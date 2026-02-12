@@ -37,7 +37,7 @@ interface HREmployee {
   updated_at: string;
 }
 
-const DEPARTMENTS = [
+const DEFAULT_DEPARTMENTS = [
   'مدیریت',
   'اجرایی',
   'فروش',
@@ -48,7 +48,7 @@ const DEPARTMENTS = [
   'حمل و نقل',
 ];
 
-const POSITIONS = [
+const DEFAULT_POSITIONS = [
   'مدیرعامل',
   'مدیرکل',
   'مدیر اجرایی',
@@ -62,16 +62,50 @@ const POSITIONS = [
   'حسابدار',
 ];
 
-// Multi-select dropdown component
-function MultiSelectDropdown({ options, selected, onChange, placeholder, className }: {
+const STORAGE_KEY_POSITIONS = 'hr_custom_positions';
+const STORAGE_KEY_DEPARTMENTS = 'hr_custom_departments';
+
+function loadCustomItems(key: string): string[] {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveCustomItems(key: string, items: string[]) {
+  localStorage.setItem(key, JSON.stringify(items));
+}
+
+// Multi-select dropdown component with add/remove
+function MultiSelectDropdown({ options, selected, onChange, placeholder, className, customItems, onCustomItemsChange }: {
   options: readonly string[];
   selected: string[];
   onChange: (vals: string[]) => void;
   placeholder: string;
   className?: string;
+  customItems?: string[];
+  onCustomItemsChange?: (items: string[]) => void;
 }) {
+  const [newItem, setNewItem] = useState('');
+  const allOptions = [...options, ...(customItems || [])];
+
   const toggle = (val: string) => {
     onChange(selected.includes(val) ? selected.filter(v => v !== val) : [...selected, val]);
+  };
+
+  const handleAdd = () => {
+    const trimmed = newItem.trim();
+    if (!trimmed || allOptions.includes(trimmed)) return;
+    onCustomItemsChange?.([...(customItems || []), trimmed]);
+    setNewItem('');
+  };
+
+  const handleRemoveCustom = (item: string) => {
+    onCustomItemsChange?.((customItems || []).filter(i => i !== item));
+    // Also remove from selected if present
+    if (selected.includes(item)) {
+      onChange(selected.filter(v => v !== item));
+    }
   };
 
   return (
@@ -86,17 +120,42 @@ function MultiSelectDropdown({ options, selected, onChange, placeholder, classNa
           <ChevronDown className="h-4 w-4 shrink-0 opacity-50 mr-2" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-56 p-2 z-[99999] bg-popover" align="start">
+      <PopoverContent className="w-64 p-2 z-[99999] bg-popover" align="start">
+        {/* Add new item */}
+        {onCustomItemsChange && (
+          <div className="flex items-center gap-1 mb-2 pb-2 border-b">
+            <Input
+              value={newItem}
+              onChange={(e) => setNewItem(e.target.value)}
+              placeholder="افزودن مورد جدید..."
+              className="h-8 text-sm"
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }}
+            />
+            <Button size="sm" variant="ghost" onClick={handleAdd} disabled={!newItem.trim()} className="h-8 w-8 p-0 shrink-0">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
         <div className="space-y-1 max-h-60 overflow-y-auto">
-          {options.map(opt => (
-            <label key={opt} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent cursor-pointer text-sm">
-              <Checkbox
-                checked={selected.includes(opt)}
-                onCheckedChange={() => toggle(opt)}
-              />
-              <span>{opt}</span>
-            </label>
-          ))}
+          {allOptions.map(opt => {
+            const isCustom = (customItems || []).includes(opt);
+            return (
+              <div key={opt} className="flex items-center gap-1">
+                <label className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent cursor-pointer text-sm flex-1">
+                  <Checkbox
+                    checked={selected.includes(opt)}
+                    onCheckedChange={() => toggle(opt)}
+                  />
+                  <span>{opt}</span>
+                </label>
+                {isCustom && onCustomItemsChange && (
+                  <Button size="sm" variant="ghost" onClick={() => handleRemoveCustom(opt)} className="h-6 w-6 p-0 text-destructive shrink-0">
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            );
+          })}
         </div>
         {selected.length > 0 && (
           <div className="border-t mt-2 pt-2">
@@ -134,6 +193,19 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
   const [newDepartments, setNewDepartments] = useState<string[]>([]);
   const [newHireDate, setNewHireDate] = useState('');
   const [newNotes, setNewNotes] = useState('');
+
+  // Custom items for positions and departments
+  const [customPositions, setCustomPositions] = useState<string[]>(() => loadCustomItems(STORAGE_KEY_POSITIONS));
+  const [customDepartments, setCustomDepartments] = useState<string[]>(() => loadCustomItems(STORAGE_KEY_DEPARTMENTS));
+
+  const handleCustomPositionsChange = (items: string[]) => {
+    setCustomPositions(items);
+    saveCustomItems(STORAGE_KEY_POSITIONS, items);
+  };
+  const handleCustomDepartmentsChange = (items: string[]) => {
+    setCustomDepartments(items);
+    saveCustomItems(STORAGE_KEY_DEPARTMENTS, items);
+  };
   
   // User lookup state
   const [lookingUpUser, setLookingUpUser] = useState(false);
@@ -435,10 +507,12 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                 سمت
               </Label>
               <MultiSelectDropdown
-                options={POSITIONS}
+                options={DEFAULT_POSITIONS}
                 selected={newPositions}
                 onChange={setNewPositions}
                 placeholder="انتخاب سمت‌ها"
+                customItems={customPositions}
+                onCustomItemsChange={handleCustomPositionsChange}
               />
             </div>
 
@@ -448,10 +522,12 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                 واحد سازمانی
               </Label>
               <MultiSelectDropdown
-                options={DEPARTMENTS}
+                options={DEFAULT_DEPARTMENTS}
                 selected={newDepartments}
                 onChange={setNewDepartments}
                 placeholder="انتخاب واحدها"
+                customItems={customDepartments}
+                onCustomItemsChange={handleCustomDepartmentsChange}
               />
             </div>
 
@@ -547,11 +623,13 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                       <TableCell>
                         {editingId === employee.id ? (
                           <MultiSelectDropdown
-                            options={POSITIONS}
+                            options={DEFAULT_POSITIONS}
                             selected={employee.position ? employee.position.split('،') : []}
                             onChange={(vals) => updateEmployeeField(employee.id, 'position', vals.length > 0 ? vals.join('،') : null)}
                             placeholder="انتخاب"
                             className="w-36"
+                            customItems={customPositions}
+                            onCustomItemsChange={handleCustomPositionsChange}
                           />
                         ) : (
                           employee.position ? (
@@ -566,11 +644,13 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                       <TableCell>
                         {editingId === employee.id ? (
                           <MultiSelectDropdown
-                            options={DEPARTMENTS}
+                            options={DEFAULT_DEPARTMENTS}
                             selected={employee.department ? employee.department.split('،') : []}
                             onChange={(vals) => updateEmployeeField(employee.id, 'department', vals.length > 0 ? vals.join('،') : null)}
                             placeholder="انتخاب"
                             className="w-36"
+                            customItems={customDepartments}
+                            onCustomItemsChange={handleCustomDepartmentsChange}
                           />
                         ) : (
                           employee.department ? (
