@@ -11,6 +11,12 @@ import { Calculator, Plus, Trash2, CalendarDays, Image as ImageIcon, Save, Clock
 import { MediaUploader } from './MediaUploader';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { LocationMapModal } from '@/components/locations/LocationMapModal';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const EXPERT_RENTAL_ITEMS: Record<string, { label: string }> = {
+  cross_screw: { label: 'پیچ تنظیم صلیبی یک متری' },
+  bowl_screw: { label: 'پیچ تنظیم کاسه‌ای 70 سانتی' },
+};
 
 interface EditExpertPricingDialogProps {
   open: boolean;
@@ -52,6 +58,13 @@ export const EditExpertPricingDialog = ({
   const [requestedDate, setRequestedDate] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   
+  // Rental item state
+  const [selectedItem1, setSelectedItem1] = useState('');
+  const [quantity1, setQuantity1] = useState('');
+  const [selectedItem2, setSelectedItem2] = useState('');
+  const [quantity2, setQuantity2] = useState('');
+  const [isRentalOrder, setIsRentalOrder] = useState(false);
+
   // Address editing state
   const [address, setAddress] = useState('');
   const [locationLat, setLocationLat] = useState<number | null>(null);
@@ -87,6 +100,22 @@ export const EditExpertPricingDialog = ({
         if (notes) {
           setDescription(notes.description || '');
           
+          // Check if this is a rental order with item_type
+          if (notes.item_type) {
+            setIsRentalOrder(true);
+            // Find key by label
+            const key1 = Object.entries(EXPERT_RENTAL_ITEMS).find(([_, v]) => v.label === notes.item_type)?.[0] || '';
+            setSelectedItem1(key1);
+            setQuantity1(notes.quantity?.toString() || '');
+            if (notes.item_type_2) {
+              const key2 = Object.entries(EXPERT_RENTAL_ITEMS).find(([_, v]) => v.label === notes.item_type_2)?.[0] || '';
+              setSelectedItem2(key2);
+              setQuantity2(notes.quantity_2?.toString() || '');
+            }
+          } else {
+            setIsRentalOrder(false);
+          }
+
           if (notes.dimensions && notes.dimensions.length > 0) {
             setDimensions(notes.dimensions.map((d: any) => ({
               length: d.length?.toString() || '',
@@ -199,13 +228,21 @@ export const EditExpertPricingDialog = ({
       }
 
       // Build updated notes object
-      const updatedNotes = {
+      const updatedNotes: any = {
         ...existingNotes,
         is_expert_pricing_request: true,
         description: description,
         dimensions: dimensions.filter(d => d.length || d.width || d.height),
         requested_date: requestedDate || null
       };
+
+      // Add rental item data if applicable
+      if (isRentalOrder) {
+        updatedNotes.item_type = selectedItem1 ? EXPERT_RENTAL_ITEMS[selectedItem1]?.label : null;
+        updatedNotes.quantity = selectedItem1 ? parseInt(quantity1) || null : null;
+        updatedNotes.item_type_2 = selectedItem2 ? EXPERT_RENTAL_ITEMS[selectedItem2]?.label : null;
+        updatedNotes.quantity_2 = selectedItem2 ? parseInt(quantity2) || null : null;
+      }
 
       // Build update data with address
       const updateData: any = {
@@ -363,7 +400,74 @@ export const EditExpertPricingDialog = ({
             />
           </div>
 
-          {/* Dimensions */}
+          {/* Rental Items - shown for rental expert pricing orders */}
+          {isRentalOrder && (
+            <div className="space-y-4 p-4 border rounded-lg bg-background">
+              <Label className="font-medium">اقلام کرایه</Label>
+              
+              {/* Item 1 */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">نوع کالا</Label>
+                  <Select value={selectedItem1} onValueChange={setSelectedItem1}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="انتخاب کالا" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-[100000]">
+                      {Object.entries(EXPERT_RENTAL_ITEMS).map(([key, item]) => (
+                        <SelectItem key={key} value={key}>{item.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">تعداد</Label>
+                  <Input
+                    type="number"
+                    placeholder="تعداد"
+                    value={quantity1}
+                    onChange={(e) => setQuantity1(e.target.value)}
+                    min="1"
+                  />
+                </div>
+              </div>
+
+              {/* Item 2 */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">نوع کالای دوم (اختیاری)</Label>
+                  <Select value={selectedItem2} onValueChange={setSelectedItem2}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="انتخاب کالا" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-[100000]">
+                      <SelectItem value="none">بدون کالای دوم</SelectItem>
+                      {Object.entries(EXPERT_RENTAL_ITEMS)
+                        .filter(([key]) => key !== selectedItem1)
+                        .map(([key, item]) => (
+                          <SelectItem key={key} value={key}>{item.label}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {selectedItem2 && selectedItem2 !== 'none' && (
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">تعداد</Label>
+                    <Input
+                      type="number"
+                      placeholder="تعداد"
+                      value={quantity2}
+                      onChange={(e) => setQuantity2(e.target.value)}
+                      min="1"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Dimensions - shown for non-rental orders */}
+          {!isRentalOrder && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>ابعاد درخواستی (متر)</Label>
@@ -413,6 +517,7 @@ export const EditExpertPricingDialog = ({
               </div>
             ))}
           </div>
+          )}
 
           {/* Requested Date */}
           <div className="space-y-2">
