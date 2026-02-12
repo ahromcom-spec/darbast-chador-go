@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowRight, Building2, MapPin, Package, Upload } from 'lucide-react';
+import { ArrowRight, Building2, MapPin, Package, Upload, X } from 'lucide-react';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -555,29 +555,46 @@ export default function ScaffoldingRentalForm() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>نوع جنس داربست فلزی *</FormLabel>
-                            <Select
-                              onValueChange={(value) => {
-                                field.onChange(value);
-                                // If second dropdown has the same value, reset it
-                                if (form.getValues('itemType2') === value) {
-                                  form.setValue('itemType2', '');
-                                }
-                              }}
-                              value={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="انتخاب کنید..." />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {Object.entries(RENTAL_ITEMS).map(([key, item]) => (
-                                  <SelectItem key={key} value={key}>
-                                    {item.label} - {item.price.toLocaleString('fa-IR')} تومان
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <div className="flex gap-2 items-center">
+                              <Select
+                                onValueChange={(value) => {
+                                  field.onChange(value);
+                                  if (form.getValues('itemType2') === value) {
+                                    form.setValue('itemType2', '');
+                                  }
+                                }}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="flex-1">
+                                    <SelectValue placeholder="انتخاب کنید..." />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {Object.entries(RENTAL_ITEMS).map(([key, item]) => (
+                                    <SelectItem key={key} value={key}>
+                                      {item.label} - {item.price.toLocaleString('fa-IR')} تومان
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              {field.value && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => {
+                                    field.onChange('');
+                                    form.setValue('quantity', 1);
+                                    form.setValue('itemType2', '');
+                                    form.setValue('quantity2', 1);
+                                  }}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -614,23 +631,39 @@ export default function ScaffoldingRentalForm() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>نوع جنس داربست فلزی (دوم - اختیاری)</FormLabel>
-                              <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="انتخاب کنید..." />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {availableItemsForSecond.map(([key, item]) => (
-                                    <SelectItem key={key} value={key}>
-                                      {item.label} - {item.price.toLocaleString('fa-IR')} تومان
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <div className="flex gap-2 items-center">
+                                <Select
+                                  onValueChange={field.onChange}
+                                  value={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger className="flex-1">
+                                      <SelectValue placeholder="انتخاب کنید..." />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {availableItemsForSecond.map(([key, item]) => (
+                                      <SelectItem key={key} value={key}>
+                                        {item.label} - {item.price.toLocaleString('fa-IR')} تومان
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                {field.value && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => {
+                                      field.onChange('');
+                                      form.setValue('quantity2', 1);
+                                    }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
                               <FormMessage />
                             </FormItem>
                           )}
