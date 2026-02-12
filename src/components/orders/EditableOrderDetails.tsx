@@ -1197,6 +1197,8 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         executionStageUpdatedAt={order.execution_stage_updated_at}
         approvedCollectionDate={approvedCollectionDate}
         approvals={orderApprovals}
+        totalPaid={order.total_paid}
+        totalPrice={order.total_price}
       />
 
       {/* زنجیره انتقال و همکاری بین مدیران */}

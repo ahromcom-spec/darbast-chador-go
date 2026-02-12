@@ -2303,6 +2303,8 @@ export default function OrderDetail() {
             paymentConfirmedAt={isFullyPaidForPayment ? order.payment_confirmed_at : null}
             approvedCollectionDate={approvedCollectionDate}
             approvals={approvals}
+            totalPaid={order.total_paid}
+            totalPrice={order.total_price}
           />
 
           {/* گزارش‌های روزانه */}
