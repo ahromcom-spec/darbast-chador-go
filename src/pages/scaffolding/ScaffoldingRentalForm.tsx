@@ -32,8 +32,7 @@ const rentalFormSchema = z.object({
     .min(1, 'تعداد حداقل باید 1 باشد')
     .max(600, 'تعداد حداکثر باید 600 باشد')
     .optional(),
-  rentalStartDate: z.string().min(1, 'تاریخ شروع اجاره را انتخاب کنید'),
-  rentalEndDate: z.string().min(1, 'تاریخ پایان اجاره را انتخاب کنید'),
+  rentalRequestDate: z.string().min(1, 'تاریخ درخواست کرایه را انتخاب کنید'),
   additionalNotes: z.string().optional(),
 });
 
@@ -90,8 +89,7 @@ export default function ScaffoldingRentalForm() {
       quantity: 1,
       itemType2: '',
       quantity2: 1,
-      rentalStartDate: '',
-      rentalEndDate: '',
+      rentalRequestDate: '',
       additionalNotes: '',
     }
   });
@@ -204,8 +202,7 @@ export default function ScaffoldingRentalForm() {
           quantity: notes.quantity || 1,
           itemType2: foundItemType2,
           quantity2: notes.quantity_2 || 1,
-          rentalStartDate: notes.rental_start_date || '',
-          rentalEndDate: notes.rental_end_date || '',
+          rentalRequestDate: notes.rental_request_date || notes.rental_start_date || '',
           additionalNotes: notes.additional_notes || '',
         });
       }
@@ -289,8 +286,7 @@ export default function ScaffoldingRentalForm() {
         quantity: values.quantity,
         item_type_2: values.itemType2 ? RENTAL_ITEMS[values.itemType2]?.label : null,
         quantity_2: values.itemType2 ? values.quantity2 : null,
-        rental_start_date: values.rentalStartDate,
-        rental_end_date: values.rentalEndDate,
+        rental_request_date: values.rentalRequestDate,
         total_price: calculateTotal(),
         additional_notes: values.additionalNotes,
       };
@@ -711,43 +707,24 @@ export default function ScaffoldingRentalForm() {
                   </Card>
 
                   {/* Date Selection */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="rentalStartDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>تاریخ شروع اجاره *</FormLabel>
-                          <FormControl>
-                            <PersianDatePicker
-                              value={field.value}
-                              onChange={(date) => field.onChange(date)}
-                              placeholder="انتخاب تاریخ شروع"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="rentalEndDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>تاریخ پایان اجاره *</FormLabel>
-                          <FormControl>
-                            <PersianDatePicker
-                              value={field.value}
-                              onChange={(date) => field.onChange(date)}
-                              placeholder="انتخاب تاریخ پایان"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                  <FormField
+                    control={form.control}
+                    name="rentalRequestDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>تاریخ درخواست کرایه *</FormLabel>
+                        <FormControl>
+                          <PersianDatePicker
+                            value={field.value}
+                            onChange={(date) => field.onChange(date)}
+                            placeholder="انتخاب تاریخ درخواست کرایه"
+                            timeMode="none"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   {/* Additional Notes */}
                   <FormField
