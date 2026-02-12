@@ -5321,6 +5321,8 @@ export default function DailyReportModule() {
                       executionStageUpdatedAt={selectedOrderDetails.execution_stage_updated_at}
                       paymentConfirmedAt={selectedOrderDetails.payment_confirmed_at}
                       approvedCollectionDate={selectedOrderDetails.approved_collection_date}
+                      totalPaid={selectedOrderDetails.total_paid}
+                      totalPrice={selectedOrderDetails.total_price}
                     />
 
                     {/* Execution Schedule */}

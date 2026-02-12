@@ -190,6 +190,17 @@ export function MultiPaymentDialog({
       if (isSettled) {
         updatePayload.payment_confirmed_at = nowIso;
         updatePayload.payment_confirmed_by = user.id;
+        updatePayload.status = 'paid';
+        // اگر مرحله اجرایی در انتظار پرداخت باشد، به مرحله بعدی (در انتظار جمع‌آوری) ببر
+        const { data: currentOrder } = await supabase
+          .from('projects_v3')
+          .select('execution_stage')
+          .eq('id', orderId)
+          .maybeSingle();
+        if (currentOrder?.execution_stage === 'awaiting_payment') {
+          updatePayload.execution_stage = 'awaiting_collection';
+          updatePayload.execution_stage_updated_at = nowIso;
+        }
       }
 
       const { error: updateError } = await supabase

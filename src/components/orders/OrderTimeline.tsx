@@ -29,6 +29,8 @@ interface OrderTimelineProps {
   executionStageUpdatedAt?: string | null;
   paymentConfirmedAt?: string | null; // تاریخ تایید پرداخت
   approvedCollectionDate?: string | null; // تاریخ جمع‌آوری تایید شده توسط مدیر
+  totalPaid?: number | null; // مجموع پرداخت شده
+  totalPrice?: number | null; // مبلغ کل سفارش
   approvals?: Array<{
     approver_role: string;
     approved_at: string | null;
@@ -70,6 +72,8 @@ export const OrderTimeline = ({
   executionStageUpdatedAt,
   paymentConfirmedAt,
   approvedCollectionDate,
+  totalPaid,
+  totalPrice,
   approvals = [],
 }: OrderTimelineProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -212,7 +216,17 @@ export const OrderTimeline = ({
       details: paymentConfirmedAt
         ? 'پرداخت با موفقیت انجام شد ✓'
         : (currentStageNumber >= 3)
-          ? 'لطفاً مبلغ سفارش را پرداخت کنید'
+          ? (() => {
+              const paid = totalPaid ?? 0;
+              const price = totalPrice ?? 0;
+              if (paid > 0 && price > 0) {
+                const remaining = Math.max(0, price - paid);
+                return remaining > 0
+                  ? `${paid.toLocaleString('fa-IR')} تومان پرداخت شده / ${remaining.toLocaleString('fa-IR')} تومان مانده`
+                  : 'پرداخت با موفقیت انجام شد ✓';
+              }
+              return 'لطفاً مبلغ سفارش را پرداخت کنید';
+            })()
           : undefined,
     },
     {
