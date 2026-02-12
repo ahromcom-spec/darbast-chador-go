@@ -2106,7 +2106,18 @@ export default function ExecutiveOrders() {
           </DialogHeader>
           {selectedOrder && (
             <>
-              <OrderDetailsContent order={selectedOrder} getStatusBadge={getStatusBadge} onUpdate={fetchOrders} hidePrice={isExecutiveModule} hideDetails={isAccountingModule} />
+              <OrderDetailsContent order={selectedOrder} getStatusBadge={getStatusBadge} onUpdate={async () => {
+                await fetchOrders();
+                // Refresh selectedOrder with latest data from DB
+                const { data: refreshed } = await supabase
+                  .from('projects_v3')
+                  .select('*')
+                  .eq('id', selectedOrder.id)
+                  .maybeSingle();
+                if (refreshed) {
+                  setSelectedOrder(prev => prev ? { ...prev, ...refreshed, notes: refreshed.notes } : prev);
+                }
+              }} hidePrice={isExecutiveModule} hideDetails={isAccountingModule} />
               {/* نقشه موقعیت پروژه با امکان ویرایش - hidden for accounting module */}
               {!isAccountingModule && selectedOrder.location_lat && selectedOrder.location_lng && (
                 <div className="mt-4">

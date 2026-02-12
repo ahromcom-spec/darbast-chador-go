@@ -563,7 +563,17 @@ export default function SalesOrders() {
 
           {selectedOrder && (
             <div className="space-y-4">
-              <EditableOrderDetails order={selectedOrder} onUpdate={fetchOrders} />
+              <EditableOrderDetails order={selectedOrder} onUpdate={async () => {
+                await fetchOrders();
+                const { data: refreshed } = await supabase
+                  .from('projects_v3')
+                  .select('*')
+                  .eq('id', selectedOrder.id)
+                  .maybeSingle();
+                if (refreshed) {
+                  setSelectedOrder(prev => prev ? { ...prev, ...refreshed, notes: refreshed.notes } : prev);
+                }
+              }} />
               
               {/* Additional execution-specific info */}
               {selectedOrder.execution_start_date && (

@@ -301,7 +301,17 @@ export default function GeneralManagerPendingOrders() {
             <DialogTitle>جزئیات سفارش {selectedOrder?.code}</DialogTitle>
           </DialogHeader>
           {selectedOrder && (
-            <EditableOrderDetails order={selectedOrder} onUpdate={fetchOrders} />
+            <EditableOrderDetails order={selectedOrder} onUpdate={async () => {
+              await fetchOrders();
+              const { data: refreshed } = await supabase
+                .from('projects_v3')
+                .select('*')
+                .eq('id', selectedOrder.id)
+                .maybeSingle();
+              if (refreshed) {
+                setSelectedOrder(prev => prev ? { ...prev, ...refreshed, notes: refreshed.notes } : prev);
+              }
+            }} />
           )}
         </DialogContent>
       </Dialog>
