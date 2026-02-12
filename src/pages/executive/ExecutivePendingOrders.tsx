@@ -1436,8 +1436,18 @@ export default function ExecutivePendingOrders() {
             </DialogDescription>
           </DialogHeader>
           {selectedOrder && (
-            <EditableOrderDetails order={selectedOrder} onUpdate={() => {
-              fetchOrders();
+            <EditableOrderDetails order={selectedOrder} onUpdate={async () => {
+              await fetchOrders();
+              // Refresh selectedOrder with latest data
+              const { data: refreshed } = await supabase
+                .from('projects_v3')
+                .select('*')
+                .eq('id', selectedOrder.id)
+                .maybeSingle();
+              if (refreshed) {
+                const notesObj = parseOrderNotes(refreshed.notes) || {};
+                setSelectedOrder(prev => prev ? { ...prev, ...refreshed, notes: notesObj } : prev);
+              }
             }} hidePrice={isExecutiveModule} hideDetails={isAccountingModule} />
           )}
         </DialogContent>
