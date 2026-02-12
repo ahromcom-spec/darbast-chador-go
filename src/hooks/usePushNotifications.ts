@@ -55,7 +55,7 @@ export function usePushNotifications() {
         // Check for existing subscription
         try {
           const registration = await navigator.serviceWorker.ready;
-          const existingSub = await registration.pushManager.getSubscription();
+          const existingSub = await (registration as any).pushManager.getSubscription();
           setSubscription(existingSub);
           console.log('🔔 Existing subscription:', existingSub ? 'Found' : 'None');
         } catch (error) {
@@ -117,14 +117,14 @@ export function usePushNotifications() {
       console.log('✅ Service Worker ready:', registration.scope);
       
       // Unsubscribe from existing subscription if any
-      const existingSub = await registration.pushManager.getSubscription();
+      const existingSub = await (registration as any).pushManager.getSubscription();
       if (existingSub) {
         console.log('🔄 Unsubscribing from existing subscription...');
         await existingSub.unsubscribe();
       }
 
       console.log('📲 Subscribing to push manager...');
-      const sub = await registration.pushManager.subscribe({
+      const sub = await (registration as any).pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
       });
