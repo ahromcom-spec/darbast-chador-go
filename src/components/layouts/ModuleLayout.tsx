@@ -95,6 +95,20 @@ export function ModuleLayout({
     [onSaveBeforeLeave, hasUnsavedChanges]
   );
 
+  // Auto-save when lock is taken from current user
+  const handleLockTakenFromMe = useCallback(() => {
+    if (onSaveBeforeLeave && hasUnsavedChanges) {
+      onSaveBeforeLeave().then((success) => {
+        if (success) {
+          toast.info('داده‌های شما به‌صورت خودکار ذخیره شد');
+        }
+      }).catch((error) => {
+        console.error('Error auto-saving on lock taken:', error);
+        toast.error('خطا در ذخیره خودکار داده‌ها');
+      });
+    }
+  }, [onSaveBeforeLeave, hasUnsavedChanges]);
+
   // Module lock hook (only active if enableLock is true)
   const {
     lockStatus,
@@ -106,6 +120,7 @@ export function ModuleLayout({
     moduleKey: activeModuleKey,
     moduleDate,
     onForceTakeover: handleForceTakeover,
+    onLockTakenFromMe: handleLockTakenFromMe,
     autoAcquire: false,
   });
 
@@ -289,6 +304,7 @@ export function ModuleLayout({
             isReadOnly={isReadOnly}
             isLoading={lockLoading}
             isMine={lockStatus.isMine}
+            lockedBy={lockStatus.lockedBy}
             lockedByName={lockStatus.lockedByName}
             onTakeControl={acquireLock}
             onReleaseControl={releaseLock}
