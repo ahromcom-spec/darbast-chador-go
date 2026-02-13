@@ -1059,6 +1059,18 @@ export function useDailyReport() {
           
           // Record transactions in bank_card_transactions table
           const transactionsToInsert = [];
+
+          // Get module name for transaction records
+          let resolvedModuleName = moduleKey;
+          const { data: moduleData } = await supabase
+            .from('module_assignments')
+            .select('module_name')
+            .eq('module_key', moduleKey)
+            .limit(1)
+            .maybeSingle();
+          if (moduleData?.module_name) {
+            resolvedModuleName = moduleData.module_name;
+          }
           
           if (depositAmount > 0) {
             transactionsToInsert.push({
@@ -1069,7 +1081,9 @@ export function useDailyReport() {
               description: staffRow.receiving_notes || `واریز از گزارش روزانه ${dateStr}`,
               reference_type: 'daily_report_staff',
               reference_id: reportId,
-              created_by: user.id
+              created_by: user.id,
+              module_name: resolvedModuleName,
+              report_date: dateStr
             });
           }
           
@@ -1082,7 +1096,9 @@ export function useDailyReport() {
               description: staffRow.spending_notes || `برداشت از گزارش روزانه ${dateStr}`,
               reference_type: 'daily_report_staff',
               reference_id: reportId,
-              created_by: user.id
+              created_by: user.id,
+              module_name: resolvedModuleName,
+              report_date: dateStr
             });
           }
           
