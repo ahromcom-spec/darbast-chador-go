@@ -11,7 +11,8 @@ import {
   ToggleLeft, 
   ToggleRight,
   Building2,
-  Calendar
+  Calendar,
+  ArrowLeftRight
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -33,6 +34,7 @@ interface BankCardsListProps {
   onDelete: (id: string) => Promise<boolean>;
   onToggleStatus: (id: string, isActive: boolean) => Promise<boolean>;
   onViewTransactions: (card: BankCard) => void;
+  onTransfer?: (cardId: string) => void;
 }
 
 export function BankCardsList({
@@ -42,6 +44,7 @@ export function BankCardsList({
   onDelete,
   onToggleStatus,
   onViewTransactions,
+  onTransfer,
 }: BankCardsListProps) {
   if (loading) {
     return (
@@ -141,6 +144,18 @@ export function BankCardsList({
                 <History className="h-3 w-3" />
                 تراکنش‌ها
               </Button>
+
+              {onTransfer && card.is_active && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onTransfer(card.id)}
+                  className="gap-1"
+                >
+                  <ArrowLeftRight className="h-3 w-3" />
+                  انتقال
+                </Button>
+              )}
 
               <Button
                 variant="ghost"
