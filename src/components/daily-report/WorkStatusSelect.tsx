@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { requestZoom100 } from '@/lib/zoom';
+import { getCurrentZoom } from '@/lib/zoom';
 
 export type WorkStatus = "کارکرده" | "غایب";
 
@@ -46,7 +46,7 @@ export function WorkStatusSelect({
     if (!triggerEl) return;
 
     // Get the current CSS zoom level from document - default to 1
-    const zoomLevel = parseFloat(document.documentElement.style.zoom || '1') || 1;
+    const zoomLevel = getCurrentZoom();
     
     const rect = triggerEl.getBoundingClientRect();
     
@@ -151,9 +151,6 @@ export function WorkStatusSelect({
       setOpen(false);
       return;
     }
-
-    // Force 100% zoom (and keep it) so portal positioning stays correct
-    requestZoom100({ preserveScroll: true });
 
     requestAnimationFrame(() => {
       updatePosition();

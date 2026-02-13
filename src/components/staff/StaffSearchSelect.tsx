@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { createPortal } from 'react-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { requestZoom100 } from '@/lib/zoom';
+import { getCurrentZoom } from '@/lib/zoom';
 
 // Staff list now only comes from HR employees and salary settings
 
@@ -247,6 +247,9 @@ export function StaffSearchSelect({
     const triggerEl = triggerRef.current;
     if (!triggerEl) return;
 
+    // Account for CSS zoom on documentElement
+    const zoomLevel = getCurrentZoom();
+
     const rect = triggerEl.getBoundingClientRect();
 
     const VIEWPORT_MARGIN = 8;
@@ -257,24 +260,39 @@ export function StaffSearchSelect({
 
     const isRTL = document.documentElement.dir === 'rtl' || !!triggerEl.closest('[dir="rtl"]');
 
-    // Position inside boundary (Daily Report cards) to avoid CSS `zoom` coordinate issues.
+    // Position inside boundary (Daily Report cards) to avoid coordinate issues.
     if (boundaryEl) {
       const b = boundaryEl.getBoundingClientRect();
+      const adjustedRect = {
+        left: rect.left / zoomLevel,
+        right: rect.right / zoomLevel,
+        top: rect.top / zoomLevel,
+        bottom: rect.bottom / zoomLevel,
+        width: rect.width / zoomLevel,
+      };
+      const adjustedBoundary = {
+        left: b.left / zoomLevel,
+        right: b.right / zoomLevel,
+        top: b.top / zoomLevel,
+        bottom: b.bottom / zoomLevel,
+        width: b.width / zoomLevel,
+        height: b.height / zoomLevel,
+      };
 
-      const availableWidth = Math.max(200, b.width - VIEWPORT_MARGIN * 2);
-      const width = Math.min(Math.max(rect.width, 320), availableWidth);
+      const availableWidth = Math.max(200, adjustedBoundary.width - VIEWPORT_MARGIN * 2);
+      const width = Math.min(Math.max(adjustedRect.width, 320), availableWidth);
 
-      let left = isRTL ? rect.right - b.left - width : rect.left - b.left;
-      left = Math.max(VIEWPORT_MARGIN, Math.min(left, b.width - VIEWPORT_MARGIN - width));
+      let left = isRTL ? adjustedRect.right - adjustedBoundary.left - width : adjustedRect.left - adjustedBoundary.left;
+      left = Math.max(VIEWPORT_MARGIN, Math.min(left, adjustedBoundary.width - VIEWPORT_MARGIN - width));
 
-      const spaceAbove = rect.top - b.top - OFFSET - VIEWPORT_MARGIN;
-      const spaceBelow = b.bottom - rect.bottom - OFFSET - VIEWPORT_MARGIN;
+      const spaceAbove = adjustedRect.top - adjustedBoundary.top - OFFSET - VIEWPORT_MARGIN;
+      const spaceBelow = adjustedBoundary.bottom - adjustedRect.bottom - OFFSET - VIEWPORT_MARGIN;
       const openBelow = spaceBelow >= 220 || spaceBelow >= spaceAbove;
 
       if (openBelow) {
         const maxHeight = Math.min(520, Math.max(180, spaceBelow));
         setPosition({
-          top: rect.bottom - b.top + OFFSET,
+          top: adjustedRect.bottom - adjustedBoundary.top + OFFSET,
           bottom: undefined,
           left,
           width,
@@ -284,7 +302,7 @@ export function StaffSearchSelect({
         const maxHeight = Math.min(520, Math.max(180, spaceAbove));
         setPosition({
           top: undefined,
-          bottom: b.bottom - rect.top + OFFSET,
+          bottom: adjustedBoundary.bottom - adjustedRect.top + OFFSET,
           left,
           width,
           maxHeight,
@@ -294,27 +312,38 @@ export function StaffSearchSelect({
       return;
     }
 
-    // Fallback: fixed to viewport
+    // Fallback: fixed to viewport (divide by zoom for CSS coords)
+    const viewportWidth = window.innerWidth / zoomLevel;
+    const viewportHeight = window.innerHeight / zoomLevel;
+
+    const adjustedRect = {
+      left: rect.left / zoomLevel,
+      right: rect.right / zoomLevel,
+      top: rect.top / zoomLevel,
+      bottom: rect.bottom / zoomLevel,
+      width: rect.width / zoomLevel,
+    };
+
     const boundLeft = VIEWPORT_MARGIN;
-    const boundRight = window.innerWidth - VIEWPORT_MARGIN;
+    const boundRight = viewportWidth - VIEWPORT_MARGIN;
     const boundTop = VIEWPORT_MARGIN;
-    const boundBottom = window.innerHeight - VIEWPORT_MARGIN;
+    const boundBottom = viewportHeight - VIEWPORT_MARGIN;
 
     const availableWidth = Math.max(200, boundRight - boundLeft);
-    const width = Math.min(Math.max(rect.width, 320), availableWidth);
+    const width = Math.min(Math.max(adjustedRect.width, 320), availableWidth);
 
-    let left = isRTL ? rect.right - width : rect.left;
+    let left = isRTL ? adjustedRect.right - width : adjustedRect.left;
     left = Math.max(boundLeft, Math.min(left, boundRight - width));
 
-    const spaceAbove = rect.top - boundTop - OFFSET;
-    const spaceBelow = boundBottom - rect.bottom - OFFSET;
+    const spaceAbove = adjustedRect.top - boundTop - OFFSET;
+    const spaceBelow = boundBottom - adjustedRect.bottom - OFFSET;
 
     const openBelow = spaceBelow >= 220 || spaceBelow >= spaceAbove;
 
     if (openBelow) {
       const maxHeight = Math.min(520, Math.max(180, spaceBelow));
       setPosition({
-        top: rect.bottom + OFFSET,
+        top: adjustedRect.bottom + OFFSET,
         bottom: undefined,
         left,
         width,
@@ -324,7 +353,7 @@ export function StaffSearchSelect({
       const maxHeight = Math.min(520, Math.max(180, spaceAbove));
       setPosition({
         top: undefined,
-        bottom: window.innerHeight - rect.top + OFFSET,
+        bottom: viewportHeight - adjustedRect.top + OFFSET,
         left,
         width,
         maxHeight,
@@ -337,9 +366,6 @@ export function StaffSearchSelect({
       setOpen(false);
       return;
     }
-
-    // Force 100% zoom (and keep it) so portal positioning stays correct
-    requestZoom100({ preserveScroll: true });
 
     requestAnimationFrame(() => {
       updatePosition();

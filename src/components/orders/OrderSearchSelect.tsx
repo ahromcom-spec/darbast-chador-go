@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { createPortal } from 'react-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { requestZoom100 } from '@/lib/zoom';
 
 interface Order {
   id: string;
@@ -98,7 +97,8 @@ export function OrderSearchSelect({
     const isRTL =
       document.documentElement.dir === 'rtl' || !!triggerEl.closest('[dir="rtl"]');
 
-    // Fixed to viewport: avoids clipping by containers and allows taller dropdowns.
+    // Portal renders into document.body which is outside #root zoom context,
+    // so getBoundingClientRect screen coords can be used directly.
     const boundLeft = VIEWPORT_MARGIN;
     const boundRight = window.innerWidth - VIEWPORT_MARGIN;
     const boundTop = VIEWPORT_MARGIN;
@@ -116,7 +116,6 @@ export function OrderSearchSelect({
     const MIN_PANEL_HEIGHT = dense ? 520 : 240;
     const MAX_PANEL_HEIGHT = dense ? 900 : 800;
 
-    // Prefer the side that can show more items (especially in dense mode)
     const openBelow = spaceBelow >= MIN_PANEL_HEIGHT || spaceBelow >= spaceAbove;
 
     if (openBelow) {
@@ -145,9 +144,6 @@ export function OrderSearchSelect({
       setOpen(false);
       return;
     }
-
-    // Force 100% zoom (and keep it) so portal positioning stays correct
-    requestZoom100({ preserveScroll: true });
 
     requestAnimationFrame(() => {
       updatePosition();

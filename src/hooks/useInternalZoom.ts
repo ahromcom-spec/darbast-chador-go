@@ -31,33 +31,40 @@ export const useInternalZoom = () => {
     }
   }, []);
 
-  // Apply zoom to document using CSS transform instead of CSS zoom for better dropdown positioning
+  // Apply zoom to #root (NOT html/body) so that portals rendered at <body> level
+  // are outside the zoom context. This means getBoundingClientRect() returns screen
+  // coords and portal positioning works correctly without zoom compensation.
   useEffect(() => {
     if (!isDesktop) return;
 
     const zoomValue = ZOOM_LEVELS[zoomIndex];
     const root = document.documentElement;
+    const appRoot = document.getElementById('root');
     
     // Store zoom value as a CSS variable for JavaScript access
     root.style.setProperty('--app-zoom', String(zoomValue));
     
-    // Only apply CSS zoom when NOT 1 (100%)
-    // When zoom is 1, remove it completely to avoid any positioning issues
-    if (zoomValue === 1) {
-      root.style.removeProperty('zoom');
-      document.body.style.removeProperty('zoom');
-    } else {
-      root.style.zoom = String(zoomValue);
-      document.body.style.zoom = String(zoomValue);
+    // Remove any zoom from html/body (legacy cleanup)
+    root.style.removeProperty('zoom');
+    document.body.style.removeProperty('zoom');
+    
+    // Apply zoom to #root only
+    if (appRoot) {
+      if (zoomValue === 1) {
+        appRoot.style.removeProperty('zoom');
+      } else {
+        appRoot.style.zoom = String(zoomValue);
+      }
     }
 
     // Save to localStorage
     localStorage.setItem(STORAGE_KEY, String(zoomIndex));
 
     return () => {
-      root.style.removeProperty('zoom');
       root.style.removeProperty('--app-zoom');
+      root.style.removeProperty('zoom');
       document.body.style.removeProperty('zoom');
+      if (appRoot) appRoot.style.removeProperty('zoom');
     };
   }, [zoomIndex, isDesktop]);
 
@@ -73,17 +80,8 @@ export const useInternalZoom = () => {
     setZoomIndex(4);
   }, []);
 
-  // Allow dropdowns/popovers to permanently force 100% zoom (Windows only)
-  useEffect(() => {
-    if (!isDesktop) return;
-
-    const handleForceZoom100 = () => {
-      setZoomIndex((prev) => (prev === 4 ? prev : 4));
-    };
-
-    window.addEventListener('app:force-zoom-100', handleForceZoom100);
-    return () => window.removeEventListener('app:force-zoom-100', handleForceZoom100);
-  }, [isDesktop]);
+  // Legacy: keep the event listener for backward compatibility but no longer force zoom reset
+  // Dropdowns now work correctly at any zoom level
 
   // Handle keyboard and mouse wheel events
   useEffect(() => {
