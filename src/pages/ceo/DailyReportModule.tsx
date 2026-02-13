@@ -4399,12 +4399,13 @@ export default function DailyReportModule() {
                                      })()
                                    ) : (
                                      <div className="min-w-[220px]">
-                                       <BankCardSelect
-                                         value={row.bank_card_id ?? null}
-                                         onValueChange={(value) => updateStaffRow(index, 'bank_card_id', value)}
-                                         placeholder="انتخاب کارت بانکی"
-                                         showBalance={true}
-                                       />
+                                        <BankCardSelect
+                                          value={row.bank_card_id ?? null}
+                                          onValueChange={(value) => updateStaffRow(index, 'bank_card_id', value)}
+                                          placeholder="انتخاب کارت بانکی"
+                                          showBalance={true}
+                                          showManagementCards={moduleName?.includes('مدیریت') ?? false}
+                                        />
                                      </div>
                                    )
                                  ) : effectiveReadOnly ? (
