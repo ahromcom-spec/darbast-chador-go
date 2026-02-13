@@ -3,44 +3,8 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { requestZoom100 } from "@/lib/zoom";
 
-// Helper to force zoom to 100% when dropdown opens (and keep it there)
-const useZoomReset = (open: boolean) => {
-  const wasOpen = React.useRef(false);
-
-  React.useEffect(() => {
-    if (open && !wasOpen.current) {
-      requestZoom100({ preserveScroll: true });
-    }
-    wasOpen.current = open;
-  }, [open]);
-};
-
-// Wrapper component that handles zoom reset for Select
-const Select = ({ open: controlledOpen, onOpenChange, defaultOpen, ...props }: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>) => {
-  const [internalOpen, setInternalOpen] = React.useState(defaultOpen ?? false);
-  const isControlled = controlledOpen !== undefined;
-  const actualOpen = isControlled ? controlledOpen : internalOpen;
-  
-  useZoomReset(actualOpen);
-  
-  const handleOpenChange = React.useCallback((newOpen: boolean) => {
-    if (!isControlled) {
-      setInternalOpen(newOpen);
-    }
-    onOpenChange?.(newOpen);
-  }, [isControlled, onOpenChange]);
-  
-  return (
-    <SelectPrimitive.Root 
-      open={actualOpen} 
-      onOpenChange={handleOpenChange}
-      defaultOpen={undefined}
-      {...props} 
-    />
-  );
-};
+const Select = SelectPrimitive.Root;
 
 const SelectGroup = SelectPrimitive.Group;
 
