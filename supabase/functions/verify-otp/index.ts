@@ -135,6 +135,10 @@ serve(async (req) => {
       // رمز عبور درست است - ورود کاربر
       // Use stable password derived from phone number (not changing per login)
       const loginPassword = `stable-${normalizedPhone}-ahrom-x`;
+      // Old password formats to try before resorting to password update (which invalidates sessions)
+      const oldPasswords = [
+        `whitelist-${normalizedPhone}-x`,
+      ];
 
       // تلاش برای ورود
       let session;
@@ -146,52 +150,72 @@ serve(async (req) => {
       if (!signInErr && signInData?.session) {
         session = signInData.session;
       } else {
-        // اگر کاربر وجود ندارد، ایجاد کاربر جدید
-        const { data: created, error: createErr } = await supabase.auth.admin.createUser({
-          email: derivedEmail,
-          password: loginPassword,
-          email_confirm: true,
-          user_metadata: { full_name: full_name || '', phone_number: normalizedPhone },
-        });
-
-        if (createErr) {
-          // اگر کاربر قبلاً وجود دارد، بروزرسانی رمز عبور
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('user_id')
-            .eq('phone_number', normalizedPhone)
-            .maybeSingle();
-
-          if (profile?.user_id) {
-            await supabase.auth.admin.updateUserById(profile.user_id, {
+        // Try old password formats first (doesn't invalidate sessions)
+        for (const oldPw of oldPasswords) {
+          const { data: oldData, error: oldErr } = await supabase.auth.signInWithPassword({
+            email: derivedEmail,
+            password: oldPw,
+          });
+          if (!oldErr && oldData?.session) {
+            session = oldData.session;
+            // Migrate password in background WITHOUT invalidating sessions
+            // We'll use admin API but only after we already have a valid session
+            const userId = oldData.session.user.id;
+            supabase.auth.admin.updateUserById(userId, {
               password: loginPassword,
-              email_confirm: true,
-            });
+            }).catch(() => {});
+            break;
           }
         }
 
-        // تلاش مجدد برای ورود
-        const { data: retryData, error: retryErr } = await supabase.auth.signInWithPassword({ 
-          email: derivedEmail, 
-          password: loginPassword 
-        });
+        if (!session) {
+          // اگر کاربر وجود ندارد، ایجاد کاربر جدید
+          const { data: created, error: createErr } = await supabase.auth.admin.createUser({
+            email: derivedEmail,
+            password: loginPassword,
+            email_confirm: true,
+            user_metadata: { full_name: full_name || '', phone_number: normalizedPhone },
+          });
 
-        if (retryErr) {
-          console.error('Password login error:', retryErr);
-          return new Response(
-            JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        session = retryData.session;
+          if (createErr) {
+            // اگر کاربر قبلاً وجود دارد، بروزرسانی رمز عبور
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('user_id')
+              .eq('phone_number', normalizedPhone)
+              .maybeSingle();
 
-        // اختصاص نقش‌ها از لیست سفید
-        if (whitelistData?.allowed_roles && created?.user) {
-          const roleInserts = whitelistData.allowed_roles.map((role: string) => ({
-            user_id: created.user.id,
-            role,
-          }));
-          await supabase.from('user_roles').insert(roleInserts);
+            if (profile?.user_id) {
+              await supabase.auth.admin.updateUserById(profile.user_id, {
+                password: loginPassword,
+                email_confirm: true,
+              });
+            }
+          }
+
+          // تلاش مجدد برای ورود
+          const { data: retryData, error: retryErr } = await supabase.auth.signInWithPassword({ 
+            email: derivedEmail, 
+            password: loginPassword 
+          });
+
+          if (retryErr) {
+            console.error('Password login error:', retryErr);
+            return new Response(
+              JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          session = retryData.session;
+
+          // اختصاص نقش‌ها از لیست سفید
+          if (whitelistData?.allowed_roles && created?.user) {
+            const roleInserts = whitelistData.allowed_roles.map((role: string) => ({
+              user_id: created.user.id,
+              role,
+            }));
+            await supabase.from('user_roles').insert(roleInserts);
+          }
         }
       }
 
@@ -301,28 +325,46 @@ serve(async (req) => {
       if (!signInErr && signInData?.session) {
         session = signInData.session;
       } else {
-        // If sign-in failed, try to recover the account password if user exists
-        // Avoid costly list calls unless necessary
-        if (isWhitelistedPhone || isTestPhone) {
-          // Auto-provision for whitelisted/test numbers
-          const { data: created, error: createErr } = await supabase.auth.admin.createUser({
+        // Try old password formats before resorting to updateUserById (which invalidates all sessions)
+        const oldOtpPasswords = [
+          `whitelist-${normalizedPhone}-x`,
+        ];
+        for (const oldPw of oldOtpPasswords) {
+          const { data: oldData, error: oldErr } = await supabase.auth.signInWithPassword({
             email: derivedEmail,
-            password: loginPassword,
-            email_confirm: true,
-            user_metadata: { full_name: full_name || '', phone_number: normalizedPhone },
+            password: oldPw,
           });
-          if (!createErr) {
-            const { data: retry, error: retryErr } = await signInDirect(derivedEmail);
-            if (retryErr) {
-              console.error('Authentication error');
-              return new Response(
-                JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
-                { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-              );
+          if (!oldErr && oldData?.session) {
+            session = oldData.session;
+            // Migrate to stable password in background
+            supabase.auth.admin.updateUserById(oldData.session.user.id, {
+              password: loginPassword,
+            }).catch(() => {});
+            break;
+          }
+        }
+
+        if (!session) {
+          // If sign-in failed, try to recover the account password if user exists
+          if (isWhitelistedPhone || isTestPhone) {
+            // Auto-provision for whitelisted/test numbers
+            const { data: created, error: createErr } = await supabase.auth.admin.createUser({
+              email: derivedEmail,
+              password: loginPassword,
+              email_confirm: true,
+              user_metadata: { full_name: full_name || '', phone_number: normalizedPhone },
+            });
+            if (!createErr) {
+              const { data: retry, error: retryErr } = await signInDirect(derivedEmail);
+              if (retryErr) {
+                console.error('Authentication error');
+                return new Response(
+                  JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
+                  { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                );
+              }
+              session = retry.session;
             }
-            session = retry.session;
-          } else {
-            // If already exists, fall through to recovery
           }
         }
 
@@ -341,6 +383,7 @@ serve(async (req) => {
             );
           }
 
+          // Update password as last resort (will invalidate other sessions - unavoidable)
           await supabase.auth.admin.updateUserById(profile.user_id, {
             password: loginPassword,
             email_confirm: true,
