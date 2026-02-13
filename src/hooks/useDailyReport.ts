@@ -175,7 +175,7 @@ const createCompanyExpenseRow = (): StaffReportRow => ({
 });
 
 export function useDailyReport() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   
   // Get module key from URL for module-specific reports
@@ -197,7 +197,22 @@ export function useDailyReport() {
     }
     return new Date();
   });
-  
+
+  // Sync reportDate to URL so refresh preserves the selected date
+  useEffect(() => {
+    const dateStr = toLocalDateString(reportDate);
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      newParams.set('date', dateStr);
+      return newParams;
+    }, { replace: true });
+  }, [reportDate, setSearchParams]);
+
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, []);
+
   // Data state
   const [orders, setOrders] = useState<Order[]>([]);
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);

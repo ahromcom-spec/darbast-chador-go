@@ -364,7 +364,7 @@ const isAggregatedModule = (moduleKey: string, moduleName?: string): boolean => 
 
 export default function DailyReportModule() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const activeModuleKey = searchParams.get('moduleKey') || 'daily_report';
 
   const { moduleName } = useModuleAssignmentInfo(activeModuleKey, DEFAULT_TITLE, DEFAULT_DESCRIPTION);
@@ -430,6 +430,22 @@ export default function DailyReportModule() {
     }
     return new Date();
   });
+
+  // Sync reportDate to URL so refresh preserves the selected date
+  useEffect(() => {
+    const dateStr = toLocalDateString(reportDate);
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      newParams.set('date', dateStr);
+      return newParams;
+    }, { replace: true });
+  }, [reportDate, setSearchParams]);
+
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, []);
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
   const [orderReports, setOrderReports] = useState<OrderReportRow[]>([]);
