@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { recalculateBankCardBalance } from './useBankCardRealtimeSync';
 
 export function useDailyReportBulkDelete(onSuccess?: () => void) {
   const { toast } = useToast();
@@ -39,6 +40,21 @@ export function useDailyReportBulkDelete(onSuccess?: () => void) {
     try {
       const ids = Array.from(selectedReportIds);
 
+      // Delete bank card transactions linked to these reports and recalculate balances
+      const { data: linkedStaff } = await supabase
+        .from('daily_report_staff')
+        .select('bank_card_id')
+        .in('daily_report_id', ids)
+        .not('bank_card_id', 'is', null);
+
+      const affectedCardIds = [...new Set((linkedStaff || []).map(s => s.bank_card_id).filter(Boolean))] as string[];
+
+      await supabase
+        .from('bank_card_transactions')
+        .delete()
+        .eq('reference_type', 'daily_report_staff')
+        .in('reference_id', ids);
+
       // Delete related records first
       const { error: ordersError } = await supabase
         .from('daily_report_orders')
@@ -51,6 +67,11 @@ export function useDailyReportBulkDelete(onSuccess?: () => void) {
         .delete()
         .in('daily_report_id', ids);
       if (staffError) throw staffError;
+
+      // Recalculate affected bank card balances
+      for (const cardId of affectedCardIds) {
+        await recalculateBankCardBalance(cardId);
+      }
 
       // Delete the reports
       const { error } = await supabase
