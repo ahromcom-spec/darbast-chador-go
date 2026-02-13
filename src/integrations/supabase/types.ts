@@ -4781,7 +4781,7 @@ export type Database = {
         }[]
       }
       get_module_lock_status: {
-        Args: { p_module_date?: string; p_module_key: string }
+        Args: { p_module_date: string; p_module_key: string }
         Returns: Json
       }
       get_my_projects_v3: {
