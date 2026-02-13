@@ -142,33 +142,38 @@ serve(async (req) => {
 
       // تلاش برای ورود
       let session;
+      console.log('[MULTI-DEVICE] Password login attempt for:', normalizedPhone);
       const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ 
         email: derivedEmail, 
         password: loginPassword 
       });
 
       if (!signInErr && signInData?.session) {
+        console.log('[MULTI-DEVICE] ✅ Stable password login SUCCESS - no session invalidation');
         session = signInData.session;
       } else {
+        console.log('[MULTI-DEVICE] ⚠️ Stable password failed, trying old passwords...', signInErr?.message);
         // Try old password formats first (doesn't invalidate sessions)
+        let migratedFromOld = false;
         for (const oldPw of oldPasswords) {
           const { data: oldData, error: oldErr } = await supabase.auth.signInWithPassword({
             email: derivedEmail,
             password: oldPw,
           });
           if (!oldErr && oldData?.session) {
+            console.log('[MULTI-DEVICE] ✅ Old password login SUCCESS');
             session = oldData.session;
-            // Migrate password in background WITHOUT invalidating sessions
-            // We'll use admin API but only after we already have a valid session
-            const userId = oldData.session.user.id;
-            supabase.auth.admin.updateUserById(userId, {
-              password: loginPassword,
-            }).catch(() => {});
+            migratedFromOld = true;
+            // Migrate password in background - NOTE: updateUserById WITH password WILL invalidate other sessions!
+            // Instead, we skip the migration here to preserve multi-device sessions
+            // The next login will also succeed with the old password
+            console.log('[MULTI-DEVICE] Skipping password migration to preserve other sessions');
             break;
           }
         }
 
         if (!session) {
+          console.log('[MULTI-DEVICE] ⚠️ All password attempts failed, creating/recovering user...');
           // اگر کاربر وجود ندارد، ایجاد کاربر جدید
           const { data: created, error: createErr } = await supabase.auth.admin.createUser({
             email: derivedEmail,
@@ -178,6 +183,7 @@ serve(async (req) => {
           });
 
           if (createErr) {
+            console.log('[MULTI-DEVICE] User exists, updating password (will invalidate other sessions)...');
             // اگر کاربر قبلاً وجود دارد، بروزرسانی رمز عبور
             const { data: profile } = await supabase
               .from('profiles')
@@ -321,11 +327,14 @@ serve(async (req) => {
       }
     } else {
       // Login flow
+      console.log('[MULTI-DEVICE] OTP login attempt for:', normalizedPhone);
       const { data: signInData, error: signInErr } = await signInDirect(derivedEmail);
       if (!signInErr && signInData?.session) {
+        console.log('[MULTI-DEVICE] ✅ OTP stable password login SUCCESS');
         session = signInData.session;
       } else {
-        // Try old password formats before resorting to updateUserById (which invalidates all sessions)
+        console.log('[MULTI-DEVICE] ⚠️ OTP stable password failed:', signInErr?.message);
+        // Try old password formats - do NOT migrate to preserve other sessions
         const oldOtpPasswords = [
           `whitelist-${normalizedPhone}-x`,
         ];
@@ -335,11 +344,9 @@ serve(async (req) => {
             password: oldPw,
           });
           if (!oldErr && oldData?.session) {
+            console.log('[MULTI-DEVICE] ✅ Old OTP password SUCCESS - skipping migration');
             session = oldData.session;
-            // Migrate to stable password in background
-            supabase.auth.admin.updateUserById(oldData.session.user.id, {
-              password: loginPassword,
-            }).catch(() => {});
+            // Do NOT call updateUserById - it invalidates all other sessions!
             break;
           }
         }
@@ -369,7 +376,7 @@ serve(async (req) => {
         }
 
         if (!session) {
-          // Last resort: lookup by phone in profiles to avoid quota-heavy listUsers
+          // Last resort: lookup by phone in profiles
           const { data: profile, error: profileErr } = await supabase
             .from('profiles')
             .select('user_id')
@@ -383,7 +390,7 @@ serve(async (req) => {
             );
           }
 
-          // Update password as last resort (will invalidate other sessions - unavoidable)
+          console.log('[MULTI-DEVICE] ⚠️ Last resort: updating password (WILL invalidate other sessions)');
           await supabase.auth.admin.updateUserById(profile.user_id, {
             password: loginPassword,
             email_confirm: true,
