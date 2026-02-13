@@ -4918,6 +4918,10 @@ export type Database = {
         Args: { photo_ids: string[] }
         Returns: undefined
       }
+      is_assigned_to_module: {
+        Args: { _module_key: string; _user_id: string }
+        Returns: boolean
+      }
       log_audit:
         | {
             Args: {
