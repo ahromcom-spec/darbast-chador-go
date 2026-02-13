@@ -1036,8 +1036,8 @@ export default function DailyReportModule() {
           .insert(
             staffToSave.map((s) => ({
               daily_report_id: reportId,
-              // Use real_user_id if available, otherwise check if staff_user_id is UUID
-              staff_user_id: s.real_user_id || (isUuid(s.staff_user_id) ? s.staff_user_id : null),
+              // Only use real_user_id (verified auth.users UUID) to avoid FK violations
+              staff_user_id: s.real_user_id || null,
               staff_name: s.staff_name || '',
               work_status: toDbWorkStatus(s.work_status),
               overtime_hours: s.overtime_hours,
@@ -3039,7 +3039,7 @@ export default function DailyReportModule() {
     if (uniqueStaffToSave.length > 0) {
       const staffPayload = uniqueStaffToSave.map((s) => ({
         daily_report_id: reportId,
-        staff_user_id: s.real_user_id || (isUuid(s.staff_user_id) ? s.staff_user_id : null),
+        staff_user_id: s.real_user_id || null,
         staff_name: s.staff_name || '',
         work_status: toDbWorkStatus(s.work_status),
         overtime_hours: s.overtime_hours || 0,
@@ -3267,7 +3267,7 @@ export default function DailyReportModule() {
 
         const staffPayload = deduplicatedStaff.map((s) => ({
           daily_report_id: reportId,
-          staff_user_id: s.real_user_id || (isUuid(s.staff_user_id) ? s.staff_user_id : null),
+          staff_user_id: s.real_user_id || null,
           staff_name: s.staff_name || '',
           work_status: toDbWorkStatus(s.work_status),
           overtime_hours: s.overtime_hours || 0,
@@ -3495,8 +3495,8 @@ export default function DailyReportModule() {
     if (staffToSave.length > 0) {
       const staffPayload = staffToSave.map((s) => ({
         daily_report_id: reportId,
-        // Use real_user_id if available, otherwise check if staff_user_id is UUID
-        staff_user_id: s.real_user_id || (isUuid(s.staff_user_id) ? s.staff_user_id : null),
+        // Only use real_user_id (verified auth.users UUID) to avoid FK violations
+        staff_user_id: s.real_user_id || null,
         staff_name: s.staff_name || '',
         work_status: toDbWorkStatus(s.work_status),
         overtime_hours: s.overtime_hours || 0,
