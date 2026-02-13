@@ -4478,7 +4478,7 @@ export default function DailyReportModule() {
                                           onValueChange={(value) => updateStaffRow(index, 'bank_card_id', value)}
                                           placeholder="انتخاب کارت بانکی"
                                           showBalance={true}
-                                          onlyManagementCards={moduleName?.includes('مدیریت') ?? false}
+                                          showManagementCards={moduleName?.includes('مدیریت') ?? false}
                                         />
                                      </div>
                                    )
