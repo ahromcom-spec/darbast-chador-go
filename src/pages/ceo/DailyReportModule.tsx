@@ -3931,25 +3931,74 @@ export default function DailyReportModule() {
     };
   }, [orderReports, staffReports, dailyNotes]);
 
-  // Restore data from version history and flag for save
-  const handleRestoreVersion = useCallback((data: any) => {
-    if (data.orderReports) setOrderReports(data.orderReports);
-    if (data.staffReports) setStaffReports(data.staffReports);
-    if (data.dailyNotes !== undefined) setDailyNotes(data.dailyNotes);
-    pendingRestoreSaveRef.current = true;
-  }, []);
+  // Restore data from version history and persist to database
+  const handleRestoreVersion = useCallback(async (data: any) => {
+    const restoredOrders = data.orderReports || orderReports;
+    const restoredStaff = data.staffReports || staffReports;
+    const restoredNotes = data.dailyNotes !== undefined ? data.dailyNotes : dailyNotes;
 
-  // Save to database after version restore state updates
-  useEffect(() => {
-    if (pendingRestoreSaveRef.current) {
-      pendingRestoreSaveRef.current = false;
-      saveReport().then((success) => {
-        if (success) {
-          toast.success('داده‌های بازیابی شده در دیتابیس ذخیره شدند');
+    // 1. Sync refs immediately so saveReport reads correct data
+    orderReportsRef.current = restoredOrders;
+    staffReportsRef.current = restoredStaff;
+    dailyNotesRef.current = restoredNotes;
+
+    // 2. Update React state for UI
+    setOrderReports(restoredOrders);
+    setStaffReports(restoredStaff);
+    setDailyNotes(restoredNotes);
+
+    // 3. Mark current date as dirty in cache so saveReport picks it up
+    const currentDateStr = toLocalDateString(reportDate);
+    dateCache.cacheDate(currentDateStr, {
+      orderReports: restoredOrders,
+      staffReports: restoredStaff,
+      dailyNotes: restoredNotes,
+      existingReportId: existingReportId,
+    }, true);
+
+    // 4. Persist to database directly
+    try {
+      setSaving(true);
+      isDeletingRowRef.current = true;
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+
+      await saveRegularReportForDate(
+        currentDateStr,
+        {
+          orderReports: restoredOrders,
+          staffReports: restoredStaff,
+          dailyNotes: restoredNotes,
+          existingReportId: existingReportId,
+        },
+        reportDate
+      );
+
+      dateCache.markDateAsSaved(currentDateStr);
+      updateInitialDataHash();
+      setIsSaved(true);
+      toast.success('داده‌های بازیابی شده در دیتابیس ذخیره شدند');
+
+      // Save version for audit trail
+      if (saveVersionRef.current && !isAggregated) {
+        try {
+          await saveVersionRef.current({ orderReports: restoredOrders, staffReports: restoredStaff, dailyNotes: restoredNotes });
+        } catch (e) {
+          console.error('Error saving version history:', e);
         }
-      });
+      }
+
+      fetchSavedReports();
+    } catch (error: any) {
+      console.error('Error saving restored version:', error);
+      toast.error(`خطا در ذخیره داده‌های بازیابی شده: ${error?.message || 'خطای نامشخص'}`);
+    } finally {
+      setSaving(false);
+      isDeletingRowRef.current = false;
     }
-  }, [orderReports, staffReports, dailyNotes]);
+  }, [reportDate, existingReportId, isAggregated, dateCache]);
 
   return (
     <ModuleLayout
