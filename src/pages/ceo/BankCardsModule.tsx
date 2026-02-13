@@ -3,9 +3,10 @@ import { ModuleLayout } from '@/components/layouts/ModuleLayout';
 import { BankCardsList } from '@/components/bank-cards/BankCardsList';
 import { BankCardForm } from '@/components/bank-cards/BankCardForm';
 import { BankCardTransactions } from '@/components/bank-cards/BankCardTransactions';
+import { BankCardTransferDialog } from '@/components/bank-cards/BankCardTransferDialog';
 import { useBankCards, BankCard } from '@/hooks/useBankCards';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CreditCard, History, Plus, RefreshCw } from 'lucide-react';
+import { CreditCard, History, Plus, RefreshCw, ArrowLeftRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { recalculateAllBankCardBalances } from '@/hooks/useBankCardRealtimeSync';
@@ -23,6 +24,8 @@ export default function BankCardsModule() {
   const [editingCard, setEditingCard] = useState<BankCard | null>(null);
   const [viewingCard, setViewingCard] = useState<BankCard | null>(null);
   const [isRecalculating, setIsRecalculating] = useState(false);
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [transferFromCardId, setTransferFromCardId] = useState<string | undefined>();
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   // Setup realtime subscription for daily_report_staff changes
@@ -82,6 +85,11 @@ export default function BankCardsModule() {
     setViewingCard(card);
   };
 
+  const handleTransfer = (fromCardId?: string) => {
+    setTransferFromCardId(fromCardId);
+    setIsTransferOpen(true);
+  };
+
   // Manual recalculation of all balances
   const handleRecalculateAll = async () => {
     setIsRecalculating(true);
@@ -119,6 +127,14 @@ export default function BankCardsModule() {
           <div className="flex items-center gap-2">
             <Button 
               variant="outline" 
+              onClick={() => handleTransfer()}
+              className="gap-2"
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+              انتقال بین کارت‌ها
+            </Button>
+            <Button 
+              variant="outline" 
               onClick={handleRecalculateAll}
               disabled={isRecalculating}
               className="gap-2"
@@ -153,6 +169,7 @@ export default function BankCardsModule() {
               onDelete={deleteCard}
               onToggleStatus={toggleCardStatus}
               onViewTransactions={handleViewTransactions}
+              onTransfer={(cardId) => handleTransfer(cardId)}
             />
           </TabsContent>
 
@@ -239,6 +256,15 @@ export default function BankCardsModule() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Transfer Dialog */}
+        <BankCardTransferDialog
+          open={isTransferOpen}
+          onOpenChange={setIsTransferOpen}
+          cards={cards}
+          onTransferComplete={fetchCards}
+          defaultFromCardId={transferFromCardId}
+        />
       </div>
     </ModuleLayout>
   );
