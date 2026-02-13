@@ -124,6 +124,7 @@ export function ModuleLockWrapper({
         isReadOnly={isReadOnly}
         isLoading={isLoading}
         isMine={lockStatus.isMine}
+        lockedBy={lockStatus.lockedBy}
         lockedByName={lockStatus.lockedByName}
         onTakeControl={acquireLock}
         onReleaseControl={releaseLock}

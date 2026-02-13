@@ -36,6 +36,7 @@ interface ModuleLockStatusBarProps {
   isReadOnly: boolean;
   isLoading: boolean;
   isMine: boolean;
+  lockedBy: string | null;
   lockedByName: string | null;
   onTakeControl: () => void;
   onReleaseControl?: () => void;
@@ -53,6 +54,7 @@ export function ModuleLockStatusBar({
   isReadOnly,
   isLoading,
   isMine,
+  lockedBy,
   lockedByName,
   onTakeControl,
   onReleaseControl,
@@ -62,6 +64,9 @@ export function ModuleLockStatusBar({
   onSaveBeforeRelease,
   isSaving = false,
 }: ModuleLockStatusBarProps) {
+  // Determine if someone else has the lock (even without a name)
+  const isLockedByOther = !isMine && !!lockedBy;
+  const displayName = lockedByName || 'کاربر دیگر';
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showTakeoverDialog, setShowTakeoverDialog] = useState(false);
   const [savingBeforeRelease, setSavingBeforeRelease] = useState(false);
@@ -76,7 +81,7 @@ export function ModuleLockStatusBar({
 
   // Handle take control with confirmation if someone else has it
   const handleTakeControlClick = () => {
-    if (lockedByName) {
+    if (isLockedByOther) {
       setShowTakeoverDialog(true);
     } else {
       onTakeControl();
@@ -119,11 +124,11 @@ export function ModuleLockStatusBar({
       <div
         className={cn(
           'flex items-center justify-between gap-2 px-4 py-2 rounded-lg border text-sm',
-          isMine 
-            ? 'bg-primary/10 border-primary/30'
-            : lockedByName
-              ? 'bg-destructive/10 border-destructive/30'
-              : 'bg-amber-50 border-amber-200'
+        isMine 
+          ? 'bg-primary/10 border-primary/30'
+          : isLockedByOther
+            ? 'bg-destructive/10 border-destructive/30'
+            : 'bg-amber-50 border-amber-200'
         )}
       >
         <div className="flex items-center gap-2">
@@ -145,12 +150,12 @@ export function ModuleLockStatusBar({
                 </Badge>
               )}
             </>
-          ) : lockedByName ? (
+          ) : isLockedByOther ? (
             <>
               <Lock className="h-4 w-4 text-destructive" />
               <span className="text-destructive">
                 در حال ویرایش توسط:{' '}
-                <strong className="font-semibold">{lockedByName}</strong>
+                <strong className="font-semibold">{displayName}</strong>
               </span>
               <Badge variant="secondary" className="bg-destructive/10 text-destructive border-destructive/30">
                 <Lock className="h-3 w-3 ml-1" />
@@ -222,9 +227,9 @@ export function ModuleLockStatusBar({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>کنترل ویرایش را بگیرید</p>
-                  {lockedByName && (
+                  {isLockedByOther && (
                     <p className="text-xs text-muted-foreground">
-                      داده‌های {lockedByName} ذخیره خواهند شد
+                      داده‌های {displayName} ذخیره خواهند شد
                     </p>
                   )}
                 </TooltipContent>
@@ -315,7 +320,7 @@ export function ModuleLockStatusBar({
               کنترل در دست کاربر دیگر
             </AlertDialogTitle>
             <AlertDialogDescription className="text-right">
-              <strong>{lockedByName}</strong> در حال حاضر کنترل ویرایش این گزارش را در دست دارد.
+              <strong>{displayName}</strong> در حال حاضر کنترل ویرایش این گزارش را در دست دارد.
               <br />
               آیا می‌خواهید کنترل را از ایشان بگیرید؟ در این صورت دسترسی ویرایش ایشان قطع خواهد شد.
             </AlertDialogDescription>

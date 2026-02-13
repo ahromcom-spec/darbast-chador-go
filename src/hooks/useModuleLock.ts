@@ -18,6 +18,7 @@ interface UseModuleLockOptions {
   moduleKey: string;
   moduleDate?: string; // YYYY-MM-DD format
   onForceTakeover?: (previousOwnerId: string) => Promise<void>;
+  onLockTakenFromMe?: () => void;
   autoAcquire?: boolean;
 }
 
@@ -45,6 +46,7 @@ export function useModuleLock({
   moduleKey,
   moduleDate,
   onForceTakeover,
+  onLockTakenFromMe,
   autoAcquire = false,
 }: UseModuleLockOptions): UseModuleLockReturn {
   const { user } = useAuth();
@@ -52,6 +54,7 @@ export function useModuleLock({
   const [isLoading, setIsLoading] = useState(true);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const wasMineRef = useRef(false);
 
   // Get today's date in YYYY-MM-DD format if not provided
   const effectiveDate = moduleDate || new Date().toISOString().split('T')[0];
@@ -187,6 +190,16 @@ export function useModuleLock({
       };
     }
   }, [lockStatus.isMine, refreshLock]);
+
+  // Detect when lock is taken from current user and trigger auto-save callback
+  useEffect(() => {
+    if (wasMineRef.current && !lockStatus.isMine) {
+      // Lock was taken from us
+      onLockTakenFromMe?.();
+      toast.warning('کنترل ویرایش توسط کاربر دیگری گرفته شد');
+    }
+    wasMineRef.current = lockStatus.isMine;
+  }, [lockStatus.isMine, onLockTakenFromMe]);
 
   // Set up realtime subscription
   useEffect(() => {
