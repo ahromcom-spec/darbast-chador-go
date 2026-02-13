@@ -135,9 +135,10 @@ serve(async (req) => {
       // رمز عبور درست است - ورود کاربر
       // Use stable password derived from phone number (not changing per login)
       const loginPassword = `stable-${normalizedPhone}-ahrom-x`;
-      // Old password formats to try before resorting to password update (which invalidates sessions)
+      // All known password formats to try before resorting to password update (which invalidates sessions)
       const oldPasswords = [
         `whitelist-${normalizedPhone}-x`,
+        `user-pwd-${normalizedPhone}-x`,
       ];
 
       // تلاش برای ورود
@@ -337,6 +338,7 @@ serve(async (req) => {
         // Try old password formats - do NOT migrate to preserve other sessions
         const oldOtpPasswords = [
           `whitelist-${normalizedPhone}-x`,
+          `user-pwd-${normalizedPhone}-x`,
         ];
         for (const oldPw of oldOtpPasswords) {
           const { data: oldData, error: oldErr } = await supabase.auth.signInWithPassword({
