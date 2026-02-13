@@ -279,8 +279,10 @@ export type Database = {
           created_by: string | null
           description: string | null
           id: string
+          module_name: string | null
           reference_id: string | null
           reference_type: string | null
+          report_date: string | null
           transaction_type: string
         }
         Insert: {
@@ -291,8 +293,10 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          module_name?: string | null
           reference_id?: string | null
           reference_type?: string | null
+          report_date?: string | null
           transaction_type: string
         }
         Update: {
@@ -303,8 +307,10 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          module_name?: string | null
           reference_id?: string | null
           reference_type?: string | null
+          report_date?: string | null
           transaction_type?: string
         }
         Relationships: [
