@@ -411,6 +411,9 @@ export default function DailyReportModule() {
   // Track initial state for unsaved changes detection
   const initialDataHashRef = useRef<string>('');
   
+  // Flag to trigger save after version restore
+  const pendingRestoreSaveRef = useRef(false);
+  
   // Initialize reportDate from URL parameter if available
   const [reportDate, setReportDate] = useState<Date>(() => {
     const dateParam = searchParams.get('date');
@@ -3928,12 +3931,25 @@ export default function DailyReportModule() {
     };
   }, [orderReports, staffReports, dailyNotes]);
 
-  // Restore data from version history
+  // Restore data from version history and flag for save
   const handleRestoreVersion = useCallback((data: any) => {
     if (data.orderReports) setOrderReports(data.orderReports);
     if (data.staffReports) setStaffReports(data.staffReports);
     if (data.dailyNotes !== undefined) setDailyNotes(data.dailyNotes);
+    pendingRestoreSaveRef.current = true;
   }, []);
+
+  // Save to database after version restore state updates
+  useEffect(() => {
+    if (pendingRestoreSaveRef.current) {
+      pendingRestoreSaveRef.current = false;
+      saveReport().then((success) => {
+        if (success) {
+          toast.success('داده‌های بازیابی شده در دیتابیس ذخیره شدند');
+        }
+      });
+    }
+  }, [orderReports, staffReports, dailyNotes]);
 
   return (
     <ModuleLayout
