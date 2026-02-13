@@ -30,6 +30,8 @@ interface BankCardSelectProps {
   showManagementCards?: boolean;
   /** When true, ONLY cards with "مدیریت" in their name are shown. Overrides showManagementCards. */
   onlyManagementCards?: boolean;
+  /** When provided, only cards whose IDs are in this list will be shown. Overrides other filters. */
+  allowedCardIds?: string[];
 }
 
 export function BankCardSelect({
@@ -40,6 +42,7 @@ export function BankCardSelect({
   showBalance = true,
   showManagementCards = false,
   onlyManagementCards = false,
+  allowedCardIds,
 }: BankCardSelectProps) {
   const [cards, setCards] = useState<BankCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -145,10 +148,11 @@ export function BankCardSelect({
 
   // Filter cards: hide management cards unless explicitly allowed
   const filteredCards = useMemo(() => {
+    if (allowedCardIds && allowedCardIds.length > 0) return cards.filter(card => allowedCardIds.includes(card.id));
     if (onlyManagementCards) return cards.filter(card => card.card_name.includes('مدیریت'));
     if (showManagementCards) return cards;
     return cards.filter(card => !card.card_name.includes('مدیریت'));
-  }, [cards, showManagementCards, onlyManagementCards]);
+  }, [cards, showManagementCards, onlyManagementCards, allowedCardIds]);
 
   if (loading) {
     return (
