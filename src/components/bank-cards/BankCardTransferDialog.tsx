@@ -17,8 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeftRight, CreditCard, Loader2 } from 'lucide-react';
+import { ArrowLeftRight, CreditCard, Loader2, CalendarDays } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
@@ -43,6 +44,7 @@ export function BankCardTransferDialog({
   const [toCardId, setToCardId] = useState('');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [transactionDate, setTransactionDate] = useState<string | undefined>(new Date().toISOString());
   const [saving, setSaving] = useState(false);
 
   const activeCards = cards.filter((c) => c.is_active);
@@ -80,6 +82,11 @@ export function BankCardTransferDialog({
       const fromNewBalance = fromCard.current_balance - parsedAmount;
       const toNewBalance = toCard.current_balance + parsedAmount;
 
+      // Build created_at from transactionDate or now
+      const createdAt = transactionDate
+        ? new Date(transactionDate).toISOString()
+        : new Date().toISOString();
+
       // Insert both transactions
       const { error: txError } = await supabase
         .from('bank_card_transactions')
@@ -93,6 +100,7 @@ export function BankCardTransferDialog({
             reference_type: 'card_transfer',
             reference_id: toCardId,
             created_by: user.id,
+            created_at: createdAt,
           },
           {
             bank_card_id: toCardId,
@@ -103,6 +111,7 @@ export function BankCardTransferDialog({
             reference_type: 'card_transfer',
             reference_id: fromCardId,
             created_by: user.id,
+            created_at: createdAt,
           },
         ]);
 
@@ -115,6 +124,7 @@ export function BankCardTransferDialog({
       setToCardId('');
       setAmount('');
       setDescription('');
+      setTransactionDate(new Date().toISOString());
       onOpenChange(false);
       onTransferComplete();
     } catch (error) {
@@ -131,6 +141,7 @@ export function BankCardTransferDialog({
       setToCardId('');
       setAmount('');
       setDescription('');
+      setTransactionDate(new Date().toISOString());
     }
     onOpenChange(val);
   };
@@ -207,6 +218,19 @@ export function BankCardTransferDialog({
               onChange={(e) => handleAmountChange(e.target.value)}
               className="text-lg font-semibold"
               dir="ltr"
+            />
+          </div>
+
+          {/* Transaction Date */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1">
+              <CalendarDays className="h-3.5 w-3.5" />
+              تاریخ تراکنش
+            </Label>
+            <PersianDatePicker
+              value={transactionDate}
+              onChange={(val) => setTransactionDate(val)}
+              placeholder="انتخاب تاریخ"
             />
           </div>
 
