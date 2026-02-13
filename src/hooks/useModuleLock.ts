@@ -168,7 +168,6 @@ export function useModuleLock({
       // If refresh failed, someone else took over
       if (!data) {
         await fetchLockStatus();
-        toast.warning('کنترل ویرایش توسط کاربر دیگری گرفته شد');
       }
     } catch (error) {
       console.error('Error refreshing lock:', error);
