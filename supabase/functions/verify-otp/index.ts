@@ -133,7 +133,8 @@ serve(async (req) => {
       }
 
       // رمز عبور درست است - ورود کاربر
-      const loginPassword = `whitelist-${normalizedPhone}-x`;
+      // Use stable password derived from phone number (not changing per login)
+      const loginPassword = `stable-${normalizedPhone}-ahrom-x`;
 
       // تلاش برای ورود
       let session;
@@ -221,7 +222,9 @@ serve(async (req) => {
       );
     }
     
-    const loginPassword = `otp-${normalizedCode}-x`;
+    // Use a stable password derived from phone number (not OTP code) 
+    // so existing sessions on other devices are NOT invalidated
+    const loginPassword = `stable-${normalizedPhone}-ahrom-x`;
 
     // Run OTP verification
     const { data: otpResult } = await supabase.rpc('verify_otp_code', { 
