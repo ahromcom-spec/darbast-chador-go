@@ -63,6 +63,7 @@ export function ModuleLockStatusBar({
   isSaving = false,
 }: ModuleLockStatusBarProps) {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showTakeoverDialog, setShowTakeoverDialog] = useState(false);
   const [savingBeforeRelease, setSavingBeforeRelease] = useState(false);
 
   const formatTime = (dateStr: string) => {
@@ -71,6 +72,15 @@ export function ModuleLockStatusBar({
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  // Handle take control with confirmation if someone else has it
+  const handleTakeControlClick = () => {
+    if (lockedByName) {
+      setShowTakeoverDialog(true);
+    } else {
+      onTakeControl();
+    }
   };
 
   // Handle release control with optional save
@@ -198,7 +208,7 @@ export function ModuleLockStatusBar({
                   <Button
                     variant="default"
                     size="sm"
-                    onClick={onTakeControl}
+                    onClick={handleTakeControlClick}
                     disabled={isLoading}
                     className="gap-1"
                   >
@@ -291,6 +301,43 @@ export function ModuleLockStatusBar({
                 <Save className="h-4 w-4" />
               )}
               ذخیره و تغییر
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Takeover Confirmation Dialog */}
+      <AlertDialog open={showTakeoverDialog} onOpenChange={setShowTakeoverDialog}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5 text-destructive" />
+              کنترل در دست کاربر دیگر
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-right">
+              <strong>{lockedByName}</strong> در حال حاضر کنترل ویرایش این گزارش را در دست دارد.
+              <br />
+              آیا می‌خواهید کنترل را از ایشان بگیرید؟ در این صورت دسترسی ویرایش ایشان قطع خواهد شد.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowTakeoverDialog(false)}
+              className="w-full sm:w-auto"
+            >
+              انصراف
+            </Button>
+            <Button
+              variant="default"
+              onClick={() => {
+                setShowTakeoverDialog(false);
+                onTakeControl();
+              }}
+              className="w-full sm:w-auto gap-2"
+            >
+              <LockOpen className="h-4 w-4" />
+              بله، کنترل را بگیر
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
