@@ -194,7 +194,7 @@ export function BankCardTransactions({ card, getTransactions }: BankCardTransact
               </div>
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <span className="font-semibold">
                     {tx.transaction_type === 'deposit' ? 'واریز' : 'برداشت'}
                   </span>
@@ -203,14 +203,24 @@ export function BankCardTransactions({ card, getTransactions }: BankCardTransact
                       {getReferenceLabel(tx.reference_type)}
                     </Badge>
                   )}
+                  {tx.module_name && (
+                    <Badge variant="secondary" className="text-xs">
+                      {tx.module_name}
+                    </Badge>
+                  )}
                 </div>
                 {tx.description && (
                   <p className="text-sm text-muted-foreground truncate">
                     {tx.description}
                   </p>
                 )}
-                <div className="text-xs text-muted-foreground mt-1">
-                  {format(new Date(tx.created_at), 'yyyy/MM/dd - HH:mm')}
+                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
+                  <span>{format(new Date(tx.created_at), 'yyyy/MM/dd - HH:mm')}</span>
+                  {tx.report_date && (
+                    <span className="text-xs text-primary/70">
+                      📅 تاریخ گزارش: {format(new Date(tx.report_date + 'T00:00:00'), 'yyyy/MM/dd')}
+                    </span>
+                  )}
                 </div>
               </div>
 

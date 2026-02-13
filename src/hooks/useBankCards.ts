@@ -30,6 +30,9 @@ export interface BankCardTransaction {
   reference_id: string | null;
   created_by: string | null;
   created_at: string;
+  // Enriched fields for daily report transactions
+  module_name?: string | null;
+  report_date?: string | null;
 }
 
 export interface CreateBankCardData {
@@ -264,7 +267,66 @@ export function useBankCards() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return (data || []) as BankCardTransaction[];
+      const transactions = (data || []) as BankCardTransaction[];
+
+      // Enrich daily_report_staff transactions with module name and report date
+      const dailyReportTxs = transactions.filter(
+        (tx) => tx.reference_type === 'daily_report_staff' && tx.reference_id
+      );
+
+      if (dailyReportTxs.length > 0) {
+        const staffIds = dailyReportTxs.map((tx) => tx.reference_id!);
+        
+        // Get daily_report_staff -> daily_reports info
+        const { data: staffRows } = await supabase
+          .from('daily_report_staff')
+          .select('id, daily_report_id')
+          .in('id', staffIds);
+
+        if (staffRows && staffRows.length > 0) {
+          const reportIds = [...new Set(staffRows.map((s) => s.daily_report_id))];
+          
+          const { data: reports } = await supabase
+            .from('daily_reports')
+            .select('id, module_key, report_date')
+            .in('id', reportIds);
+
+          // Get module names
+          const moduleKeys = [...new Set((reports || []).map((r) => r.module_key).filter(Boolean))] as string[];
+          let moduleNameMap = new Map<string, string>();
+          
+          if (moduleKeys.length > 0) {
+            const { data: modules } = await supabase
+              .from('module_assignments')
+              .select('module_key, module_name')
+              .in('module_key', moduleKeys);
+            
+            (modules || []).forEach((m) => {
+              if (!moduleNameMap.has(m.module_key)) {
+                moduleNameMap.set(m.module_key, m.module_name);
+              }
+            });
+          }
+
+          // Build lookup maps
+          const staffToReport = new Map(staffRows.map((s) => [s.id, s.daily_report_id]));
+          const reportMap = new Map((reports || []).map((r) => [r.id, r]));
+
+          // Enrich transactions
+          for (const tx of dailyReportTxs) {
+            const reportId = staffToReport.get(tx.reference_id!);
+            if (reportId) {
+              const report = reportMap.get(reportId);
+              if (report) {
+                tx.report_date = report.report_date;
+                tx.module_name = report.module_key ? (moduleNameMap.get(report.module_key) || report.module_key) : null;
+              }
+            }
+          }
+        }
+      }
+
+      return transactions;
     } catch (error) {
       console.error('Error fetching transactions:', error);
       return [];
