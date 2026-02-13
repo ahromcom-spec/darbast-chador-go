@@ -264,6 +264,7 @@ export function useBankCards() {
         .from('bank_card_transactions')
         .select('*')
         .eq('bank_card_id', cardId)
+        .order('report_date', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
 
       if (error) throw error;
