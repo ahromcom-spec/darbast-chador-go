@@ -1,13 +1,18 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 
 const ZOOM_LEVELS = [0.5, 0.6, 0.7, 0.85, 1, 1.15, 1.3, 1.5] as const;
+const DEFAULT_INDEX = 4; // 100%
 const STORAGE_KEY = 'site-zoom-level';
 
 export const useInternalZoom = () => {
-  const [zoomIndex, setZoomIndex] = useState(4); // Default to 100% (index 4)
+  const [zoomIndex, setZoomIndex] = useState(DEFAULT_INDEX);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const location = useLocation();
+  const prevPathRef = useRef(location.pathname);
 
-  // Detect desktop environment (Windows, macOS, Linux, or mobile "Desktop site" mode)
+  // Detect environment
   useEffect(() => {
     const ua = navigator.userAgent.toLowerCase();
     const desktop =
@@ -15,11 +20,11 @@ export const useInternalZoom = () => {
       ua.includes('macintosh') ||
       ua.includes('linux x86') ||
       ua.includes('cros') ||
-      // "Desktop site" on mobile Chrome often sets a desktop UA or renders wide viewport
       (window.innerWidth >= 980 && !ua.includes('mobile'));
     setIsDesktop(desktop);
+    setIsMobile(!desktop);
 
-    // Load saved zoom level
+    // Only restore saved zoom on desktop
     if (desktop) {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved !== null) {
@@ -29,26 +34,28 @@ export const useInternalZoom = () => {
         }
       }
     }
+    // On mobile, always start at 100% (default) — no restore from storage
   }, []);
 
-  // Apply zoom to #root (NOT html/body) so that portals rendered at <body> level
-  // are outside the zoom context. This means getBoundingClientRect() returns screen
-  // coords and portal positioning works correctly without zoom compensation.
+  // Reset zoom to 100% on route change (mobile only)
   useEffect(() => {
-    if (!isDesktop) return;
+    if (!isMobile) return;
+    if (prevPathRef.current !== location.pathname) {
+      prevPathRef.current = location.pathname;
+      setZoomIndex(DEFAULT_INDEX);
+    }
+  }, [location.pathname, isMobile]);
 
+  // Apply zoom to #root
+  useEffect(() => {
     const zoomValue = ZOOM_LEVELS[zoomIndex];
     const root = document.documentElement;
     const appRoot = document.getElementById('root');
-    
-    // Store zoom value as a CSS variable for JavaScript access
+
     root.style.setProperty('--app-zoom', String(zoomValue));
-    
-    // Remove any zoom from html/body (legacy cleanup)
     root.style.removeProperty('zoom');
     document.body.style.removeProperty('zoom');
-    
-    // Apply zoom to #root only
+
     if (appRoot) {
       if (zoomValue === 1) {
         appRoot.style.removeProperty('zoom');
@@ -57,8 +64,10 @@ export const useInternalZoom = () => {
       }
     }
 
-    // Save to localStorage
-    localStorage.setItem(STORAGE_KEY, String(zoomIndex));
+    // Only persist on desktop
+    if (isDesktop) {
+      localStorage.setItem(STORAGE_KEY, String(zoomIndex));
+    }
 
     return () => {
       root.style.removeProperty('--app-zoom');
@@ -77,34 +86,25 @@ export const useInternalZoom = () => {
   }, []);
 
   const resetZoom = useCallback(() => {
-    setZoomIndex(4);
+    setZoomIndex(DEFAULT_INDEX);
   }, []);
 
-  // Legacy: keep the event listener for backward compatibility but no longer force zoom reset
-  // Dropdowns now work correctly at any zoom level
-
-  // Handle keyboard and mouse wheel events
+  // Keyboard and mouse wheel events (desktop only)
   useEffect(() => {
     if (!isDesktop) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!e.ctrlKey) return;
-
-      // Ctrl + Plus or Ctrl + NumpadAdd or Ctrl + =
       if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') {
         e.preventDefault();
         zoomIn();
         return;
       }
-
-      // Ctrl + Minus or Ctrl + NumpadSubtract
       if (e.key === '-' || e.code === 'NumpadSubtract') {
         e.preventDefault();
         zoomOut();
         return;
       }
-
-      // Ctrl + 0 or Ctrl + Numpad0 (reset)
       if (e.key === '0' || e.code === 'Numpad0') {
         e.preventDefault();
         resetZoom();
@@ -114,16 +114,9 @@ export const useInternalZoom = () => {
 
     const handleWheel = (e: WheelEvent) => {
       if (!e.ctrlKey) return;
-
       e.preventDefault();
-      
-      if (e.deltaY < 0) {
-        // Scroll up = zoom in
-        zoomIn();
-      } else if (e.deltaY > 0) {
-        // Scroll down = zoom out
-        zoomOut();
-      }
+      if (e.deltaY < 0) zoomIn();
+      else if (e.deltaY > 0) zoomOut();
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -135,11 +128,11 @@ export const useInternalZoom = () => {
     };
   }, [isDesktop, zoomIn, zoomOut, resetZoom]);
 
-
   return {
     zoomLevel: ZOOM_LEVELS[zoomIndex],
     zoomPercentage: Math.round(ZOOM_LEVELS[zoomIndex] * 100),
     isDesktop,
+    isMobile,
     zoomIn,
     zoomOut,
     resetZoom
