@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Select,
@@ -26,6 +26,8 @@ interface BankCardSelectProps {
   placeholder?: string;
   disabled?: boolean;
   showBalance?: boolean;
+  /** When true, cards with "مدیریت" in their name are included. Default false (hidden). */
+  showManagementCards?: boolean;
 }
 
 export function BankCardSelect({
@@ -34,6 +36,7 @@ export function BankCardSelect({
   placeholder = 'انتخاب کارت بانکی',
   disabled = false,
   showBalance = true,
+  showManagementCards = false,
 }: BankCardSelectProps) {
   const [cards, setCards] = useState<BankCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,6 +140,12 @@ export function BankCardSelect({
     };
   }, [fetchCards, updateCardBalance]);
 
+  // Filter cards: hide management cards unless explicitly allowed
+  const filteredCards = useMemo(() => {
+    if (showManagementCards) return cards;
+    return cards.filter(card => !card.card_name.includes('مدیریت'));
+  }, [cards, showManagementCards]);
+
   if (loading) {
     return (
       <Select disabled>
@@ -147,7 +156,7 @@ export function BankCardSelect({
     );
   }
 
-  if (cards.length === 0) {
+  if (filteredCards.length === 0) {
     return (
       <Select disabled>
         <SelectTrigger>
@@ -187,7 +196,7 @@ export function BankCardSelect({
         <SelectItem value={NONE_VALUE}>
           <span className="text-muted-foreground">بدون کارت</span>
         </SelectItem>
-        {cards.map((card) => (
+        {filteredCards.map((card) => (
           <SelectItem key={card.id} value={card.id}>
             <div className="flex items-center justify-between gap-4 w-full">
               <div className="flex items-center gap-2">
