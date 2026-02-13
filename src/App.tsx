@@ -16,7 +16,7 @@ import { GlobalKeyboardShortcuts } from "@/components/common/GlobalKeyboardShort
 import { IncomingCallProvider } from "@/contexts/IncomingCallContext";
 import GlobalIncomingCallPopup from "@/components/calls/GlobalIncomingCallPopup";
 import { ZoomProvider } from "@/contexts/ZoomContext";
-import { MobileZoomControls } from "@/components/common/MobileZoomControls";
+
 
 import { AssistantAvatar } from '@/components/assistant/AssistantAvatar';
 import { useSiteAnalytics } from '@/hooks/useSiteAnalytics';
@@ -182,7 +182,7 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <ZoomProvider>
-              <MobileZoomControls />
+              
               <IncomingCallProvider>
                 {/* <PageLoadProgress /> */}
                 <AdminImpersonationBanner />
