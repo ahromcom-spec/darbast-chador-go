@@ -190,8 +190,9 @@ async function syncBankCardBalancesFromLedger(params: {
   reportDate: Date;
   userId: string;
   staffToSave: StaffReportRow[];
+  moduleName?: string;
 }) {
-  const { reportId, reportDate, userId, staffToSave } = params;
+  const { reportId, reportDate, userId, staffToSave, moduleName } = params;
 
   // فقط ردیف‌های «کارت/صندوق» روی موجودی کارت اثر دارند
   const cashBoxTotalsByCard = new Map<
@@ -296,6 +297,8 @@ async function syncBankCardBalancesFromLedger(params: {
             reference_type: 'daily_report_staff',
             reference_id: reportId,
             created_by: userId,
+            module_name: moduleName || null,
+            report_date: dateStr,
           });
         }
 
@@ -309,6 +312,8 @@ async function syncBankCardBalancesFromLedger(params: {
             reference_type: 'daily_report_staff',
             reference_id: reportId,
             created_by: userId,
+            module_name: moduleName || null,
+            report_date: dateStr,
           });
         }
 
@@ -1062,6 +1067,7 @@ export default function DailyReportModule() {
           reportDate,
           userId: user.id,
           staffToSave,
+          moduleName,
         });
       }
 
@@ -3070,6 +3076,7 @@ export default function DailyReportModule() {
         reportDate: tempReportDate,
         userId: user.id,
         staffToSave: uniqueStaffToSave,
+        moduleName,
       });
     }
   };
@@ -3297,6 +3304,7 @@ export default function DailyReportModule() {
           reportDate,
           userId: user.id,
           staffToSave: staffForReport,
+          moduleName,
         });
       }
     }
@@ -3527,6 +3535,7 @@ export default function DailyReportModule() {
         reportDate,
         userId: user.id,
         staffToSave,
+        moduleName,
       });
     }
   };
