@@ -92,15 +92,31 @@ export function useDateFinalizationLock({
       setIsLoading(true);
       
       if (lockStatus.isLocked) {
+        // Optimistic update - immediately show unlocked
+        setLockStatus(DEFAULT_STATUS);
+        
         // Unlock - delete the lock record
         const { error } = await supabase
           .from('daily_report_date_locks')
           .delete()
           .eq('report_date', reportDate);
 
-        if (error) throw error;
+        if (error) {
+          // Revert on error
+          await fetchLockStatus();
+          throw error;
+        }
         toast.success('قفل تثبیت تاریخ برداشته شد');
       } else {
+        // Optimistic update - immediately show locked
+        setLockStatus({
+          isLocked: true,
+          lockedBy: user.id,
+          lockedByName: null,
+          lockedAt: new Date().toISOString(),
+          lockedByModuleKey: 'aggregated',
+        });
+        
         // Lock - insert a lock record
         const { error } = await supabase
           .from('daily_report_date_locks')
@@ -111,6 +127,8 @@ export function useDateFinalizationLock({
           });
 
         if (error) {
+          // Revert on error
+          setLockStatus(DEFAULT_STATUS);
           if (error.code === '23505') {
             toast.error('این تاریخ قبلاً توسط کاربر دیگری قفل شده است');
           } else {
@@ -121,6 +139,7 @@ export function useDateFinalizationLock({
         toast.success('تاریخ تثبیت و قفل شد. ماژول‌های منبع دیگر قادر به ویرایش نیستند');
       }
 
+      // Fetch accurate status from DB
       await fetchLockStatus();
     } catch (error) {
       console.error('Error toggling date lock:', error);
@@ -142,8 +161,10 @@ export function useDateFinalizationLock({
           event: '*',
           schema: 'public',
           table: 'daily_report_date_locks',
+          filter: `report_date=eq.${reportDate}`,
         },
         () => {
+          // Immediately refetch lock status on any change
           fetchLockStatus();
         }
       )
