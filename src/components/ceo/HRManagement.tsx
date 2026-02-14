@@ -349,7 +349,7 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
       const { error } = await supabase
         .from('hr_employees')
         .insert({
-          phone_number: newPhoneNumber || '',
+          phone_number: newPhoneNumber || null,
           full_name: newFullName.trim(),
           position: newPositions.length > 0 ? newPositions.join('،') : null,
           department: newDepartments.length > 0 ? newDepartments.join('،') : null,
@@ -457,7 +457,7 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
         <Info className="h-4 w-4" />
         <AlertTitle>راهنما</AlertTitle>
         <AlertDescription className="text-sm mt-2 space-y-1">
-          <p>• وارد کردن <strong>شماره موبایل</strong> الزامی است</p>
+          <p>• وارد کردن <strong>شماره موبایل</strong> اختیاری است</p>
           <p>• اگر نیرو هنوز در اهرم ثبت‌نام نکرده، وضعیت "در انتظار ثبت‌نام" خواهد بود</p>
           <p>• پس از ثبت‌نام، وضعیت خودکار به "فعال" تغییر می‌کند</p>
           <p>• نیروهای ثبت‌شده در تنظیمات حقوق گزارش روزانه قابل انتخاب هستند</p>
