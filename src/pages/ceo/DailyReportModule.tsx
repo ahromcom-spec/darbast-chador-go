@@ -1701,7 +1701,23 @@ export default function DailyReportModule() {
         );
         const primaryReport = aggregatedModuleReport || existingReports[0];
         setExistingReportId(primaryReport?.id || null);
-        setDailyNotes(primaryReport?.notes || '');
+        
+        // در ماژول کلی: ترکیب توضیحات همه ماژول‌های منبع
+        if (isAggregated) {
+          const allNotes: string[] = [];
+          for (const r of existingReports) {
+            if (r.notes && r.notes.trim()) {
+              const moduleName = getModuleDisplayName(r.module_key || '');
+              const creatorId = reportToCreatorMap.get(r.id) || '';
+              const creatorName = creatorId ? creatorNamesCache.get(creatorId) : '';
+              const label = creatorName ? `${moduleName} (${creatorName})` : moduleName;
+              allNotes.push(`【${label}】: ${r.notes.trim()}`);
+            }
+          }
+          setDailyNotes(allNotes.length > 0 ? allNotes.join('\n') : '');
+        } else {
+          setDailyNotes(primaryReport?.notes || '');
+        }
 
         // واکشی کارت‌های بانکی برای نمایش در حالت تجمیعی
         const { data: bankCardsData } = await supabase
