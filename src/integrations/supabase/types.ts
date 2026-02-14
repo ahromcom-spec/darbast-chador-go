@@ -788,7 +788,7 @@ export type Database = {
           daily_report_id: string
           id: string
           notes: string | null
-          order_id: string
+          order_id: string | null
           row_color: string | null
           service_details: string | null
           team_name: string | null
@@ -800,7 +800,7 @@ export type Database = {
           daily_report_id: string
           id?: string
           notes?: string | null
-          order_id: string
+          order_id?: string | null
           row_color?: string | null
           service_details?: string | null
           team_name?: string | null
@@ -812,7 +812,7 @@ export type Database = {
           daily_report_id?: string
           id?: string
           notes?: string | null
-          order_id?: string
+          order_id?: string | null
           row_color?: string | null
           service_details?: string | null
           team_name?: string | null
