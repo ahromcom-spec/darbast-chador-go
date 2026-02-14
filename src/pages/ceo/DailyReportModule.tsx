@@ -1777,7 +1777,30 @@ export default function DailyReportModule() {
           const cashBoxRows = allStaffRows.filter(r => r.is_cash_box && !r.is_company_expense);
           const regularRows = allStaffRows.filter(r => !r.is_cash_box && !r.is_company_expense);
 
-          setStaffReports([...companyRows, ...cashBoxRows, ...regularRows]);
+          const finalStaff: StaffReportRow[] = [];
+          
+          // اگر ردیف ماهیت شرکت وجود ندارد، یکی اضافه کن
+          if (companyRows.length > 0) {
+            finalStaff.push(...companyRows);
+          } else {
+            finalStaff.push({
+              staff_user_id: null,
+              staff_name: 'ماهیت شرکت اهرم',
+              work_status: 'کارکرده',
+              overtime_hours: 0,
+              amount_received: 0,
+              receiving_notes: '',
+              amount_spent: 0,
+              spending_notes: '',
+              bank_card_id: null,
+              notes: '',
+              is_cash_box: false,
+              is_company_expense: true,
+            });
+          }
+          
+          finalStaff.push(...cashBoxRows, ...regularRows);
+          setStaffReports(finalStaff);
         } else {
           // ماژول کلی (isAggregated): ادغام نیروها - با تشخیص انواع مختلف
           const companyExpenseRows: StaffReportRow[] = [];
