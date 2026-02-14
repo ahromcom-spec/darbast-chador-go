@@ -144,7 +144,7 @@ export default function ExecutiveStageOrderExecuted() {
           // Fetch collection request date if exists
           const { data: collectionData } = await supabase
             .from('collection_requests')
-            .select('requested_date, status')
+            .select('requested_date, confirmed_date, status')
             .eq('order_id', order.id)
             .in('status', ['pending', 'approved'])
             .order('created_at', { ascending: false })

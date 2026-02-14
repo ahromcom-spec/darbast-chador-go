@@ -157,6 +157,7 @@ interface Order {
   subcategory_code?: string | null;
   collection_request?: {
     requested_date: string | null;
+    confirmed_date: string | null;
     status: string;
     created_at: string;
   } | null;
@@ -386,7 +387,7 @@ export default function ExecutiveOrders() {
           // Fetch collection request data
           const { data: collectionRequestData } = await supabase
             .from('collection_requests')
-            .select('requested_date, status, created_at')
+            .select('requested_date, confirmed_date, status, created_at')
             .eq('order_id', order.id)
             .order('created_at', { ascending: false })
             .limit(1)
@@ -1723,6 +1724,18 @@ export default function ExecutiveOrders() {
                             day: 'numeric',
                             hour: '2-digit',
                             minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    )}
+                    {order.collection_request.confirmed_date && (
+                      <div className="mt-2 text-sm bg-green-100 dark:bg-green-900/30 p-2 rounded">
+                        <span className="text-green-700 dark:text-green-300 font-medium">✓ تاریخ جمع‌آوری تثبیت شده: </span>
+                        <span className="font-bold text-green-800 dark:text-green-200">
+                          {new Date(order.collection_request.confirmed_date).toLocaleDateString('fa-IR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
                           })}
                         </span>
                       </div>
