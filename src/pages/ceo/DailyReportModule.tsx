@@ -400,7 +400,7 @@ export default function DailyReportModule() {
     };
   }, []);
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -700,12 +700,18 @@ export default function DailyReportModule() {
   }, [reportDate, isAggregated, dateCache]);
 
   useEffect(() => {
-    if (!userId || !reportDate) return;
+    if (!userId || !reportDate) {
+      setLoading(false);
+      return;
+    }
 
     const newDateStr = toLocalDateString(reportDate);
     const loadKey = `${userId}|${newDateStr}|${activeModuleKey}`;
 
-    if (lastLoadKeyRef.current === loadKey) return;
+    if (lastLoadKeyRef.current === loadKey) {
+      setLoading(false);
+      return;
+    }
 
     // ابتدا داده‌های تاریخ قبلی را در کش ذخیره کن (بدون تغییر وضعیت dirty)
     const oldDateStr = prevDateStrRef.current;
@@ -742,6 +748,7 @@ export default function DailyReportModule() {
       cachedShowAllReportsRef.current = null;
       isFetchingReportRef.current = false;
       lastFetchTimestampRef.current = 0;
+      setLoading(false);
       return;
     }
 
