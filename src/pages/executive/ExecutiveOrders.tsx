@@ -1873,13 +1873,12 @@ export default function ExecutiveOrders() {
                     </Button>
                   )}
 
-                  {/* دکمه ثبت پرداخت - برای همه مراحل بعد از اجرا */}
-                  {(order.execution_stage === 'order_executed' || 
+                  {/* دکمه ثبت پرداخت - برای همه مراحل بعد از اجرا و قبل از اتمام */}
+                  {order.status !== 'closed' && (order.execution_stage === 'order_executed' || 
                     order.execution_stage === 'awaiting_payment' || 
                     order.execution_stage === 'awaiting_collection' || 
                     order.execution_stage === 'in_collection' || 
-                    order.execution_stage === 'collected' ||
-                    order.status === 'closed') && (
+                    order.execution_stage === 'collected') && (
                     <Button
                       onClick={() => {
                         setSelectedOrder(order);
@@ -1955,14 +1954,13 @@ export default function ExecutiveOrders() {
                     </Button>
                   )}
 
-                  {/* دکمه درخواست جمع‌آوری - فقط بعد از اجرای سفارش فعال می‌شود */}
-                  {(order.execution_stage === 'order_executed' || 
+                  {/* دکمه درخواست جمع‌آوری - فقط بعد از اجرای سفارش و قبل از اتمام */}
+                  {order.status !== 'closed' && (order.execution_stage === 'order_executed' || 
                     order.execution_stage === 'awaiting_payment' || 
                     order.execution_stage === 'awaiting_collection' || 
                     order.execution_stage === 'in_collection' || 
                     order.execution_stage === 'collected' ||
-                    order.status === 'completed' || 
-                    order.status === 'closed') && (
+                    order.status === 'completed') && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -1976,6 +1974,29 @@ export default function ExecutiveOrders() {
                       درخواست جمع‌آوری
                     </Button>
                   )}
+
+                  {/* نمایش وضعیت اتمام سفارش */}
+                  {order.status === 'closed' && (
+                    <div className="flex items-center gap-2 text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 px-3 py-1.5 rounded-lg">
+                      <CheckCircle className="h-4 w-4" />
+                      <span className="text-sm font-medium">سفارش به اتمام رسید</span>
+                    </div>
+                  )}
+
+                  {/* نمایش وضعیت پرداخت شده */}
+                  {(() => {
+                    const tp = Number(order.total_price ?? 0);
+                    const paid = Number(order.total_paid ?? 0);
+                    if (tp > 0 && paid >= tp) {
+                      return (
+                        <div className="flex items-center gap-2 text-green-600 bg-green-100 dark:bg-green-900/30 px-3 py-1.5 rounded-lg">
+                          <Banknote className="h-4 w-4" />
+                          <span className="text-sm font-medium">پرداخت شده</span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
 
                   {order.status === 'paid' && !order.executive_completion_date && (
                     <Button
