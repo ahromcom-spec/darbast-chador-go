@@ -4382,14 +4382,11 @@ export default function DailyReportModule() {
                                 </TableCell>
                                 {/* ستون منبع ماژول در حالت تجمیعی */}
                                 {isAggregated && (
-                                  <TableCell className="border border-blue-200">
+                                  <TableCell className="border border-blue-200 max-w-[150px]">
                                     {row.source_module_name ? (
-                                      <Badge 
-                                        variant="outline" 
-                                        className="text-xs bg-blue-50 text-blue-700 border-blue-200 whitespace-nowrap"
-                                      >
+                                      <span className="text-xs text-blue-700 leading-relaxed break-words">
                                         {row.source_module_name}
-                                      </Badge>
+                                      </span>
                                     ) : (
                                       <span className="text-muted-foreground text-xs">—</span>
                                     )}
@@ -4661,14 +4658,11 @@ export default function DailyReportModule() {
                               </TableCell>
                               {/* ستون منبع ماژول در حالت تجمیعی */}
                               {isAggregated && (
-                                <TableCell className="border border-amber-200">
+                                <TableCell className="border border-amber-200 max-w-[150px]">
                                   {row.source_module_name ? (
-                                    <Badge 
-                                      variant="outline" 
-                                      className="text-xs bg-blue-50 text-blue-700 border-blue-200 whitespace-nowrap"
-                                    >
+                                    <span className="text-xs text-blue-700 leading-relaxed break-words">
                                       {row.source_module_name}
-                                    </Badge>
+                                    </span>
                                   ) : (
                                     <span className="text-muted-foreground text-xs">—</span>
                                   )}
