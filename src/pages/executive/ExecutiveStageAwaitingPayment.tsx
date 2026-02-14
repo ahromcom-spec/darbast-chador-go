@@ -35,6 +35,7 @@ interface Order {
   notes: any;
   collection_request?: {
     requested_date: string | null;
+    confirmed_date: string | null;
     status: string;
   } | null;
 }
@@ -138,7 +139,7 @@ export default function ExecutiveStageAwaitingPayment() {
           // دریافت درخواست جمع‌آوری مشتری
           const { data: collectionRequestData } = await supabase
             .from('collection_requests')
-            .select('requested_date, status')
+            .select('requested_date, confirmed_date, status')
             .eq('order_id', order.id)
             .order('created_at', { ascending: false })
             .limit(1)

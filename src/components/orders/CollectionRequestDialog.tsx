@@ -33,6 +33,7 @@ interface CollectionRequest {
   order_id: string;
   description: string | null;
   requested_date: string | null;
+  confirmed_date: string | null;
   status: string;
   created_at: string;
   approved_at: string | null;
@@ -143,7 +144,11 @@ export function CollectionRequestDialog({
         setDescription(request.description || '');
         if (request.requested_date) {
           setRequestedDate(request.requested_date);
-          setConfirmedDate(request.requested_date); // Pre-fill with customer's requested date
+        }
+        if (request.confirmed_date) {
+          setConfirmedDate(request.confirmed_date);
+        } else if (request.requested_date) {
+          setConfirmedDate(request.requested_date); // Pre-fill with customer's requested date if no confirmed date
         }
 
         // Fetch messages
@@ -321,14 +326,14 @@ export function CollectionRequestDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      // Update collection request
+      // Update collection request - keep requested_date unchanged, set confirmed_date
       const { error } = await supabase
         .from('collection_requests')
         .update({
           status: 'approved',
           approved_at: new Date().toISOString(),
           approved_by: user.id,
-          requested_date: dateToUse, // Update with manager's confirmed date
+          confirmed_date: dateToUse,
         })
         .eq('id', existingRequest.id);
 
@@ -340,7 +345,7 @@ export function CollectionRequestDialog({
         .update({
           execution_stage: 'awaiting_collection',
           execution_stage_updated_at: new Date().toISOString(),
-          customer_completion_date: dateToUse, // Save collection date to order
+          customer_completion_date: dateToUse,
         })
         .eq('id', orderId);
 
@@ -353,7 +358,7 @@ export function CollectionRequestDialog({
         ...existingRequest,
         status: 'approved',
         approved_at: new Date().toISOString(),
-        requested_date: dateToUse,
+        confirmed_date: dateToUse,
       });
 
       toast({
@@ -488,10 +493,10 @@ export function CollectionRequestDialog({
     }
 
     // Optimistic update - بروزرسانی فوری state
-    const previousDate = existingRequest.requested_date;
+    const previousDate = existingRequest.confirmed_date;
     setExistingRequest({
       ...existingRequest,
-      requested_date: confirmedDate,
+      confirmed_date: confirmedDate,
     });
     setUpdatingDate(true);
 
@@ -499,7 +504,7 @@ export function CollectionRequestDialog({
       const { error } = await supabase
         .from('collection_requests')
         .update({
-          requested_date: confirmedDate,
+          confirmed_date: confirmedDate,
         })
         .eq('id', existingRequest.id);
 
@@ -526,7 +531,7 @@ export function CollectionRequestDialog({
       // Revert on error
       setExistingRequest({
         ...existingRequest,
-        requested_date: previousDate,
+        confirmed_date: previousDate,
       });
       toast({
         title: 'خطا',
@@ -547,7 +552,7 @@ export function CollectionRequestDialog({
       const { error } = await supabase
         .from('collection_requests')
         .update({
-          requested_date: null,
+          confirmed_date: null,
         })
         .eq('id', existingRequest.id);
 
@@ -567,7 +572,7 @@ export function CollectionRequestDialog({
 
       setExistingRequest({
         ...existingRequest,
-        requested_date: null,
+        confirmed_date: null,
       });
       setConfirmedDate('');
 
@@ -674,6 +679,17 @@ export function CollectionRequestDialog({
                 <span>تاریخ درخواست جمع‌آوری:</span>
                 <span className="font-medium">
                   {formatPersianDateTime(existingRequest.requested_date)}
+                </span>
+              </div>
+            )}
+
+            {/* Confirmed Date */}
+            {existingRequest.confirmed_date && (
+              <div className="flex items-center gap-2 text-sm">
+                <Calendar className="h-4 w-4 text-green-600" />
+                <span className="text-green-700 dark:text-green-300">تاریخ جمع‌آوری تثبیت شده:</span>
+                <span className="font-medium text-green-700 dark:text-green-300">
+                  {formatPersianDateTime(existingRequest.confirmed_date)}
                 </span>
               </div>
             )}
@@ -790,14 +806,14 @@ export function CollectionRequestDialog({
                     <div className="flex gap-2">
                       <Button
                         onClick={handleUpdateDate}
-                        disabled={!confirmedDate || confirmedDate === existingRequest.requested_date}
+                        disabled={!confirmedDate || confirmedDate === existingRequest.confirmed_date}
                         variant="outline"
                         className="flex-1"
                       >
                         <Calendar className="h-4 w-4 mr-2" />
                         به‌روزرسانی تاریخ
                       </Button>
-                      {existingRequest.requested_date && (
+                      {existingRequest.confirmed_date && (
                         <Button
                           onClick={handleClearCollectionDate}
                           variant="outline"
@@ -846,14 +862,14 @@ export function CollectionRequestDialog({
                     <div className="flex gap-2">
                       <Button
                         onClick={handleUpdateDate}
-                        disabled={!confirmedDate || confirmedDate === existingRequest.requested_date}
+                        disabled={!confirmedDate || confirmedDate === existingRequest.confirmed_date}
                         variant="outline"
                         className="flex-1"
                       >
                         <Calendar className="h-4 w-4 mr-2" />
                         به‌روزرسانی تاریخ
                       </Button>
-                      {existingRequest.requested_date && (
+                      {existingRequest.confirmed_date && (
                         <Button
                           onClick={handleClearCollectionDate}
                           variant="outline"

@@ -223,7 +223,7 @@ export default function OrderDetail() {
   const [approvedRenewalCost, setApprovedRenewalCost] = useState(0);
   const [approvedRenewals, setApprovedRenewals] = useState<any[]>([]);
   const [repairRequests, setRepairRequests] = useState<any[]>([]);
-  const [collectionRequestInfo, setCollectionRequestInfo] = useState<{requested_date: string | null; status: string} | null>(null);
+  const [collectionRequestInfo, setCollectionRequestInfo] = useState<{requested_date: string | null; confirmed_date: string | null; status: string} | null>(null);
   const [showCollectionDialog, setShowCollectionDialog] = useState(false);
   const [showCollaboratorDialog, setShowCollaboratorDialog] = useState(false);
   const [showEditExpertPricingDialog, setShowEditExpertPricingDialog] = useState(false);
@@ -455,7 +455,7 @@ export default function OrderDetail() {
         supabase.from('project_media').select('*').eq('project_id', id).order('created_at', { ascending: false }),
         supabase.from('order_approvals').select('approver_role, approved_at, approver_user_id').eq('order_id', id).order('created_at', { ascending: true }),
         supabase.from('repair_requests').select('final_cost, status, created_at, description').eq('order_id', id),
-        supabase.from('collection_requests').select('requested_date, status').eq('order_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('collection_requests').select('requested_date, confirmed_date, status').eq('order_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('order_renewals').select('renewal_price, renewal_number, new_start_date, new_end_date, status').eq('order_id', id).eq('status', 'approved').order('renewal_number', { ascending: true })
       ]);
 
@@ -1702,26 +1702,38 @@ export default function OrderDetail() {
                         درخواست جمع‌آوری
                       </Button>
                     </div>
-                    {/* نمایش تاریخ جمع‌آوری ثبت شده */}
-                    {collectionRequestInfo && collectionRequestInfo.requested_date && (
-                      <div className="border-t border-teal-200 dark:border-teal-700 pt-3">
-                        <div className="flex items-center justify-between p-2 bg-teal-100/50 dark:bg-teal-900/30 rounded-lg text-sm">
-                          <div className="flex items-center gap-2">
-                            <CalendarDays className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                            <span className="text-teal-800 dark:text-teal-200">
-                              تاریخ درخواست جمع‌آوری: {formatPersianDate(collectionRequestInfo.requested_date)}
+                    {/* نمایش تاریخ‌های جمع‌آوری */}
+                    {collectionRequestInfo && (collectionRequestInfo.requested_date || collectionRequestInfo.confirmed_date) && (
+                      <div className="border-t border-teal-200 dark:border-teal-700 pt-3 space-y-2">
+                        {/* تاریخ درخواست جمع‌آوری */}
+                        {collectionRequestInfo.requested_date && (
+                          <div className="flex items-center justify-between p-2 bg-teal-100/50 dark:bg-teal-900/30 rounded-lg text-sm">
+                            <div className="flex items-center gap-2">
+                              <CalendarDays className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                              <span className="text-teal-800 dark:text-teal-200">
+                                تاریخ درخواست جمع‌آوری: {formatPersianDate(collectionRequestInfo.requested_date)}
+                              </span>
+                            </div>
+                            <Badge variant="outline" className={
+                              collectionRequestInfo.status === 'approved'
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-300'
+                                : collectionRequestInfo.status === 'rejected'
+                                ? 'bg-red-100 text-red-700 border-red-300'
+                                : 'bg-teal-100 text-teal-700 border-teal-300'
+                            }>
+                              {collectionRequestInfo.status === 'approved' ? 'تایید شده' : collectionRequestInfo.status === 'rejected' ? 'رد شده' : 'در انتظار بررسی'}
+                            </Badge>
+                          </div>
+                        )}
+                        {/* تاریخ جمع‌آوری تثبیت شده */}
+                        {collectionRequestInfo.confirmed_date && (
+                          <div className="flex items-center gap-2 p-2 bg-green-100/50 dark:bg-green-900/30 rounded-lg text-sm">
+                            <CalendarDays className="h-4 w-4 text-green-600 dark:text-green-400" />
+                            <span className="text-green-800 dark:text-green-200 font-medium">
+                              تاریخ جمع‌آوری تثبیت شده: {formatPersianDate(collectionRequestInfo.confirmed_date)}
                             </span>
                           </div>
-                          <Badge variant="outline" className={
-                            collectionRequestInfo.status === 'approved'
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-300'
-                              : collectionRequestInfo.status === 'rejected'
-                              ? 'bg-red-100 text-red-700 border-red-300'
-                              : 'bg-teal-100 text-teal-700 border-teal-300'
-                          }>
-                            {collectionRequestInfo.status === 'approved' ? 'تایید شده' : collectionRequestInfo.status === 'rejected' ? 'رد شده' : 'در انتظار بررسی'}
-                          </Badge>
-                        </div>
+                        )}
                       </div>
                     )}
                   </section>

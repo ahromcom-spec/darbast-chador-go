@@ -455,6 +455,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           completed_at: string | null
+          confirmed_date: string | null
           created_at: string
           customer_id: string
           description: string | null
@@ -468,6 +469,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           completed_at?: string | null
+          confirmed_date?: string | null
           created_at?: string
           customer_id: string
           description?: string | null
@@ -481,6 +483,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           completed_at?: string | null
+          confirmed_date?: string | null
           created_at?: string
           customer_id?: string
           description?: string | null
