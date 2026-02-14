@@ -479,6 +479,37 @@ export function CollectionRequestDialog({
     }
   };
 
+  // Manager updates the requested date
+  const handleUpdateRequestedDate = async () => {
+    if (!existingRequest || !isManager) return;
+
+    if (!requestedDate) {
+      toast({ title: 'خطا', description: 'لطفاً تاریخ درخواست را انتخاب کنید', variant: 'destructive' });
+      return;
+    }
+
+    const previousDate = existingRequest.requested_date;
+    setExistingRequest({ ...existingRequest, requested_date: requestedDate });
+    setUpdatingDate(true);
+
+    try {
+      const { error } = await supabase
+        .from('collection_requests')
+        .update({ requested_date: requestedDate })
+        .eq('id', existingRequest.id);
+
+      if (error) throw error;
+
+      toast({ title: '✓ موفق', description: 'تاریخ درخواست جمع‌آوری به‌روزرسانی شد' });
+    } catch (error: any) {
+      console.error('Error updating requested date:', error);
+      setExistingRequest({ ...existingRequest, requested_date: previousDate });
+      toast({ title: 'خطا', description: 'خطا در به‌روزرسانی تاریخ درخواست', variant: 'destructive' });
+    } finally {
+      setUpdatingDate(false);
+    }
+  };
+
   // Manager updates the collection date
   const handleUpdateDate = async () => {
     if (!existingRequest || !isManager) return;
@@ -783,13 +814,22 @@ export function CollectionRequestDialog({
 
             {isManager && existingRequest.status === 'approved' && (
               <div className="space-y-4">
-                {/* Allow managers to edit the approved date */}
+                {/* Allow managers to edit both dates */}
                 <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
                   <p className="text-sm text-blue-800 dark:text-blue-200">
-                    در صورت نیاز می‌توانید تاریخ جمع‌آوری را ویرایش کنید:
+                    ویرایش تاریخ‌های جمع‌آوری:
                   </p>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">تاریخ جمع‌آوری</label>
+                    <label className="text-sm font-medium">تاریخ درخواست جمع‌آوری</label>
+                    <PersianDatePicker
+                      value={requestedDate}
+                      onChange={setRequestedDate}
+                      placeholder="انتخاب تاریخ درخواست"
+                      timeMode="ampm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">تاریخ جمع‌آوری تثبیت شده</label>
                     <PersianDatePicker
                       value={confirmedDate}
                       onChange={setConfirmedDate}
@@ -803,22 +843,32 @@ export function CollectionRequestDialog({
                       <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">در حال ثبت تاریخ...</span>
                     </div>
                   ) : (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
+                      <Button
+                        onClick={handleUpdateRequestedDate}
+                        disabled={!requestedDate || requestedDate === existingRequest.requested_date}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Calendar className="h-4 w-4 mr-1" />
+                        به‌روزرسانی تاریخ درخواست
+                      </Button>
                       <Button
                         onClick={handleUpdateDate}
                         disabled={!confirmedDate || confirmedDate === existingRequest.confirmed_date}
                         variant="outline"
-                        className="flex-1"
+                        size="sm"
                       >
-                        <Calendar className="h-4 w-4 mr-2" />
-                        به‌روزرسانی تاریخ
+                        <Calendar className="h-4 w-4 mr-1" />
+                        به‌روزرسانی تاریخ تثبیت
                       </Button>
                       {existingRequest.confirmed_date && (
                         <Button
                           onClick={handleClearCollectionDate}
                           variant="outline"
+                          size="sm"
                           className="text-destructive hover:bg-destructive/10"
-                          title="پاک کردن تاریخ"
+                          title="پاک کردن تاریخ تثبیت"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -839,13 +889,22 @@ export function CollectionRequestDialog({
 
             {isManager && existingRequest.status === 'completed' && (
               <div className="space-y-4">
-                {/* Allow managers to edit the date even after completion */}
+                {/* Allow managers to edit both dates even after completion */}
                 <div className="bg-muted/50 border rounded-lg p-4 space-y-3">
                   <p className="text-sm text-muted-foreground">
-                    ویرایش تاریخ جمع‌آوری:
+                    ویرایش تاریخ‌های جمع‌آوری:
                   </p>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">تاریخ جمع‌آوری</label>
+                    <label className="text-sm font-medium">تاریخ درخواست جمع‌آوری</label>
+                    <PersianDatePicker
+                      value={requestedDate}
+                      onChange={setRequestedDate}
+                      placeholder="انتخاب تاریخ درخواست"
+                      timeMode="ampm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">تاریخ جمع‌آوری تثبیت شده</label>
                     <PersianDatePicker
                       value={confirmedDate}
                       onChange={setConfirmedDate}
@@ -859,22 +918,32 @@ export function CollectionRequestDialog({
                       <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">در حال ثبت تاریخ...</span>
                     </div>
                   ) : (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
+                      <Button
+                        onClick={handleUpdateRequestedDate}
+                        disabled={!requestedDate || requestedDate === existingRequest.requested_date}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Calendar className="h-4 w-4 mr-1" />
+                        به‌روزرسانی تاریخ درخواست
+                      </Button>
                       <Button
                         onClick={handleUpdateDate}
                         disabled={!confirmedDate || confirmedDate === existingRequest.confirmed_date}
                         variant="outline"
-                        className="flex-1"
+                        size="sm"
                       >
-                        <Calendar className="h-4 w-4 mr-2" />
-                        به‌روزرسانی تاریخ
+                        <Calendar className="h-4 w-4 mr-1" />
+                        به‌روزرسانی تاریخ تثبیت
                       </Button>
                       {existingRequest.confirmed_date && (
                         <Button
                           onClick={handleClearCollectionDate}
                           variant="outline"
+                          size="sm"
                           className="text-destructive hover:bg-destructive/10"
-                          title="پاک کردن تاریخ"
+                          title="پاک کردن تاریخ تثبیت"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
