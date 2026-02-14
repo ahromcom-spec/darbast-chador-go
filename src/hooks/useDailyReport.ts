@@ -515,7 +515,7 @@ export function useDailyReport() {
     
     if (orderReports.length === 0 && staffReports.length === 0) return;
 
-    const hasOrderData = orderReports.some((r) => r.order_id);
+    const hasOrderData = orderReports.some((r) => r.order_id || r.activity_description?.trim() || r.service_details?.trim() || r.team_name?.trim() || r.notes?.trim());
 
     const hasStaffData = staffReports.some(
       (s) =>
@@ -536,8 +536,8 @@ export function useDailyReport() {
 
     // Create hash to detect duplicate saves
     const dataHash = JSON.stringify({
-      orders: orderReports.filter(r => r.order_id).map(r => ({
-        order_id: r.order_id,
+      orders: orderReports.filter(r => r.order_id || r.activity_description?.trim() || r.service_details?.trim() || r.team_name?.trim() || r.notes?.trim()).map(r => ({
+        order_id: r.order_id || null,
         activity: r.activity_description,
         service: r.service_details,
         team: r.team_name,
@@ -646,13 +646,14 @@ export function useDailyReport() {
 
       if (deleteOrdersError) throw deleteOrdersError;
 
-      if (orderReports.filter((r) => r.order_id).length > 0) {
+      const ordersWithData = orderReports.filter((r) => r.order_id || r.activity_description?.trim() || r.service_details?.trim() || r.team_name?.trim() || r.notes?.trim());
+      if (ordersWithData.length > 0) {
         const { error: insertOrdersError } = await supabase
           .from('daily_report_orders')
           .insert(
-            orderReports.filter((r) => r.order_id).map((r) => ({
+            ordersWithData.map((r) => ({
               daily_report_id: reportId,
-              order_id: r.order_id,
+              order_id: r.order_id || null,
               activity_description: r.activity_description,
               service_details: r.service_details,
               team_name: r.team_name,
@@ -940,13 +941,13 @@ export function useDailyReport() {
 
       if (deleteOrderError) throw deleteOrderError;
 
-      const ordersToInsert = orderReports.filter(r => r.order_id);
+      const ordersToInsert = orderReports.filter(r => r.order_id || r.activity_description?.trim() || r.service_details?.trim() || r.team_name?.trim() || r.notes?.trim());
       if (ordersToInsert.length > 0) {
         const { error: orderError } = await supabase
           .from('daily_report_orders')
           .insert(ordersToInsert.map(r => ({
             daily_report_id: reportId,
-            order_id: r.order_id,
+            order_id: r.order_id || null,
             activity_description: r.activity_description || '',
             service_details: r.service_details || '',
             team_name: r.team_name || '',
