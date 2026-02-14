@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard, RotateCcw, AlertTriangle, Clock } from 'lucide-react';
+import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard, RotateCcw, AlertTriangle, Clock, Lock, Unlock } from 'lucide-react';
+import { useDateFinalizationLock } from '@/hooks/useDateFinalizationLock';
 import { useDailyReportBulkDelete } from '@/hooks/useDailyReportBulkDelete';
 import { useDailyReportDateCache } from '@/hooks/useDailyReportDateCache';
 import { Button } from '@/components/ui/button';
@@ -407,9 +408,6 @@ export default function DailyReportModule() {
   // Lock control state - controls whether inputs are disabled
   const [isLockReadOnly, setIsLockReadOnly] = useState(false);
   
-  // حالت فقط‌خواندنی مؤثر: ترکیب ماژول تجمیعی و وضعیت قفل
-  const effectiveReadOnly = isAggregated || isLockReadOnly;
-  
   // Ref to access saveVersion from ModuleLayout for version tracking
   const saveVersionRef = useRef<((data: any) => Promise<number | null>) | null>(null);
   
@@ -431,7 +429,20 @@ export default function DailyReportModule() {
     return new Date();
   });
 
-  // Sync reportDate to URL so refresh preserves the selected date
+  // قفل تثبیت تاریخ - مدیر کلی می‌تواند تاریخ را قفل کند تا ماژول‌های منبع نتوانند ویرایش کنند
+  const {
+    lockStatus: dateLockStatus,
+    isLoading: dateLockLoading,
+    isDateLocked,
+    toggleLock: toggleDateLock,
+  } = useDateFinalizationLock({
+    reportDate: toLocalDateString(reportDate),
+    enabled: true,
+  });
+  
+  // حالت فقط‌خواندنی مؤثر: ترکیب ماژول تجمیعی، وضعیت قفل ویرایش، و قفل تثبیت تاریخ
+  const effectiveReadOnly = isAggregated || isLockReadOnly || (!isAggregated && isDateLocked);
+
   useEffect(() => {
     const dateStr = toLocalDateString(reportDate);
     setSearchParams(prev => {
@@ -2768,6 +2779,12 @@ export default function DailyReportModule() {
   const saveReport = async (): Promise<boolean> => {
     if (!user) return false;
     
+    // جلوگیری از ذخیره وقتی تاریخ توسط مدیر کلی قفل شده
+    if (!isAggregated && isDateLocked) {
+      toast.error('این تاریخ توسط مدیر کلی تثبیت و قفل شده است. امکان ذخیره وجود ندارد.');
+      return false;
+    }
+    
     // جلوگیری از ذخیره همزمان با auto-save
     if (isAutoSavingRef.current) {
       toast.error('لطفاً صبر کنید، در حال ذخیره خودکار...');
@@ -4183,6 +4200,44 @@ export default function DailyReportModule() {
                   روز بعد
                 </Button>
               </div>
+
+              {/* دکمه قفل تثبیت تاریخ - فقط در ماژول کلی */}
+              {isAggregated && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={isDateLocked ? "destructive" : "outline"}
+                    size="lg"
+                    onClick={toggleDateLock}
+                    disabled={dateLockLoading}
+                    className="gap-2 px-4 sm:px-6 py-3 text-sm sm:text-base font-bold shadow-md hover:shadow-lg transition-all"
+                  >
+                    {dateLockLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : isDateLocked ? (
+                      <Unlock className="h-5 w-5" />
+                    ) : (
+                      <Lock className="h-5 w-5" />
+                    )}
+                    {isDateLocked ? 'باز کردن قفل' : 'قفل تثبیت تاریخ'}
+                  </Button>
+                  {isDateLocked && dateLockStatus.lockedByName && (
+                    <Badge variant="secondary" className="gap-1 text-xs">
+                      <Lock className="h-3 w-3" />
+                      قفل شده توسط {dateLockStatus.lockedByName}
+                    </Badge>
+                  )}
+                </div>
+              )}
+
+              {/* هشدار قفل تاریخ در ماژول‌های غیرتجمیعی */}
+              {!isAggregated && isDateLocked && (
+                <div className="flex items-center gap-2 bg-destructive/10 text-destructive border border-destructive/30 rounded-lg p-3">
+                  <Lock className="h-5 w-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">
+                    این تاریخ توسط مدیر کلی تثبیت و قفل شده است. امکان ویرایش وجود ندارد.
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Daily Notes */}

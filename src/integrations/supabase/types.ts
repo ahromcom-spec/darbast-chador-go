@@ -751,6 +751,36 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_report_date_locks: {
+        Row: {
+          created_at: string
+          id: string
+          locked_at: string
+          locked_by: string
+          locked_by_module_key: string
+          notes: string | null
+          report_date: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          locked_at?: string
+          locked_by: string
+          locked_by_module_key: string
+          notes?: string | null
+          report_date: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          locked_at?: string
+          locked_by?: string
+          locked_by_module_key?: string
+          notes?: string | null
+          report_date?: string
+        }
+        Relationships: []
+      }
       daily_report_orders: {
         Row: {
           activity_description: string | null
