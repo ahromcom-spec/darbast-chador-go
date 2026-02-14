@@ -4495,7 +4495,7 @@ export default function DailyReportModule() {
                                            placeholder="انتخاب کارت بانکی"
                                            showBalance={true}
                                            showManagementCards={moduleName?.includes('مدیریت') ?? false}
-                                           allowedCardIds={moduleName?.includes('مدیریت') ? ['5a8bb67f-3757-4ac6-b745-44451d55630a', 'd193daf8-26d2-4b1c-8547-34f8802a9427'] : undefined}
+                                           allowedCardIds={moduleName?.includes('مدیریت') ? ['5a8bb67f-3757-4ac6-b745-44451d55630a', 'd193daf8-26d2-4b1c-8547-34f8802a9427', 'd0bdf39e-e3cd-4231-a979-a287be516c17'] : undefined}
                                          />
                                      </div>
                                    )
