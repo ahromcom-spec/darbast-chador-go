@@ -4787,6 +4787,9 @@ export default function DailyReportModule() {
                           {/* Summary Row */}
                           <TableRow className="bg-amber-200 dark:bg-amber-800/40 font-bold">
                             <TableCell className="border border-amber-300 text-right">جمع:</TableCell>
+                            {isAggregated && (
+                              <TableCell className="border border-amber-300"></TableCell>
+                            )}
                             <TableCell className="border border-amber-300">{totals.presentCount} نیرو</TableCell>
                             <TableCell className="border border-amber-300">{totals.totalOvertime} ساعت</TableCell>
                             <TableCell className="border border-amber-300">{totals.totalReceived.toLocaleString('fa-IR')} تومان</TableCell>
@@ -4807,7 +4810,7 @@ export default function DailyReportModule() {
                                   : 'bg-amber-100 dark:bg-amber-900/30'
                             }
                           >
-                            <TableCell colSpan={9} className="text-center">
+                            <TableCell colSpan={isAggregated ? 10 : 9} className="text-center">
                               <Badge
                                 variant={balanceState === 'balanced' ? 'default' : balanceState === 'deficit' ? 'destructive' : 'secondary'}
                                 className="text-base px-4 py-2"
