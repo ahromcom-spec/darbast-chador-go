@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTableArrowNavigation } from '@/hooks/useTableArrowNavigation';
 import { Plus, Trash2, User, CreditCard, Building } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -118,6 +119,7 @@ export function StaffReportsTable({
   };
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const arrowNavRef = useTableArrowNavigation<HTMLDivElement>();
 
   // Scroll to rightmost position on mount (for RTL layout)
   // In RTL, scrollLeft = 0 is the rightmost position
@@ -126,6 +128,12 @@ export function StaffReportsTable({
       scrollContainerRef.current.scrollLeft = 0;
     }
   }, [staffReports.length]);
+
+  // Combine refs
+  const setRefs = (el: HTMLDivElement | null) => {
+    (scrollContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+    (arrowNavRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+  };
 
   // Handler to add a bank card row (cash box row)
   const handleAddBankCardRow = () => {
@@ -171,7 +179,7 @@ export function StaffReportsTable({
         </div>
       </CardHeader>
       <CardContent>
-        <div ref={scrollContainerRef} className="overflow-x-auto" dir="rtl">
+        <div ref={setRefs} className="overflow-x-auto" dir="rtl">
           <Table className="table-fixed border-collapse border border-amber-300 w-[900px]">
             <TableHeader>
               <TableRow className="bg-amber-100 dark:bg-amber-900/30">
