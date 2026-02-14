@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useTableArrowNavigation } from '@/hooks/useTableArrowNavigation';
 import { Plus, Trash2, Package, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,6 +42,7 @@ export function OrderReportsTable({
     : orderReports;
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const arrowNavRef = useTableArrowNavigation<HTMLDivElement>();
 
   // Scroll to rightmost position on mount (for RTL layout)
   // In RTL, scrollLeft = 0 is the rightmost position
@@ -49,6 +51,12 @@ export function OrderReportsTable({
       scrollContainerRef.current.scrollLeft = 0;
     }
   }, [orderReports.length]);
+
+  // Combine refs
+  const setRefs = (el: HTMLDivElement | null) => {
+    (scrollContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+    (arrowNavRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+  };
 
   return (
     <Card data-dropdown-boundary className="relative border-2 border-blue-500/30">
@@ -67,7 +75,7 @@ export function OrderReportsTable({
         </div>
       </CardHeader>
       <CardContent>
-        <div ref={scrollContainerRef} className="overflow-x-auto" dir="rtl">
+        <div ref={setRefs} className="overflow-x-auto" dir="rtl">
           <Table className="table-auto border-collapse border border-blue-300">
             <TableHeader>
               <TableRow className="bg-blue-100 dark:bg-blue-900/30">
