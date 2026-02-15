@@ -781,6 +781,86 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_report_order_media: {
+        Row: {
+          created_at: string | null
+          daily_report_id: string
+          daily_report_order_id: string | null
+          file_path: string
+          file_size: number | null
+          file_type: string
+          id: string
+          mime_type: string | null
+          order_id: string | null
+          project_media_id: string | null
+          report_date: string
+          synced_to_project_media: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          daily_report_id: string
+          daily_report_order_id?: string | null
+          file_path: string
+          file_size?: number | null
+          file_type: string
+          id?: string
+          mime_type?: string | null
+          order_id?: string | null
+          project_media_id?: string | null
+          report_date: string
+          synced_to_project_media?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          daily_report_id?: string
+          daily_report_order_id?: string | null
+          file_path?: string
+          file_size?: number | null
+          file_type?: string
+          id?: string
+          mime_type?: string | null
+          order_id?: string | null
+          project_media_id?: string | null
+          report_date?: string
+          synced_to_project_media?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_report_order_media_daily_report_id_fkey"
+            columns: ["daily_report_id"]
+            isOneToOne: false
+            referencedRelation: "daily_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_report_order_media_daily_report_order_id_fkey"
+            columns: ["daily_report_order_id"]
+            isOneToOne: false
+            referencedRelation: "daily_report_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_report_order_media_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_report_order_media_project_media_id_fkey"
+            columns: ["project_media_id"]
+            isOneToOne: false
+            referencedRelation: "project_media"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_report_orders: {
         Row: {
           activity_description: string | null

@@ -42,6 +42,7 @@ import { OrderTimeline } from '@/components/orders/OrderTimeline';
 import { MediaGallery, MediaItem } from '@/components/media/MediaGallery';
 import StaticLocationMap from '@/components/locations/StaticLocationMap';
 import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
+import { OrderRowMediaUpload } from '@/components/daily-report/OrderRowMediaUpload';
 
 interface SavedReport {
   id: string;
@@ -1043,13 +1044,14 @@ export default function DailyReportModule() {
 
       if (deleteOrdersError) throw deleteOrdersError;
 
-      if (orderReports.filter((r) => r.order_id).length > 0) {
+      const ordersWithData = orderReports.filter((r) => r.order_id || r.activity_description?.trim() || r.service_details?.trim() || r.team_name?.trim() || r.notes?.trim());
+      if (ordersWithData.length > 0) {
         const { error: insertOrdersError } = await supabase
           .from('daily_report_orders')
           .insert(
-            orderReports.filter((r) => r.order_id).map((r) => ({
+            ordersWithData.map((r) => ({
               daily_report_id: reportId,
-              order_id: r.order_id,
+              order_id: r.order_id || null,
               activity_description: r.activity_description,
               service_details: r.service_details,
               team_name: r.team_name,
@@ -1750,7 +1752,7 @@ export default function DailyReportModule() {
             : getModuleDisplayName(moduleKey);
           return {
             id: o.id,
-            order_id: o.order_id,
+            order_id: o.order_id || '',
             activity_description: o.activity_description || '',
             service_details: o.service_details || '',
             team_name: o.team_name || '',
@@ -2032,7 +2034,7 @@ export default function DailyReportModule() {
 
           const loadedOrderRows: OrderReportRow[] = (orderData || []).map((o: any) => ({
             id: o.id,
-            order_id: o.order_id,
+            order_id: o.order_id || '',
             activity_description: o.activity_description || '',
             service_details: o.service_details || '',
             team_name: o.team_name || '',
@@ -2480,6 +2482,41 @@ export default function DailyReportModule() {
     });
   }, [markCurrentDateDirty]);
 
+  // Sync row media to project_media when order is selected
+  const syncRowMediaToProject = async (orderId: string, reportId: string, rowId?: string) => {
+    try {
+      let query = supabase
+        .from('daily_report_order_media')
+        .select('id, file_path, file_type, file_size, mime_type')
+        .eq('daily_report_id', reportId)
+        .eq('synced_to_project_media', false);
+      if (rowId) query = query.eq('daily_report_order_id', rowId);
+
+      const { data: unsynced } = await query;
+      if (!unsynced || unsynced.length === 0) return;
+
+      const dateStr = toLocalDateString(reportDate);
+      for (const m of unsynced) {
+        const { error: insertErr } = await supabase.from('project_media').insert({
+          project_id: orderId,
+          user_id: user!.id,
+          file_path: m.file_path,
+          file_type: m.file_type,
+          file_size: m.file_size,
+          mime_type: m.mime_type,
+          created_at: `${dateStr}T12:00:00+03:30`,
+        });
+        if (!insertErr) {
+          await supabase.from('daily_report_order_media')
+            .update({ order_id: orderId, synced_to_project_media: true })
+            .eq('id', m.id);
+        }
+      }
+    } catch (err) {
+      console.error('syncRowMediaToProject error:', err);
+    }
+  };
+
   const updateOrderRow = (index: number, field: keyof OrderReportRow, value: string) => {
     setIsSaved(false);
     markCurrentDateDirty();
@@ -2505,6 +2542,11 @@ export default function DailyReportModule() {
     }
 
     updated[index] = { ...updated[index], [field]: value };
+
+    // When order_id is set, sync any existing row media to project_media
+    if (field === 'order_id' && value && existingReportId && user) {
+      syncRowMediaToProject(value, existingReportId, updated[index].id);
+    }
 
     // بررسی آیا یک ردیف خالی در انتها وجود دارد
     const isRowEmpty = (row: OrderReportRow) =>
@@ -4327,6 +4369,7 @@ export default function DailyReportModule() {
                             <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">شرح فعالیت امروز و ابعاد</TableHead>
                             <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">اکیپ</TableHead>
                             <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">توضیحات</TableHead>
+                            <TableHead className="text-right whitespace-nowrap px-2 border border-blue-300">رسانه</TableHead>
                             <TableHead className="w-[50px] border border-blue-300"></TableHead>
                           </TableRow>
                         </TableHeader>
@@ -4464,6 +4507,16 @@ export default function DailyReportModule() {
                                       placeholder="توضیحات..."
                                     />
                                   )}
+                                </TableCell>
+                                <TableCell className="border border-blue-200">
+                                  <OrderRowMediaUpload
+                                    dailyReportId={existingReportId}
+                                    dailyReportOrderId={row.id}
+                                    orderId={row.order_id || undefined}
+                                    reportDate={toLocalDateString(reportDate)}
+                                    readOnly={effectiveReadOnly}
+                                    rowIndex={index}
+                                  />
                                 </TableCell>
                                 <TableCell className="border border-blue-200">
                                   {!effectiveReadOnly && (
