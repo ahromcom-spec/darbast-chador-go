@@ -73,7 +73,7 @@ const loadStaffDirectoryCached = async () => {
     // 1) HR employees (best source for user_id)
     const { data: hrData, error: hrError } = await supabase
       .from('hr_employees')
-      .select('phone_number, full_name, position, department, user_id')
+      .select('id, phone_number, full_name, position, department, user_id')
       .order('full_name', { ascending: true });
 
     if (hrError) throw hrError;
@@ -88,8 +88,10 @@ const loadStaffDirectoryCached = async () => {
 
     const hrStaff: StaffMember[] = (hrData || [])
       .map((h: any) => {
-        const code = String(h.phone_number || '').trim();
+        const phone = String(h.phone_number || '').trim();
         const name = String(h.full_name || '').trim();
+        // For employees without a phone number, use a short code derived from their DB id
+        const code = phone || (h.id ? `HR-${String(h.id).slice(-6)}` : '');
         const fullCode = `${h.position || ''} - ${h.department || ''}`
           .trim()
           .replace(/^-\s*|\s*-$/g, '');
