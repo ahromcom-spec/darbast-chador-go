@@ -575,7 +575,7 @@ export function useDailyReport() {
         hasCompanyExpense = true;
       }
       return (
-        s.is_cash_box ||
+        (s.is_cash_box && (Boolean(s.bank_card_id) || (s.amount_received ?? 0) > 0 || (s.amount_spent ?? 0) > 0)) ||
         s.is_company_expense ||
         Boolean(s.staff_user_id) ||
         Boolean(s.staff_name?.trim()) ||
