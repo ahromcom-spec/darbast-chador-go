@@ -3033,21 +3033,37 @@ export default function DailyReportModule() {
       });
     
     if (ordersToInsert.length > 0) {
-      const { error: orderError } = await supabase
+      const { data: insertedOrders, error: orderError } = await supabase
         .from('daily_report_orders')
         .insert(ordersToInsert.map(r => ({
-        daily_report_id: reportId,
+          daily_report_id: reportId,
           order_id: r.order_id || null,
           activity_description: r.activity_description || '',
           service_details: r.service_details || '',
           team_name: r.team_name || '',
           notes: r.notes || '',
           row_color: r.row_color || 'yellow'
-        })));
+        })))
+        .select('id, order_id');
 
       if (orderError) {
         console.error('Error inserting order reports:', orderError);
         throw orderError;
+      }
+
+      // Re-link orphaned media records to new order row IDs
+      if (insertedOrders && insertedOrders.length > 0) {
+        for (const newRow of insertedOrders) {
+          if (newRow.order_id) {
+            // Update media records that belong to this report+order but lost their order row link
+            await supabase
+              .from('daily_report_order_media')
+              .update({ daily_report_order_id: newRow.id })
+              .eq('daily_report_id', reportId!)
+              .eq('order_id', newRow.order_id)
+              .is('daily_report_order_id', null);
+          }
+        }
       }
     }
 
