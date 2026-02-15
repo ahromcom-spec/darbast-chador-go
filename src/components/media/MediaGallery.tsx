@@ -29,6 +29,8 @@ interface MediaGalleryProps {
    * می‌تواند باعث سختی تعامل/پخش شود. با این گزینه نمایش تمام‌صفحه غیرفعال می‌شود.
    */
   disableFullscreen?: boolean;
+  /** Callback for deleting a media item. If provided, a delete button is shown. */
+  onDelete?: (mediaId: string) => void;
 }
 
 // Helper function to check if media is video
@@ -282,6 +284,7 @@ export const MediaGallery = ({
   bucket = 'project-media',
   layout = 'grid',
   disableFullscreen = false,
+  onDelete,
 }: MediaGalleryProps) => {
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
   const [isFetchingUrls, setIsFetchingUrls] = useState(false);
@@ -570,29 +573,42 @@ export const MediaGallery = ({
           {media.map((item, idx) => {
             const isVideo = isMediaVideo(item);
             return (
-              <button
-                key={item.id}
-                onClick={() => setCurrentIndex(idx)}
-                className={cn(
-                  "relative flex-shrink-0 w-16 h-12 rounded-md overflow-hidden border-2 transition-all",
-                  idx === currentIndex 
-                    ? "border-primary ring-2 ring-primary/30" 
-                    : "border-transparent opacity-70 hover:opacity-100"
+              <div key={item.id} className="relative flex-shrink-0 group">
+                <button
+                  onClick={() => setCurrentIndex(idx)}
+                  className={cn(
+                    "relative w-16 h-12 rounded-md overflow-hidden border-2 transition-all",
+                    idx === currentIndex 
+                      ? "border-primary ring-2 ring-primary/30" 
+                      : "border-transparent opacity-70 hover:opacity-100"
+                  )}
+                >
+                  {isVideo ? (
+                    <div className="w-full h-full bg-black/20 flex items-center justify-center">
+                      <Play className="h-4 w-4 text-primary" fill="currentColor" />
+                    </div>
+                  ) : (
+                    <img
+                      src={getMediaUrl(item)}
+                      alt={`تصویر ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  )}
+                </button>
+                {onDelete && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(item.id);
+                    }}
+                    className="absolute -top-1.5 -right-1.5 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow"
+                    title="حذف"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
                 )}
-              >
-                {isVideo ? (
-                  <div className="w-full h-full bg-black/20 flex items-center justify-center">
-                    <Play className="h-4 w-4 text-primary" fill="currentColor" />
-                  </div>
-                ) : (
-                  <img
-                    src={getMediaUrl(item)}
-                    alt={`تصویر ${idx + 1}`}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                )}
-              </button>
+              </div>
             );
           })}
         </div>
