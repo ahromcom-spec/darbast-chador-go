@@ -1506,6 +1506,46 @@ export default function DailyReportModule() {
   };
 
 
+  // Handle media deletion from order details dialog
+  const handleOrderMediaDelete = async (mediaId: string) => {
+    if (!selectedOrderDetails) return;
+    try {
+      // Find the media item to get file_path
+      const mediaItem = orderMedia.find(m => m.id === mediaId);
+      
+      // Delete from project_media
+      const { error: dbError } = await supabase
+        .from('project_media')
+        .delete()
+        .eq('id', mediaId);
+      if (dbError) {
+        console.error('Error deleting from project_media:', dbError);
+      }
+
+      // Also delete matching records from daily_report_order_media (by file_path)
+      if (mediaItem?.file_path) {
+        const { error: dailyMediaError } = await supabase
+          .from('daily_report_order_media')
+          .delete()
+          .eq('file_path', mediaItem.file_path);
+        if (dailyMediaError) {
+          console.error('Error deleting from daily_report_order_media:', dailyMediaError);
+        }
+      }
+
+      // Delete from storage
+      if (mediaItem?.file_path) {
+        await supabase.storage.from('project-media').remove([mediaItem.file_path]);
+      }
+
+      // Update UI
+      setOrderMedia(prev => prev.filter(m => m.id !== mediaId));
+      toast.success('رسانه حذف شد');
+    } catch (error) {
+      console.error('Error deleting media:', error);
+      toast.error('خطا در حذف رسانه');
+    }
+  };
 
   const fetchExistingReport = async (isRealtimeTrigger = false) => {
     if (!user) return;
@@ -6044,6 +6084,7 @@ export default function DailyReportModule() {
                               layout="slider"
                               disableFullscreen
                               emptyMessage=""
+                              onDelete={(mediaId) => handleOrderMediaDelete(mediaId)}
                             />
                           </div>
                         ));
