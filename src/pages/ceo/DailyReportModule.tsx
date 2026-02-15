@@ -3786,7 +3786,7 @@ export default function DailyReportModule() {
   };
 
   // Fetch full order details for dialog
-  const [orderMedia, setOrderMedia] = useState<Array<{id: string; file_path: string; file_type: string; url?: string; mime_type?: string}>>([]);
+  const [orderMedia, setOrderMedia] = useState<Array<{id: string; file_path: string; file_type: string; url?: string; mime_type?: string; created_at?: string}>>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   
   const fetchOrderDetails = async (orderId: string, dailyRow?: OrderReportRow | null) => {
@@ -3914,6 +3914,7 @@ export default function DailyReportModule() {
             file_path: m.file_path,
             file_type: m.file_type,
             mime_type: (m as any).mime_type ?? undefined,
+            created_at: m.created_at,
           }))
         );
       } else {
@@ -5979,19 +5980,51 @@ export default function DailyReportModule() {
                         </div>
                       </div>
 
-                      {/* Use centralized MediaGallery component */}
-                      <MediaGallery
-                        media={orderMedia.map(m => ({
-                          id: m.id,
-                          file_path: m.file_path,
-                          file_type: m.file_type,
-                          mime_type: m.mime_type,
-                          url: m.url
-                        } as MediaItem))}
-                        layout="slider"
-                        disableFullscreen
-                        emptyMessage="هنوز تصویر یا ویدیویی برای این سفارش ثبت نشده است"
-                      />
+                      {/* Group media by date (Jalali) */}
+                      {orderMedia.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          هنوز تصویر یا ویدیویی برای این سفارش ثبت نشده است
+                        </p>
+                      ) : (() => {
+                        // Group media by Jalali date
+                        const grouped = orderMedia.reduce<Record<string, typeof orderMedia>>((acc, m) => {
+                          let dateKey = 'بدون تاریخ';
+                          if (m.created_at) {
+                            try {
+                              dateKey = format(new Date(m.created_at), 'yyyy/MM/dd - EEEE');
+                            } catch { dateKey = 'بدون تاریخ'; }
+                          }
+                          if (!acc[dateKey]) acc[dateKey] = [];
+                          acc[dateKey].push(m);
+                          return acc;
+                        }, {});
+
+                        return Object.entries(grouped).map(([dateLabel, items]) => (
+                          <div key={dateLabel} className="space-y-2">
+                            <div className="flex items-center gap-2 py-1">
+                              <span className="text-xs font-semibold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/30 px-2 py-0.5 rounded-full">
+                                📅 {dateLabel}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground">
+                                ({items.length} فایل)
+                              </span>
+                              <div className="flex-1 border-t border-dashed border-purple-200 dark:border-purple-800" />
+                            </div>
+                            <MediaGallery
+                              media={items.map(m => ({
+                                id: m.id,
+                                file_path: m.file_path,
+                                file_type: m.file_type,
+                                mime_type: m.mime_type,
+                                url: m.url,
+                              } as MediaItem))}
+                              layout="slider"
+                              disableFullscreen
+                              emptyMessage=""
+                            />
+                          </div>
+                        ));
+                      })()}
                     </div>
                   </div>
                 );
