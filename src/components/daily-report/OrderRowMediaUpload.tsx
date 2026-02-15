@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Camera, Film, X, Loader2, ImageIcon } from 'lucide-react';
+import { Camera, Film, X, Loader2, ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -40,6 +41,7 @@ export function OrderRowMediaUpload({
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, fileName: '' });
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
@@ -306,8 +308,8 @@ export function OrderRowMediaUpload({
       {/* Thumbnails */}
       {media.length > 0 && (
         <div className="flex flex-wrap gap-1 max-w-[120px]">
-          {media.slice(0, 4).map((item) => (
-            <div key={item.id} className="relative group">
+          {media.slice(0, 4).map((item, idx) => (
+            <div key={item.id} className="relative group cursor-pointer" onClick={() => setPreviewIndex(idx)}>
               {item.file_type === 'image' ? (
                 <img
                   src={item.publicUrl}
@@ -321,7 +323,7 @@ export function OrderRowMediaUpload({
               )}
               {!readOnly && (
                 <button
-                  onClick={() => removeMedia(item)}
+                  onClick={(e) => { e.stopPropagation(); removeMedia(item); }}
                   className="absolute -top-1 -right-1 bg-destructive text-white rounded-full w-3.5 h-3.5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <X className="h-2 w-2" />
@@ -330,12 +332,64 @@ export function OrderRowMediaUpload({
             </div>
           ))}
           {media.length > 4 && (
-            <div className="w-8 h-8 rounded bg-muted border flex items-center justify-center text-[10px] text-muted-foreground">
+            <div
+              className="w-8 h-8 rounded bg-muted border flex items-center justify-center text-[10px] text-muted-foreground cursor-pointer"
+              onClick={() => setPreviewIndex(4)}
+            >
               +{media.length - 4}
             </div>
           )}
         </div>
       )}
+
+      {/* Media Preview Dialog */}
+      <Dialog open={previewIndex !== null} onOpenChange={(open) => { if (!open) setPreviewIndex(null); }}>
+        <DialogContent className="max-w-[90vw] max-h-[90vh] p-2 sm:p-4 flex flex-col items-center justify-center">
+          {previewIndex !== null && media[previewIndex] && (
+            <>
+              {media[previewIndex].file_type === 'image' ? (
+                <img
+                  src={media[previewIndex].publicUrl}
+                  alt=""
+                  className="max-w-full max-h-[75vh] object-contain rounded"
+                />
+              ) : (
+                <video
+                  src={media[previewIndex].publicUrl}
+                  controls
+                  autoPlay
+                  className="max-w-full max-h-[75vh] rounded"
+                />
+              )}
+              {media.length > 1 && (
+                <div className="flex items-center gap-4 mt-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={previewIndex <= 0}
+                    onClick={() => setPreviewIndex(prev => prev !== null ? prev - 1 : null)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    {previewIndex + 1} / {media.length}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={previewIndex >= media.length - 1}
+                    onClick={() => setPreviewIndex(prev => prev !== null ? prev + 1 : null)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
