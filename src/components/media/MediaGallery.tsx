@@ -291,6 +291,13 @@ export const MediaGallery = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [fullscreenMedia, setFullscreenMedia] = useState<MediaItem | null>(null);
 
+  // Keep currentIndex in bounds when media array changes (e.g. after deletion)
+  useEffect(() => {
+    if (media && media.length > 0 && currentIndex >= media.length) {
+      setCurrentIndex(media.length - 1);
+    }
+  }, [media, currentIndex]);
+
   // Fetch signed URLs for all media
   useEffect(() => {
     let cancelled = false;
@@ -455,6 +462,15 @@ export const MediaGallery = ({
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
                   </div>
                 )}
+                {onDelete && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
+                    className="absolute top-1 right-1 z-10 bg-destructive text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                    title="حذف"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
               </div>
             );
           })}
@@ -540,6 +556,17 @@ export const MediaGallery = ({
           <div className="w-full max-h-64 h-64 flex items-center justify-center bg-muted/30">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
           </div>
+        )}
+
+        {/* Delete button on current media (always visible when onDelete provided) */}
+        {onDelete && (
+          <button
+            onClick={() => onDelete(currentMedia.id)}
+            className="absolute top-2 right-2 z-10 bg-destructive text-white rounded-full w-6 h-6 flex items-center justify-center shadow hover:bg-destructive/90 transition-colors"
+            title="حذف"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
         )}
         
         {media.length > 1 && (
