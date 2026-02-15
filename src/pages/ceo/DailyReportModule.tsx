@@ -2863,16 +2863,20 @@ export default function DailyReportModule() {
           const tempReportDate = new Date(cachedDateStr);
 
           // در ماژول مادر (shouldShowAllUserReports): ذخیره ردیف‌ها به گزارش‌های اصلی‌شان
+          let savedReportId: string | undefined;
           if (shouldShowAllUserReports && !isAggregated) {
-            // For parent module, we need to handle staff differently
-            // For now, just save to regular report
-            await saveRegularReportForDate(cachedDateStr, cachedEntry, tempReportDate);
+            savedReportId = await saveRegularReportForDate(cachedDateStr, cachedEntry, tempReportDate);
           } else {
-            await saveRegularReportForDate(cachedDateStr, cachedEntry, tempReportDate);
+            savedReportId = await saveRegularReportForDate(cachedDateStr, cachedEntry, tempReportDate);
           }
 
           // بازگرداندن state های اصلی
           orderReportsRef.current = originalOrderReports;
+
+          // به‌روزرسانی existingReportId برای تاریخ فعلی
+          if (savedReportId && cachedDateStr === toLocalDateString(reportDate)) {
+            setExistingReportId(savedReportId);
+          }
 
           // علامت‌گذاری به عنوان ذخیره شده
           dateCache.markDateAsSaved(cachedDateStr);
@@ -3157,6 +3161,8 @@ export default function DailyReportModule() {
         moduleName,
       });
     }
+
+    return reportId;
   };
 
   // تابع ذخیره برای استفاده در دیالوگ خروج
