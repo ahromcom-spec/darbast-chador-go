@@ -97,8 +97,15 @@ const isManagerUser = async (userId: string): Promise<boolean> => {
 
 const extractStaffCode = (value: unknown): string => {
   if (typeof value !== 'string') return '';
+  // Match phone numbers like 09xxxxxxxxx
   const phoneMatch = value.match(/09\d{9}/);
   if (phoneMatch) return phoneMatch[0];
+  // Match HR-XXXXXX short codes for staff without phone numbers
+  const hrCodeMatch = value.match(/HR-[0-9a-f]{6}/i);
+  if (hrCodeMatch) return hrCodeMatch[0];
+  // Match full UUIDs (legacy data)
+  const uuidMatch = value.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  if (uuidMatch) return `HR-${uuidMatch[0].slice(-6)}`;
   const codeMatch = value.match(/\b\d{4}\b/);
   return codeMatch?.[0] ?? '';
 };
