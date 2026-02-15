@@ -4467,12 +4467,13 @@ export default function DailyReportModule() {
                                 </TableCell>
                                 <TableCell className="border border-blue-200">
                                   <OrderRowMediaUpload
-                                    dailyReportId={existingReportId}
+                                    dailyReportId={isAggregated && row.source_daily_report_id ? row.source_daily_report_id : existingReportId}
                                     dailyReportOrderId={row.id}
                                     orderId={row.order_id || undefined}
                                     reportDate={toLocalDateString(reportDate)}
                                     readOnly={effectiveReadOnly}
                                     rowIndex={index}
+                                    showAllUsers={isAggregated}
                                   />
                                 </TableCell>
                                 <TableCell className="border border-blue-200">

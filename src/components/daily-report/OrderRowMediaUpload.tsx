@@ -21,6 +21,7 @@ interface OrderRowMediaUploadProps {
   reportDate: string; // YYYY-MM-DD
   readOnly?: boolean;
   rowIndex: number;
+  showAllUsers?: boolean; // In aggregated/overview mode, show media from all users
 }
 
 export function OrderRowMediaUpload({
@@ -30,6 +31,7 @@ export function OrderRowMediaUpload({
   reportDate,
   readOnly = false,
   rowIndex,
+  showAllUsers = false,
 }: OrderRowMediaUploadProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -47,8 +49,12 @@ export function OrderRowMediaUpload({
         .from('daily_report_order_media')
         .select('id, file_path, file_type')
         .eq('daily_report_id', dailyReportId)
-        .eq('user_id', user.id)
         .eq('report_date', reportDate);
+
+      // In aggregated/overview mode, show media from all users
+      if (!showAllUsers) {
+        query = query.eq('user_id', user.id);
+      }
 
       if (dailyReportOrderId) {
         query = query.eq('daily_report_order_id', dailyReportOrderId);
@@ -78,7 +84,7 @@ export function OrderRowMediaUpload({
     } catch (err) {
       console.error('Error fetching row media:', err);
     }
-  }, [dailyReportId, dailyReportOrderId, orderId, reportDate, user]);
+  }, [dailyReportId, dailyReportOrderId, orderId, reportDate, user, showAllUsers]);
 
   useEffect(() => {
     fetchMedia();
