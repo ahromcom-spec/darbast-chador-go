@@ -3818,10 +3818,9 @@ export default function DailyReportModule() {
           .select(`
             name, 
             code,
-            service_types:service_type_id(
+            service_types_v3:service_type_id(
               name, 
-              code,
-              service_categories:category_id(name)
+              code
             )
           `)
           .eq('id', orderData.subcategory_id)
