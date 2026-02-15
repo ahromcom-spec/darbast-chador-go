@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
 
 // Types
 export interface OrderReportRow {
@@ -701,6 +702,20 @@ export function useDailyReport() {
           );
 
         if (insertStaffError) throw insertStaffError;
+
+        // Recalculate balances for affected bank cards
+        const affectedCardIds = new Set<string>();
+        for (const s of staffToSave) {
+          if (s.is_cash_box && s.bank_card_id) {
+            affectedCardIds.add(s.bank_card_id);
+          }
+        }
+        if (affectedCardIds.size > 0) {
+          await Promise.all(
+            Array.from(affectedCardIds).map(cardId => recalculateBankCardBalance(cardId))
+          );
+          window.dispatchEvent(new CustomEvent('bank-card-balance-updated'));
+        }
       }
 
       clearLocalStorageBackup();
