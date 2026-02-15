@@ -340,6 +340,9 @@ async function syncBankCardBalancesFromLedger(params: {
       console.error('Error updating bank card balance (recalc):', updateError);
     }
   }
+
+  // Dispatch custom event so BankCardSelect refetches immediately
+  window.dispatchEvent(new CustomEvent('bank-card-balance-updated'));
 }
 
 const DEFAULT_TITLE = 'گزارش روزانه شرکت اهرم';

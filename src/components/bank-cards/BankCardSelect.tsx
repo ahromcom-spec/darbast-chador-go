@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/select';
 import { CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
+
 
 const NONE_VALUE = '__none__';
 
@@ -83,6 +83,12 @@ export function BankCardSelect({
   useEffect(() => {
     fetchCards();
 
+    // Listen for custom event dispatched after bank card balance updates
+    const handleBalanceUpdated = () => {
+      fetchCards();
+    };
+    window.addEventListener('bank-card-balance-updated', handleBalanceUpdated);
+
     // Subscribe to realtime changes on bank_cards table
     const channel = supabase
       .channel('bank-cards-select-realtime')
@@ -94,45 +100,12 @@ export function BankCardSelect({
           table: 'bank_cards'
         },
         (payload) => {
-          // Update specific card balance if it's an UPDATE
           if (payload.eventType === 'UPDATE' && payload.new) {
             const newData = payload.new as any;
             updateCardBalance(newData.id, newData.current_balance);
           } else {
-            // For INSERT/DELETE, refetch all
             fetchCards();
           }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'daily_report_staff'
-        },
-        (payload) => {
-          // Only process changes that affect bank cards (cash box rows)
-          const oldData = payload.old as any;
-          const newData = payload.new as any;
-          
-          const affectedCardIds = new Set<string>();
-          
-          if (oldData?.bank_card_id && oldData?.is_cash_box) {
-            affectedCardIds.add(oldData.bank_card_id);
-          }
-          if (newData?.bank_card_id && newData?.is_cash_box) {
-            affectedCardIds.add(newData.bank_card_id);
-          }
-          
-          // Recalculate balance for each affected card
-          affectedCardIds.forEach((cardId) => {
-            recalculateBankCardBalance(cardId).then((newBalance) => {
-              if (newBalance !== null) {
-                updateCardBalance(cardId, newBalance);
-              }
-            });
-          });
         }
       )
       .subscribe();
@@ -140,6 +113,7 @@ export function BankCardSelect({
     channelRef.current = channel;
 
     return () => {
+      window.removeEventListener('bank-card-balance-updated', handleBalanceUpdated);
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
       }
