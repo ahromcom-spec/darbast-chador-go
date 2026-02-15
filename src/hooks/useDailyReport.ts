@@ -430,7 +430,7 @@ export function useDailyReport() {
 
         const mappedOrders = (orderData || []).map((o: any) => ({
           id: o.id,
-          order_id: o.order_id,
+          order_id: o.order_id || '',
           activity_description: o.activity_description || '',
           service_details: o.service_details || '',
           team_name: o.team_name || '',
