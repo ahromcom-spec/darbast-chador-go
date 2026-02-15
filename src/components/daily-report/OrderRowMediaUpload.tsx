@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 const MEDIA_BUCKET = 'project-media';
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const isValidUuid = (val: unknown): val is string => typeof val === 'string' && UUID_REGEX.test(val);
 
 interface MediaItem {
   id: string;
@@ -57,10 +59,10 @@ export function OrderRowMediaUpload({
         query = query.eq('user_id', user.id);
       }
 
-      if (dailyReportOrderId) {
+      if (dailyReportOrderId && isValidUuid(dailyReportOrderId)) {
         query = query.eq('daily_report_order_id', dailyReportOrderId);
       }
-      if (orderId) {
+      if (orderId && isValidUuid(orderId)) {
         query = query.eq('order_id', orderId);
       }
 
@@ -139,12 +141,16 @@ export function OrderRowMediaUpload({
         }
 
         // Insert record in daily_report_order_media
+        // Only pass dailyReportOrderId if it's a valid UUID (saved row); skip for unsaved rows
+        const validOrderRowId = isValidUuid(dailyReportOrderId) ? dailyReportOrderId : null;
+        const validOrderId = isValidUuid(orderId) ? orderId : null;
+
         const { error: dbError } = await supabase
           .from('daily_report_order_media')
           .insert({
             daily_report_id: dailyReportId,
-            daily_report_order_id: dailyReportOrderId || null,
-            order_id: orderId || null,
+            daily_report_order_id: validOrderRowId,
+            order_id: validOrderId,
             user_id: user.id,
             file_path: storagePath,
             file_type: type,
@@ -155,12 +161,13 @@ export function OrderRowMediaUpload({
 
         if (dbError) {
           console.error('DB error:', dbError);
+          toast({ title: `خطا در ثبت رسانه: ${dbError.message}`, variant: 'destructive' });
           continue;
         }
 
-        // If order is selected, also insert into project_media with report date
-        if (orderId) {
-          await syncMediaToProject(storagePath, type, file.size, file.type, orderId, reportDate);
+        // If order is selected and valid UUID, also insert into project_media with report date
+        if (validOrderId) {
+          await syncMediaToProject(storagePath, type, file.size, file.type, validOrderId, reportDate);
         }
       }
 
@@ -195,7 +202,10 @@ export function OrderRowMediaUpload({
         mime_type: mimeType,
         created_at: `${date}T12:00:00+03:30`,
       });
-      if (error) console.error('Sync to project_media error:', error);
+      if (error) {
+        console.error('Sync to project_media error:', error);
+        // Don't show toast - this is a secondary sync, not critical
+      }
     } catch (err) {
       console.error('syncMediaToProject error:', err);
     }
