@@ -233,6 +233,8 @@ export function useDailyReport() {
   const isInitialLoadRef = useRef(true);
   const isSavingRef = useRef(false);
   const lastSavedHashRef = useRef<string>('');
+  // Race condition prevention: track the expected date to discard stale fetch results
+  const expectedDateRef = useRef<string>('');
 
   // LocalStorage key for backup - include module key for module-specific backups
   const getLocalStorageKey = useCallback(() => {
@@ -400,6 +402,7 @@ export function useDailyReport() {
     try {
       setLoading(true);
       const dateStr = toLocalDateString(reportDate);
+      const expectedDate = dateStr; // capture for staleness check
 
       // ALWAYS clear localStorage backup first to prevent stale data from causing duplicates
       clearLocalStorageBackup();
@@ -421,6 +424,9 @@ export function useDailyReport() {
         reportIdToLoad = myReport.id;
       }
 
+      // Staleness check: if the user has navigated to a different date, discard this result
+      if (expectedDateRef.current !== expectedDate) return;
+
       if (reportIdToLoad) {
         setExistingReportId(reportIdToLoad);
 
@@ -438,6 +444,9 @@ export function useDailyReport() {
           notes: o.notes || '',
           row_color: o.row_color || 'yellow',
         }));
+        
+        // Staleness check after loading order data
+        if (expectedDateRef.current !== expectedDate) return;
         setOrderReports(deduplicateOrderRows(mappedOrders));
 
         const { data: staffData } = await supabase
@@ -496,6 +505,8 @@ export function useDailyReport() {
           normalizedStaff.push(createEmptyStaffRow());
         }
 
+        // Staleness check before setting staff data
+        if (expectedDateRef.current !== expectedDate) return;
         setStaffReports(normalizedStaff);
         
         // Clear any stale localStorage backup since we have DB data
@@ -1181,6 +1192,8 @@ export function useDailyReport() {
   // Reset and fetch when date or module changes
   useEffect(() => {
     if (user && reportDate) {
+      const dateStr = toLocalDateString(reportDate);
+      expectedDateRef.current = dateStr; // Set expected date BEFORE fetch to prevent stale results
       setOrderReports([]);
       setStaffReports([]);
       setExistingReportId(null);

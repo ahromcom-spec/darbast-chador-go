@@ -553,6 +553,8 @@ export default function DailyReportModule() {
   const cachedShowAllReportsRef = useRef<boolean | null>(null);
   // Cache نتیجه isManagerUser تا هربار کوئری نزند
   const cachedIsManagerRef = useRef<boolean | null>(null);
+  // Race condition prevention: track the expected date to discard stale fetch results
+  const expectedDateRef = useRef<string>('');
   // Ensure tables start from the right side in RTL by scrolling to the rightmost (selection) column
   useEffect(() => {
     if (loading) return;
@@ -745,6 +747,7 @@ export default function DailyReportModule() {
     // بررسی کش
     const cachedData = dateCache.getCachedDate(newDateStr);
     if (cachedData) {
+      expectedDateRef.current = newDateStr; // Set expected date for cache path too
       orderReportsRef.current = cachedData.orderReports;
       setOrderReports(cachedData.orderReports);
       setStaffReports(cachedData.staffReports);
@@ -767,6 +770,7 @@ export default function DailyReportModule() {
     cachedShowAllReportsRef.current = null;
     isFetchingReportRef.current = false;
     lastFetchTimestampRef.current = 0;
+    expectedDateRef.current = newDateStr; // Set expected date BEFORE fetch
     fetchExistingReport();
   }, [reportDate, userId, activeModuleKey, isAggregated, dateCache]);
 
@@ -1567,6 +1571,7 @@ export default function DailyReportModule() {
 
     try {
       const dateStr = toLocalDateString(reportDate);
+      const expectedDate = dateStr; // capture for staleness check
       
       // استفاده از کش برای بررسی مدیر بودن (جلوگیری از کوئری تکراری)
       let isManager: boolean;
@@ -1622,6 +1627,12 @@ export default function DailyReportModule() {
       const { data: existingReports, error: existingError } = await reportQuery;
 
       if (existingError) throw existingError;
+
+      // Staleness check: if user navigated to different date, discard this result
+      if (expectedDateRef.current !== expectedDate) {
+        isFetchingReportRef.current = false;
+        return;
+      }
 
        if (isAggregated || showAllReports) {
          // ماژول کلی یا ماژول مادر با گزارشات کاربران اختصاص‌یافته:
@@ -1686,6 +1697,12 @@ export default function DailyReportModule() {
           supabase.from('daily_report_staff').select('*').in('daily_report_id', allReportIds),
         ]);
         
+        // Staleness check after heavy data load
+        if (expectedDateRef.current !== expectedDate) {
+          isFetchingReportRef.current = false;
+          return;
+        }
+
         const creatorNamesCache = new Map<string, string>();
         if (creatorProfilesResult.data) {
           for (const p of creatorProfilesResult.data as any[]) {
@@ -2033,6 +2050,12 @@ export default function DailyReportModule() {
             supabase.from('daily_report_orders').select('*').eq('daily_report_id', reportIdToLoad),
             supabase.from('daily_report_staff').select('*').eq('daily_report_id', reportIdToLoad),
           ]);
+
+          // Staleness check after loading order+staff data
+          if (expectedDateRef.current !== expectedDate) {
+            isFetchingReportRef.current = false;
+            return;
+          }
 
           const loadedOrderRows: OrderReportRow[] = (orderDataResult.data || []).map((o: any) => ({
             id: o.id,
