@@ -118,11 +118,14 @@ export function OrderRowMediaUpload({
 
         const { error: uploadError } = await supabase.storage
           .from(MEDIA_BUCKET)
-          .upload(storagePath, file, { upsert: true });
+          .upload(storagePath, file, { 
+            upsert: true,
+            contentType: file.type || (type === 'video' ? 'video/mp4' : 'image/jpeg'),
+          });
 
         if (uploadError) {
-          console.error('Upload error:', uploadError);
-          toast({ title: 'خطا در آپلود', variant: 'destructive' });
+          console.error('Upload error:', uploadError, 'MIME:', file.type, 'Size:', file.size);
+          toast({ title: `خطا در آپلود: ${uploadError.message}`, variant: 'destructive' });
           continue;
         }
 
