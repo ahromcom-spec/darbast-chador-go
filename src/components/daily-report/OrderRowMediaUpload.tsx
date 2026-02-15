@@ -37,6 +37,7 @@ export function OrderRowMediaUpload({
   const { toast } = useToast();
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, fileName: '' });
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
@@ -104,10 +105,12 @@ export function OrderRowMediaUpload({
     }
 
     setUploading(true);
+    const totalFiles = files.length;
 
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        setUploadProgress({ current: i + 1, total: totalFiles, fileName: file.name });
         const maxSize = type === 'image' ? 10 * 1024 * 1024 : 50 * 1024 * 1024;
         if (file.size > maxSize) {
           toast({
@@ -168,6 +171,7 @@ export function OrderRowMediaUpload({
       toast({ title: 'خطا', variant: 'destructive' });
     } finally {
       setUploading(false);
+      setUploadProgress({ current: 0, total: 0, fileName: '' });
       e.target.value = '';
     }
   };
@@ -256,7 +260,22 @@ export function OrderRowMediaUpload({
         </div>
       )}
 
-      {/* Media count badges */}
+      {/* Upload progress indicator */}
+      {uploading && uploadProgress.total > 0 && (
+        <div className="w-full max-w-[120px] flex flex-col items-center gap-0.5">
+          <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-300"
+              style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+            />
+          </div>
+          <span className="text-[9px] text-muted-foreground whitespace-nowrap">
+            {uploadProgress.current} / {uploadProgress.total} در حال آپلود...
+          </span>
+        </div>
+      )}
+
+
       {(imageCount > 0 || videoCount > 0) && (
         <div className="flex items-center gap-1 text-[10px]">
           {imageCount > 0 && (
