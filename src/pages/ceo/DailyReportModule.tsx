@@ -548,6 +548,8 @@ export default function DailyReportModule() {
   const lastFetchTimestampRef = useRef(0);
   // Cache نتیجه بررسی shouldShowAllUserReports تا هربار محاسبه نشود
   const cachedShowAllReportsRef = useRef<boolean | null>(null);
+  // Cache نتیجه isManagerUser تا هربار کوئری نزند
+  const cachedIsManagerRef = useRef<boolean | null>(null);
   // Ensure tables start from the right side in RTL by scrolling to the rightmost (selection) column
   useEffect(() => {
     if (loading) return;
@@ -1521,29 +1523,30 @@ export default function DailyReportModule() {
     lastFetchTimestampRef.current = now;
 
     try {
-      setLoading(true);
       const dateStr = toLocalDateString(reportDate);
       
-      // بررسی اینکه آیا کاربر فعلی مدیر است
-      const isManager = await isManagerUser(user.id);
+      // استفاده از کش برای بررسی مدیر بودن (جلوگیری از کوئری تکراری)
+      let isManager: boolean;
+      if (cachedIsManagerRef.current !== null) {
+        isManager = cachedIsManagerRef.current;
+      } else {
+        isManager = await isManagerUser(user.id);
+        cachedIsManagerRef.current = isManager;
+      }
       
       // بررسی اینکه آیا این ماژول به کاربران دیگر اختصاص داده شده
-      // اگر مدیر است و ماژول به دیگران اختصاص داده شده، باید همه گزارشات را ببیند
       let showAllReports = false;
       
       if (isManager && !isAggregated) {
-        // استفاده از کش اگر قبلا محاسبه شده (جلوگیری از کوئری‌های تکراری)
         if (cachedShowAllReportsRef.current !== null && isRealtimeTrigger) {
           showAllReports = cachedShowAllReportsRef.current;
         } else {
-          // بررسی اینکه آیا این ماژول به کاربران دیگر اختصاص داده شده
           const { data: assignments } = await supabase
             .from('module_assignments')
             .select('assigned_user_id')
             .eq('module_key', activeModuleKey)
             .eq('is_active', true);
           
-          // اگر ماژول به کاربران دیگر (غیر از کاربر فعلی) اختصاص داده شده، نمایش همه گزارشات
           if (assignments && assignments.some(a => a.assigned_user_id && a.assigned_user_id !== user.id)) {
             showAllReports = true;
           }
@@ -1607,75 +1610,83 @@ export default function DailyReportModule() {
           reportToCreatorMap.set(r.id, (r as any).created_by || '');
         }
         
-        // واکشی نام ثبت‌کنندگان گزارشات
+        // واکشی موازی: پروفایل‌ها، نام ماژول‌ها، کارت‌های بانکی، سفارشات و نیروها
         const creatorIds = Array.from(new Set(existingReports.map(r => (r as any).created_by).filter(Boolean)));
-        const creatorNamesCache = new Map<string, string>();
+        const uniqueModuleKeys = Array.from(new Set(existingReports.map(r => r.module_key).filter(Boolean)));
         
-        if (creatorIds.length > 0) {
-          const { data: creatorProfiles } = await supabase
-            .from('profiles')
-            .select('user_id, full_name')
-            .in('user_id', creatorIds);
-          
-          if (creatorProfiles) {
-            for (const p of creatorProfiles) {
-              if (p.user_id && p.full_name) {
-                creatorNamesCache.set(p.user_id, p.full_name);
-              }
+        // همه کوئری‌های مستقل را همزمان اجرا کن
+        const [
+          creatorProfilesResult,
+          hierarchyStatesResult,
+          moduleAssignmentsResult,
+          bankCardsResult,
+          allOrderDataResult,
+          allStaffDataResult,
+        ] = await Promise.all([
+          // 1) پروفایل ثبت‌کنندگان
+          creatorIds.length > 0
+            ? supabase.from('profiles').select('user_id, full_name').in('user_id', creatorIds)
+            : Promise.resolve({ data: [] }),
+          // 2) نام‌های سفارشی ماژول‌ها
+          uniqueModuleKeys.length > 0
+            ? (supabase as any).from('module_hierarchy_states').select('custom_names').eq('type', 'available')
+            : Promise.resolve({ data: [] }),
+          // 3) نام‌های استاندارد ماژول‌ها
+          uniqueModuleKeys.length > 0
+            ? supabase.from('module_assignments').select('module_key, module_name').in('module_key', uniqueModuleKeys).eq('is_active', true)
+            : Promise.resolve({ data: [] }),
+          // 4) کارت‌های بانکی
+          supabase.from('bank_cards').select('id, card_name, bank_name, current_balance').eq('is_active', true),
+          // 5) سفارشات
+          supabase.from('daily_report_orders').select('*').in('daily_report_id', allReportIds),
+          // 6) نیروها
+          supabase.from('daily_report_staff').select('*').in('daily_report_id', allReportIds),
+        ]);
+        
+        const creatorNamesCache = new Map<string, string>();
+        if (creatorProfilesResult.data) {
+          for (const p of creatorProfilesResult.data as any[]) {
+            if (p.user_id && p.full_name) {
+              creatorNamesCache.set(p.user_id, p.full_name);
             }
           }
         }
         
-        // واکشی نام‌های دقیق ماژول‌ها از جداول مختلف
-        const uniqueModuleKeys = Array.from(new Set(existingReports.map(r => r.module_key).filter(Boolean)));
         const moduleNamesCache = new Map<string, string>();
-        
-        if (uniqueModuleKeys.length > 0) {
-          // اول از module_hierarchy_states واکشی کن (برای custom keys)
-          const { data: hierarchyStates } = await (supabase as any)
-            .from('module_hierarchy_states')
-            .select('custom_names')
-            .eq('type', 'available');
-          
-          if (hierarchyStates) {
-            for (const state of hierarchyStates) {
-              const customNames = state.custom_names as Record<string, { name: string; description?: string }> | null;
-              if (customNames) {
-                for (const key of uniqueModuleKeys) {
-                  if (customNames[key]?.name && !moduleNamesCache.has(key)) {
-                    moduleNamesCache.set(key, customNames[key].name);
-                  }
+        if (hierarchyStatesResult.data) {
+          for (const state of hierarchyStatesResult.data as any[]) {
+            const customNames = state.custom_names as Record<string, { name: string; description?: string }> | null;
+            if (customNames) {
+              for (const key of uniqueModuleKeys) {
+                if (customNames[key]?.name && !moduleNamesCache.has(key)) {
+                  moduleNamesCache.set(key, customNames[key].name);
                 }
               }
             }
           }
-          
-          // سپس از module_assignments برای کلیدهای استاندارد
-          const { data: moduleAssignments } = await supabase
-            .from('module_assignments')
-            .select('module_key, module_name')
-            .in('module_key', uniqueModuleKeys)
-            .eq('is_active', true);
-          
-          if (moduleAssignments) {
-            for (const ma of moduleAssignments) {
-              if (ma.module_key && ma.module_name && !moduleNamesCache.has(ma.module_key)) {
-                moduleNamesCache.set(ma.module_key, ma.module_name);
-              }
+        }
+        if (moduleAssignmentsResult.data) {
+          for (const ma of moduleAssignmentsResult.data as any[]) {
+            if (ma.module_key && ma.module_name && !moduleNamesCache.has(ma.module_key)) {
+              moduleNamesCache.set(ma.module_key, ma.module_name);
             }
           }
         }
         
+        // کارت‌های بانکی
+        const cardsMap = new Map<string, BankCardCache>();
+        for (const card of (bankCardsResult.data || []) as any[]) {
+          cardsMap.set(card.id, card);
+        }
+        setBankCardsCache(cardsMap);
+        
+        const allOrderData = allOrderDataResult.data;
+        const allStaffData = allStaffDataResult.data;
+        
         // تابع برای تبدیل module_key به نام دقیق فارسی از دیتابیس
         const getModuleDisplayName = (key: string): string => {
-          // اول از کش نام‌های واقعی بخوان
           const cachedName = moduleNamesCache.get(key);
-          if (cachedName) {
-            // نام کامل را برگردان
-            return cachedName;
-          }
-          
-          // Fallback به منطق قبلی اگر نام در کش نبود
+          if (cachedName) return cachedName;
           if (key.includes('اجرایی') || key.includes('executive')) return 'گزارش اجرایی';
           if (key.includes('پشتیبانی') || key.includes('support')) return 'گزارش پشتیبانی';
           if (key.includes('مدیریت') || key.includes('management')) return 'گزارش مدیریت';
@@ -1684,61 +1695,12 @@ export default function DailyReportModule() {
           return key;
         };
         
-        // تابع برای دریافت نام ثبت‌کننده گزارش بر اساس reportId
+        // تابع برای دریافت نام ثبت‌کننده گزارش
         const getCreatorName = (reportId: string): string => {
           const creatorId = reportToCreatorMap.get(reportId);
-          if (creatorId) {
-            return creatorNamesCache.get(creatorId) || '';
-          }
+          if (creatorId) return creatorNamesCache.get(creatorId) || '';
           return '';
         };
-        
-        // اگر ماژول کلی هم گزارش دارد، آن را به عنوان report اصلی استفاده کن
-        // در غیر این صورت، اولین گزارش را به عنوان پایه استفاده کن
-        const aggregatedModuleReport = existingReports.find((r) => 
-          r.module_key === activeModuleKey || 
-          r.module_key?.includes('کلی') ||
-          r.module_key?.includes('total') ||
-          r.module_key?.includes('full')
-        );
-        const primaryReport = aggregatedModuleReport || existingReports[0];
-        setExistingReportId(primaryReport?.id || null);
-        
-        // در ماژول کلی: ترکیب توضیحات همه ماژول‌های منبع
-        if (isAggregated) {
-          const allNotes: string[] = [];
-          for (const r of existingReports) {
-            if (r.notes && r.notes.trim()) {
-              const moduleName = getModuleDisplayName(r.module_key || '');
-              const creatorId = reportToCreatorMap.get(r.id) || '';
-              const creatorName = creatorId ? creatorNamesCache.get(creatorId) : '';
-              const label = creatorName ? `${moduleName} (${creatorName})` : moduleName;
-              allNotes.push(`【${label}】: ${r.notes.trim()}`);
-            }
-          }
-          setDailyNotes(allNotes.length > 0 ? allNotes.join('\n') : '');
-        } else {
-          setDailyNotes(primaryReport?.notes || '');
-        }
-
-        // واکشی کارت‌های بانکی برای نمایش در حالت تجمیعی
-        const { data: bankCardsData } = await supabase
-          .from('bank_cards')
-          .select('id, card_name, bank_name, current_balance')
-          .eq('is_active', true);
-        
-        // ذخیره کارت‌ها در کش برای نمایش
-        const cardsMap = new Map<string, BankCardCache>();
-        for (const card of bankCardsData || []) {
-          cardsMap.set(card.id, card);
-        }
-        setBankCardsCache(cardsMap);
-
-        // واکشی تمام سفارشات از همه گزارشات
-        const { data: allOrderData } = await supabase
-          .from('daily_report_orders')
-          .select('*')
-          .in('daily_report_id', allReportIds);
 
         // نمایش تمام سفارشات از همه ماژول‌ها (بدون حذف تکراری‌ها)
         // هر ماژول ممکن است گزارش متفاوتی برای یک سفارش داشته باشد
@@ -1765,11 +1727,7 @@ export default function DailyReportModule() {
           };
         }));
 
-        // واکشی تمام نیروها از همه گزارشات
-        const { data: allStaffData } = await supabase
-          .from('daily_report_staff')
-          .select('*')
-          .in('daily_report_id', allReportIds);
+        // نیروها قبلاً در Promise.all واکشی شده‌اند
 
         // در ماژول مادر (showAllReports و نه isAggregated): بدون ادغام نمایش بده
         // در ماژول کلی (isAggregated): با ادغام نمایش بده
@@ -2027,12 +1985,13 @@ export default function DailyReportModule() {
           setExistingReportId(reportIdToLoad);
           setDailyNotes(existingReport?.notes || '');
 
-          const { data: orderData } = await supabase
-            .from('daily_report_orders')
-            .select('*')
-            .eq('daily_report_id', reportIdToLoad);
+          // واکشی موازی سفارشات و نیروها
+          const [orderDataResult, staffDataResult] = await Promise.all([
+            supabase.from('daily_report_orders').select('*').eq('daily_report_id', reportIdToLoad),
+            supabase.from('daily_report_staff').select('*').eq('daily_report_id', reportIdToLoad),
+          ]);
 
-          const loadedOrderRows: OrderReportRow[] = (orderData || []).map((o: any) => ({
+          const loadedOrderRows: OrderReportRow[] = (orderDataResult.data || []).map((o: any) => ({
             id: o.id,
             order_id: o.order_id || '',
             activity_description: o.activity_description || '',
@@ -2060,10 +2019,7 @@ export default function DailyReportModule() {
           orderReportsRef.current = nextOrderRows;
           setOrderReports(nextOrderRows);
 
-          const { data: staffData } = await supabase
-            .from('daily_report_staff')
-            .select('*')
-            .eq('daily_report_id', reportIdToLoad);
+          const staffData = staffDataResult.data;
 
           const allStaff: StaffReportRow[] = (staffData || []).map((s: any) => {
             const staffCode = extractStaffCode(s.staff_name || '');
