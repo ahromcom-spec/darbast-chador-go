@@ -1933,6 +1933,7 @@ export type Database = {
           notes: string | null
           order_id: string
           paid_by: string
+          payment_date: string | null
           payment_method: string | null
           receipt_number: string | null
         }
@@ -1944,6 +1945,7 @@ export type Database = {
           notes?: string | null
           order_id: string
           paid_by: string
+          payment_date?: string | null
           payment_method?: string | null
           receipt_number?: string | null
         }
@@ -1955,6 +1957,7 @@ export type Database = {
           notes?: string | null
           order_id?: string
           paid_by?: string
+          payment_date?: string | null
           payment_method?: string | null
           receipt_number?: string | null
         }

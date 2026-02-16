@@ -14,6 +14,7 @@ import { sendOrderSms, sendCeoNotificationSms, buildOrderSmsAddress } from '@/li
 import { BankCardSelect } from '@/components/bank-cards/BankCardSelect';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
+import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 
 interface Payment {
   id: string;
@@ -22,6 +23,7 @@ interface Payment {
   receipt_number: string | null;
   notes: string | null;
   created_at: string;
+  payment_date: string | null;
   paid_by_name?: string;
   bank_card_id?: string | null;
 }
@@ -63,6 +65,7 @@ export function MultiPaymentDialog({
   const [notes, setNotes] = useState('');
   const [selectedBankCardId, setSelectedBankCardId] = useState<string | null>(null);
   const [totalPaid, setTotalPaid] = useState(0);
+  const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString());
 
   // Edit state
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
@@ -71,6 +74,7 @@ export function MultiPaymentDialog({
   const [editNotes, setEditNotes] = useState('');
   const [editBankCardId, setEditBankCardId] = useState<string | null>(null);
   const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editPaymentDate, setEditPaymentDate] = useState<string>(new Date().toISOString());
 
   // Delete state
   const [deletingPayment, setDeletingPayment] = useState<Payment | null>(null);
@@ -79,6 +83,7 @@ export function MultiPaymentDialog({
   useEffect(() => {
     if (open && orderId) {
       fetchPayments();
+      setPaymentDate(new Date().toISOString());
     }
   }, [open, orderId]);
 
@@ -87,7 +92,7 @@ export function MultiPaymentDialog({
     try {
       const { data, error } = await supabase
         .from('order_payments')
-        .select('id, amount, payment_method, receipt_number, notes, created_at, paid_by, bank_card_id')
+        .select('id, amount, payment_method, receipt_number, notes, created_at, paid_by, bank_card_id, payment_date')
         .eq('order_id', orderId)
         .order('created_at', { ascending: false });
 
@@ -107,7 +112,8 @@ export function MultiPaymentDialog({
           return {
             ...payment,
             amount: Number(payment.amount),
-            paid_by_name
+            paid_by_name,
+            payment_date: (payment as any).payment_date || payment.created_at
           };
         })
       );
@@ -153,10 +159,8 @@ export function MultiPaymentDialog({
         updatePayload.execution_stage_updated_at = nowIso;
       }
     } else {
-      // If no longer settled, revert payment confirmation
       updatePayload.payment_confirmed_at = null;
       updatePayload.payment_confirmed_by = null;
-      // Check if we need to revert status
       const { data: currentOrder } = await supabase
         .from('projects_v3')
         .select('status, execution_stage')
@@ -208,7 +212,8 @@ export function MultiPaymentDialog({
           notes: notes || (selectedBankCardId ? 'واریز به کارت بانکی' : 'پرداخت نقدی / علی‌الحساب'),
           paid_by: user.id,
           bank_card_id: selectedBankCardId || null,
-        })
+          payment_date: paymentDate,
+        } as any)
         .select('id')
         .single();
 
@@ -274,6 +279,7 @@ export function MultiPaymentDialog({
       setReceiptNumber('');
       setNotes('');
       setSelectedBankCardId(null);
+      setPaymentDate(new Date().toISOString());
       fetchPayments();
       onPaymentSuccess?.();
     } catch (error: any) {
@@ -291,6 +297,7 @@ export function MultiPaymentDialog({
     setEditReceiptNumber(payment.receipt_number || '');
     setEditNotes(payment.notes || '');
     setEditBankCardId(payment.bank_card_id || null);
+    setEditPaymentDate(payment.payment_date || payment.created_at);
   };
 
   const cancelEdit = () => {
@@ -299,6 +306,7 @@ export function MultiPaymentDialog({
     setEditReceiptNumber('');
     setEditNotes('');
     setEditBankCardId(null);
+    setEditPaymentDate(new Date().toISOString());
   };
 
   const handleEditPayment = async (payment: Payment) => {
@@ -308,7 +316,6 @@ export function MultiPaymentDialog({
       return;
     }
 
-    // Validate: new total_paid should not exceed totalPrice
     const otherPaymentsTotal = totalPaid - payment.amount;
     const newTotalPaid = otherPaymentsTotal + newAmount;
     const priceIsSet = totalPrice !== null && totalPrice !== undefined && totalPrice > 0;
@@ -334,7 +341,8 @@ export function MultiPaymentDialog({
           notes: editNotes || null,
           bank_card_id: newBankCardId,
           payment_method: newBankCardId ? 'card_transfer' : 'cash',
-        })
+          payment_date: editPaymentDate,
+        } as any)
         .eq('id', payment.id);
 
       if (error) throw error;
@@ -344,7 +352,6 @@ export function MultiPaymentDialog({
 
       // Handle bank card changes
       if (bankCardChanged || amountDiff !== 0) {
-        // Remove old bank card transaction if existed
         if (oldBankCardId) {
           await supabase
             .from('bank_card_transactions')
@@ -354,7 +361,6 @@ export function MultiPaymentDialog({
           await recalculateBankCardBalance(oldBankCardId);
         }
 
-        // Create new bank card transaction if new card selected
         if (newBankCardId) {
           const { data: cardData } = await supabase
             .from('bank_cards')
@@ -415,7 +421,10 @@ export function MultiPaymentDialog({
         .delete()
         .eq('id', payment.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Delete error details:', error);
+        throw error;
+      }
 
       // Sync order total_paid
       const newTotalPaid = totalPaid - payment.amount;
@@ -433,7 +442,7 @@ export function MultiPaymentDialog({
       onPaymentSuccess?.();
     } catch (error: any) {
       console.error('Error deleting payment:', error);
-      toast({ variant: 'destructive', title: 'خطا', description: 'حذف پرداخت با خطا مواجه شد' });
+      toast({ variant: 'destructive', title: 'خطا در حذف', description: error.message || 'حذف پرداخت با خطا مواجه شد' });
     } finally {
       setDeleteSubmitting(false);
     }
@@ -544,6 +553,20 @@ export function MultiPaymentDialog({
 
               <div>
                 <Label className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  تاریخ واریز
+                </Label>
+                <div className="mt-1.5">
+                  <PersianDatePicker
+                    value={paymentDate}
+                    onChange={(date) => date && setPaymentDate(date)}
+                    disabled={isSettled}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="flex items-center gap-2">
                   <CreditCard className="h-4 w-4" />
                   واریز به کارت بانکی (اختیاری)
                 </Label>
@@ -612,6 +635,18 @@ export function MultiPaymentDialog({
                             </div>
                             <div>
                               <Label className="text-xs flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                تاریخ واریز
+                              </Label>
+                              <div className="mt-1">
+                                <PersianDatePicker
+                                  value={editPaymentDate}
+                                  onChange={(date) => date && setEditPaymentDate(date)}
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-xs flex items-center gap-1">
                                 <CreditCard className="h-3 w-3" />
                                 کارت بانکی
                               </Label>
@@ -650,7 +685,7 @@ export function MultiPaymentDialog({
                               </p>
                               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <Calendar className="h-3 w-3" />
-                                {formatPersianDateTimeFull(payment.created_at)}
+                                {formatPersianDateTimeFull(payment.payment_date || payment.created_at)}
                               </div>
                               {payment.paid_by_name && (
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
