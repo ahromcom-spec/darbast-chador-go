@@ -562,7 +562,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
     };
 
     const scaffoldTypeName = scaffoldingTypeLabels[scaffoldingType] || scaffoldingType || subcategoryName || '-';
-    const subtypeName = ceilingSubtype ? ceilingSubtypeLabels[ceilingSubtype] || ceilingSubtype : scaffoldTypeName;
+    const subtypeName = ceilingSubtype ? ceilingSubtypeLabels[ceilingSubtype] || ceilingSubtype : (subcategoryName || scaffoldTypeName);
 
     return `
       <div class="invoice-container">
