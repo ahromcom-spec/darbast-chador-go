@@ -350,40 +350,62 @@ export function MultiPaymentDialog({
       // Sync order total_paid
       await syncOrderTotalPaid(newTotalPaid);
 
-      // Handle bank card changes
-      if (bankCardChanged || amountDiff !== 0) {
-        if (oldBankCardId) {
-          await supabase
-            .from('bank_card_transactions')
-            .delete()
-            .eq('reference_type', 'order_payment')
-            .eq('reference_id', payment.id);
-          await recalculateBankCardBalance(oldBankCardId);
+      // Always handle bank card transactions robustly during edit
+      // 1. Delete any existing bank card transaction for this payment (from old or new card)
+      const { data: existingTx } = await supabase
+        .from('bank_card_transactions')
+        .select('id, bank_card_id')
+        .eq('reference_type', 'order_payment')
+        .eq('reference_id', payment.id);
+
+      const affectedCardIds = new Set<string>();
+
+      if (existingTx && existingTx.length > 0) {
+        for (const tx of existingTx) {
+          affectedCardIds.add(tx.bank_card_id);
         }
+        await supabase
+          .from('bank_card_transactions')
+          .delete()
+          .eq('reference_type', 'order_payment')
+          .eq('reference_id', payment.id);
+      }
 
-        if (newBankCardId) {
-          const { data: cardData } = await supabase
-            .from('bank_cards')
-            .select('current_balance')
-            .eq('id', newBankCardId)
-            .single();
+      // Also track old card if it had one but no transaction was found (legacy data)
+      if (oldBankCardId) {
+        affectedCardIds.add(oldBankCardId);
+      }
 
-          if (cardData) {
-            const newCardBalance = Number(cardData.current_balance) + newAmount;
-            await supabase.from('bank_card_transactions').insert({
-              bank_card_id: newBankCardId,
-              transaction_type: 'deposit',
-              amount: newAmount,
-              balance_after: newCardBalance,
-              description: `واریز پرداخت سفارش ${orderCode} - ${customerName}`,
-              reference_type: 'order_payment',
-              reference_id: payment.id,
-              created_by: user?.id,
-            });
-          }
-          await recalculateBankCardBalance(newBankCardId);
+      // 2. Insert new bank card transaction if a card is selected
+      if (newBankCardId) {
+        const { data: cardData } = await supabase
+          .from('bank_cards')
+          .select('current_balance')
+          .eq('id', newBankCardId)
+          .single();
+
+        if (cardData) {
+          const newCardBalance = Number(cardData.current_balance) + newAmount;
+          await supabase.from('bank_card_transactions').insert({
+            bank_card_id: newBankCardId,
+            transaction_type: 'deposit',
+            amount: newAmount,
+            balance_after: newCardBalance,
+            description: `واریز پرداخت سفارش ${orderCode} - ${customerName}`,
+            reference_type: 'order_payment',
+            reference_id: payment.id,
+            created_by: user?.id,
+          });
         }
+        affectedCardIds.add(newBankCardId);
+      }
 
+      // 3. Recalculate balance for all affected cards
+      for (const cardId of affectedCardIds) {
+        await recalculateBankCardBalance(cardId);
+      }
+
+      if (affectedCardIds.size > 0) {
         window.dispatchEvent(new CustomEvent('bank-card-balance-updated'));
       }
 
