@@ -45,17 +45,6 @@ export function BankCardTransactions({ card, getTransactions }: BankCardTransact
       // Set transactions back in descending order (newest first)
       setTransactions(ascending.reverse());
       setCurrentBalance(runningBalance);
-      
-      // Also fetch the latest balance from DB
-      const { data: cardData } = await supabase
-        .from('bank_cards')
-        .select('current_balance')
-        .eq('id', card.id)
-        .single();
-      
-      if (cardData) {
-        setCurrentBalance(cardData.current_balance);
-      }
     } finally {
       setLoading(false);
       isFetchingRef.current = false;
