@@ -4702,8 +4702,9 @@ export default function DailyReportModule() {
                                      {row.staff_name || '-'}
                                    </div>
                                  ) : (
-                                   <StaffSearchSelect
-                                     value={row.staff_user_id || ''}
+                                    <StaffSearchSelect
+                                      value={row.staff_user_id || ''}
+                                      displayName={row.staff_name?.replace(/^MANUAL-\d+\s*-\s*/, '') || undefined}
                                      onValueChange={(code, name, userId) => {
                                        // Check if this staff is already selected
                                        const alreadySelected = staffReports.some(

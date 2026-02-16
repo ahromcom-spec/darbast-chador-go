@@ -412,6 +412,7 @@ export function StaffReportsTable({
                     ) : (
                       <StaffSearchSelect
                         value={row.staff_user_id || ''}
+                        displayName={row.staff_name?.replace(/^MANUAL-\d+\s*-\s*/, '') || undefined}
                         onValueChange={(code, name, userId) => handleStaffSelect(index, code, name, userId)}
                         placeholder="انتخاب نیرو"
                         excludeCodes={staffReports

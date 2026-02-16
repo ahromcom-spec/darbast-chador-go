@@ -104,6 +104,9 @@ const extractStaffCode = (value: unknown): string => {
   // Match HR-XXXXXX short codes for staff without phone numbers
   const hrCodeMatch = value.match(/HR-[0-9a-f]{6}/i);
   if (hrCodeMatch) return hrCodeMatch[0];
+  // Match MANUAL-xxx codes for manually entered staff names
+  const manualMatch = value.match(/MANUAL-\d+/);
+  if (manualMatch) return manualMatch[0];
   // Match full UUIDs (legacy data)
   const uuidMatch = value.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
   if (uuidMatch) return `HR-${uuidMatch[0].slice(-6)}`;

@@ -20,6 +20,7 @@ interface StaffMember {
 
 interface StaffSearchSelectProps {
   value: string;
+  displayName?: string;
   onValueChange: (value: string, staffName: string, userId?: string | null) => void;
   placeholder?: string;
   excludeCodes?: string[];
@@ -145,6 +146,7 @@ const loadStaffDirectoryCached = async () => {
 
 export function StaffSearchSelect({
   value,
+  displayName,
   onValueChange,
   placeholder = 'انتخاب نیرو',
   excludeCodes = [],
@@ -472,7 +474,7 @@ export function StaffSearchSelect({
           {selectedStaff
             ? selectedStaff.code.length > 20 ? selectedStaff.name : `${selectedStaff.name} - ${selectedStaff.code}`
             : value
-              ? value
+              ? (displayName || value)
               : placeholder}
         </span>
         {selectedStaff || value ? (
