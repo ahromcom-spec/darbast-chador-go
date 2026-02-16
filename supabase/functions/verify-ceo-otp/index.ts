@@ -24,7 +24,8 @@ serve(async (req) => {
       );
     }
 
-    if (action !== 'module_delete') {
+    const validActions = ['module_delete', 'bank_card_delete'];
+    if (!validActions.includes(action)) {
       return new Response(
         JSON.stringify({ error: 'عملیات نامعتبر', success: false }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
