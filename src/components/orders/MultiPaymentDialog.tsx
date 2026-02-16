@@ -69,6 +69,7 @@ export function MultiPaymentDialog({
   const [editAmount, setEditAmount] = useState('');
   const [editReceiptNumber, setEditReceiptNumber] = useState('');
   const [editNotes, setEditNotes] = useState('');
+  const [editBankCardId, setEditBankCardId] = useState<string | null>(null);
   const [editSubmitting, setEditSubmitting] = useState(false);
 
   // Delete state
@@ -289,6 +290,7 @@ export function MultiPaymentDialog({
     setEditAmount(payment.amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','));
     setEditReceiptNumber(payment.receipt_number || '');
     setEditNotes(payment.notes || '');
+    setEditBankCardId(payment.bank_card_id || null);
   };
 
   const cancelEdit = () => {
@@ -296,6 +298,7 @@ export function MultiPaymentDialog({
     setEditAmount('');
     setEditReceiptNumber('');
     setEditNotes('');
+    setEditBankCardId(null);
   };
 
   const handleEditPayment = async (payment: Payment) => {
@@ -318,6 +321,10 @@ export function MultiPaymentDialog({
     try {
       const amountDiff = newAmount - payment.amount;
 
+      const oldBankCardId = payment.bank_card_id || null;
+      const newBankCardId = editBankCardId;
+      const bankCardChanged = oldBankCardId !== newBankCardId;
+
       // Update payment record
       const { error } = await supabase
         .from('order_payments')
@@ -325,6 +332,8 @@ export function MultiPaymentDialog({
           amount: newAmount,
           receipt_number: editReceiptNumber || null,
           notes: editNotes || null,
+          bank_card_id: newBankCardId,
+          payment_method: newBankCardId ? 'card_transfer' : 'cash',
         })
         .eq('id', payment.id);
 
@@ -333,24 +342,42 @@ export function MultiPaymentDialog({
       // Sync order total_paid
       await syncOrderTotalPaid(newTotalPaid);
 
-      // If payment had a bank card, update the bank card transaction & recalculate
-      if (payment.bank_card_id && amountDiff !== 0) {
-        // Update the linked bank_card_transaction
-        const { data: txData } = await supabase
-          .from('bank_card_transactions')
-          .select('id, amount')
-          .eq('reference_type', 'order_payment')
-          .eq('reference_id', payment.id)
-          .maybeSingle();
-
-        if (txData) {
+      // Handle bank card changes
+      if (bankCardChanged || amountDiff !== 0) {
+        // Remove old bank card transaction if existed
+        if (oldBankCardId) {
           await supabase
             .from('bank_card_transactions')
-            .update({ amount: newAmount, balance_after: 0 }) // balance_after will be recalculated
-            .eq('id', txData.id);
+            .delete()
+            .eq('reference_type', 'order_payment')
+            .eq('reference_id', payment.id);
+          await recalculateBankCardBalance(oldBankCardId);
         }
 
-        await recalculateBankCardBalance(payment.bank_card_id);
+        // Create new bank card transaction if new card selected
+        if (newBankCardId) {
+          const { data: cardData } = await supabase
+            .from('bank_cards')
+            .select('current_balance')
+            .eq('id', newBankCardId)
+            .single();
+
+          if (cardData) {
+            const newCardBalance = Number(cardData.current_balance) + newAmount;
+            await supabase.from('bank_card_transactions').insert({
+              bank_card_id: newBankCardId,
+              transaction_type: 'deposit',
+              amount: newAmount,
+              balance_after: newCardBalance,
+              description: `واریز پرداخت سفارش ${orderCode} - ${customerName}`,
+              reference_type: 'order_payment',
+              reference_id: payment.id,
+              created_by: user?.id,
+            });
+          }
+          await recalculateBankCardBalance(newBankCardId);
+        }
+
         window.dispatchEvent(new CustomEvent('bank-card-balance-updated'));
       }
 
@@ -584,6 +611,20 @@ export function MultiPaymentDialog({
                               />
                             </div>
                             <div>
+                              <Label className="text-xs flex items-center gap-1">
+                                <CreditCard className="h-3 w-3" />
+                                کارت بانکی
+                              </Label>
+                              <div className="mt-1">
+                                <BankCardSelect
+                                  value={editBankCardId}
+                                  onValueChange={setEditBankCardId}
+                                  placeholder="انتخاب کارت بانکی"
+                                  showBalance={true}
+                                />
+                              </div>
+                            </div>
+                            <div>
                               <Label className="text-xs">شماره رسید</Label>
                               <Input type="text" value={editReceiptNumber} onChange={(e) => setEditReceiptNumber(e.target.value)} className="mt-1 h-8 text-sm" />
                             </div>
@@ -652,7 +693,7 @@ export function MultiPaymentDialog({
       </Dialog>
 
       {/* Delete Confirmation */}
-      <AlertDialog open={!!deletingPayment} onOpenChange={(open) => !open && setDeletingPayment(null)}>
+      <AlertDialog open={!!deletingPayment} onOpenChange={(open) => { if (!open && !deleteSubmitting) setDeletingPayment(null); }}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
             <AlertDialogTitle>حذف پرداخت</AlertDialogTitle>
@@ -662,9 +703,13 @@ export function MultiPaymentDialog({
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-row-reverse gap-2">
             <AlertDialogCancel disabled={deleteSubmitting}>انصراف</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeletePayment} disabled={deleteSubmitting} className="bg-destructive hover:bg-destructive/90">
+            <Button
+              variant="destructive"
+              onClick={handleDeletePayment}
+              disabled={deleteSubmitting}
+            >
               {deleteSubmitting ? 'در حال حذف...' : 'حذف پرداخت'}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
