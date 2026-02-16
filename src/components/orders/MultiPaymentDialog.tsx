@@ -601,6 +601,7 @@ export function MultiPaymentDialog({
                     placeholder="انتخاب کارت بانکی"
                     disabled={isSettled}
                     showBalance={true}
+                    showManagementCards={true}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">با انتخاب کارت، مبلغ پرداختی به موجودی آن اضافه می‌شود</p>
@@ -680,6 +681,7 @@ export function MultiPaymentDialog({
                                   onValueChange={setEditBankCardId}
                                   placeholder="انتخاب کارت بانکی"
                                   showBalance={true}
+                                  showManagementCards={true}
                                 />
                               </div>
                             </div>
