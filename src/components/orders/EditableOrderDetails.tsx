@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { calculateTotalFromDimensions } from '@/lib/dimensionCalculations';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -184,18 +185,20 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   // Calculate total measure (m² or m³) from dimensions for expert pricing
   const calculateExpertPricingTotalMeasure = () => {
     const dims = parsedNotes?.dimensions;
-    const totalFromNotes = parseLocalizedNumber(
-      parsedNotes?.total_volume ?? parsedNotes?.totalVolume ?? parsedNotes?.total_area ?? parsedNotes?.totalArea
-    );
-    if (totalFromNotes > 0) return totalFromNotes;
-    if (!dims || !Array.isArray(dims)) return 0;
+    if (!dims || !Array.isArray(dims) || dims.length === 0) {
+      // Fallback to stored value only if no dimensions
+      const totalFromNotes = parseLocalizedNumber(
+        parsedNotes?.total_volume ?? parsedNotes?.totalVolume ?? parsedNotes?.total_area ?? parsedNotes?.totalArea
+      );
+      return totalFromNotes > 0 ? totalFromNotes : 0;
+    }
+    // Always recalculate from dimensions
     const hasAnyWidth = dims.some((d: any) => parseLocalizedNumber(d?.width) > 0);
-    const isVolume = Boolean(parsedNotes?.total_volume ?? parsedNotes?.totalVolume) || hasAnyWidth;
     return dims.reduce((sum: number, dim: any) => {
       const length = parseLocalizedNumber(dim?.length);
       const height = parseLocalizedNumber(dim?.height);
       if (length <= 0 || height <= 0) return sum;
-      if (isVolume) {
+      if (hasAnyWidth) {
         const width = parseLocalizedNumber(dim?.width);
         const w = width > 0 ? width : 1;
         return sum + length * w * height;
@@ -962,12 +965,18 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
           </div>
         )}
 
-        {totalArea && (
-          <div>
-            <Label className="text-xs text-muted-foreground">مساحت کل</Label>
-            <p className="font-medium">{totalArea} متر مربع</p>
-          </div>
-        )}
+        {(() => {
+          const dims = parsedNotes?.dimensions;
+          const { total, unit } = calculateTotalFromDimensions(dims, parsedNotes?.columnHeight);
+          const displayTotal = total > 0 ? total : totalArea;
+          if (!displayTotal) return null;
+          return (
+            <div>
+              <Label className="text-xs text-muted-foreground">مساحت کل</Label>
+              <p className="font-medium">{parseFloat(Number(displayTotal).toFixed(2))} {total > 0 ? unit : 'متر مربع'}</p>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Description */}

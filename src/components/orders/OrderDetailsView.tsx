@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { ImageIcon, ChevronLeft, ChevronRight, Ruler, FileText, Layers, User, Phone, MapPin, Calendar, Banknote, Upload, Trash2, Loader2, X, Film } from 'lucide-react';
 import { formatPersianDate } from '@/lib/dateUtils';
+import { calculateTotalFromDimensions } from '@/lib/dimensionCalculations';
 import { CentralizedVideoPlayer } from '@/components/media/CentralizedVideoPlayer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -467,7 +468,8 @@ export const OrderDetailsView = ({ order, showMedia = true, allowMediaEdit = tru
   
   const scaffoldingType = parsedNotes?.service_type || parsedNotes?.scaffoldingType || parsedNotes?.scaffold_type;
   const dimensions = parsedNotes?.dimensions;
-  const totalArea = parsedNotes?.totalArea || parsedNotes?.total_area || parsedNotes?.total_volume;
+  const { total: calculatedTotalArea, unit: calculatedUnit } = calculateTotalFromDimensions(dimensions, parsedNotes?.columnHeight);
+  const totalArea = calculatedTotalArea > 0 ? calculatedTotalArea : (parsedNotes?.totalArea || parsedNotes?.total_area || parsedNotes?.total_volume);
   const conditions = parsedNotes?.conditions || parsedNotes?.serviceConditions;
   const description = parsedNotes?.description || parsedNotes?.installationDescription || parsedNotes?.additional_notes || parsedNotes?.locationPurpose;
   const estimatedPrice = parsedNotes?.estimated_price || parsedNotes?.price || parsedNotes?.totalPrice || order.payment_amount;
@@ -578,7 +580,7 @@ export const OrderDetailsView = ({ order, showMedia = true, allowMediaEdit = tru
           {totalArea && (
             <div>
               <Label className="text-xs text-muted-foreground">متراژ کل</Label>
-              <p className="font-medium">{typeof totalArea === 'number' ? totalArea.toLocaleString('fa-IR') : totalArea} {parsedNotes?.total_volume ? 'متر مکعب' : 'متر مربع'}</p>
+              <p className="font-medium">{typeof totalArea === 'number' ? parseFloat(totalArea.toFixed(2)).toLocaleString('fa-IR') : totalArea} {calculatedTotalArea > 0 ? calculatedUnit : (parsedNotes?.total_volume ? 'متر مکعب' : 'متر مربع')}</p>
             </div>
           )}
         </div>

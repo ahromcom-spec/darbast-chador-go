@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { calculateTotalFromDimensions } from '@/lib/dimensionCalculations';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard, RotateCcw, AlertTriangle, Clock, Lock, Unlock } from 'lucide-react';
 import { useDateFinalizationLock } from '@/hooks/useDateFinalizationLock';
@@ -5652,14 +5653,20 @@ export default function DailyReportModule() {
                             </div>
                           ))}
                         </div>
-                        {parsedNotes.totalArea && (
-                          <div className="p-3 bg-primary/10 rounded-lg flex items-center justify-between mt-2">
-                            <span className="text-sm text-muted-foreground">متراژ کل</span>
-                            <span className="font-bold text-lg text-primary">
-                              {parsedNotes.totalArea % 1 === 0 ? parsedNotes.totalArea : parsedNotes.totalArea.toFixed(2)} متر{parsedNotes.service_type === 'facade' ? ' مربع' : ' مکعب'}
-                            </span>
-                          </div>
-                        )}
+                        {(() => {
+                          const { total: recalcTotal, unit: recalcUnit } = calculateTotalFromDimensions(parsedNotes.dimensions, parsedNotes.columnHeight);
+                          const displayTotal = recalcTotal > 0 ? recalcTotal : parsedNotes.totalArea;
+                          if (!displayTotal) return null;
+                          const displayUnit = recalcTotal > 0 ? recalcUnit : (parsedNotes.service_type === 'facade' ? 'متر مربع' : 'متر مکعب');
+                          return (
+                            <div className="p-3 bg-primary/10 rounded-lg flex items-center justify-between mt-2">
+                              <span className="text-sm text-muted-foreground">متراژ کل</span>
+                              <span className="font-bold text-lg text-primary">
+                                {displayTotal % 1 === 0 ? displayTotal : parseFloat(displayTotal.toFixed(2))} {displayUnit}
+                              </span>
+                            </div>
+                          );
+                        })()}
                         {/* Column specific info */}
                         {parsedNotes.columnHeight && (
                           <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">

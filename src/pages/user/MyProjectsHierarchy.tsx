@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { calculateTotalFromDimensions } from '@/lib/dimensionCalculations';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -787,15 +788,17 @@ export default function MyProjectsHierarchy() {
                                         }, 0);
                                       };
 
-                                      const totalValue = typeof notes?.totalArea === 'number'
-                                        ? notes.totalArea
-                                        : (typeof notes?.total_volume === 'number' 
-                                            ? notes.total_volume 
-                                            : (typeof notes?.total_area === 'number' ? notes.total_area : computedFromDims()));
+                                      const { total: recalcTotal, unit: recalcUnit, isVolume: recalcIsVolume } = calculateTotalFromDimensions(dims, notes?.columnHeight);
+                                      const totalValue = recalcTotal > 0 ? recalcTotal : (
+                                        typeof notes?.totalArea === 'number'
+                                          ? notes.totalArea
+                                          : (typeof notes?.total_volume === 'number' 
+                                              ? notes.total_volume 
+                                              : (typeof notes?.total_area === 'number' ? notes.total_area : 0))
+                                      );
 
-                                      const isVolume = (notes && typeof notes === 'object' && notes !== null && ('total_volume' in notes)) || (hasWidth && dims.length > 0);
                                       const metricLabel = 'متراژ:';
-                                      const unit = isVolume ? 'متر مکعب' : 'متر مربع';
+                                      const unit = recalcTotal > 0 ? recalcUnit : (recalcIsVolume ? 'متر مکعب' : 'متر مربع');
 
                                       const estimatedPrice = typeof notes?.estimated_price === 'number'
                                         ? notes.estimated_price

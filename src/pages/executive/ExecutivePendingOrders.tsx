@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { calculateTotalFromDimensions } from '@/lib/dimensionCalculations';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -1043,6 +1044,8 @@ export default function ExecutivePendingOrders() {
     const getServiceInfo = () => {
       try {
         const n = order.notes || {};
+        const { total: recalcTotal, unit: recalcUnit } = calculateTotalFromDimensions(n.dimensions, n.columnHeight);
+        if (recalcTotal > 0) return `مساحت کل: ${parseFloat(recalcTotal.toFixed(2))} ${recalcUnit}`;
         const totalArea = n.total_area ?? n.totalArea;
         if (totalArea) return `مساحت کل: ${totalArea} متر مربع`;
         if (n.dimensions?.length > 0) return `تعداد ابعاد: ${n.dimensions.length}`;
