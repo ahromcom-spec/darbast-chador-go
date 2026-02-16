@@ -230,11 +230,32 @@ export function StaffSearchSelect({
     });
   }, [search, allStaff, excludeCodes, value]);
 
+  // MRU: read recently-used codes from localStorage
+  const MRU_KEY = 'staff_search_mru';
+  const getMruList = (): string[] => {
+    try { return JSON.parse(localStorage.getItem(MRU_KEY) || '[]'); } catch { return []; }
+  };
+  const pushMru = (code: string) => {
+    const list = getMruList().filter(c => c !== code);
+    list.unshift(code);
+    localStorage.setItem(MRU_KEY, JSON.stringify(list.slice(0, 30)));
+  };
+
   const sortedStaff = useMemo(() => {
-    return [...filteredStaff].sort((a, b) => a.code.localeCompare(b.code));
+    const mru = getMruList();
+    const mruIndex = new Map(mru.map((c, i) => [c, i]));
+    return [...filteredStaff].sort((a, b) => {
+      const aIdx = mruIndex.has(a.code) ? mruIndex.get(a.code)! : 99999;
+      const bIdx = mruIndex.has(b.code) ? mruIndex.get(b.code)! : 99999;
+      if (aIdx !== bIdx) return aIdx - bIdx;
+      return a.code.localeCompare(b.code);
+    });
   }, [filteredStaff]);
 
+  const listRef = useRef<HTMLDivElement>(null);
+
   const handleSelect = (staff: StaffMember) => {
+    pushMru(staff.code);
     onValueChange(staff.code, staff.name, staff.user_id);
     setOpen(false);
     setSearch('');
@@ -467,6 +488,13 @@ export function StaffSearchSelect({
                   ref={searchInputRef}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      const firstBtn = listRef.current?.querySelector('button') as HTMLElement | null;
+                      firstBtn?.focus();
+                    }
+                  }}
                   placeholder="جستجو با نام یا کد پرسنل..."
                   compactFocus
                   className="pr-10 text-sm h-10"
@@ -482,13 +510,28 @@ export function StaffSearchSelect({
               ) : sortedStaff.length === 0 ? (
                 <div className="py-6 text-center text-sm text-muted-foreground">پرسنلی یافت نشد</div>
               ) : (
-                <div className="p-1 bg-background">
-                  {sortedStaff.map((staff) => (
+                <div ref={listRef} className="p-1 bg-background">
+                  {sortedStaff.map((staff, idx) => (
                     <button
                       key={staff.code}
                       type="button"
                       onClick={() => handleSelect(staff)}
-                      className={`w-full text-right px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors cursor-pointer ${
+                      onKeyDown={(e) => {
+                        if (e.key === 'ArrowDown') {
+                          e.preventDefault();
+                          const next = (e.currentTarget.nextElementSibling as HTMLElement | null);
+                          next?.focus();
+                        } else if (e.key === 'ArrowUp') {
+                          e.preventDefault();
+                          const prev = (e.currentTarget.previousElementSibling as HTMLElement | null);
+                          if (prev) prev.focus();
+                          else searchInputRef.current?.focus();
+                        } else if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleSelect(staff);
+                        }
+                      }}
+                      className={`w-full text-right px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors cursor-pointer focus:bg-accent focus:outline-none ${
                         value === staff.code ? 'bg-amber-100 dark:bg-amber-900/30' : ''
                       }`}
                     >
