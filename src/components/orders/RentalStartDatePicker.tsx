@@ -79,16 +79,7 @@ export function RentalStartDatePicker({
             mode="single"
             selected={selectedDate}
             onSelect={handleDateSelect}
-            disabled={(date) => {
-              const today = new Date();
-              today.setHours(0, 0, 0, 0);
-              // Allow dates from 1 year ago to 1 year in the future
-              const minDate = new Date(today);
-              minDate.setFullYear(minDate.getFullYear() - 1);
-              const maxDate = new Date(today);
-              maxDate.setFullYear(maxDate.getFullYear() + 1);
-              return date < minDate || date > maxDate;
-            }}
+            disabled={() => false}
             className="p-3 pointer-events-auto"
           />
         </PopoverContent>
