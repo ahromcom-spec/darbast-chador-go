@@ -260,6 +260,7 @@ export function useBankCards() {
 
   const getCardTransactions = useCallback(async (cardId: string) => {
     try {
+      // Use RPC-style query to sort by effective date (report_date if available, otherwise created_at date)
       const { data, error } = await supabase
         .from('bank_card_transactions')
         .select('*')
@@ -268,7 +269,17 @@ export function useBankCards() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return (data || []) as BankCardTransaction[];
+      
+      // Sort client-side by effective date: report_date first, fallback to created_at date
+      const sorted = ((data || []) as BankCardTransaction[]).sort((a, b) => {
+        const dateA = a.report_date || (a.created_at ? a.created_at.substring(0, 10) : '');
+        const dateB = b.report_date || (b.created_at ? b.created_at.substring(0, 10) : '');
+        if (dateA !== dateB) return dateB.localeCompare(dateA); // DESC
+        // Same effective date: sort by created_at DESC
+        return (b.created_at || '').localeCompare(a.created_at || '');
+      });
+      
+      return sorted;
     } catch (error) {
       console.error('Error fetching transactions:', error);
       return [];
