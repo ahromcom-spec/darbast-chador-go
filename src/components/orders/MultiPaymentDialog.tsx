@@ -5,13 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Banknote, User, Plus, History, Calendar, FileText, Wallet, CreditCard } from 'lucide-react';
+import { Banknote, User, Plus, History, Calendar, FileText, Wallet, CreditCard, Pencil, Trash2, Check, X } from 'lucide-react';
 import { formatPersianDateTimeFull } from '@/lib/dateUtils';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
 import { sendOrderSms, sendCeoNotificationSms, buildOrderSmsAddress } from '@/lib/orderSms';
 import { BankCardSelect } from '@/components/bank-cards/BankCardSelect';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
 
 interface Payment {
   id: string;
@@ -21,6 +23,7 @@ interface Payment {
   notes: string | null;
   created_at: string;
   paid_by_name?: string;
+  bank_card_id?: string | null;
 }
 
 interface MultiPaymentDialogProps {
@@ -61,6 +64,17 @@ export function MultiPaymentDialog({
   const [selectedBankCardId, setSelectedBankCardId] = useState<string | null>(null);
   const [totalPaid, setTotalPaid] = useState(0);
 
+  // Edit state
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState('');
+  const [editReceiptNumber, setEditReceiptNumber] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  // Delete state
+  const [deletingPayment, setDeletingPayment] = useState<Payment | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+
   useEffect(() => {
     if (open && orderId) {
       fetchPayments();
@@ -72,13 +86,12 @@ export function MultiPaymentDialog({
     try {
       const { data, error } = await supabase
         .from('order_payments')
-        .select('id, amount, payment_method, receipt_number, notes, created_at, paid_by')
+        .select('id, amount, payment_method, receipt_number, notes, created_at, paid_by, bank_card_id')
         .eq('order_id', orderId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Fetch paid_by names
       const paymentsWithNames = await Promise.all(
         (data || []).map(async (payment) => {
           let paid_by_name = '';
@@ -113,45 +126,77 @@ export function MultiPaymentDialog({
     }
   };
 
+  /** Sync total_paid on projects_v3 after add/edit/delete */
+  const syncOrderTotalPaid = async (newTotalPaid: number) => {
+    const nowIso = new Date().toISOString();
+    const isSettledNow = !!totalPrice && totalPrice > 0 && newTotalPaid >= totalPrice;
+
+    const updatePayload: Record<string, any> = {
+      total_paid: newTotalPaid,
+      updated_at: nowIso,
+    };
+
+    if (isSettledNow) {
+      updatePayload.payment_confirmed_at = nowIso;
+      updatePayload.payment_confirmed_by = user?.id;
+      const { data: currentOrder } = await supabase
+        .from('projects_v3')
+        .select('execution_stage, status')
+        .eq('id', orderId)
+        .maybeSingle();
+      if (currentOrder?.status !== 'closed') {
+        updatePayload.status = 'paid';
+      }
+      if (currentOrder?.execution_stage === 'awaiting_payment') {
+        updatePayload.execution_stage = 'awaiting_collection';
+        updatePayload.execution_stage_updated_at = nowIso;
+      }
+    } else {
+      // If no longer settled, revert payment confirmation
+      updatePayload.payment_confirmed_at = null;
+      updatePayload.payment_confirmed_by = null;
+      // Check if we need to revert status
+      const { data: currentOrder } = await supabase
+        .from('projects_v3')
+        .select('status, execution_stage')
+        .eq('id', orderId)
+        .maybeSingle();
+      if (currentOrder?.status === 'paid') {
+        updatePayload.status = 'active';
+      }
+      if (currentOrder?.execution_stage === 'awaiting_collection') {
+        updatePayload.execution_stage = 'awaiting_payment';
+        updatePayload.execution_stage_updated_at = nowIso;
+      }
+    }
+
+    await supabase.from('projects_v3').update(updatePayload).eq('id', orderId);
+  };
+
   const handleAddPayment = async () => {
     const amount = parseFloat(paymentAmount.replace(/,/g, ''));
     
     if (!paymentAmount || amount <= 0) {
-      toast({
-        variant: 'destructive',
-        title: 'خطا',
-        description: 'لطفاً مبلغ پرداختی را وارد کنید'
-      });
+      toast({ variant: 'destructive', title: 'خطا', description: 'لطفاً مبلغ پرداختی را وارد کنید' });
       return;
     }
 
-    // بررسی که مبلغ پرداختی بیشتر از باقی‌مانده نباشد (فقط اگر قیمت تعیین شده باشد)
     const priceIsSet = totalPrice !== null && totalPrice !== undefined && totalPrice > 0;
     if (priceIsSet) {
       const currentRemaining = totalPrice - totalPaid;
       if (amount > currentRemaining) {
-        toast({
-          variant: 'destructive',
-          title: 'خطا',
-          description: `مبلغ پرداختی نمی‌تواند بیشتر از باقی‌مانده (${currentRemaining.toLocaleString('fa-IR')} تومان) باشد`
-        });
+        toast({ variant: 'destructive', title: 'خطا', description: `مبلغ پرداختی نمی‌تواند بیشتر از باقی‌مانده (${currentRemaining.toLocaleString('fa-IR')} تومان) باشد` });
         return;
       }
     }
 
     if (!user?.id) {
-      toast({
-        variant: 'destructive',
-        title: 'خطا',
-        description: 'لطفاً ابتدا وارد سیستم شوید'
-      });
+      toast({ variant: 'destructive', title: 'خطا', description: 'لطفاً ابتدا وارد سیستم شوید' });
       return;
     }
 
     setSubmitting(true);
     try {
-
-      // Insert payment record
       const { data: insertedPayment, error: paymentError } = await supabase
         .from('order_payments')
         .insert({
@@ -166,59 +211,15 @@ export function MultiPaymentDialog({
         .select('id')
         .single();
 
-      if (paymentError) {
-        console.error('Payment insert error:', paymentError);
-        throw new Error(`خطا در ثبت پرداخت: ${paymentError.message}`);
-      }
+      if (paymentError) throw new Error(`خطا در ثبت پرداخت: ${paymentError.message}`);
+      if (!insertedPayment) throw new Error('پرداخت ثبت نشد');
 
-      if (!insertedPayment) {
-        throw new Error('پرداخت ثبت نشد - لطفاً دوباره تلاش کنید');
-      }
-
-      // Update total_paid in projects_v3
       const newTotalPaid = totalPaid + amount;
-      const nowIso = new Date().toISOString();
+      await syncOrderTotalPaid(newTotalPaid);
 
-      // فقط وقتی سفارش واقعاً تسویه شد payment_confirmed_at ثبت شود
-      const isSettled = !!totalPrice && newTotalPaid >= (totalPrice || 0);
-      const updatePayload: Record<string, any> = {
-        total_paid: newTotalPaid,
-        payment_method: 'cash',
-        updated_at: nowIso,
-      };
-
-      if (isSettled) {
-        updatePayload.payment_confirmed_at = nowIso;
-        updatePayload.payment_confirmed_by = user.id;
-        // وضعیت فعلی سفارش را بررسی کن - اگر سفارش قبلاً بسته شده، وضعیت را تغییر نده
-        const { data: currentOrder } = await supabase
-          .from('projects_v3')
-          .select('execution_stage, status')
-          .eq('id', orderId)
-          .maybeSingle();
-        if (currentOrder?.status !== 'closed') {
-          updatePayload.status = 'paid';
-        }
-        if (currentOrder?.execution_stage === 'awaiting_payment') {
-          updatePayload.execution_stage = 'awaiting_collection';
-          updatePayload.execution_stage_updated_at = nowIso;
-        }
-      }
-
-      const { error: updateError } = await supabase
-        .from('projects_v3')
-        .update(updatePayload)
-        .eq('id', orderId);
-
-      if (updateError) {
-        console.error('Order update error:', updateError);
-        // Still continue - payment was recorded
-      }
-
-      // Update bank card balance if a card was selected (deposit)
+      // Update bank card balance if selected
       if (selectedBankCardId) {
         try {
-          // Get current card balance
           const { data: cardData } = await supabase
             .from('bank_cards')
             .select('current_balance')
@@ -227,8 +228,6 @@ export function MultiPaymentDialog({
 
           if (cardData) {
             const newCardBalance = Number(cardData.current_balance) + amount;
-
-            // Insert bank card transaction
             await supabase.from('bank_card_transactions').insert({
               bank_card_id: selectedBankCardId,
               transaction_type: 'deposit',
@@ -239,27 +238,17 @@ export function MultiPaymentDialog({
               reference_id: insertedPayment.id,
               created_by: user.id,
             });
-
-            // Update card balance
-            await supabase
-              .from('bank_cards')
-              .update({ current_balance: newCardBalance, updated_at: new Date().toISOString() })
-              .eq('id', selectedBankCardId);
+            await supabase.from('bank_cards').update({ current_balance: newCardBalance, updated_at: new Date().toISOString() }).eq('id', selectedBankCardId);
+            window.dispatchEvent(new CustomEvent('bank-card-balance-updated'));
           }
         } catch (cardError) {
           console.error('Error updating bank card balance:', cardError);
-          // Don't fail the whole payment for this
         }
       }
 
-      // Send notification to customer
+      // Notifications
       if (customerId) {
-        const { data: customerData } = await supabase
-          .from('customers')
-          .select('user_id')
-          .eq('id', customerId)
-          .maybeSingle();
-
+        const { data: customerData } = await supabase.from('customers').select('user_id').eq('id', customerId).maybeSingle();
         if (customerData?.user_id) {
           const remaining = (totalPrice || 0) - newTotalPaid;
           await supabase.from('notifications').insert({
@@ -273,288 +262,412 @@ export function MultiPaymentDialog({
           });
         }
       }
-
-      // ارسال پیامک به مشتری
       if (customerPhone) {
-        sendOrderSms(customerPhone, orderCode, 'paid', {
-          orderId,
-          serviceType: serviceType || 'خدمات',
-          address: address || 'ثبت نشده',
-          amount
-        });
+        sendOrderSms(customerPhone, orderCode, 'paid', { orderId, serviceType: serviceType || 'خدمات', address: address || 'ثبت نشده', amount });
       }
+      sendCeoNotificationSms(orderCode, 'paid', { orderId, serviceType: serviceType || 'خدمات', address: address || 'ثبت نشده', amount, customerName });
 
-      // ارسال پیامک به مدیرعامل
-      sendCeoNotificationSms(orderCode, 'paid', {
-        orderId,
-        serviceType: serviceType || 'خدمات',
-        address: address || 'ثبت نشده',
-        amount,
-        customerName
-      });
+      toast({ title: '✓ پرداخت ثبت شد', description: `مبلغ ${amount.toLocaleString('fa-IR')} تومان با موفقیت ثبت شد` });
 
-      toast({
-        title: '✓ پرداخت ثبت شد',
-        description: `مبلغ ${amount.toLocaleString('fa-IR')} تومان با موفقیت ثبت شد`
-      });
-
-      // Reset form
       setPaymentAmount('');
       setReceiptNumber('');
       setNotes('');
       setSelectedBankCardId(null);
-      
-      // Refresh payments
       fetchPayments();
       onPaymentSuccess?.();
     } catch (error: any) {
       console.error('Error adding payment:', error);
-      toast({
-        variant: 'destructive',
-        title: 'خطا در ثبت پرداخت',
-        description: error.message || 'ثبت پرداخت با خطا مواجه شد. لطفاً دوباره تلاش کنید.'
-      });
+      toast({ variant: 'destructive', title: 'خطا در ثبت پرداخت', description: error.message || 'ثبت پرداخت با خطا مواجه شد.' });
     } finally {
       setSubmitting(false);
     }
   };
 
-  // اگر totalPrice صفر یا تعیین نشده باشد، مانده را نامحدود در نظر بگیر (امکان ثبت پرداخت بدون قیمت مشخص)
+  // ---- EDIT ----
+  const startEdit = (payment: Payment) => {
+    setEditingPaymentId(payment.id);
+    setEditAmount(payment.amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','));
+    setEditReceiptNumber(payment.receipt_number || '');
+    setEditNotes(payment.notes || '');
+  };
+
+  const cancelEdit = () => {
+    setEditingPaymentId(null);
+    setEditAmount('');
+    setEditReceiptNumber('');
+    setEditNotes('');
+  };
+
+  const handleEditPayment = async (payment: Payment) => {
+    const newAmount = parseFloat(editAmount.replace(/,/g, ''));
+    if (!newAmount || newAmount <= 0) {
+      toast({ variant: 'destructive', title: 'خطا', description: 'مبلغ معتبر وارد کنید' });
+      return;
+    }
+
+    // Validate: new total_paid should not exceed totalPrice
+    const otherPaymentsTotal = totalPaid - payment.amount;
+    const newTotalPaid = otherPaymentsTotal + newAmount;
+    const priceIsSet = totalPrice !== null && totalPrice !== undefined && totalPrice > 0;
+    if (priceIsSet && newTotalPaid > totalPrice) {
+      toast({ variant: 'destructive', title: 'خطا', description: `مبلغ جدید بیشتر از باقی‌مانده مجاز است` });
+      return;
+    }
+
+    setEditSubmitting(true);
+    try {
+      const amountDiff = newAmount - payment.amount;
+
+      // Update payment record
+      const { error } = await supabase
+        .from('order_payments')
+        .update({
+          amount: newAmount,
+          receipt_number: editReceiptNumber || null,
+          notes: editNotes || null,
+        })
+        .eq('id', payment.id);
+
+      if (error) throw error;
+
+      // Sync order total_paid
+      await syncOrderTotalPaid(newTotalPaid);
+
+      // If payment had a bank card, update the bank card transaction & recalculate
+      if (payment.bank_card_id && amountDiff !== 0) {
+        // Update the linked bank_card_transaction
+        const { data: txData } = await supabase
+          .from('bank_card_transactions')
+          .select('id, amount')
+          .eq('reference_type', 'order_payment')
+          .eq('reference_id', payment.id)
+          .maybeSingle();
+
+        if (txData) {
+          await supabase
+            .from('bank_card_transactions')
+            .update({ amount: newAmount, balance_after: 0 }) // balance_after will be recalculated
+            .eq('id', txData.id);
+        }
+
+        await recalculateBankCardBalance(payment.bank_card_id);
+        window.dispatchEvent(new CustomEvent('bank-card-balance-updated'));
+      }
+
+      toast({ title: '✓ پرداخت ویرایش شد', description: `مبلغ به ${newAmount.toLocaleString('fa-IR')} تومان تغییر یافت` });
+      cancelEdit();
+      fetchPayments();
+      onPaymentSuccess?.();
+    } catch (error: any) {
+      console.error('Error editing payment:', error);
+      toast({ variant: 'destructive', title: 'خطا', description: 'ویرایش پرداخت با خطا مواجه شد' });
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  // ---- DELETE ----
+  const handleDeletePayment = async () => {
+    if (!deletingPayment) return;
+    setDeleteSubmitting(true);
+    try {
+      const payment = deletingPayment;
+
+      // If payment had a bank card, remove the linked transaction & recalculate
+      if (payment.bank_card_id) {
+        await supabase
+          .from('bank_card_transactions')
+          .delete()
+          .eq('reference_type', 'order_payment')
+          .eq('reference_id', payment.id);
+      }
+
+      // Delete the payment
+      const { error } = await supabase
+        .from('order_payments')
+        .delete()
+        .eq('id', payment.id);
+
+      if (error) throw error;
+
+      // Sync order total_paid
+      const newTotalPaid = totalPaid - payment.amount;
+      await syncOrderTotalPaid(Math.max(0, newTotalPaid));
+
+      // Recalculate bank card if needed
+      if (payment.bank_card_id) {
+        await recalculateBankCardBalance(payment.bank_card_id);
+        window.dispatchEvent(new CustomEvent('bank-card-balance-updated'));
+      }
+
+      toast({ title: '✓ پرداخت حذف شد', description: `مبلغ ${payment.amount.toLocaleString('fa-IR')} تومان حذف شد` });
+      setDeletingPayment(null);
+      fetchPayments();
+      onPaymentSuccess?.();
+    } catch (error: any) {
+      console.error('Error deleting payment:', error);
+      toast({ variant: 'destructive', title: 'خطا', description: 'حذف پرداخت با خطا مواجه شد' });
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  };
+
   const hasPriceSet = totalPrice !== null && totalPrice !== undefined && totalPrice > 0;
   const remainingAmount = hasPriceSet ? (totalPrice - totalPaid) : Infinity;
   const displayRemaining = hasPriceSet ? remainingAmount : null;
   const isSettled = hasPriceSet && remainingAmount <= 0;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent dir="rtl" className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Banknote className="h-5 w-5 text-green-600" />
-            ثبت پرداخت - سفارش {orderCode}
-          </DialogTitle>
-          <DialogDescription>
-            ثبت پرداخت‌های نقدی برای این سفارش
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent dir="rtl" className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Banknote className="h-5 w-5 text-green-600" />
+              ثبت پرداخت - سفارش {orderCode}
+            </DialogTitle>
+            <DialogDescription>
+              ثبت پرداخت‌های نقدی برای این سفارش
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Customer Info */}
-          <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-            <div className="flex items-center gap-2 text-sm text-green-800 dark:text-green-200">
-              <User className="h-4 w-4" />
-              <span>مشتری: {customerName}</span>
+          <div className="space-y-4">
+            {/* Customer Info */}
+            <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+              <div className="flex items-center gap-2 text-sm text-green-800 dark:text-green-200">
+                <User className="h-4 w-4" />
+                <span>مشتری: {customerName}</span>
+              </div>
             </div>
-          </div>
 
-          {/* Payment Summary */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 text-center">
-              <p className="text-xs text-muted-foreground mb-1">مبلغ کل</p>
-              <p className="font-bold text-blue-600 dark:text-blue-400">
-                {totalPrice ? totalPrice.toLocaleString('fa-IR') : '—'}
-              </p>
-            </div>
-            <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
-              <p className="text-xs text-muted-foreground mb-1">پرداخت شده</p>
-              <p className="font-bold text-green-600 dark:text-green-400">
-                {totalPaid > 0 ? totalPaid.toLocaleString('fa-IR') : '۰'}
-              </p>
-              {totalPaid > 0 && !isSettled && (
-                <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">علی‌الحساب</p>
-              )}
-            </div>
-            <div className={`p-3 rounded-lg border text-center ${
-              !isSettled 
-                ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800' 
-                : 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800'
-            }`}>
-              <p className="text-xs text-muted-foreground mb-1">مانده</p>
-              <p className={`font-bold ${!isSettled ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                {isSettled 
-                  ? 'تسویه' 
-                  : displayRemaining !== null 
-                    ? displayRemaining.toLocaleString('fa-IR')
-                    : '—'}
-              </p>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* New Payment Form */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              ثبت پرداخت جدید
-            </h4>
-            
-            <div>
-              <Label htmlFor="payment-amount">مبلغ پرداختی (تومان) *</Label>
-              <Input
-                id="payment-amount"
-                type="text"
-                value={paymentAmount}
-                onChange={(e) => {
-                  // فقط اعداد مجاز - حذف همه کاراکترها غیر عددی
-                  const rawValue = e.target.value.replace(/[^0-9]/g, '');
-                  const numericValue = parseInt(rawValue) || 0;
-                  
-                  // اگر قیمت تعیین شده، محدود به باقی‌مانده، در غیر این صورت نامحدود
-                  let limitedValue = numericValue;
-                  if (hasPriceSet && remainingAmount !== Infinity) {
-                    const maxAllowed = remainingAmount > 0 ? remainingAmount : 0;
-                    limitedValue = Math.min(numericValue, maxAllowed);
-                  }
-                  
-                  // فرمت سه رقم سه رقم با کاما
-                  const formattedValue = limitedValue > 0 
-                    ? limitedValue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                    : '';
-                  setPaymentAmount(formattedValue);
-                }}
-                placeholder="مبلغ را وارد کنید"
-                className="mt-1.5"
-                dir="ltr"
-                disabled={isSettled}
-              />
-              {!hasPriceSet ? (
-                <p className="text-xs text-amber-600 mt-1">
-                  قیمت سفارش هنوز تعیین نشده - هر مبلغی قابل ثبت است
+            {/* Payment Summary */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800 text-center">
+                <p className="text-xs text-muted-foreground mb-1">مبلغ کل</p>
+                <p className="font-bold text-blue-600 dark:text-blue-400">
+                  {totalPrice ? totalPrice.toLocaleString('fa-IR') : '—'}
                 </p>
-              ) : !isSettled ? (
-                <p className="text-xs text-muted-foreground mt-1">
-                  حداکثر مبلغ قابل ثبت: {remainingAmount.toLocaleString('fa-IR')} تومان
+              </div>
+              <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800 text-center">
+                <p className="text-xs text-muted-foreground mb-1">پرداخت شده</p>
+                <p className="font-bold text-green-600 dark:text-green-400">
+                  {totalPaid > 0 ? totalPaid.toLocaleString('fa-IR') : '۰'}
                 </p>
-              ) : (
-                <p className="text-xs text-green-600 mt-1">
-                  این سفارش تسویه شده است
+                {totalPaid > 0 && !isSettled && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">علی‌الحساب</p>
+                )}
+              </div>
+              <div className={`p-3 rounded-lg border text-center ${
+                !isSettled 
+                  ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800' 
+                  : 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800'
+              }`}>
+                <p className="text-xs text-muted-foreground mb-1">مانده</p>
+                <p className={`font-bold ${!isSettled ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                  {isSettled 
+                    ? 'تسویه' 
+                    : displayRemaining !== null 
+                      ? displayRemaining.toLocaleString('fa-IR')
+                      : '—'}
                 </p>
-              )}
+              </div>
             </div>
 
-            <div>
-              <Label className="flex items-center gap-2">
-                <CreditCard className="h-4 w-4" />
-                واریز به کارت بانکی (اختیاری)
-              </Label>
-              <div className="mt-1.5">
-                <BankCardSelect
-                  value={selectedBankCardId}
-                  onValueChange={setSelectedBankCardId}
-                  placeholder="انتخاب کارت بانکی"
+            <Separator />
+
+            {/* New Payment Form */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                ثبت پرداخت جدید
+              </h4>
+              
+              <div>
+                <Label htmlFor="payment-amount">مبلغ پرداختی (تومان) *</Label>
+                <Input
+                  id="payment-amount"
+                  type="text"
+                  value={paymentAmount}
+                  onChange={(e) => {
+                    const rawValue = e.target.value.replace(/[^0-9]/g, '');
+                    const numericValue = parseInt(rawValue) || 0;
+                    let limitedValue = numericValue;
+                    if (hasPriceSet && remainingAmount !== Infinity) {
+                      const maxAllowed = remainingAmount > 0 ? remainingAmount : 0;
+                      limitedValue = Math.min(numericValue, maxAllowed);
+                    }
+                    const formattedValue = limitedValue > 0 
+                      ? limitedValue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                      : '';
+                    setPaymentAmount(formattedValue);
+                  }}
+                  placeholder="مبلغ را وارد کنید"
+                  className="mt-1.5"
+                  dir="ltr"
                   disabled={isSettled}
-                  showBalance={true}
                 />
+                {!hasPriceSet ? (
+                  <p className="text-xs text-amber-600 mt-1">قیمت سفارش هنوز تعیین نشده - هر مبلغی قابل ثبت است</p>
+                ) : !isSettled ? (
+                  <p className="text-xs text-muted-foreground mt-1">حداکثر مبلغ قابل ثبت: {remainingAmount.toLocaleString('fa-IR')} تومان</p>
+                ) : (
+                  <p className="text-xs text-green-600 mt-1">این سفارش تسویه شده است</p>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                با انتخاب کارت، مبلغ پرداختی به موجودی آن اضافه می‌شود
-              </p>
-            </div>
 
-            <div>
-              <Label htmlFor="receipt-number">شماره رسید (اختیاری)</Label>
-              <Input
-                id="receipt-number"
-                type="text"
-                value={receiptNumber}
-                onChange={(e) => setReceiptNumber(e.target.value)}
-                placeholder="شماره رسید یا فیش"
-                className="mt-1.5"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="payment-notes">توضیحات (اختیاری)</Label>
-              <Input
-                id="payment-notes"
-                type="text"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="مثلاً: علی‌الحساب، پرداخت نقدی"
-                className="mt-1.5"
-              />
-            </div>
-
-            <Button 
-              onClick={handleAddPayment} 
-              disabled={submitting || !paymentAmount || isSettled}
-              className="w-full gap-2 bg-green-600 hover:bg-green-700"
-            >
-              <Wallet className="h-4 w-4" />
-              {submitting ? 'در حال ثبت...' : 'ثبت پرداخت'}
-            </Button>
-          </div>
-
-          <Separator />
-
-          {/* Payment History */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium flex items-center gap-2">
-              <History className="h-4 w-4" />
-              تاریخچه پرداخت‌ها ({payments.length})
-            </h4>
-            
-            {loading ? (
-              <div className="text-center text-sm text-muted-foreground py-4">
-                در حال بارگذاری...
-              </div>
-            ) : payments.length === 0 ? (
-              <div className="text-center text-sm text-muted-foreground py-4 bg-muted/50 rounded-lg">
-                هنوز پرداختی ثبت نشده است
-              </div>
-            ) : (
-              <ScrollArea className="h-48">
-                <div className="space-y-2">
-                  {payments.map((payment) => (
-                    <div 
-                      key={payment.id} 
-                      className="p-3 bg-muted/50 rounded-lg border text-sm"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-1">
-                          <p className="font-bold text-green-600">
-                            {payment.amount.toLocaleString('fa-IR')} تومان
-                          </p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
-                            {formatPersianDateTimeFull(payment.created_at)}
-                          </div>
-                          {payment.paid_by_name && (
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <User className="h-3 w-3" />
-                              ثبت توسط: {payment.paid_by_name}
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-left space-y-1">
-                          {payment.receipt_number && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <FileText className="h-3 w-3" />
-                              {payment.receipt_number}
-                            </div>
-                          )}
-                          {payment.notes && (
-                            <p className="text-xs text-muted-foreground max-w-32 truncate">
-                              {payment.notes}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+              <div>
+                <Label className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  واریز به کارت بانکی (اختیاری)
+                </Label>
+                <div className="mt-1.5">
+                  <BankCardSelect
+                    value={selectedBankCardId}
+                    onValueChange={setSelectedBankCardId}
+                    placeholder="انتخاب کارت بانکی"
+                    disabled={isSettled}
+                    showBalance={true}
+                  />
                 </div>
-              </ScrollArea>
-            )}
-          </div>
-        </div>
+                <p className="text-xs text-muted-foreground mt-1">با انتخاب کارت، مبلغ پرداختی به موجودی آن اضافه می‌شود</p>
+              </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            بستن
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+              <div>
+                <Label htmlFor="receipt-number">شماره رسید (اختیاری)</Label>
+                <Input id="receipt-number" type="text" value={receiptNumber} onChange={(e) => setReceiptNumber(e.target.value)} placeholder="شماره رسید یا فیش" className="mt-1.5" />
+              </div>
+
+              <div>
+                <Label htmlFor="payment-notes">توضیحات (اختیاری)</Label>
+                <Input id="payment-notes" type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="مثلاً: علی‌الحساب، پرداخت نقدی" className="mt-1.5" />
+              </div>
+
+              <Button onClick={handleAddPayment} disabled={submitting || !paymentAmount || isSettled} className="w-full gap-2 bg-green-600 hover:bg-green-700">
+                <Wallet className="h-4 w-4" />
+                {submitting ? 'در حال ثبت...' : 'ثبت پرداخت'}
+              </Button>
+            </div>
+
+            <Separator />
+
+            {/* Payment History */}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium flex items-center gap-2">
+                <History className="h-4 w-4" />
+                تاریخچه پرداخت‌ها ({payments.length})
+              </h4>
+              
+              {loading ? (
+                <div className="text-center text-sm text-muted-foreground py-4">در حال بارگذاری...</div>
+              ) : payments.length === 0 ? (
+                <div className="text-center text-sm text-muted-foreground py-4 bg-muted/50 rounded-lg">هنوز پرداختی ثبت نشده است</div>
+              ) : (
+                <ScrollArea className="h-56">
+                  <div className="space-y-2">
+                    {payments.map((payment) => (
+                      <div key={payment.id} className="p-3 bg-muted/50 rounded-lg border text-sm">
+                        {editingPaymentId === payment.id ? (
+                          /* Edit Mode */
+                          <div className="space-y-2">
+                            <div>
+                              <Label className="text-xs">مبلغ (تومان)</Label>
+                              <Input
+                                type="text"
+                                value={editAmount}
+                                onChange={(e) => {
+                                  const raw = e.target.value.replace(/[^0-9]/g, '');
+                                  const num = parseInt(raw) || 0;
+                                  setEditAmount(num > 0 ? num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '');
+                                }}
+                                className="mt-1 h-8 text-sm"
+                                dir="ltr"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">شماره رسید</Label>
+                              <Input type="text" value={editReceiptNumber} onChange={(e) => setEditReceiptNumber(e.target.value)} className="mt-1 h-8 text-sm" />
+                            </div>
+                            <div>
+                              <Label className="text-xs">توضیحات</Label>
+                              <Input type="text" value={editNotes} onChange={(e) => setEditNotes(e.target.value)} className="mt-1 h-8 text-sm" />
+                            </div>
+                            <div className="flex gap-2 justify-end">
+                              <Button size="sm" variant="ghost" onClick={cancelEdit} disabled={editSubmitting} className="h-7 px-2 text-xs">
+                                <X className="h-3 w-3 ml-1" /> انصراف
+                              </Button>
+                              <Button size="sm" onClick={() => handleEditPayment(payment)} disabled={editSubmitting || !editAmount} className="h-7 px-2 text-xs bg-blue-600 hover:bg-blue-700">
+                                <Check className="h-3 w-3 ml-1" /> {editSubmitting ? 'ذخیره...' : 'ذخیره'}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          /* View Mode */
+                          <div className="flex justify-between items-start">
+                            <div className="space-y-1 flex-1">
+                              <p className="font-bold text-green-600">
+                                {payment.amount.toLocaleString('fa-IR')} تومان
+                              </p>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Calendar className="h-3 w-3" />
+                                {formatPersianDateTimeFull(payment.created_at)}
+                              </div>
+                              {payment.paid_by_name && (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <User className="h-3 w-3" />
+                                  ثبت توسط: {payment.paid_by_name}
+                                </div>
+                              )}
+                              {payment.receipt_number && (
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <FileText className="h-3 w-3" />
+                                  {payment.receipt_number}
+                                </div>
+                              )}
+                              {payment.notes && (
+                                <p className="text-xs text-muted-foreground">{payment.notes}</p>
+                              )}
+                            </div>
+                            <div className="flex gap-1 mr-2 shrink-0">
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(payment)} title="ویرایش">
+                                <Pencil className="h-3.5 w-3.5 text-blue-600" />
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setDeletingPayment(payment)} title="حذف">
+                                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>بستن</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deletingPayment} onOpenChange={(open) => !open && setDeletingPayment(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف پرداخت</AlertDialogTitle>
+            <AlertDialogDescription>
+              آیا از حذف پرداخت به مبلغ {deletingPayment?.amount.toLocaleString('fa-IR')} تومان اطمینان دارید؟ این عملیات قابل بازگشت نیست و مانده حساب سفارش و موجودی کارت بانکی بروزرسانی خواهد شد.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel disabled={deleteSubmitting}>انصراف</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeletePayment} disabled={deleteSubmitting} className="bg-destructive hover:bg-destructive/90">
+              {deleteSubmitting ? 'در حال حذف...' : 'حذف پرداخت'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
