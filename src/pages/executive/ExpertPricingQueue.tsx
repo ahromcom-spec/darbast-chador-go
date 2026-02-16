@@ -184,19 +184,15 @@ export default function ExpertPricingQueue() {
     const dimensions = getDimensions(order);
     if (!dimensions.length) return null;
 
-    const parsedNotes = parseOrderNotes(order.notes);
-    const totalFromNotes = parseLocalizedNumber(parsedNotes?.total_volume ?? parsedNotes?.totalVolume);
-    if (totalFromNotes > 0) return totalFromNotes;
-
+    // Always recalculate from dimensions instead of trusting stored values
     const hasAnyWidth = dimensions.some((d: any) => parseLocalizedNumber(d?.width) > 0);
-    const isVolume = Boolean(parsedNotes?.total_volume ?? parsedNotes?.totalVolume) || hasAnyWidth;
     
     const total = dimensions.reduce((sum: number, dim: any) => {
       const length = parseLocalizedNumber(dim?.length);
       const height = parseLocalizedNumber(dim?.height);
       if (length <= 0 || height <= 0) return sum;
 
-      if (isVolume) {
+      if (hasAnyWidth) {
         const width = parseLocalizedNumber(dim?.width);
         const w = width > 0 ? width : 1;
         return sum + length * w * height;

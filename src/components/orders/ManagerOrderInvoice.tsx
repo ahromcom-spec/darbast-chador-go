@@ -521,15 +521,9 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
       return '-';
     };
 
-    // Calculate total area/volume from dimensions if not provided
+    // Calculate total area/volume from dimensions - always recalculate from dimensions
     const calculateTotalMeasurement = () => {
-      // First check if totalArea is explicitly provided
-      const storedArea = parsedNotes?.totalArea || parsedNotes?.total_area;
-      if (storedArea && storedArea !== '-') {
-        return storedArea;
-      }
-      
-      // Calculate from dimensions
+      // Calculate from dimensions first
       const lengthVal = getLength();
       const widthVal = getWidth();
       const heightVal = getHeight();
@@ -542,11 +536,17 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
         // If width exists, calculate volume (L × W × H)
         if (!isNaN(w) && w > 0) {
           const volume = l * w * h;
-          return volume > 0 ? volume.toLocaleString('fa-IR') : '-';
+          return volume > 0 ? parseFloat(volume.toFixed(2)).toLocaleString('fa-IR') : '-';
         }
         // Otherwise calculate area (L × H)
         const area = l * h;
-        return area > 0 ? area.toLocaleString('fa-IR') : '-';
+        return area > 0 ? parseFloat(area.toFixed(2)).toLocaleString('fa-IR') : '-';
+      }
+      
+      // Fallback to stored value only if dimensions not available
+      const storedArea = parsedNotes?.totalArea || parsedNotes?.total_area;
+      if (storedArea && storedArea !== '-') {
+        return typeof storedArea === 'number' ? parseFloat(storedArea.toFixed(2)).toLocaleString('fa-IR') : storedArea;
       }
       
       return '-';

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { calculateTotalFromDimensions } from '@/lib/dimensionCalculations';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -102,18 +103,18 @@ const getOrderNotesSummary = (notes: any, paymentAmount?: number): OrderNotesSum
     }, 0);
   };
 
-  const totalValue =
+  const { total: recalcTotal, unit: recalcUnit } = calculateTotalFromDimensions(dims, notes?.columnHeight);
+  const totalValue = recalcTotal > 0 ? recalcTotal : (
     typeof notes.totalArea === 'number'
       ? notes.totalArea
       : typeof notes.total_area === 'number'
       ? notes.total_area
-      : computedFromDims();
+      : computedFromDims()
+  );
 
-  const isArea =
-    (notes && typeof notes === 'object' && 'total_area' in notes) ||
-    (!hasWidth && dims.length > 0);
-
-  const unit = isArea ? 'متر مربع' : 'متر مکعب';
+  const unit = recalcTotal > 0 ? recalcUnit : (
+    ((notes && typeof notes === 'object' && 'total_area' in notes) || (!hasWidth && dims.length > 0)) ? 'متر مربع' : 'متر مکعب'
+  );
 
   const estimatedPrice =
     typeof notes.estimated_price === 'number'

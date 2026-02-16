@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { calculateTotalFromNotes } from '@/lib/dimensionCalculations';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -524,7 +525,7 @@ export const CEOOrders = () => {
               <>
                 <p className="text-sm">
                   <strong>متراژ کل:</strong>{' '}
-                  {details.totalArea.toFixed(2)} متر مربع
+                  {(() => { const { total, unit } = calculateTotalFromNotes(order.notes); return total > 0 ? `${parseFloat(total.toFixed(2))} ${unit}` : `${details.totalArea.toFixed(2)} متر مربع`; })()}
                 </p>
                 <p className="text-sm">
                   <strong>قیمت تخمینی:</strong>{' '}
