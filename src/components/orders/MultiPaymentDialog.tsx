@@ -243,6 +243,7 @@ export function MultiPaymentDialog({
               reference_type: 'order_payment',
               reference_id: insertedPayment.id,
               created_by: user.id,
+              report_date: paymentDate || null,
             });
             await supabase.from('bank_cards').update({ current_balance: newCardBalance, updated_at: new Date().toISOString() }).eq('id', selectedBankCardId);
             window.dispatchEvent(new CustomEvent('bank-card-balance-updated'));
@@ -395,6 +396,7 @@ export function MultiPaymentDialog({
             reference_type: 'order_payment',
             reference_id: payment.id,
             created_by: user?.id,
+            report_date: editPaymentDate || null,
           });
         }
         affectedCardIds.add(newBankCardId);
