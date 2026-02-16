@@ -447,17 +447,39 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
         border: 1px solid #e2e8f0;
       }
       
+      .bank-section {
+        page-break-inside: avoid;
+      }
+      .signatures-section {
+        page-break-inside: avoid;
+      }
+      .payment-status-section {
+        page-break-inside: avoid;
+      }
       @media print {
         body { 
           -webkit-print-color-adjust: exact; 
           print-color-adjust: exact;
-          font-size: 12px;
+          font-size: 11px;
         }
         .no-print { display: none !important; }
         .invoice-container { 
           border: 2px solid #1e3a5f; 
           margin: 0 auto;
           max-width: 180mm;
+          padding: 8px !important;
+        }
+        .bank-section {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+        .signatures-section {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+        .images-section {
+          page-break-inside: avoid;
+          break-inside: avoid;
         }
       }
     </style>
@@ -745,6 +767,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
         </table>
 
         <!-- Payment Status Section -->
+        <div style="page-break-inside: avoid; break-inside: avoid;">
         <table class="main-info-table" style="margin-top: 8px;">
           <tr>
             <td class="label-cell" colspan="6" style="text-align:center; font-size:12px;">💰 وضعیت پرداخت</td>
@@ -760,6 +783,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
             <td class="value-cell" style="color:#dc2626; font-weight:bold;">${Math.max(0, grandTotal - paidTotal).toLocaleString('fa-IR')} تومان</td>
           </tr>
         </table>
+        </div>
         ` : `
         <!-- Pricing Table without prices -->
         <table class="order-details-table">
@@ -816,7 +840,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
 
         ${!hidePrice ? `
         <!-- Bank Info -->
-        <div class="bank-section">
+        <div class="bank-section" style="page-break-inside: avoid; break-inside: avoid;">
           <div class="bank-title">💳 اطلاعات حساب بانکی</div>
           <table class="bank-info-table">
             <tr>
