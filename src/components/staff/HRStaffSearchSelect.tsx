@@ -105,7 +105,7 @@ export function HRStaffSearchSelect({
 
     const searchLower = search.toLowerCase().trim();
     return employees.filter((emp) => {
-      const phone = emp.phone_number.toLowerCase();
+      const phone = (emp.phone_number || '').toLowerCase();
       const name = emp.full_name.toLowerCase();
       const position = (emp.position || '').toLowerCase();
       const department = (emp.department || '').toLowerCase();
