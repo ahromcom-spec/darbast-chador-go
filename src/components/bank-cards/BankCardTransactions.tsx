@@ -28,9 +28,25 @@ export function BankCardTransactions({ card, getTransactions }: BankCardTransact
       isFetchingRef.current = true;
       setLoading(true);
       const data = await getTransactions(card.id);
-      setTransactions(data);
       
-      // Also fetch the latest balance
+      // Recalculate balance_after client-side based on sorted order
+      // Sort ascending first to compute running balance from initial_balance
+      const ascending = [...data].reverse();
+      let runningBalance = card.initial_balance;
+      for (const tx of ascending) {
+        if (tx.transaction_type === 'deposit') {
+          runningBalance += tx.amount;
+        } else {
+          runningBalance -= tx.amount;
+        }
+        tx.balance_after = runningBalance;
+      }
+      
+      // Set transactions back in descending order (newest first)
+      setTransactions(ascending.reverse());
+      setCurrentBalance(runningBalance);
+      
+      // Also fetch the latest balance from DB
       const { data: cardData } = await supabase
         .from('bank_cards')
         .select('current_balance')
@@ -44,7 +60,7 @@ export function BankCardTransactions({ card, getTransactions }: BankCardTransact
       setLoading(false);
       isFetchingRef.current = false;
     }
-  }, [card.id, getTransactions]);
+  }, [card.id, card.initial_balance, getTransactions]);
 
   // Setup realtime subscription
   useEffect(() => {
