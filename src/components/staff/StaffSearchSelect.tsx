@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, User, X, Loader2 } from 'lucide-react';
+import { Search, User, X, Loader2, PenLine } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -151,6 +151,9 @@ export function StaffSearchSelect({
 }: StaffSearchSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [manualMode, setManualMode] = useState(false);
+  const [manualName, setManualName] = useState('');
+  const manualInputRef = useRef<HTMLInputElement>(null);
   const [hrStaff, setHrStaff] = useState<StaffMember[]>([]);
   const [salaryStaff, setSalaryStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(false);
@@ -259,6 +262,19 @@ export function StaffSearchSelect({
     onValueChange(staff.code, staff.name, staff.user_id);
     setOpen(false);
     setSearch('');
+    setManualMode(false);
+    setManualName('');
+  };
+
+  const handleManualSubmit = () => {
+    const name = manualName.trim();
+    if (!name) return;
+    const code = `MANUAL-${Date.now()}`;
+    onValueChange(code, name, null);
+    setOpen(false);
+    setSearch('');
+    setManualMode(false);
+    setManualName('');
   };
 
   const handleClear = (e: React.MouseEvent) => {
@@ -552,6 +568,44 @@ export function StaffSearchSelect({
                       </div>
                     </button>
                   ))}
+                  
+                  {/* Manual entry section */}
+                  <div className="border-t mt-1 pt-1">
+                    {manualMode ? (
+                      <div className="px-2 py-2 flex items-center gap-2">
+                        <Input
+                          ref={manualInputRef}
+                          value={manualName}
+                          onChange={(e) => setManualName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') { e.preventDefault(); handleManualSubmit(); }
+                            if (e.key === 'Escape') { setManualMode(false); setManualName(''); }
+                          }}
+                          placeholder="نام نیرو را وارد کنید..."
+                          className="text-sm h-9 flex-1"
+                          autoFocus
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={handleManualSubmit}
+                          disabled={!manualName.trim()}
+                          className="shrink-0 h-9"
+                        >
+                          تایید
+                        </Button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setManualMode(true); setTimeout(() => manualInputRef.current?.focus(), 50); }}
+                        className="w-full text-right px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors cursor-pointer focus:bg-accent focus:outline-none text-muted-foreground flex items-center gap-2"
+                      >
+                        <PenLine className="h-4 w-4" />
+                        <span>ورود دستی نام نیرو...</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
             </ScrollArea>
