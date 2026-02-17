@@ -39,43 +39,23 @@ interface BankCardSelectProps {
  * Uses bank_card_transactions (single source of truth) with report_date <= asOfDate.
  */
 async function getHistoricalBalance(cardId: string, asOfDate: string, initialBalance: number): Promise<number> {
-  // 1) Manual transactions net (exclude daily report logs)
-  const { data: manualTx } = await supabase
+  // Fetch ALL transactions for this card, then filter client-side
+  // because report_date can be NULL (e.g. card_transfer) and we need created_at as fallback
+  const { data: allTx } = await supabase
     .from('bank_card_transactions')
-    .select('transaction_type, amount, reference_type')
-    .eq('bank_card_id', cardId)
-    .lte('report_date', asOfDate)
-    .or('reference_type.is.null,reference_type.neq.daily_report_staff');
+    .select('transaction_type, amount, report_date, created_at')
+    .eq('bank_card_id', cardId);
 
-  const manualNet = (manualTx || []).reduce((sum, t) => {
-    const amt = Number(t.amount ?? 0) || 0;
-    return sum + (t.transaction_type === 'deposit' ? amt : -amt);
-  }, 0);
-
-  // 2) Daily report cash-box net (filter by report date via daily_reports join)
-  const { data: reports } = await supabase
-    .from('daily_reports')
-    .select('id')
-    .lte('report_date', asOfDate);
-
-  let dailyNet = 0;
-  if (reports && reports.length > 0) {
-    const reportIds = reports.map(r => r.id);
-    const { data: drRows } = await supabase
-      .from('daily_report_staff')
-      .select('amount_received, amount_spent')
-      .eq('bank_card_id', cardId)
-      .eq('is_cash_box', true)
-      .in('daily_report_id', reportIds);
-
-    dailyNet = (drRows || []).reduce((sum, r) => {
-      const received = Number(r.amount_received ?? 0) || 0;
-      const spent = Number(r.amount_spent ?? 0) || 0;
-      return sum + received - spent;
-    }, 0);
+  let txNet = 0;
+  for (const tx of allTx || []) {
+    // Use report_date if available, otherwise extract date from created_at
+    const txDate = tx.report_date || (tx.created_at ? tx.created_at.substring(0, 10) : null);
+    if (!txDate || txDate > asOfDate) continue;
+    const amt = Number(tx.amount ?? 0) || 0;
+    txNet += tx.transaction_type === 'deposit' ? amt : -amt;
   }
 
-  return initialBalance + manualNet + dailyNet;
+  return initialBalance + txNet;
 }
 
 export function BankCardSelect({
