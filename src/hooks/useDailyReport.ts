@@ -412,13 +412,13 @@ export function useDailyReport() {
 
       let reportIdToLoad: string | null = null;
 
-      // Fetch report specific to this module_key, user, and date
+      // Fetch report specific to this module_key and date (any user)
       const { data: myReport, error: myReportError } = await supabase
         .from('daily_reports')
         .select('id')
         .eq('report_date', dateStr)
-        .eq('created_by', user.id)
         .eq('module_key', moduleKey)
+        .limit(1)
         .maybeSingle();
 
       if (myReportError) throw myReportError;
@@ -610,13 +610,13 @@ export function useDailyReport() {
       let reportId = existingReportId;
 
       if (!reportId) {
-        // First check if a report already exists for this date/user/module (fresh DB check)
+        // First check if a report already exists for this date/module (fresh DB check)
         const { data: existingCheck } = await supabase
           .from('daily_reports')
           .select('id')
           .eq('report_date', dateStr)
-          .eq('created_by', user.id)
           .eq('module_key', moduleKey)
+          .limit(1)
           .maybeSingle();
 
         if (existingCheck?.id) {
@@ -642,8 +642,8 @@ export function useDailyReport() {
                 .from('daily_reports')
                 .select('id')
                 .eq('report_date', dateStr)
-                .eq('created_by', user.id)
                 .eq('module_key', moduleKey)
+                .limit(1)
                 .maybeSingle();
               if (retry?.id) {
                 reportId = retry.id;
@@ -919,13 +919,13 @@ export function useDailyReport() {
       let reportId = existingReportId;
 
       if (!reportId) {
-        // First check if a report already exists for this date/user/module (fresh DB check)
+        // First check if a report already exists for this date/module (any user) — prevent duplicates
         const { data: existingCheck } = await supabase
           .from('daily_reports')
           .select('id')
           .eq('report_date', dateStr)
-          .eq('created_by', user.id)
           .eq('module_key', moduleKey)
+          .limit(1)
           .maybeSingle();
 
         if (existingCheck?.id) {
@@ -951,8 +951,8 @@ export function useDailyReport() {
                 .from('daily_reports')
                 .select('id')
                 .eq('report_date', dateStr)
-                .eq('created_by', user.id)
                 .eq('module_key', moduleKey)
+                .limit(1)
                 .maybeSingle();
               if (retry?.id) {
                 reportId = retry.id;
