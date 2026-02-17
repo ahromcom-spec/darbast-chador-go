@@ -28,11 +28,9 @@ interface NotifyManagersPayload {
  * ارسال Push Notification - اگر مدیر در حال مشاهده حساب کاربر است، ارسال نمی‌شود
  */
 export const sendPushNotification = async (payload: PushNotificationPayload): Promise<{ success: boolean; error?: string }> => {
-  // اگر مدیر در حال مشاهده حساب کاربر است، نوتیفیکیشن ارسال نشود
-  if (isAdminImpersonating()) {
-    console.log('[sendPushNotification] Skipped - Admin is impersonating user');
-    return { success: true };
-  }
+  // غیرفعال‌سازی موقت ارسال نوتیفیکیشن به مشتریان
+  console.log('[sendPushNotification] Skipped - Customer notifications temporarily disabled');
+  return { success: true };
 
   try {
     const { data, error } = await supabase.functions.invoke('send-push-notification', {
@@ -56,11 +54,9 @@ export const sendPushNotification = async (payload: PushNotificationPayload): Pr
  * ارسال اعلان به مدیران - اگر مدیر در حال مشاهده حساب کاربر است، ارسال نمی‌شود
  */
 export const notifyManagers = async (payload: NotifyManagersPayload): Promise<{ success: boolean; error?: string }> => {
-  // اگر مدیر در حال مشاهده حساب کاربر است، نوتیفیکیشن به مدیران ارسال نشود
-  if (isAdminImpersonating()) {
-    console.log('[notifyManagers] Skipped - Admin is impersonating user');
-    return { success: true };
-  }
+  // غیرفعال‌سازی موقت ارسال نوتیفیکیشن به مدیران
+  console.log('[notifyManagers] Skipped - Customer notifications temporarily disabled');
+  return { success: true };
 
   try {
     const { data, error } = await supabase.functions.invoke('notify-managers-new-order', {
@@ -90,11 +86,9 @@ export const sendNotificationRpc = async (
   link?: string,
   type: string = 'info'
 ): Promise<{ success: boolean; error?: string }> => {
-  // اگر مدیر در حال مشاهده حساب کاربر است، اعلان درون برنامه‌ای ایجاد نشود
-  if (isAdminImpersonating()) {
-    console.log('[sendNotificationRpc] Skipped - Admin is impersonating user');
-    return { success: true };
-  }
+  // غیرفعال‌سازی موقت ارسال اعلان درون برنامه‌ای
+  console.log('[sendNotificationRpc] Skipped - Customer notifications temporarily disabled');
+  return { success: true };
 
   try {
     const { error } = await supabase.rpc('send_notification', {
@@ -127,11 +121,9 @@ export const createInAppNotification = async (
   link?: string,
   type: string = 'info'
 ): Promise<{ success: boolean; error?: string }> => {
-  // اگر مدیر در حال مشاهده حساب کاربر است، اعلان درون برنامه‌ای ایجاد نشود
-  if (isAdminImpersonating()) {
-    console.log('[createInAppNotification] Skipped - Admin is impersonating user');
-    return { success: true };
-  }
+  // غیرفعال‌سازی موقت ارسال اعلان درون برنامه‌ای
+  console.log('[createInAppNotification] Skipped - Customer notifications temporarily disabled');
+  return { success: true };
 
   try {
     const { error } = await supabase

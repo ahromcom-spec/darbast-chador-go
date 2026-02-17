@@ -29,11 +29,9 @@ export const sendOrderSms = async (
   status: SmsStatus,
   details?: OrderSmsDetails
 ): Promise<{ success: boolean; error?: string }> => {
-  // اگر مدیر در حال مشاهده حساب کاربر است، پیامک ارسال نشود
-  if (isAdminImpersonating()) {
-    console.log('[sendOrderSms] Skipped - Admin is impersonating user');
-    return { success: true };
-  }
+  // غیرفعال‌سازی موقت ارسال پیامک به مشتریان
+  console.log('[sendOrderSms] Skipped - Customer notifications temporarily disabled');
+  return { success: true };
 
   try {
     console.log(`[sendOrderSms] Sending SMS - Phone: ${phone}, Order: ${orderCode}, Status: ${status}, Details:`, details);
