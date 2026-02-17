@@ -39,18 +39,43 @@ interface BankCardSelectProps {
  * Uses bank_card_transactions (single source of truth) with report_date <= asOfDate.
  */
 async function getHistoricalBalance(cardId: string, asOfDate: string, initialBalance: number): Promise<number> {
-  const { data: txData } = await supabase
+  // 1) Manual transactions net (exclude daily report logs)
+  const { data: manualTx } = await supabase
     .from('bank_card_transactions')
-    .select('transaction_type, amount')
+    .select('transaction_type, amount, reference_type')
     .eq('bank_card_id', cardId)
+    .lte('report_date', asOfDate)
+    .or('reference_type.is.null,reference_type.neq.daily_report_staff');
+
+  const manualNet = (manualTx || []).reduce((sum, t) => {
+    const amt = Number(t.amount ?? 0) || 0;
+    return sum + (t.transaction_type === 'deposit' ? amt : -amt);
+  }, 0);
+
+  // 2) Daily report cash-box net (filter by report date via daily_reports join)
+  const { data: reports } = await supabase
+    .from('daily_reports')
+    .select('id')
     .lte('report_date', asOfDate);
 
-  let txNet = 0;
-  for (const tx of txData || []) {
-    txNet += tx.transaction_type === 'deposit' ? tx.amount : -tx.amount;
+  let dailyNet = 0;
+  if (reports && reports.length > 0) {
+    const reportIds = reports.map(r => r.id);
+    const { data: drRows } = await supabase
+      .from('daily_report_staff')
+      .select('amount_received, amount_spent')
+      .eq('bank_card_id', cardId)
+      .eq('is_cash_box', true)
+      .in('daily_report_id', reportIds);
+
+    dailyNet = (drRows || []).reduce((sum, r) => {
+      const received = Number(r.amount_received ?? 0) || 0;
+      const spent = Number(r.amount_spent ?? 0) || 0;
+      return sum + received - spent;
+    }, 0);
   }
 
-  return initialBalance + txNet;
+  return initialBalance + manualNet + dailyNet;
 }
 
 export function BankCardSelect({
