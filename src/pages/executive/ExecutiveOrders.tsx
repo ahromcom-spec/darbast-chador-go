@@ -1873,8 +1873,8 @@ export default function ExecutiveOrders() {
                     </Button>
                   )}
 
-                  {/* دکمه ثبت پرداخت - برای همه مراحل بعد از اجرا و قبل از اتمام */}
-                  {order.status !== 'closed' && (order.execution_stage === 'order_executed' || 
+                  {/* دکمه ثبت پرداخت - برای همه مراحل بعد از اجرا (شامل اتمام سفارش) */}
+                  {(order.status === 'closed' || order.execution_stage === 'order_executed' || 
                     order.execution_stage === 'awaiting_payment' || 
                     order.execution_stage === 'awaiting_collection' || 
                     order.execution_stage === 'in_collection' || 
