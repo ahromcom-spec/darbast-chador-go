@@ -1021,12 +1021,21 @@ export function useDailyReport() {
           }
         }
         
-        // Delete existing transactions for this report
+        // Delete existing transactions for this report (by reference_id)
         await supabase
           .from('bank_card_transactions')
           .delete()
           .eq('reference_type', 'daily_report_staff')
           .eq('reference_id', reportId);
+        
+        // Also clean up any orphaned transactions for the same date/module
+        // This handles cases where a report was deleted and recreated with a new ID
+        await supabase
+          .from('bank_card_transactions')
+          .delete()
+          .eq('reference_type', 'daily_report_staff')
+          .eq('report_date', dateStr)
+          .like('module_name', `%${moduleKey}%`);
       }
 
       const { error: deleteStaffError } = await supabase
