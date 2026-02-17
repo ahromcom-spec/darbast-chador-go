@@ -150,12 +150,18 @@ const isManagerUser = async (userId: string): Promise<boolean> => {
   return (data || []).some((r: any) => MANAGER_ROLES.has(r.role));
 };
 
-// Extract staff code from name - support both 4-digit codes and 11-digit phone numbers
+// Extract staff code from name - support MANUAL entries, phone numbers, and HR codes
 const extractStaffCode = (value: unknown): string => {
   if (typeof value !== 'string') return '';
+  // Handle manual entries: "MANUAL-1234567890 - نام" → "MANUAL-1234567890"
+  const manualMatch = value.match(/^(MANUAL-\d+)/);
+  if (manualMatch) return manualMatch[1];
   // Try 11-digit phone number first (e.g., 09388231167)
   const phoneMatch = value.match(/09\d{9}/);
   if (phoneMatch) return phoneMatch[0];
+  // Try UUID-like pattern (for HR employees without phone)
+  const uuidMatch = value.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+  if (uuidMatch) return uuidMatch[1];
   // Fallback to 4-digit code
   const codeMatch = value.match(/\b\d{4}\b/);
   return codeMatch?.[0] ?? '';
