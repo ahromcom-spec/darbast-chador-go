@@ -688,8 +688,8 @@ export default function ExecutiveOrders() {
           const amountNumber = typeof amountRaw === 'number' ? amountRaw : Number(amountRaw);
           const hasPaymentAmount = Number.isFinite(amountNumber) && amountNumber > 0;
 
-          // بعد از تعیین قیمت توسط کارشناس، سفارش قابل تایید است (بدون نیاز به تایید مشتری)
-          const canApprove = priceSetByManager && hasPaymentAmount;
+          // بعد از تعیین قیمت، سفارش قابل تایید است (بدون نیاز به تایید مشتری)
+          const canApprove = hasPaymentAmount;
           if (!canApprove) {
             toast({
               variant: 'destructive',
@@ -1374,7 +1374,8 @@ export default function ExecutiveOrders() {
             const addOnsAmount = Math.max(0, totalAmount - baseAmount);
 
             // (بدون نیاز به تایید مشتری - تایید خودکار انجام می‌شود)
-            const canApprove = !isExpertPricingRequest || (priceSetByManager && hasPaymentAmount);
+            // اگر payment_amount تنظیم شده باشد، حتی بدون price_set_by_manager هم قابل تایید است
+            const canApprove = !isExpertPricingRequest || hasPaymentAmount;
 
             const serviceLabel = getOrderServiceLabel(notesObj);
             const isExecutionWithMaterialsOrder = order.subcategory_id === SUBCATEGORY_SCAFFOLD_EXECUTION_WITH_MATERIALS;
