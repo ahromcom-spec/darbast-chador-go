@@ -1196,31 +1196,56 @@ export default function DailyReportModule() {
       if (reportsError) throw reportsError;
 
       if (reports && reports.length > 0) {
-        const reportsWithCounts = await Promise.all(
-          reports.map(async (report) => {
-            const [ordersCount, staffCount] = await Promise.all([
-              supabase
-                .from('daily_report_orders')
-                .select('id', { count: 'exact', head: true })
-                .eq('daily_report_id', report.id),
-              supabase
-                .from('daily_report_staff')
-                .select('id', { count: 'exact', head: true })
-                .eq('daily_report_id', report.id),
-            ]);
+        // Group reports by date to prevent duplicate date entries
+        const reportsByDate = new Map<string, typeof reports>();
+        for (const report of reports) {
+          const existing = reportsByDate.get(report.report_date);
+          if (existing) {
+            existing.push(report);
+          } else {
+            reportsByDate.set(report.report_date, [report]);
+          }
+        }
 
+        const reportsWithCounts = await Promise.all(
+          Array.from(reportsByDate.entries()).map(async ([date, dateReports]) => {
+            // Sum counts across all reports for this date
+            let totalOrders = 0;
+            let totalStaff = 0;
+            
+            await Promise.all(
+              dateReports.map(async (report) => {
+                const [ordersCount, staffCount] = await Promise.all([
+                  supabase
+                    .from('daily_report_orders')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('daily_report_id', report.id),
+                  supabase
+                    .from('daily_report_staff')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('daily_report_id', report.id),
+                ]);
+                totalOrders += ordersCount.count || 0;
+                totalStaff += staffCount.count || 0;
+              })
+            );
+
+            // Use the first report's metadata but aggregated counts
+            const primaryReport = dateReports[0];
             return {
-              id: report.id,
-              report_date: report.report_date,
-              created_at: report.created_at,
-              notes: report.notes,
-              orders_count: ordersCount.count || 0,
-              staff_count: staffCount.count || 0,
-              is_archived: (report as any).is_archived || false,
+              id: primaryReport.id,
+              report_date: date,
+              created_at: primaryReport.created_at,
+              notes: primaryReport.notes,
+              orders_count: totalOrders,
+              staff_count: totalStaff,
+              is_archived: (primaryReport as any).is_archived || false,
             };
           })
         );
 
+        // Sort by date descending
+        reportsWithCounts.sort((a, b) => b.report_date.localeCompare(a.report_date));
         setSavedReports(reportsWithCounts);
       } else {
         setSavedReports([]);
