@@ -26,6 +26,8 @@ interface StaffReportsTableProps {
   onRemoveRow: (index: number) => void;
   onAddRow: () => void;
   onSetStaffReports: (updater: (prev: StaffReportRow[]) => StaffReportRow[]) => void;
+  /** Report date in YYYY-MM-DD format for historical balance display */
+  reportDate?: string;
 }
 
 // Interface for bank card data
@@ -43,6 +45,7 @@ export function StaffReportsTable({
   onRemoveRow,
   onAddRow,
   onSetStaffReports,
+  reportDate,
 }: StaffReportsTableProps) {
   const balance = totals.totalReceived - totals.totalSpent;
   const balanceState: 'balanced' | 'deficit' | 'surplus' = balance === 0 ? 'balanced' : balance < 0 ? 'deficit' : 'surplus';
@@ -239,12 +242,13 @@ export function StaffReportsTable({
                        <span className="text-muted-foreground">—</span>
                      ) : (
                        <div className="w-[140px]">
-                        <BankCardSelect
-                          value={row.bank_card_id || null}
-                          onValueChange={(value) => onUpdateRow(index, 'bank_card_id', value)}
-                          placeholder="انتخاب کارت"
-                          showBalance={true}
-                        />
+                         <BankCardSelect
+                           value={row.bank_card_id || null}
+                           onValueChange={(value) => onUpdateRow(index, 'bank_card_id', value)}
+                           placeholder="انتخاب کارت"
+                           showBalance={true}
+                           asOfDate={reportDate}
+                         />
                       </div>
                     )}
                   </TableCell>
@@ -402,12 +406,13 @@ export function StaffReportsTable({
                         </div>
                       ) : row.is_cash_box ? (
                         <div className="w-[120px]">
-                        <BankCardSelect
-                          value={row.bank_card_id || null}
-                          onValueChange={(value) => onUpdateRow(index, 'bank_card_id', value)}
-                          placeholder="انتخاب کارت بانکی"
-                          showBalance={true}
-                        />
+                         <BankCardSelect
+                           value={row.bank_card_id || null}
+                           onValueChange={(value) => onUpdateRow(index, 'bank_card_id', value)}
+                           placeholder="انتخاب کارت بانکی"
+                           showBalance={true}
+                           asOfDate={reportDate}
+                         />
                       </div>
                     ) : (
                       <StaffSearchSelect
