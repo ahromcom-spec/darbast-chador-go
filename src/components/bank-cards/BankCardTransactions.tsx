@@ -2,11 +2,22 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { BankCard, BankCardTransaction } from '@/hooks/useBankCards';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { ArrowDownCircle, ArrowUpCircle, Receipt, RefreshCw } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, Receipt, RefreshCw, Trash2 } from 'lucide-react';
 import { format } from 'date-fns-jalali';
 import { supabase } from '@/integrations/supabase/client';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface BankCardTransactionsProps {
   card: BankCard;
@@ -18,6 +29,9 @@ export function BankCardTransactions({ card, getTransactions }: BankCardTransact
   const [loading, setLoading] = useState(true);
   const [currentBalance, setCurrentBalance] = useState(card.current_balance);
   const [isRecalculating, setIsRecalculating] = useState(false);
+  const [deletingTransferId, setDeletingTransferId] = useState<string | null>(null);
+  const [isDeletingTransfer, setIsDeletingTransfer] = useState(false);
+  const { toast } = useToast();
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const isFetchingRef = useRef(false);
 
@@ -30,7 +44,6 @@ export function BankCardTransactions({ card, getTransactions }: BankCardTransact
       const data = await getTransactions(card.id);
       
       // Recalculate balance_after client-side based on sorted order
-      // Sort ascending first to compute running balance from initial_balance
       const ascending = [...data].reverse();
       let runningBalance = card.initial_balance;
       for (const tx of ascending) {
@@ -42,7 +55,6 @@ export function BankCardTransactions({ card, getTransactions }: BankCardTransact
         tx.balance_after = runningBalance;
       }
       
-      // Set transactions back in descending order (newest first)
       setTransactions(ascending.reverse());
       setCurrentBalance(runningBalance);
     } finally {
@@ -51,65 +63,31 @@ export function BankCardTransactions({ card, getTransactions }: BankCardTransact
     }
   }, [card.id, card.initial_balance, getTransactions]);
 
-  // Setup realtime subscription
   useEffect(() => {
     fetchTransactions();
 
     const channel = supabase
       .channel(`bank-card-transactions-${card.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'bank_card_transactions',
-          filter: `bank_card_id=eq.${card.id}`
-        },
-        () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bank_card_transactions', filter: `bank_card_id=eq.${card.id}` }, () => {
+        fetchTransactions();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bank_cards', filter: `id=eq.${card.id}` }, (payload) => {
+        if (payload.new) {
+          const newData = payload.new as any;
+          setCurrentBalance(newData.current_balance);
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_report_staff', filter: `bank_card_id=eq.${card.id}` }, () => {
+        recalculateBankCardBalance(card.id).then((newBalance) => {
+          if (newBalance !== null) setCurrentBalance(newBalance);
           fetchTransactions();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'bank_cards',
-          filter: `id=eq.${card.id}`
-        },
-        (payload) => {
-          if (payload.new) {
-            const newData = payload.new as any;
-            setCurrentBalance(newData.current_balance);
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'daily_report_staff',
-          filter: `bank_card_id=eq.${card.id}`
-        },
-        () => {
-          // Recalculate and refetch when daily report staff changes
-          recalculateBankCardBalance(card.id).then((newBalance) => {
-            if (newBalance !== null) {
-              setCurrentBalance(newBalance);
-            }
-            fetchTransactions();
-          });
-        }
-      )
+        });
+      })
       .subscribe();
 
     channelRef.current = channel;
-
     return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-      }
+      if (channelRef.current) supabase.removeChannel(channelRef.current);
     };
   }, [card.id, fetchTransactions]);
 
@@ -117,14 +95,56 @@ export function BankCardTransactions({ card, getTransactions }: BankCardTransact
     setIsRecalculating(true);
     try {
       const newBalance = await recalculateBankCardBalance(card.id);
-      if (newBalance !== null) {
-        setCurrentBalance(newBalance);
-      }
+      if (newBalance !== null) setCurrentBalance(newBalance);
       await fetchTransactions();
     } finally {
       setIsRecalculating(false);
     }
   };
+
+  const handleDeleteTransfer = async (tx: BankCardTransaction) => {
+    setIsDeletingTransfer(true);
+    try {
+      // حذف تراکنش متناظر از کارت دیگر
+      if (tx.reference_id) {
+        await supabase
+          .from('bank_card_transactions')
+          .delete()
+          .eq('bank_card_id', tx.reference_id)
+          .eq('reference_type', 'card_transfer')
+          .eq('reference_id', card.id);
+      }
+
+      // حذف تراکنش خود کارت فعلی
+      const { error } = await supabase
+        .from('bank_card_transactions')
+        .delete()
+        .eq('id', tx.id);
+
+      if (error) throw error;
+
+      toast({ title: 'تراکنش انتقال با موفقیت حذف شد' });
+      await fetchTransactions();
+    } catch (err) {
+      console.error('خطا در حذف تراکنش:', err);
+      toast({ title: 'خطا در حذف تراکنش', variant: 'destructive' });
+    } finally {
+      setIsDeletingTransfer(false);
+      setDeletingTransferId(null);
+    }
+  };
+
+  const getReferenceLabel = (type: string | null) => {
+    switch (type) {
+      case 'daily_report_staff': return 'گزارش روزانه';
+      case 'order_payment': return 'پرداخت سفارش';
+      case 'card_transfer': return 'انتقال بین کارت';
+      case 'manual': return 'دستی';
+      default: return type || '-';
+    }
+  };
+
+  const deletingTx = transactions.find(t => t.id === deletingTransferId);
 
   if (loading) {
     return (
@@ -136,21 +156,36 @@ export function BankCardTransactions({ card, getTransactions }: BankCardTransact
     );
   }
 
-  const getReferenceLabel = (type: string | null) => {
-    switch (type) {
-      case 'daily_report_staff':
-        return 'گزارش روزانه';
-      case 'order_payment':
-        return 'پرداخت سفارش';
-      case 'manual':
-        return 'دستی';
-      default:
-        return type || '-';
-    }
-  };
-
   return (
     <div className="space-y-4">
+      <AlertDialog open={!!deletingTransferId} onOpenChange={(open) => { if (!open) setDeletingTransferId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف تراکنش انتقال</AlertDialogTitle>
+            <AlertDialogDescription>
+              آیا مطمئن هستید که می‌خواهید این تراکنش انتقال را حذف کنید؟
+              <br />
+              این عملیات هر دو طرف تراکنش (کارت مبدأ و مقصد) را حذف خواهد کرد و قابل بازگشت نیست.
+              {deletingTx && (
+                <span className="block mt-2 font-bold">
+                  مبلغ: {deletingTx.amount.toLocaleString('fa-IR')} تومان
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingTransfer}>انصراف</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingTx && handleDeleteTransfer(deletingTx)}
+              disabled={isDeletingTransfer}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeletingTransfer ? 'در حال حذف...' : 'حذف تراکنش'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border">
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">موجودی فعلی</span>
@@ -175,9 +210,7 @@ export function BankCardTransactions({ card, getTransactions }: BankCardTransact
         <div className="py-12 text-center">
           <Receipt className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
           <h3 className="text-lg font-semibold mb-2">تراکنشی یافت نشد</h3>
-          <p className="text-muted-foreground">
-            هنوز تراکنشی برای این کارت ثبت نشده است.
-          </p>
+          <p className="text-muted-foreground">هنوز تراکنشی برای این کارت ثبت نشده است.</p>
         </div>
       ) : (
         <div className="divide-y rounded-lg border overflow-hidden">
@@ -215,9 +248,7 @@ export function BankCardTransactions({ card, getTransactions }: BankCardTransact
                   )}
                 </div>
                 {tx.description && (
-                  <p className="text-sm text-muted-foreground truncate">
-                    {tx.description}
-                  </p>
+                  <p className="text-sm text-muted-foreground truncate">{tx.description}</p>
                 )}
                 <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
                   <span>{format(new Date(tx.created_at), 'yyyy/MM/dd - HH:mm')}</span>
@@ -229,18 +260,27 @@ export function BankCardTransactions({ card, getTransactions }: BankCardTransact
                 </div>
               </div>
 
-              <div className="text-left">
-                <div
-                  className={`text-lg font-bold ${
-                    tx.transaction_type === 'deposit' ? 'text-green-600' : 'text-red-600'
-                  }`}
-                >
-                  {tx.transaction_type === 'deposit' ? '+' : '-'}
-                  {tx.amount.toLocaleString('fa-IR')}
+              <div className="flex flex-col items-end gap-2">
+                <div className="text-left">
+                  <div className={`text-lg font-bold ${tx.transaction_type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
+                    {tx.transaction_type === 'deposit' ? '+' : '-'}
+                    {tx.amount.toLocaleString('fa-IR')}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    مانده: {tx.balance_after.toLocaleString('fa-IR')}
+                  </div>
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  مانده: {tx.balance_after.toLocaleString('fa-IR')}
-                </div>
+                {tx.reference_type === 'card_transfer' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => setDeletingTransferId(tx.id)}
+                    title="حذف تراکنش انتقال"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
           ))}
