@@ -16,8 +16,10 @@ import {
   Calendar,
   ArrowLeftRight,
   Loader2,
-  ShieldCheck
+  ShieldCheck,
+  Blocks,
 } from 'lucide-react';
+import { BankCardModuleAccessDialog } from './BankCardModuleAccessDialog';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -48,6 +50,7 @@ interface BankCardsListProps {
   onToggleStatus: (id: string, isActive: boolean) => Promise<boolean>;
   onViewTransactions: (card: BankCard) => void;
   onTransfer?: (cardId: string) => void;
+  onRefresh?: () => void;
 }
 
 export function BankCardsList({
@@ -58,8 +61,10 @@ export function BankCardsList({
   onToggleStatus,
   onViewTransactions,
   onTransfer,
+  onRefresh,
 }: BankCardsListProps) {
   const [deletingCard, setDeletingCard] = useState<BankCard | null>(null);
+  const [moduleAccessCard, setModuleAccessCard] = useState<BankCard | null>(null);
   const [otpStep, setOtpStep] = useState<'confirm' | 'otp'>('confirm');
   const [otpCode, setOtpCode] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
@@ -228,6 +233,15 @@ export function BankCardsList({
                   </Button>
                 )}
                 <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setModuleAccessCard(card)}
+                  className="gap-1 text-primary border-primary/30 hover:bg-primary/5"
+                >
+                  <Blocks className="h-3 w-3" />
+                  ماژول‌ها
+                </Button>
+                <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => onToggleStatus(card.id, !card.is_active)}
@@ -361,6 +375,14 @@ export function BankCardsList({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Module Access Dialog */}
+      <BankCardModuleAccessDialog
+        card={moduleAccessCard}
+        open={!!moduleAccessCard}
+        onOpenChange={(open) => !open && setModuleAccessCard(null)}
+        onSaved={() => onRefresh?.()}
+      />
     </>
   );
 }
