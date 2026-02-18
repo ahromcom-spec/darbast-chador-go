@@ -381,6 +381,16 @@ export default function DailyReportModule() {
 
   const { moduleName } = useModuleAssignmentInfo(activeModuleKey, DEFAULT_TITLE, DEFAULT_DESCRIPTION);
 
+  // Map the active module to a standard module key for bank card filtering
+  // This allows cards with allowed_modules=['management'] to show in 'ماژول گزارش روزانه مدیریت'
+  const bankCardModuleKey = (() => {
+    if (!moduleName) return activeModuleKey;
+    if (moduleName.includes('مدیریت')) return 'management';
+    if (moduleName.includes('اجرایی') || moduleName.includes('executive')) return 'executive';
+    if (moduleName.includes('پشتیبانی') || moduleName.includes('support')) return 'support';
+    return activeModuleKey;
+  })();
+
   // آیا این ماژول تجمیعی است؟ (نمایش همه گزارشات از همه ماژول‌ها)
   const isAggregated = isAggregatedModule(activeModuleKey, moduleName);
 
@@ -4723,8 +4733,8 @@ export default function DailyReportModule() {
                                             onValueChange={(value) => updateStaffRow(index, 'bank_card_id', value)}
                                             placeholder="انتخاب کارت بانکی"
                                             showBalance={true}
-                                            showManagementCards={moduleName?.includes('مدیریت') ?? false}
-                                            allowedCardIds={moduleName?.includes('مدیریت') ? ['5a8bb67f-3757-4ac6-b745-44451d55630a', 'd193daf8-26d2-4b1c-8547-34f8802a9427', 'd0bdf39e-e3cd-4231-a979-a287be516c17'] : undefined}
+                                            showManagementCards={true}
+                                            moduleKey={bankCardModuleKey || undefined}
                                             asOfDate={toLocalDateString(reportDate)}
                                           />
                                      </div>
