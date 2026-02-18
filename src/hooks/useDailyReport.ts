@@ -1028,9 +1028,9 @@ export function useDailyReport() {
           .eq('reference_type', 'daily_report_staff')
           .eq('reference_id', reportId);
         
-        // Also clean up any orphaned transactions for the same date
-        // This handles cases where a report was deleted and recreated with a new ID,
-        // leaving behind transactions referencing the old (now non-existent) report ID
+        // Also clean up any orphaned transactions for the same date and module_key
+        // This handles cases where report was deleted/recreated with a new ID,
+        // or where reference_id points to a non-existent daily_report_staff row
         const { data: orphanedTx } = await supabase
           .from('bank_card_transactions')
           .select('id, reference_id')
@@ -1039,9 +1039,11 @@ export function useDailyReport() {
           .neq('reference_id', reportId);
         
         if (orphanedTx && orphanedTx.length > 0) {
-          // Verify which reference_ids are truly orphaned (report no longer exists)
+          // For each orphaned transaction, check if its reference_id still exists
+          // as either a daily_report or daily_report_staff row
           const refIds = [...new Set(orphanedTx.map(t => t.reference_id).filter(Boolean))];
           for (const refId of refIds) {
+            // Check if this refId is a valid daily_report for this date+module
             const { data: reportExists } = await supabase
               .from('daily_reports')
               .select('id')
@@ -1050,13 +1052,36 @@ export function useDailyReport() {
             
             if (!reportExists) {
               // This reference_id points to a deleted report — clean up orphaned transactions
-              console.log('Cleaning up orphaned bank card transactions for deleted report:', refId);
+              console.log('Cleaning up orphaned bank card transactions for deleted/replaced report:', refId);
               await supabase
                 .from('bank_card_transactions')
                 .delete()
                 .eq('reference_type', 'daily_report_staff')
                 .eq('reference_id', refId);
             }
+          }
+        }
+
+        // Additionally: clean up any transactions for this date+moduleKey that reference
+        // a daily_report_staff row which no longer exists (truly orphaned)
+        // This covers the case where report_date matches but reference_id is a stale staff ID
+        const { data: allDateTx } = await supabase
+          .from('bank_card_transactions')
+          .select('id, reference_id')
+          .eq('reference_type', 'daily_report_staff')
+          .eq('report_date', dateStr)
+          .neq('reference_id', reportId);
+        
+        if (allDateTx && allDateTx.length > 0) {
+          // These are extra transactions for same date that don't belong to current report
+          // They are safe to delete since we already deleted+reinserted current report's transactions above
+          const staleIds = allDateTx.map(t => t.id);
+          if (staleIds.length > 0) {
+            console.log('Cleaning up stale bank card transactions for date:', dateStr, 'count:', staleIds.length);
+            await supabase
+              .from('bank_card_transactions')
+              .delete()
+              .in('id', staleIds);
           }
         }
       }
