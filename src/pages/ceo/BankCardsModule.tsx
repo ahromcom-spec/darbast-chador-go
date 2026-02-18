@@ -170,6 +170,7 @@ export default function BankCardsModule() {
               onToggleStatus={toggleCardStatus}
               onViewTransactions={handleViewTransactions}
               onTransfer={(cardId) => handleTransfer(cardId)}
+              onRefresh={fetchCards}
             />
           </TabsContent>
 

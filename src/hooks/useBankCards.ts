@@ -17,6 +17,7 @@ export interface BankCard {
   created_by: string;
   created_at: string;
   updated_at: string;
+  allowed_modules: string[] | null;
 }
 
 export interface BankCardTransaction {

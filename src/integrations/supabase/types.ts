@@ -325,6 +325,7 @@ export type Database = {
       }
       bank_cards: {
         Row: {
+          allowed_modules: string[] | null
           bank_name: string
           card_name: string
           card_number: string | null
@@ -339,6 +340,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          allowed_modules?: string[] | null
           bank_name: string
           card_name: string
           card_number?: string | null
@@ -353,6 +355,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          allowed_modules?: string[] | null
           bank_name?: string
           card_name?: string
           card_number?: string | null
