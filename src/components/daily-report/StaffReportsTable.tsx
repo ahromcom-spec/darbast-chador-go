@@ -13,28 +13,30 @@ import { StaffReportRow, StaffMember } from '@/hooks/useDailyReport';
 import { WorkStatusSelect } from '@/components/daily-report/WorkStatusSelect';
 import { BankCardSelect } from '@/components/bank-cards/BankCardSelect';
 import { supabase } from '@/integrations/supabase/client';
+
+interface BankCardInfo {
+  id: string;
+  card_name: string;
+  bank_name: string;
+}
+
 interface StaffReportsTableProps {
   staffReports: StaffReportRow[];
   staffMembers: StaffMember[];
   totals: {
     presentCount: number;
-    totalOvertime: number;
     totalReceived: number;
     totalSpent: number;
+    totalOvertime?: number;
   };
-  onUpdateRow: (index: number, field: keyof StaffReportRow, value: any) => void;
+  onUpdateRow: (index: number, field: string, value: unknown) => void;
   onRemoveRow: (index: number) => void;
   onAddRow: () => void;
   onSetStaffReports: (updater: (prev: StaffReportRow[]) => StaffReportRow[]) => void;
   /** Report date in YYYY-MM-DD format for historical balance display */
   reportDate?: string;
-}
-
-// Interface for bank card data
-interface BankCardInfo {
-  id: string;
-  card_name: string;
-  bank_name: string;
+  /** Module key to filter bank cards by allowed_modules */
+  moduleKey?: string;
 }
 
 export function StaffReportsTable({
@@ -46,6 +48,7 @@ export function StaffReportsTable({
   onAddRow,
   onSetStaffReports,
   reportDate,
+  moduleKey,
 }: StaffReportsTableProps) {
   const balance = totals.totalReceived - totals.totalSpent;
   const balanceState: 'balanced' | 'deficit' | 'surplus' = balance === 0 ? 'balanced' : balance < 0 ? 'deficit' : 'surplus';
@@ -247,6 +250,8 @@ export function StaffReportsTable({
                            onValueChange={(value) => onUpdateRow(index, 'bank_card_id', value)}
                            placeholder="انتخاب کارت"
                            showBalance={true}
+                           moduleKey={moduleKey}
+                           showManagementCards={true}
                            asOfDate={reportDate}
                          />
                       </div>
@@ -411,6 +416,8 @@ export function StaffReportsTable({
                            onValueChange={(value) => onUpdateRow(index, 'bank_card_id', value)}
                            placeholder="انتخاب کارت بانکی"
                            showBalance={true}
+                           moduleKey={moduleKey}
+                           showManagementCards={true}
                            asOfDate={reportDate}
                          />
                       </div>

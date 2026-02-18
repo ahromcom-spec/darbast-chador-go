@@ -19,6 +19,7 @@ interface BankCard {
   bank_name: string;
   current_balance: number;
   initial_balance?: number;
+  allowed_modules: string[] | null;
 }
 
 interface BankCardSelectProps {
@@ -30,6 +31,8 @@ interface BankCardSelectProps {
   showManagementCards?: boolean;
   onlyManagementCards?: boolean;
   allowedCardIds?: string[];
+  /** Module key to filter cards by allowed_modules (e.g. 'management', 'executive', 'support', 'order_payment') */
+  moduleKey?: string;
   /** When provided, show balance as of this date (YYYY-MM-DD) instead of current balance */
   asOfDate?: string;
 }
@@ -67,6 +70,7 @@ export function BankCardSelect({
   showManagementCards = false,
   onlyManagementCards = false,
   allowedCardIds,
+  moduleKey,
   asOfDate,
 }: BankCardSelectProps) {
   const [cards, setCards] = useState<BankCard[]>([]);
@@ -82,7 +86,7 @@ export function BankCardSelect({
       isFetchingRef.current = true;
       const { data, error } = await supabase
         .from('bank_cards')
-        .select('id, card_name, bank_name, current_balance, initial_balance')
+        .select('id, card_name, bank_name, current_balance, initial_balance, allowed_modules')
         .eq('is_active', true)
         .order('card_name');
 
@@ -167,11 +171,23 @@ export function BankCardSelect({
   }, [fetchCards, updateCardBalance]);
 
   const filteredCards = useMemo(() => {
+    // If explicit card IDs are provided, use them directly
     if (allowedCardIds && allowedCardIds.length > 0) return cards.filter(card => allowedCardIds.includes(card.id));
+    
+    // If a moduleKey is provided, filter by allowed_modules:
+    // null/empty allowed_modules means all modules have access
+    if (moduleKey) {
+      return cards.filter(card => {
+        if (!card.allowed_modules || card.allowed_modules.length === 0) return true;
+        return card.allowed_modules.includes(moduleKey);
+      });
+    }
+
+    // Legacy: filter by name if no moduleKey is provided
     if (onlyManagementCards) return cards.filter(card => card.card_name.includes('مدیریت'));
     if (showManagementCards) return cards;
     return cards.filter(card => !card.card_name.includes('مدیریت'));
-  }, [cards, showManagementCards, onlyManagementCards, allowedCardIds]);
+  }, [cards, showManagementCards, onlyManagementCards, allowedCardIds, moduleKey]);
 
   if (loading) {
     return (
