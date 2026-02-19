@@ -275,6 +275,8 @@ export default function PersonnelAccountingModule() {
         .from('staff_salary_settings')
         .select('base_daily_salary, overtime_rate_fraction, staff_code, staff_name')
         .eq('staff_code', phone)
+        .order('effective_from', { ascending: false, nullsFirst: false })
+        .limit(1)
         .maybeSingle();
       
       if (salaryByPhone) {
@@ -286,6 +288,8 @@ export default function PersonnelAccountingModule() {
           .from('staff_salary_settings')
           .select('base_daily_salary, overtime_rate_fraction, staff_code, staff_name')
           .or(`staff_code.eq.${normalizedPhone},staff_code.eq.0${normalizedPhone}`)
+          .order('effective_from', { ascending: false, nullsFirst: false })
+          .limit(1)
           .maybeSingle();
         
         if (salaryByNormalized) {
@@ -303,6 +307,8 @@ export default function PersonnelAccountingModule() {
               .from('staff_salary_settings')
               .select('base_daily_salary, overtime_rate_fraction, staff_code, staff_name')
               .eq('staff_name', hrEmployee.full_name)
+              .order('effective_from', { ascending: false, nullsFirst: false })
+              .limit(1)
               .maybeSingle();
             
             if (salaryByName) {

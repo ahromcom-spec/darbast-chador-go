@@ -49,6 +49,13 @@ interface StaffAuditRecord {
   notes: string;
 }
 
+interface SalaryPeriod {
+  base_daily_salary: number;
+  overtime_rate_fraction: number;
+  effective_from: string | null;
+  effective_to: string | null;
+}
+
 interface SalarySettings {
   base_daily_salary: number;
   overtime_rate_fraction: number;
@@ -57,6 +64,7 @@ interface SalarySettings {
   bonuses: number;
   deductions: number;
   notes: string;
+  periods: SalaryPeriod[];
 }
 
 interface AuditSummary {
@@ -142,24 +150,49 @@ export function StaffAuditTab() {
   const fetchSalarySettings = async (staffCode: string): Promise<SalarySettings> => {
     const { data, error } = await supabase
       .from('staff_salary_settings')
-      .select('base_daily_salary, overtime_rate_fraction, previous_month_balance, previous_month_extra_received, bonuses, deductions, notes')
+      .select('base_daily_salary, overtime_rate_fraction, previous_month_balance, previous_month_extra_received, bonuses, deductions, notes, effective_from, effective_to')
       .eq('staff_code', staffCode)
-      .maybeSingle();
+      .order('effective_from', { ascending: true, nullsFirst: true });
 
-    const settings: SalarySettings = !error && data 
-      ? {
-          base_daily_salary: data.base_daily_salary || 0,
-          overtime_rate_fraction: data.overtime_rate_fraction || 0.167,
-          previous_month_balance: data.previous_month_balance || 0,
-          previous_month_extra_received: data.previous_month_extra_received || 0,
-          bonuses: data.bonuses || 0,
-          deductions: data.deductions || 0,
-          notes: data.notes || '',
-        }
-      : { base_daily_salary: 0, overtime_rate_fraction: 0.167, previous_month_balance: 0, previous_month_extra_received: 0, bonuses: 0, deductions: 0, notes: '' };
+    const rows = (!error && data) ? data : [];
+    
+    // Build periods for date-based salary lookup
+    const periods: SalaryPeriod[] = rows.map(r => ({
+      base_daily_salary: r.base_daily_salary || 0,
+      overtime_rate_fraction: r.overtime_rate_fraction || 0.167,
+      effective_from: r.effective_from,
+      effective_to: r.effective_to,
+    }));
+
+    // Use first row's global fields, or defaults
+    const first = rows[0];
+    const settings: SalarySettings = {
+      base_daily_salary: first?.base_daily_salary || 0,
+      overtime_rate_fraction: first?.overtime_rate_fraction || 0.167,
+      previous_month_balance: first?.previous_month_balance || 0,
+      previous_month_extra_received: first?.previous_month_extra_received || 0,
+      bonuses: first?.bonuses || 0,
+      deductions: first?.deductions || 0,
+      notes: first?.notes || '',
+      periods,
+    };
     
     setSalarySettings(settings);
     return settings;
+  };
+
+  // Find the salary for a specific date from periods
+  const getSalaryForDate = (dateStr: string, periods: SalaryPeriod[], fallback: SalarySettings) => {
+    // Try to find a matching period
+    for (const p of periods) {
+      const afterStart = !p.effective_from || dateStr >= p.effective_from;
+      const beforeEnd = !p.effective_to || dateStr <= p.effective_to;
+      if (afterStart && beforeEnd) {
+        return { base: p.base_daily_salary, fraction: p.overtime_rate_fraction };
+      }
+    }
+    // Fallback to default
+    return { base: fallback.base_daily_salary, fraction: fallback.overtime_rate_fraction };
   };
 
   const calculateSummary = (records: StaffAuditRecord[], settings: SalarySettings, localBonuses?: number, localDeductions?: number, localPrevBalance?: number, localPrevExtra?: number) => {
@@ -172,9 +205,18 @@ export function StaffAuditTab() {
     const totalReceived = records.reduce((sum, r) => sum + (r.amount_received || 0), 0);
     const totalSpent = records.reduce((sum, r) => sum + (r.amount_spent || 0), 0);
     
-    // Calculated salary
-    const estimatedSalary = totalDaysWorked * settings.base_daily_salary;
-    const overtimePay = totalOvertime * settings.base_daily_salary * settings.overtime_rate_fraction;
+    // Calculated salary - per-day based on effective date ranges
+    let estimatedSalary = 0;
+    let overtimePay = 0;
+    for (const r of records) {
+      const { base, fraction } = getSalaryForDate(r.report_date, settings.periods, settings);
+      if (r.work_status === 'حاضر') {
+        estimatedSalary += base;
+      }
+      if (r.overtime_hours > 0) {
+        overtimePay += r.overtime_hours * base * fraction;
+      }
+    }
     
     // Use local values (from UI) instead of settings
     const benefits = localBonuses ?? bonuses;
