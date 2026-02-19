@@ -2429,7 +2429,14 @@ export default function ExecutiveOrders() {
           orderCode={selectedOrder.code}
           customerName={selectedOrder.customer_name}
           customerId={selectedOrder.customer_id || ''}
-          totalPrice={selectedOrder.total_price || selectedOrder.payment_amount || 0}
+          totalPrice={(() => {
+            const tp = selectedOrder.total_price || selectedOrder.payment_amount || 0;
+            if (tp > 0) return tp;
+            try {
+              const n = typeof selectedOrder.notes === 'string' ? JSON.parse(selectedOrder.notes) : selectedOrder.notes;
+              return Number(n?.total_price) || 0;
+            } catch { return 0; }
+          })()}
           onPaymentSuccess={fetchOrders}
           customerPhone={selectedOrder.customer_phone}
           address={buildOrderSmsAddress(selectedOrder.address, selectedOrder.detailed_address)}

@@ -38,11 +38,17 @@ const toNumber = (value: unknown) => {
   return Number.isFinite(n) ? n : 0;
 };
 
-const getOrderTotalAmount = (order: Pick<Order, 'total_price' | 'payment_amount'>) => {
+const getOrderTotalAmount = (order: Pick<Order, 'total_price' | 'payment_amount' | 'notes'>) => {
   const tp = toNumber(order.total_price);
   if (tp > 0) return tp;
   const pa = toNumber(order.payment_amount);
   if (pa > 0) return pa;
+  // For rental orders, price is stored in notes.total_price
+  try {
+    const notesObj = typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
+    const np = toNumber(notesObj?.total_price);
+    if (np > 0) return np;
+  } catch {}
   return 0;
 };
 
