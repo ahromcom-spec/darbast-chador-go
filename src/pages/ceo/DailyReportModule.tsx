@@ -505,6 +505,8 @@ export default function DailyReportModule() {
 
   // Bank cards cache for aggregated view display
   const [bankCardsCache, setBankCardsCache] = useState<Map<string, BankCardCache>>(new Map());
+  // Historical balances for bank cards as of the current report date (read-only aggregated view)
+  const [bankCardsHistoricalBalances, setBankCardsHistoricalBalances] = useState<Map<string, number>>(new Map());
   
   // آیا این ماژول باید گزارشات همه کاربران اختصاص‌یافته را نشان دهد؟
   // (وقتی مدیر است و ماژول به دیگران اختصاص داده شده)
@@ -793,6 +795,52 @@ export default function DailyReportModule() {
     expectedDateRef.current = newDateStr; // Set expected date BEFORE fetch
     fetchExistingReport();
   }, [reportDate, userId, activeModuleKey, isAggregated, dateCache]);
+
+  // محاسبه موجودی تاریخی کارت‌های بانکی تا تاریخ گزارش (برای نمایش تجمیعی)
+  useEffect(() => {
+    if (bankCardsCache.size === 0) {
+      setBankCardsHistoricalBalances(new Map());
+      return;
+    }
+    const dateStr = toLocalDateString(reportDate);
+    let cancelled = false;
+    const calcAll = async () => {
+      const cardIds = Array.from(bankCardsCache.keys());
+      // Fetch transactions and initial balances in parallel
+      const [{ data: allTx }, { data: cardsData }] = await Promise.all([
+        supabase
+          .from('bank_card_transactions')
+          .select('bank_card_id, transaction_type, amount, report_date, created_at')
+          .in('bank_card_id', cardIds),
+        supabase
+          .from('bank_cards')
+          .select('id, initial_balance')
+          .in('id', cardIds),
+      ]);
+      if (cancelled) return;
+      // Group transactions by card
+      const txByCard = new Map<string, NonNullable<typeof allTx>>();
+      for (const tx of allTx || []) {
+        if (!txByCard.has(tx.bank_card_id)) txByCard.set(tx.bank_card_id, []);
+        txByCard.get(tx.bank_card_id)!.push(tx);
+      }
+      const finalMap = new Map<string, number>();
+      for (const card of cardsData || []) {
+        const txs = txByCard.get(card.id) || [];
+        let net = 0;
+        for (const tx of txs) {
+          const txDate = tx.report_date || (tx.created_at ? tx.created_at.substring(0, 10) : null);
+          if (!txDate || txDate > dateStr) continue;
+          const amt = Number(tx.amount ?? 0) || 0;
+          net += tx.transaction_type === 'deposit' ? amt : -amt;
+        }
+        finalMap.set(card.id, (card.initial_balance || 0) + net);
+      }
+      setBankCardsHistoricalBalances(finalMap);
+    };
+    calcAll();
+    return () => { cancelled = true; };
+  }, [bankCardsCache, reportDate]);
 
   // Realtime subscription برای ماژول کلی یا ماژول مادر با کاربران اختصاص‌یافته:
   // وقتی گزارشی حذف شود، دوباره واکشی کن
@@ -4723,11 +4771,11 @@ export default function DailyReportModule() {
                                                <span className="text-xs text-muted-foreground">({cardInfo.bank_name})</span>
                                              )}
                                            </div>
-                                           {cardInfo && (
-                                             <div className={`text-xs font-medium ${(cardInfo.current_balance ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                               موجودی: {(cardInfo.current_balance ?? 0).toLocaleString('fa-IR')} تومان
-                                             </div>
-                                           )}
+                                            {cardInfo && (
+                                              <div className={`text-xs font-medium ${(bankCardsHistoricalBalances.has(cardInfo.id) ? bankCardsHistoricalBalances.get(cardInfo.id)! : cardInfo.current_balance) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                موجودی: {(bankCardsHistoricalBalances.has(cardInfo.id) ? bankCardsHistoricalBalances.get(cardInfo.id)! : cardInfo.current_balance).toLocaleString('fa-IR')} تومان
+                                              </div>
+                                            )}
                                          </div>
                                        );
                                      })()
