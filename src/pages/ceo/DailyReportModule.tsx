@@ -715,16 +715,19 @@ export default function DailyReportModule() {
   }, [existingReportId]);
 
   // تابع علامت‌گذاری تاریخ فعلی به عنوان dirty (وقتی کاربر داده‌ها را تغییر می‌دهد)
-  const markCurrentDateDirty = useCallback(() => {
+  // overrideDailyNotes: مقدار جدید dailyNotes را می‌توان مستقیم پاس داد تا از مشکل stale ref جلوگیری شود
+  const markCurrentDateDirty = useCallback((overrideDailyNotes?: string) => {
     if (isAggregated) return;
     const currentDateStr = toLocalDateString(reportDate);
     // همیشه داده‌های فعلی از refs را در کش ذخیره کن (نه داده‌های قدیمی کش)
     // این تضمین می‌کند که حذف ردیف‌ها در کش منعکس شود
     const existingCache = dateCache.getCachedDate(currentDateStr);
+    // اگر overrideDailyNotes پاس شده باشد، از آن استفاده کن (جلوگیری از stale ref)
+    const notesToCache = overrideDailyNotes !== undefined ? overrideDailyNotes : dailyNotesRef.current;
     dateCache.cacheDate(currentDateStr, {
       orderReports: orderReportsRef.current,
       staffReports: staffReportsRef.current,
-      dailyNotes: dailyNotesRef.current,
+      dailyNotes: notesToCache,
       existingReportId: existingCache?.existingReportId ?? existingReportIdRef.current,
     }, true);
   }, [reportDate, isAggregated, dateCache]);
@@ -4470,9 +4473,11 @@ export default function DailyReportModule() {
                   placeholder="توضیحات روزانه"
                   value={dailyNotes}
                   onChange={(e) => {
-                    setDailyNotes(e.target.value);
+                    const newValue = e.target.value;
+                    setDailyNotes(newValue);
+                    dailyNotesRef.current = newValue;
                     setIsSaved(false);
-                    markCurrentDateDirty();
+                    markCurrentDateDirty(newValue);
                   }}
                   className="flex-1 min-h-[40px] text-sm resize-none"
                 />
