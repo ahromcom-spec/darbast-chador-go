@@ -3051,13 +3051,15 @@ export default function DailyReportModule() {
 
     if (!reportId) {
       // First check if a report already exists for this date AND module_key (fresh DB check)
-      const { data: existingCheck } = await supabase
+      // بررسی وجود هر گزارشی برای این ماژول-تاریخ (بدون محدودیت created_by تا از ایجاد تکراری جلوگیری شود)
+      const { data: existingCheckData } = await supabase
         .from('daily_reports')
         .select('id')
         .eq('report_date', dateStr)
-        .eq('created_by', user.id)
         .eq('module_key', activeModuleKey)
-        .maybeSingle();
+        .order('created_at', { ascending: true })
+        .limit(1);
+      const existingCheck = existingCheckData?.[0] ?? null;
 
       if (existingCheck?.id) {
         reportId = existingCheck.id;
