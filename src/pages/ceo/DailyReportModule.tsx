@@ -1731,6 +1731,9 @@ export default function DailyReportModule() {
         if (!showAllReports) {
           reportQuery = reportQuery.eq('created_by', user.id);
         }
+      } else {
+        // ماژول تجمیعی: گزارش خود ماژول کلی را حذف کن تا از تکرار داده‌ها جلوگیری شود
+        reportQuery = reportQuery.neq('module_key', activeModuleKey);
       }
 
       const { data: existingReports, error: existingError } = await reportQuery;
@@ -1745,9 +1748,19 @@ export default function DailyReportModule() {
 
        if (isAggregated || showAllReports) {
          // ماژول کلی یا ماژول مادر با گزارشات کاربران اختصاص‌یافته:
+         // فیلتر کردن گزارشات ماژول‌های تجمیعی دیگر (جلوگیری از تکرار داده‌ها)
+         const filteredReports = isAggregated 
+           ? (existingReports || []).filter((r: any) => !isAggregatedModule(r.module_key || ''))
+           : (existingReports || []);
          // لیست گزارش‌های همین تاریخ را نگه دار تا با تغییرات orders/staff سریع رفرش شود
-         const allReportIds = (existingReports || []).map((r) => r.id).filter(Boolean);
+         const allReportIds = filteredReports.map((r) => r.id).filter(Boolean);
          aggregatedSourceReportIdsRef.current = new Set(allReportIds);
+         
+         // جایگزینی existingReports با نسخه فیلتر شده
+         if (isAggregated) {
+           (existingReports as any[]).length = 0;
+           (existingReports as any[]).push(...filteredReports);
+         }
        }
 
        if ((isAggregated || showAllReports) && existingReports && existingReports.length > 0) {
