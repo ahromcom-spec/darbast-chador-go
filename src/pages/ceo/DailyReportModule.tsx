@@ -3001,7 +3001,8 @@ export default function DailyReportModule() {
       const currentDateStr = toLocalDateString(reportDate);
       // استفاده از refs برای دسترسی به آخرین داده‌ها و جلوگیری از stale state
       const hasCurrentData = orderReportsRef.current.some(r => r.order_id) || 
-        staffReportsRef.current.some(s => s.staff_user_id || s.staff_name?.trim() || s.is_cash_box || s.is_company_expense);
+        staffReportsRef.current.some(s => s.staff_user_id || s.staff_name?.trim() || s.is_cash_box || s.is_company_expense) ||
+        !!dailyNotesRef.current?.trim();
       
       if (hasCurrentData && !isAggregated) {
         dateCache.cacheDate(currentDateStr, {
