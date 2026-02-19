@@ -42,17 +42,34 @@ interface BankCardSelectProps {
  * Uses bank_card_transactions (single source of truth) with report_date <= asOfDate.
  */
 async function getHistoricalBalance(cardId: string, asOfDate: string, initialBalance: number): Promise<number> {
-  // Fetch ALL transactions for this card, then filter client-side
-  // because report_date can be NULL (e.g. card_transfer) and we need created_at as fallback
-  const { data: allTx } = await supabase
-    .from('bank_card_transactions')
-    .select('transaction_type, amount, report_date, created_at')
-    .eq('bank_card_id', cardId);
+  // Fetch transactions with report_date <= asOfDate (server-side filter for efficiency)
+  // Also fetch transactions where report_date is NULL (card transfers etc.) separately
+  const [{ data: datedTx }, { data: nullDateTx }] = await Promise.all([
+    supabase
+      .from('bank_card_transactions')
+      .select('transaction_type, amount, report_date, created_at')
+      .eq('bank_card_id', cardId)
+      .lte('report_date', asOfDate)
+      .limit(5000),
+    supabase
+      .from('bank_card_transactions')
+      .select('transaction_type, amount, report_date, created_at')
+      .eq('bank_card_id', cardId)
+      .is('report_date', null)
+      .limit(5000),
+  ]);
 
   let txNet = 0;
-  for (const tx of allTx || []) {
-    // Use report_date if available, otherwise extract date from created_at
-    const txDate = tx.report_date || (tx.created_at ? tx.created_at.substring(0, 10) : null);
+
+  // Process transactions with explicit report_date (already filtered server-side)
+  for (const tx of datedTx || []) {
+    const amt = Number(tx.amount ?? 0) || 0;
+    txNet += tx.transaction_type === 'deposit' ? amt : -amt;
+  }
+
+  // Process transactions without report_date: use created_at date as fallback
+  for (const tx of nullDateTx || []) {
+    const txDate = tx.created_at ? tx.created_at.substring(0, 10) : null;
     if (!txDate || txDate > asOfDate) continue;
     const amt = Number(tx.amount ?? 0) || 0;
     txNet += tx.transaction_type === 'deposit' ? amt : -amt;
