@@ -40,11 +40,17 @@ const toNumber = (value: unknown) => {
 };
 
 // total_price در برخی سفارش‌ها ممکن است 0 باشد (یعنی هنوز ست نشده)، پس فقط وقتی >0 است از آن استفاده می‌کنیم
-const getOrderTotalAmount = (order: Pick<Order, 'total_price' | 'payment_amount'>) => {
+const getOrderTotalAmount = (order: Pick<Order, 'total_price' | 'payment_amount' | 'notes'>) => {
   const tp = toNumber(order.total_price);
   if (tp > 0) return tp;
   const pa = toNumber(order.payment_amount);
   if (pa > 0) return pa;
+  // For rental orders, price is stored in notes.total_price
+  try {
+    const notesObj = typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
+    const np = toNumber(notesObj?.total_price);
+    if (np > 0) return np;
+  } catch {}
   return 0;
 };
 
