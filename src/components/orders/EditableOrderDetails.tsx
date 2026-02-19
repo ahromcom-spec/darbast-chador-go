@@ -912,7 +912,62 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
           <Layers className="h-4 w-4 text-primary" />
           <span className="font-semibold">مشخصات فنی</span>
         </div>
-        
+
+        {/* Rental Items Details - for direct rental orders (non-expert-pricing) */}
+        {parsedNotes?.service_type === 'کرایه اجناس داربست' && !isExpertPricingRequest && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs text-muted-foreground">نوع داربست</Label>
+                <p className="font-medium">کرایه اجناس داربست</p>
+              </div>
+            </div>
+
+            {/* Item 1 */}
+            {parsedNotes?.item_type && (
+              <div className="bg-background p-3 rounded-lg border space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold">{parsedNotes.item_type}</span>
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                    تعداد: {Number(parsedNotes.quantity || 0).toLocaleString('fa-IR')} عدد
+                  </span>
+                </div>
+                {parsedNotes.total_price && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">مبلغ:</span>
+                    <span className="font-medium">{Number(parsedNotes.total_price).toLocaleString('fa-IR')} تومان</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Item 2 */}
+            {parsedNotes?.item_type_2 && (
+              <div className="bg-background p-3 rounded-lg border space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold">{parsedNotes.item_type_2}</span>
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                    تعداد: {Number(parsedNotes.quantity_2 || 0).toLocaleString('fa-IR')} عدد
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Rental Request Date */}
+            {(parsedNotes?.rental_request_date || parsedNotes?.requested_date) && (
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <Label className="text-xs text-muted-foreground">تاریخ درخواست کرایه</Label>
+                  <p className="font-medium">{formatPersianDate(parsedNotes.rental_request_date || parsedNotes.requested_date)}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Standard Scaffolding Type (non-rental) */}
+        {parsedNotes?.service_type !== 'کرایه اجناس داربست' && (
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label className="text-xs text-muted-foreground">نوع داربست</Label>
@@ -939,6 +994,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
             </div>
           )}
         </div>
+        )} {/* end non-rental scaffolding type */}
 
         {/* Dimensions (read-only for now) */}
         {dimensions && Array.isArray(dimensions) && dimensions.length > 0 && (
