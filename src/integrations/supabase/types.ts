@@ -5127,6 +5127,17 @@ export type Database = {
             }
             Returns: undefined
           }
+      transfer_between_bank_cards: {
+        Args: {
+          p_amount: number
+          p_created_at?: string
+          p_created_by?: string
+          p_description?: string
+          p_from_card_id: string
+          p_to_card_id: string
+        }
+        Returns: Json
+      }
       transfer_order_ownership: {
         Args: {
           p_new_customer_id: string
