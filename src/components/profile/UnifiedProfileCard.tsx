@@ -198,6 +198,25 @@ export function UnifiedProfileCard({
 
       if (error) throw error;
 
+      // Also update customer_name in all orders belonging to this user
+      try {
+        const { data: customerData } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (customerData?.id) {
+          await supabase
+            .from('projects_v3')
+            .update({ customer_name: editName })
+            .eq('customer_id', customerData.id);
+        }
+      } catch (orderUpdateError) {
+        console.error('Error updating customer_name in orders:', orderUpdateError);
+        // Non-fatal: profile was already saved
+      }
+
       onNameUpdate(editName);
       onBioUpdate(editBio);
       setEditMode(false);
