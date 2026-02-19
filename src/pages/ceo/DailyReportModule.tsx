@@ -225,12 +225,15 @@ async function syncBankCardBalancesFromLedger(params: {
   if (affectedBankCardIds.length === 0) return;
 
   // Best-effort: حذف لاگ‌های قبلی همین گزارش برای جلوگیری از تکرار
+  // حذف بر اساس reportId (reference_id = daily_reports.id) برای این گزارش
   let canReplaceTxLogs = true;
+  
   const { error: deleteTxError } = await supabase
     .from('bank_card_transactions')
     .delete()
     .eq('reference_type', 'daily_report_staff')
-    .eq('reference_id', reportId);
+    .eq('reference_id', reportId)
+    .in('bank_card_id', affectedBankCardIds);
 
   if (deleteTxError) {
     canReplaceTxLogs = false;
