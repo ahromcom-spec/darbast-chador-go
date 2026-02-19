@@ -932,10 +932,22 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                     تعداد: {Number(parsedNotes.quantity || 0).toLocaleString('fa-IR')} عدد
                   </span>
                 </div>
+                {/* Unit price: calculate from total/qty or use stored unit_price */}
+                {(() => {
+                  const qty = Number(parsedNotes.quantity || 0);
+                  const total = Number(parsedNotes.total_price || 0);
+                  const unitPrice = parsedNotes.unit_price || parsedNotes.item_1_unit_price || (qty > 0 && total > 0 ? Math.round(total / qty) : 0);
+                  return unitPrice > 0 ? (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">قیمت واحد:</span>
+                      <span className="font-medium">{Number(unitPrice).toLocaleString('fa-IR')} تومان</span>
+                    </div>
+                  ) : null;
+                })()}
                 {parsedNotes.total_price && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">مبلغ:</span>
-                    <span className="font-medium">{Number(parsedNotes.total_price).toLocaleString('fa-IR')} تومان</span>
+                  <div className="flex justify-between text-sm border-t pt-1">
+                    <span className="text-muted-foreground font-medium">مبلغ کل:</span>
+                    <span className="font-bold text-primary">{Number(parsedNotes.total_price).toLocaleString('fa-IR')} تومان</span>
                   </div>
                 )}
               </div>
@@ -1210,17 +1222,17 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
             />
           ) : (
             <>
-              {(order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice) && (
+              {(order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) && (
                 <>
                   <p className="font-bold text-xl text-green-700 dark:text-green-300">
                     {Number(
-                      (order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || 0) + approvedRepairCost
+                      (order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || 0) + approvedRepairCost
                     ).toLocaleString('fa-IR')} تومان
                   </p>
                   <div className="mt-2 space-y-1 text-sm">
                     <div className="flex justify-between text-muted-foreground">
                       <span>هزینه قرارداد:</span>
-                      <span>{Number(order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice).toLocaleString('fa-IR')} تومان</span>
+                      <span>{Number(order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price).toLocaleString('fa-IR')} تومان</span>
                     </div>
                     {approvedRepairCost > 0 && (
                       <div className="flex justify-between text-orange-600 dark:text-orange-400">
