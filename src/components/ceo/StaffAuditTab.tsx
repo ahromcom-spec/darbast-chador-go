@@ -269,7 +269,7 @@ export function StaffAuditTab() {
       if (staffError) throw staffError;
 
       // Map records with report dates
-      const mappedRecords: StaffAuditRecord[] = (staffRecords || []).map(sr => {
+      const rawRecords: StaffAuditRecord[] = (staffRecords || []).map(sr => {
         const report = reports.find(r => r.id === sr.daily_report_id);
         return {
           id: sr.id,
@@ -282,7 +282,29 @@ export function StaffAuditTab() {
           spending_notes: sr.spending_notes || '',
           notes: sr.notes || ''
         };
-      }).sort((a, b) => a.report_date.localeCompare(b.report_date));
+      });
+
+      // Deduplicate by report_date: merge records from multiple modules on the same day
+      const dateMap = new Map<string, StaffAuditRecord>();
+      for (const rec of rawRecords) {
+        const existing = dateMap.get(rec.report_date);
+        if (!existing) {
+          dateMap.set(rec.report_date, { ...rec });
+        } else {
+          // Merge: prefer 'حاضر' if any module has it
+          if (rec.work_status === 'حاضر') existing.work_status = 'حاضر';
+          existing.overtime_hours = Math.max(existing.overtime_hours, rec.overtime_hours);
+          existing.amount_received += rec.amount_received;
+          existing.amount_spent += rec.amount_spent;
+          // Merge notes
+          const mergeNotes = (a: string, b: string) => [a, b].filter(Boolean).join(' | ');
+          existing.receiving_notes = mergeNotes(existing.receiving_notes, rec.receiving_notes);
+          existing.spending_notes = mergeNotes(existing.spending_notes, rec.spending_notes);
+          existing.notes = mergeNotes(existing.notes, rec.notes);
+        }
+      }
+      const mappedRecords = Array.from(dateMap.values())
+        .sort((a, b) => a.report_date.localeCompare(b.report_date));
 
       setRecords(mappedRecords);
 
