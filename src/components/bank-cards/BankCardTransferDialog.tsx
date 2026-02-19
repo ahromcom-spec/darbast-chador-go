@@ -76,44 +76,20 @@ export function BankCardTransferDialog({
 
     setSaving(true);
     try {
-      const transferDesc = description.trim() 
-        || `انتقال از ${fromCard.card_name} به ${toCard.card_name}`;
-
-      const fromNewBalance = fromCard.current_balance - parsedAmount;
-      const toNewBalance = toCard.current_balance + parsedAmount;
-
       // Build created_at from transactionDate or now
       const createdAt = transactionDate
         ? new Date(transactionDate).toISOString()
         : new Date().toISOString();
 
-      // Insert both transactions
-      const { error: txError } = await supabase
-        .from('bank_card_transactions')
-        .insert([
-          {
-            bank_card_id: fromCardId,
-            transaction_type: 'withdrawal',
-            amount: parsedAmount,
-            balance_after: fromNewBalance,
-            description: `انتقال به ${toCard.card_name}` + (description ? ` - ${description}` : ''),
-            reference_type: 'card_transfer',
-            reference_id: toCardId,
-            created_by: user.id,
-            created_at: createdAt,
-          },
-          {
-            bank_card_id: toCardId,
-            transaction_type: 'deposit',
-            amount: parsedAmount,
-            balance_after: toNewBalance,
-            description: `انتقال از ${fromCard.card_name}` + (description ? ` - ${description}` : ''),
-            reference_type: 'card_transfer',
-            reference_id: fromCardId,
-            created_by: user.id,
-            created_at: createdAt,
-          },
-        ]);
+      // Use atomic DB function to ensure BOTH transactions are always created together
+      const { data, error: txError } = await supabase.rpc('transfer_between_bank_cards', {
+        p_from_card_id: fromCardId,
+        p_to_card_id: toCardId,
+        p_amount: parsedAmount,
+        p_description: description.trim() || null,
+        p_created_at: createdAt,
+        p_created_by: user.id,
+      });
 
       if (txError) throw txError;
 
