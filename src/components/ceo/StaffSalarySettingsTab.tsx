@@ -180,8 +180,8 @@ export function StaffSalarySettingsTab() {
           setLastSaveDebug(debugText);
           console.error('[SalarySettings Persist Error - Duplicate]', debugPayload, error);
 
-          toast.error('این نیرو قبلاً ثبت شده است', {
-            description: 'کد پرسنلی تکراری است. اگر لازم بود، جزئیات را کپی کنید.',
+          toast.error('این نیرو با همین تاریخ شروع اعتبار قبلاً ثبت شده است', {
+            description: 'لطفاً تاریخ شروع اعتبار متفاوتی انتخاب کنید.',
             action: {
               label: 'کپی جزئیات',
               onClick: () => copyDebugToClipboard(debugText),

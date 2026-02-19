@@ -316,6 +316,8 @@ export function UserWallet() {
         .from('staff_salary_settings')
         .select('base_daily_salary, overtime_rate_fraction')
         .eq('staff_code', phone)
+        .order('effective_from', { ascending: false, nullsFirst: false })
+        .limit(1)
         .maybeSingle();
 
       if (salaryByPhone) {
@@ -326,6 +328,8 @@ export function UserWallet() {
           .from('staff_salary_settings')
           .select('base_daily_salary, overtime_rate_fraction')
           .or(`staff_code.eq.${normalizedPhone},staff_code.eq.0${normalizedPhone}`)
+          .order('effective_from', { ascending: false, nullsFirst: false })
+          .limit(1)
           .maybeSingle();
 
         if (salaryByNormalized) {
@@ -335,6 +339,8 @@ export function UserWallet() {
             .from('staff_salary_settings')
             .select('base_daily_salary, overtime_rate_fraction')
             .eq('staff_name', userFullName)
+            .order('effective_from', { ascending: false, nullsFirst: false })
+            .limit(1)
             .maybeSingle();
 
           if (salaryByName) {
