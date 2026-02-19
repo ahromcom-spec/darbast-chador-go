@@ -807,11 +807,19 @@ export default function DailyReportModule() {
     const calcAll = async () => {
       const cardIds = Array.from(bankCardsCache.keys());
       // Fetch transactions and initial balances in parallel
-      const [{ data: allTx }, { data: cardsData }] = await Promise.all([
+      const [{ data: datedTx }, { data: nullDateTx }, { data: cardsData }] = await Promise.all([
         supabase
           .from('bank_card_transactions')
           .select('bank_card_id, transaction_type, amount, report_date, created_at')
-          .in('bank_card_id', cardIds),
+          .in('bank_card_id', cardIds)
+          .lte('report_date', dateStr)
+          .limit(5000),
+        supabase
+          .from('bank_card_transactions')
+          .select('bank_card_id, transaction_type, amount, report_date, created_at')
+          .in('bank_card_id', cardIds)
+          .is('report_date', null)
+          .limit(5000),
         supabase
           .from('bank_cards')
           .select('id, initial_balance')
@@ -819,8 +827,15 @@ export default function DailyReportModule() {
       ]);
       if (cancelled) return;
       // Group transactions by card
-      const txByCard = new Map<string, NonNullable<typeof allTx>>();
-      for (const tx of allTx || []) {
+      const txByCard = new Map<string, { transaction_type: string; amount: number; report_date: string | null; created_at: string | null; bank_card_id: string }[]>();
+      for (const tx of datedTx || []) {
+        if (!txByCard.has(tx.bank_card_id)) txByCard.set(tx.bank_card_id, []);
+        txByCard.get(tx.bank_card_id)!.push(tx);
+      }
+      // Add null-date transactions filtered by created_at date
+      for (const tx of nullDateTx || []) {
+        const txDate = tx.created_at ? tx.created_at.substring(0, 10) : null;
+        if (!txDate || txDate > dateStr) continue;
         if (!txByCard.has(tx.bank_card_id)) txByCard.set(tx.bank_card_id, []);
         txByCard.get(tx.bank_card_id)!.push(tx);
       }
@@ -829,8 +844,6 @@ export default function DailyReportModule() {
         const txs = txByCard.get(card.id) || [];
         let net = 0;
         for (const tx of txs) {
-          const txDate = tx.report_date || (tx.created_at ? tx.created_at.substring(0, 10) : null);
-          if (!txDate || txDate > dateStr) continue;
           const amt = Number(tx.amount ?? 0) || 0;
           net += tx.transaction_type === 'deposit' ? amt : -amt;
         }
