@@ -9,6 +9,7 @@ export interface ModuleShortcut {
   module_description: string | null;
   module_href: string | null;
   display_order: number;
+  color: string | null;
 }
 
 export function useModuleShortcuts() {
@@ -84,5 +85,41 @@ export function useModuleShortcuts() {
     [shortcuts]
   );
 
-  return { shortcuts, isLoading, addShortcut, removeShortcut, hasShortcut, refetch: fetchShortcuts };
+  const updateColor = useCallback(
+    async (moduleKey: string, color: string | null) => {
+      if (!user) return false;
+      const { error } = await supabase
+        .from('module_shortcuts')
+        .update({ color })
+        .eq('user_id', user.id)
+        .eq('module_key', moduleKey);
+      if (error) {
+        console.error('Error updating color:', error);
+        return false;
+      }
+      setShortcuts((prev) =>
+        prev.map((s) => (s.module_key === moduleKey ? { ...s, color } : s))
+      );
+      return true;
+    },
+    [user]
+  );
+
+  const reorderShortcuts = useCallback(
+    async (reordered: ModuleShortcut[]) => {
+      if (!user) return;
+      setShortcuts(reordered);
+      const updates = reordered.map((s, i) => ({
+        id: s.id,
+        user_id: user.id,
+        module_key: s.module_key,
+        module_name: s.module_name,
+        display_order: i,
+      }));
+      await supabase.from('module_shortcuts').upsert(updates, { onConflict: 'user_id,module_key' });
+    },
+    [user]
+  );
+
+  return { shortcuts, isLoading, addShortcut, removeShortcut, hasShortcut, updateColor, reorderShortcuts, refetch: fetchShortcuts };
 }
