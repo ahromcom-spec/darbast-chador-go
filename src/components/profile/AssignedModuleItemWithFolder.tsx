@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Folder, FolderOpen, ChevronLeft, ChevronDown, ChevronUp, Pencil, Check, X, Trash2, Users, UserMinus, Plus, LogOut, Move, FolderPlus, Home } from 'lucide-react';
-import { getModuleIconByKey } from '@/components/module-shortcut/ModuleIcon';
+import { getModuleIconByKey, getModuleColors } from '@/components/module-shortcut/ModuleIcon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -96,6 +96,7 @@ export function AssignedModuleItemWithFolder({
 
   const displayName = customNames[item.key]?.name || item.name;
   const displayDescription = customNames[item.key]?.description || item.description;
+  const moduleColors = getModuleColors(item.key, item.name);
   
   // Get assignments from allModulesData if available
   const moduleData = allModulesData?.get(item.key);
@@ -148,8 +149,8 @@ export function AssignedModuleItemWithFolder({
                 <Folder className="h-5 w-5 text-amber-600" />
               </div>
             ) : (
-              <div className={`p-2 rounded-lg ${item.bgColor || 'bg-gray-100'} flex-shrink-0`}>
-                {(() => { const Icon = getModuleIconByKey(item.key, item.name); return <Icon className={`h-5 w-5 ${item.color || 'text-gray-600'}`} />; })()}
+              <div className={`p-2 rounded-lg ${moduleColors.bgColor} flex-shrink-0`}>
+                {(() => { const Icon = getModuleIconByKey(item.key, item.name); return <Icon className={`h-5 w-5 ${moduleColors.color}`} />; })()}
               </div>
             )}
             <span className="text-xs text-muted-foreground">
@@ -400,8 +401,8 @@ export function AssignedModuleItemWithFolder({
                       setShowAddModuleDialog(false);
                     }}
                   >
-                    <div className={`p-2 rounded-lg ${mod.bgColor || 'bg-gray-100'} flex-shrink-0`}>
-                      {(() => { const Icon = getModuleIconByKey(mod.key, mod.name); return <Icon className={`h-4 w-4 ${mod.color || 'text-gray-600'}`} />; })()}
+                    <div className={`p-2 rounded-lg ${getModuleColors(mod.key, mod.name).bgColor} flex-shrink-0`}>
+                      {(() => { const Icon = getModuleIconByKey(mod.key, mod.name); return <Icon className={`h-4 w-4 ${getModuleColors(mod.key, mod.name).color}`} />; })()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-sm">{customNames[mod.key]?.name || mod.name}</div>
@@ -511,9 +512,9 @@ export function AssignedModuleItemWithFolder({
           {/* Module icon & toggle */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className={`p-2 rounded-lg ${item.bgColor || 'bg-gray-100'} hover:opacity-80 transition-opacity flex-shrink-0`}
+            className={`p-2 rounded-lg ${moduleColors.bgColor} hover:opacity-80 transition-opacity flex-shrink-0`}
           >
-            {(() => { const Icon = getModuleIconByKey(item.key, item.name); return <Icon className={`h-5 w-5 ${item.color || 'text-gray-600'}`} />; })()}
+            {(() => { const Icon = getModuleIconByKey(item.key, item.name); return <Icon className={`h-5 w-5 ${moduleColors.color}`} />; })()}
           </button>
 
           {/* Module info */}

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, ChevronLeft, Pencil, Check, X, Trash2, Users, UserMinus } from 'lucide-react';
-import { getModuleIconByKey } from '@/components/module-shortcut/ModuleIcon';
+import { getModuleIconByKey, getModuleColors } from '@/components/module-shortcut/ModuleIcon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +54,7 @@ export function AssignedModuleItem({
   const displayName = customNames[module.moduleKey]?.name || module.moduleName;
   const displayDescription = customNames[module.moduleKey]?.description || module.moduleDescription;
   const hasAssignments = module.assignments.length > 0;
+  const moduleColors = getModuleColors(module.moduleKey, module.moduleName);
 
   const startEditing = () => {
     setEditedName(displayName);
@@ -90,8 +91,8 @@ export function AssignedModuleItem({
       <div className="p-4 rounded-lg border-2 border-primary bg-background">
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <div className={`p-2 rounded-lg ${module.bgColor || 'bg-gray-100'} flex-shrink-0`}>
-              {(() => { const Icon = getModuleIconByKey(module.moduleKey, module.moduleName); return <Icon className={`h-5 w-5 ${module.color || 'text-gray-600'}`} />; })()}
+            <div className={`p-2 rounded-lg ${moduleColors.bgColor} flex-shrink-0`}>
+              {(() => { const Icon = getModuleIconByKey(module.moduleKey, module.moduleName); return <Icon className={`h-5 w-5 ${moduleColors.color}`} />; })()}
             </div>
             <span className="text-xs text-muted-foreground">ویرایش ماژول</span>
           </div>
@@ -154,9 +155,9 @@ export function AssignedModuleItem({
           {/* Module icon & toggle */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className={`p-2 rounded-lg ${module.bgColor || 'bg-gray-100'} hover:opacity-80 transition-opacity flex-shrink-0`}
+            className={`p-2 rounded-lg ${moduleColors.bgColor} hover:opacity-80 transition-opacity flex-shrink-0`}
           >
-            {(() => { const Icon = getModuleIconByKey(module.moduleKey, module.moduleName); return <Icon className={`h-5 w-5 ${module.color || 'text-gray-600'}`} />; })()}
+            {(() => { const Icon = getModuleIconByKey(module.moduleKey, module.moduleName); return <Icon className={`h-5 w-5 ${moduleColors.color}`} />; })()}
           </button>
 
           {/* Module info */}
