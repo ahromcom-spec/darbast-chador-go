@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Folder, FolderOpen, ChevronLeft, ChevronDown, GripVertical, Pencil, Check, X, Trash2, Copy, MoveRight, Home } from 'lucide-react';
+import { Folder, FolderOpen, ChevronLeft, ChevronDown, GripVertical, Pencil, Check, X, Trash2, Copy, MoveRight, Home } from 'lucide-react';
+import { getModuleIconByKey, getModuleColors } from '@/components/module-shortcut/ModuleIcon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -234,8 +235,8 @@ export function DraggableModuleItem({
                 <Folder className="h-5 w-5 text-amber-600" />
               </div>
             ) : (
-              <div className={`p-2 rounded-lg ${item.bgColor || 'bg-gray-100'} flex-shrink-0`}>
-                <Building2 className={`h-5 w-5 ${item.color || 'text-gray-600'}`} />
+              <div className={`p-2 rounded-lg ${getModuleColors(item.key, item.name).bgColor} flex-shrink-0`}>
+                {(() => { const Icon = getModuleIconByKey(item.key, item.name); return <Icon className={`h-5 w-5 ${getModuleColors(item.key, item.name).color}`} />; })()}
               </div>
             )}
             <span className="text-xs text-muted-foreground">
@@ -363,8 +364,8 @@ export function DraggableModuleItem({
             </>
           ) : (
             <>
-              <div className={`p-2 rounded-lg ${item.bgColor || 'bg-gray-100'} flex-shrink-0`}>
-                <Building2 className={`h-5 w-5 ${item.color || 'text-gray-600'}`} />
+              <div className={`p-2 rounded-lg ${getModuleColors(item.key, item.name).bgColor} flex-shrink-0`}>
+                {(() => { const Icon = getModuleIconByKey(item.key, item.name); return <Icon className={`h-5 w-5 ${getModuleColors(item.key, item.name).color}`} />; })()}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-sm whitespace-normal leading-relaxed">
