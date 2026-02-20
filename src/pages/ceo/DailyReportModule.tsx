@@ -744,7 +744,7 @@ export default function DailyReportModule() {
     }
 
     const newDateStr = toLocalDateString(reportDate);
-    const loadKey = `${userId}|${newDateStr}|${activeModuleKey}`;
+    const loadKey = `${userId}|${newDateStr}|${activeModuleKey}|${isAggregated}`;
 
     if (lastLoadKeyRef.current === loadKey) {
       // اگر fetch هنوز در حال اجرا است، loading را تغییر نده
