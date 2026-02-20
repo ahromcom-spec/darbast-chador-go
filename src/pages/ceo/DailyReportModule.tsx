@@ -425,6 +425,7 @@ export default function DailyReportModule() {
   }, []);
 
   const [loading, setLoading] = useState(true);
+  const [hasReportData, setHasReportData] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -789,12 +790,14 @@ export default function DailyReportModule() {
       cachedShowAllReportsRef.current = null;
       isFetchingReportRef.current = false;
       lastFetchTimestampRef.current = 0;
+      setHasReportData(true);
       setLoading(false);
       return;
     }
 
     // از دیتابیس لود کن
     setLoading(true); // نمایش اسکلت بارگذاری تا داده‌ها کامل دریافت شوند
+    setHasReportData(false);
     setOrderReports([]);
     setStaffReports([]);
     setDailyNotes('');
@@ -1773,6 +1776,7 @@ export default function DailyReportModule() {
        }
 
        if ((isAggregated || showAllReports) && existingReports && existingReports.length > 0) {
+         setHasReportData(true);
          // ماژول کلی (isAggregated): داده‌ها ادغام می‌شوند و فقط خواندنی هستند
          // ماژول مادر (showAllReports): داده‌ها بدون ادغام نمایش داده می‌شوند و قابل ویرایش هستند
          const allReportIds = existingReports.map((r) => r.id);
@@ -2188,6 +2192,7 @@ export default function DailyReportModule() {
         }
 
         if (reportIdToLoad) {
+          setHasReportData(true);
           setExistingReportId(reportIdToLoad);
           setDailyNotes(existingReport?.notes || '');
 
@@ -4565,6 +4570,16 @@ export default function DailyReportModule() {
                   </CardContent>
                 </Card>
               </div>
+            ) : isAggregated && !hasReportData ? (
+              <Card className="border-2 border-dashed border-muted-foreground/30 -mx-2 sm:mx-0 rounded-none sm:rounded-lg">
+                <CardContent className="py-12">
+                  <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                    <FileText className="h-10 w-10 opacity-40" />
+                    <p className="text-base font-medium">گزارشی برای این تاریخ ثبت نشده است</p>
+                    <p className="text-sm">هنوز هیچ ماژولی برای این روز گزارش ثبت نکرده است</p>
+                  </div>
+                </CardContent>
+              </Card>
             ) : (
               <>
                 {/* Order Reports Table */}
