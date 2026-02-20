@@ -37,42 +37,24 @@ export async function recalculateBankCardBalance(cardId: string): Promise<number
 
     const initialBalance = Number(cardData.initial_balance ?? 0) || 0;
 
-    // 2) Calculate manual transactions net (exclude daily report logs)
-    const { data: manualTx, error: manualTxError } = await supabase
+    // 2) Calculate net from ALL transactions (single source of truth)
+    const { data: allTx, error: txError } = await supabase
       .from('bank_card_transactions')
-      .select('transaction_type, amount, reference_type')
-      .eq('bank_card_id', cardId)
-      .or('reference_type.is.null,reference_type.neq.daily_report_staff');
+      .select('transaction_type, amount')
+      .eq('bank_card_id', cardId);
 
-    if (manualTxError) {
-      console.error('Error fetching manual transactions:', manualTxError);
+    if (txError) {
+      console.error('Error fetching transactions:', txError);
     }
 
-    const manualNet = (manualTx || []).reduce((sum: number, t: any) => {
+    const txNet = (allTx || []).reduce((sum: number, t: any) => {
       const amt = Number(t.amount ?? 0) || 0;
       return sum + (t.transaction_type === 'deposit' ? amt : -amt);
     }, 0);
 
-    // 3) Calculate daily report cash-box net (all reports)
-    const { data: drRows, error: drError } = await supabase
-      .from('daily_report_staff')
-      .select('amount_received, amount_spent')
-      .eq('bank_card_id', cardId)
-      .eq('is_cash_box', true);
+    const newBalance = initialBalance + txNet;
 
-    if (drError) {
-      console.error('Error fetching daily report staff rows:', drError);
-    }
-
-    const dailyNet = (drRows || []).reduce((sum: number, r: any) => {
-      const received = Number(r.amount_received ?? 0) || 0;
-      const spent = Number(r.amount_spent ?? 0) || 0;
-      return sum + received - spent;
-    }, 0);
-
-    const newBalance = initialBalance + manualNet + dailyNet;
-
-    // 4) Update the card balance in database
+    // 3) Update the card balance in database
     const { error: updateError } = await supabase
       .from('bank_cards')
       .update({ 
