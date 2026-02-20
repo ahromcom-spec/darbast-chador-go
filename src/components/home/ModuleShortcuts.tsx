@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import { Building2, X, Loader2 } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
+import { getModuleIconByKey } from '@/components/module-shortcut/ModuleIcon';
 import { Button } from '@/components/ui/button';
 import { useModuleShortcuts } from '@/hooks/useModuleShortcuts';
 import { useAuth } from '@/contexts/AuthContext';
@@ -50,7 +51,7 @@ export function ModuleShortcuts() {
                 <X className="h-3 w-3" />
               </Button>
               <div className="p-2 rounded-lg bg-white/10">
-                <Building2 className="h-5 w-5 text-white/80" />
+                {(() => { const Icon = getModuleIconByKey(s.module_key, s.module_name); return <Icon className="h-5 w-5 text-white/80" />; })()}
               </div>
               <span className="text-white/90 text-xs font-medium text-center leading-tight line-clamp-2">
                 {s.module_name}
