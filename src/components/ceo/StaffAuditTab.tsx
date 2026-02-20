@@ -88,6 +88,7 @@ interface AuditSummary {
   remainingBalanceThisMonth: number;
   extraReceivedThisMonth: number;
   netBalance: number;
+  displayDailySalary: number;
 }
 
 export function StaffAuditTab() {
@@ -208,13 +209,24 @@ export function StaffAuditTab() {
     // Calculated salary - per-day based on effective date ranges
     let estimatedSalary = 0;
     let overtimePay = 0;
+    const salaryUsageCount: Record<number, number> = {};
     for (const r of records) {
       const { base, fraction } = getSalaryForDate(r.report_date, settings.periods, settings);
       if (r.work_status === 'حاضر') {
         estimatedSalary += base;
+        salaryUsageCount[base] = (salaryUsageCount[base] || 0) + 1;
       }
       if (r.overtime_hours > 0) {
         overtimePay += r.overtime_hours * base * fraction;
+      }
+    }
+    // Find the most-used daily salary for display purposes
+    let displayDailySalary = settings.base_daily_salary;
+    let maxCount = 0;
+    for (const [salary, count] of Object.entries(salaryUsageCount)) {
+      if (count > maxCount) {
+        maxCount = count;
+        displayDailySalary = Number(salary);
       }
     }
     
@@ -255,7 +267,8 @@ export function StaffAuditTab() {
       deductions: deductionsVal,
       remainingBalanceThisMonth,
       extraReceivedThisMonth,
-      netBalance
+      netBalance,
+      displayDailySalary
     });
   };
 
@@ -610,7 +623,7 @@ export function StaffAuditTab() {
 
             <!-- Salary Info -->
             <div class="salary-info">
-              <span>حقوق روزمزدی: ${formatCurrency(salarySettings.base_daily_salary)}</span>
+              <span>حقوق روزمزدی: ${formatCurrency(summary.displayDailySalary)}</span>
             </div>
 
             <!-- Two-Column Ledger -->
@@ -623,7 +636,7 @@ export function StaffAuditTab() {
                 <table style="width: 100%; border-collapse: collapse;">
                   <tbody>
                     <tr style="background-color: #f0fdf4;">
-                      <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: 500;">حقوق پایه (${summary.totalDaysWorked} روز × ${salarySettings.base_daily_salary.toLocaleString('fa-IR')})</td>
+                      <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: 500;">حقوق پایه (${summary.totalDaysWorked} روز × ${summary.displayDailySalary.toLocaleString('fa-IR')})</td>
                       <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: bold; text-align: left; color: #16a34a;">${formatCurrency(summary.estimatedSalary)}</td>
                     </tr>
                     <tr>
@@ -1150,7 +1163,7 @@ export function StaffAuditTab() {
       )}
 
       {/* Comprehensive Salary Calculation Summary - PDF Style */}
-      {summary && salarySettings && salarySettings.base_daily_salary > 0 && (
+      {summary && salarySettings && summary.displayDailySalary > 0 && (
         <>
           {/* PDF Download Button - Outside the PDF content */}
           <Card className="border-2 border-amber-500/50 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20">
@@ -1208,7 +1221,7 @@ export function StaffAuditTab() {
                 <Table className="border border-green-200 rounded-lg overflow-hidden">
                   <TableBody>
                     <TableRow className="bg-green-50/50 dark:bg-green-900/20">
-                      <TableCell className="font-medium text-right">حقوق پایه ({summary.totalDaysWorked} روز × {salarySettings.base_daily_salary.toLocaleString('fa-IR')})</TableCell>
+                      <TableCell className="font-medium text-right">حقوق پایه ({summary.totalDaysWorked} روز × {summary.displayDailySalary.toLocaleString('fa-IR')})</TableCell>
                       <TableCell className="text-left font-bold text-green-700">{formatCurrency(summary.estimatedSalary)}</TableCell>
                     </TableRow>
                     <TableRow>
@@ -1344,7 +1357,7 @@ export function StaffAuditTab() {
       )}
 
       {/* Warning if no salary settings */}
-      {summary && salarySettings && salarySettings.base_daily_salary === 0 && (
+      {summary && salarySettings && summary.displayDailySalary === 0 && (
         <Card className="border-amber-300 bg-amber-50 dark:bg-amber-900/20">
           <CardContent className="py-4">
             <div className="flex items-center gap-3 text-amber-700 dark:text-amber-300">
