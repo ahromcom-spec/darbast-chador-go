@@ -1770,15 +1770,18 @@ export default function DailyReportModule() {
          // ماژول مادر (showAllReports): داده‌ها بدون ادغام نمایش داده می‌شوند و قابل ویرایش هستند
          const allReportIds = existingReports.map((r) => r.id);
          
-         // پیدا کردن گزارش خود کاربر (برای امکان ذخیره)
-         const ownReport = existingReports.find((r: any) => r.created_by === user.id);
-         if (ownReport?.id) {
-           setExistingReportId(ownReport.id);
-           setDailyNotes(ownReport.notes || '');
-         } else {
-           setExistingReportId(null);
-           setDailyNotes('');
-         }
+          // پیدا کردن گزارش خود کاربر (برای امکان ذخیره)
+          const ownReport = existingReports.find((r: any) => r.created_by === user.id);
+          if (ownReport?.id) {
+            setExistingReportId(ownReport.id);
+          } else {
+            setExistingReportId(null);
+          }
+          
+          if (!isAggregated) {
+            setDailyNotes(ownReport?.notes || '');
+          }
+          // توضیحات روز ماژول کلی بعد از واکشی نام ماژول‌ها تجمیع خواهد شد
         
         // ساخت نگاشت reportId به module_key و created_by برای نمایش منبع
         const reportToModuleMap = new Map<string, string>();
@@ -1886,6 +1889,17 @@ export default function DailyReportModule() {
           if (creatorId) return creatorNamesCache.get(creatorId) || '';
           return '';
         };
+
+        // ماژول کلی: تجمیع توضیحات روز از همه ماژول‌های منبع با نام دقیق ماژول
+        if (isAggregated) {
+          const allNotesParts: string[] = [];
+          for (const r of existingReports) {
+            if (r.notes && r.notes.trim()) {
+              allNotesParts.push(`[${getModuleDisplayName(r.module_key || '')}] ${r.notes.trim()}`);
+            }
+          }
+          setDailyNotes(allNotesParts.length > 0 ? allNotesParts.join(' | ') : '');
+        }
 
         // نمایش تمام سفارشات از همه ماژول‌ها (بدون حذف تکراری‌ها)
         // هر ماژول ممکن است گزارش متفاوتی برای یک سفارش داشته باشد
