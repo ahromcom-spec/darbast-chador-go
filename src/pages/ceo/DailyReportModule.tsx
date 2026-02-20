@@ -787,6 +787,7 @@ export default function DailyReportModule() {
     }
 
     // از دیتابیس لود کن
+    setLoading(true); // نمایش اسکلت بارگذاری تا داده‌ها کامل دریافت شوند
     setOrderReports([]);
     setStaffReports([]);
     setDailyNotes('');
@@ -1743,6 +1744,7 @@ export default function DailyReportModule() {
       // Staleness check: if user navigated to different date, discard this result
       if (expectedDateRef.current !== expectedDate) {
         isFetchingReportRef.current = false;
+        setLoading(false);
         return;
       }
 
@@ -1822,6 +1824,7 @@ export default function DailyReportModule() {
         // Staleness check after heavy data load
         if (expectedDateRef.current !== expectedDate) {
           isFetchingReportRef.current = false;
+          setLoading(false);
           return;
         }
 
@@ -2176,6 +2179,7 @@ export default function DailyReportModule() {
           // Staleness check after loading order+staff data
           if (expectedDateRef.current !== expectedDate) {
             isFetchingReportRef.current = false;
+            setLoading(false);
             return;
           }
 
