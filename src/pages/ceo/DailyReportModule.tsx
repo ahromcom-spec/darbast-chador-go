@@ -400,7 +400,7 @@ export default function DailyReportModule() {
   // حالت فقط‌خواندنی واقعی: ترکیب ماژول تجمیعی و وضعیت قفل
   // اگر ماژول تجمیعی باشد یا کاربر کنترل ویرایش را نداشته باشد، فرم فقط‌خواندنی است
 
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const userId = user?.id ?? null;
 
   // هوک کش چند-روزه برای نگهداری داده‌های ذخیره‌نشده هنگام جابجایی بین روزها
@@ -735,8 +735,9 @@ export default function DailyReportModule() {
 
   useEffect(() => {
     if (!userId || !reportDate) {
-      // فقط اگر fetch در حال اجرا نیست loading را غیرفعال کن
-      if (!isFetchingReportRef.current) {
+      // اگر هنوز auth در حال بارگذاری است، loading را غیرفعال نکن
+      // تا جداول خالی نمایش داده نشوند
+      if (!authLoading && !isFetchingReportRef.current) {
         setLoading(false);
       }
       return;
@@ -808,7 +809,7 @@ export default function DailyReportModule() {
     lastFetchTimestampRef.current = 0;
     expectedDateRef.current = newDateStr; // Set expected date BEFORE fetch
     fetchExistingReport();
-  }, [reportDate, userId, activeModuleKey, isAggregated, dateCache]);
+  }, [reportDate, userId, activeModuleKey, isAggregated, dateCache, authLoading]);
 
   // محاسبه موجودی تاریخی کارت‌های بانکی تا تاریخ گزارش (برای نمایش تجمیعی)
   useEffect(() => {
