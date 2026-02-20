@@ -4499,8 +4499,46 @@ export default function DailyReportModule() {
             </div>
 
             {loading ? (
-              <div className="flex items-center justify-center py-20">
-                <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
+              <div className="space-y-6">
+                {/* Skeleton for Order Reports Table */}
+                <Card className="border-2 border-blue-500/30 -mx-2 sm:mx-0 rounded-none sm:rounded-lg">
+                  <CardHeader className="pb-3 px-2 sm:px-6">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="p-1.5 sm:p-2 rounded-lg bg-blue-500/10">
+                        <Package className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                      </div>
+                      <CardTitle className="text-base sm:text-lg">گزارش سفارشات مشتری</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="px-2 sm:px-6">
+                    <div className="flex items-center justify-center py-10">
+                      <div className="flex flex-col items-center gap-3">
+                        <Loader2 className="h-7 w-7 animate-spin text-blue-500" />
+                        <span className="text-sm text-muted-foreground">در حال بارگذاری گزارش سفارشات...</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Skeleton for Staff Reports Table */}
+                <Card className="border-2 border-yellow-500/30 -mx-2 sm:mx-0 rounded-none sm:rounded-lg">
+                  <CardHeader className="pb-3 px-2 sm:px-6">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="p-1.5 sm:p-2 rounded-lg bg-yellow-500/10">
+                        <User className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600" />
+                      </div>
+                      <CardTitle className="text-base sm:text-lg">گزارش نیروها</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="px-2 sm:px-6">
+                    <div className="flex items-center justify-center py-10">
+                      <div className="flex flex-col items-center gap-3">
+                        <Loader2 className="h-7 w-7 animate-spin text-yellow-500" />
+                        <span className="text-sm text-muted-foreground">در حال بارگذاری گزارش نیروها...</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             ) : (
               <>

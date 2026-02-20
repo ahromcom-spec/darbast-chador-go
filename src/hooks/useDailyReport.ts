@@ -193,7 +193,7 @@ export function useDailyReport() {
   const moduleKey = searchParams.get('moduleKey') || 'daily_report';
   
   // Core state
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   
