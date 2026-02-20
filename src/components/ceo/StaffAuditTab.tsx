@@ -613,36 +613,78 @@ export function StaffAuditTab() {
               <span>حقوق روزمزدی: ${formatCurrency(salarySettings.base_daily_salary)}</span>
             </div>
 
-            <!-- Summary Table -->
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 14px;">
+            <!-- Two-Column Ledger -->
+            <div style="display: flex; gap: 16px; margin-bottom: 16px; font-size: 13px;">
+              <!-- Right: بستانکار (حقوق نیرو) -->
+              <div style="flex: 1;">
+                <div style="background: linear-gradient(135deg, #dcfce7, #bbf7d0); padding: 10px; border-radius: 8px 8px 0 0; border: 1px solid #86efac; text-align: center;">
+                  <strong style="color: #166534; font-size: 15px;">بستانکار (حقوق نیرو)</strong>
+                </div>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tbody>
+                    <tr style="background-color: #f0fdf4;">
+                      <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: 500;">حقوق پایه (${summary.totalDaysWorked} روز × ${salarySettings.base_daily_salary.toLocaleString('fa-IR')})</td>
+                      <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: bold; text-align: left; color: #16a34a;">${formatCurrency(summary.estimatedSalary)}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: 500;">اضافه‌کاری (${summary.totalOvertime} ساعت)</td>
+                      <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: bold; text-align: left; color: #16a34a;">${formatCurrency(summary.overtimePay)}</td>
+                    </tr>
+                    <tr style="background-color: #f0fdf4;">
+                      <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: 500;">مزایا</td>
+                      <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: bold; text-align: left; color: #16a34a;">${formatCurrency(summary.benefits)}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: 500;">مانده از ماه قبل</td>
+                      <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: bold; text-align: left; color: #16a34a;">${formatCurrency(summary.remainingBalanceFromPreviousMonth)}</td>
+                    </tr>
+                    <tr style="background-color: #f0fdf4;">
+                      <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: 500;">خرج‌کرد بر سر کار</td>
+                      <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: bold; text-align: left; color: #16a34a;">${formatCurrency(summary.totalSpent)}</td>
+                    </tr>
+                    <tr style="background-color: #bbf7d0; border-top: 2px solid #22c55e;">
+                      <td style="padding: 10px; font-weight: bold; font-size: 14px;">جمع بستانکار:</td>
+                      <td style="padding: 10px; font-weight: bold; font-size: 14px; text-align: left; color: #166534;">${formatCurrency(summary.estimatedSalary + summary.overtimePay + summary.benefits + summary.remainingBalanceFromPreviousMonth + summary.totalSpent)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <!-- Left: بدهکار (کسورات) -->
+              <div style="flex: 1;">
+                <div style="background: linear-gradient(135deg, #ffe4e6, #fecdd3); padding: 10px; border-radius: 8px 8px 0 0; border: 1px solid #fda4af; text-align: center;">
+                  <strong style="color: #991b1b; font-size: 15px;">بدهکار (کسورات)</strong>
+                </div>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tbody>
+                    <tr style="background-color: #fef2f2;">
+                      <td style="padding: 8px 10px; border: 1px solid #fecdd3; font-weight: 500;">دریافتی این ماه</td>
+                      <td style="padding: 8px 10px; border: 1px solid #fecdd3; font-weight: bold; text-align: left; color: #dc2626;">${formatCurrency(summary.totalReceived)}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 10px; border: 1px solid #fecdd3; font-weight: 500;">دریافتی اضافی از ماه قبل</td>
+                      <td style="padding: 8px 10px; border: 1px solid #fecdd3; font-weight: bold; text-align: left; color: #dc2626;">${formatCurrency(summary.extraReceivedPreviousMonth)}</td>
+                    </tr>
+                    <tr style="background-color: #fef2f2;">
+                      <td style="padding: 8px 10px; border: 1px solid #fecdd3; font-weight: 500;">کسورات</td>
+                      <td style="padding: 8px 10px; border: 1px solid #fecdd3; font-weight: bold; text-align: left; color: #dc2626;">${formatCurrency(summary.deductions)}</td>
+                    </tr>
+                    <tr style="background-color: #fecdd3; border-top: 2px solid #ef4444;">
+                      <td style="padding: 10px; font-weight: bold; font-size: 14px;">جمع بدهکار:</td>
+                      <td style="padding: 10px; font-weight: bold; font-size: 14px; text-align: left; color: #991b1b;">${formatCurrency(summary.totalReceived + summary.extraReceivedPreviousMonth + summary.deductions)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Summary Row -->
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 13px;">
               <tbody>
                 <tr style="background-color: #fef3c7;">
-                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">جمع کارکرد</td>
-                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${summary.totalDaysWorked.toLocaleString('fa-IR')} روز</td>
-                </tr>
-                <tr>
-                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">جمع اضافه‌کاری</td>
-                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${summary.totalOvertime.toLocaleString('fa-IR')} ساعت</td>
-                </tr>
-                <tr style="background-color: #fef3c7;">
-                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">جمع دریافتی این ماه</td>
-                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left; color: #16a34a;">${formatCurrency(summary.totalReceived)}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">جمع خرج‌کرد این ماه</td>
-                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left; color: #dc2626;">${formatCurrency(summary.totalSpent)}</td>
-                </tr>
-                <tr style="background-color: #fef3c7;">
-                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">حقوق پایه (${summary.totalDaysWorked} روز)</td>
-                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${formatCurrency(summary.estimatedSalary)}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: 500;">اضافه‌کاری (${summary.totalOvertime} ساعت)</td>
-                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${formatCurrency(summary.overtimePay)}</td>
-                </tr>
-                <tr style="background-color: #fef3c7;">
-                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold;">کارکرد و مزایای این ماه</td>
-                  <td style="padding: 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${formatCurrency(summary.totalWorkAndBenefits)}</td>
+                  <td style="padding: 8px 10px; border: 1px solid #fcd34d; font-weight: 500;">جمع کارکرد</td>
+                  <td style="padding: 8px 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${summary.totalDaysWorked.toLocaleString('fa-IR')} روز</td>
+                  <td style="padding: 8px 10px; border: 1px solid #fcd34d; font-weight: 500;">جمع اضافه‌کاری</td>
+                  <td style="padding: 8px 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${summary.totalOvertime.toLocaleString('fa-IR')} ساعت</td>
                 </tr>
               </tbody>
             </table>
