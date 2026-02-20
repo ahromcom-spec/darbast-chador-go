@@ -734,7 +734,10 @@ export default function DailyReportModule() {
 
   useEffect(() => {
     if (!userId || !reportDate) {
-      setLoading(false);
+      // فقط اگر fetch در حال اجرا نیست loading را غیرفعال کن
+      if (!isFetchingReportRef.current) {
+        setLoading(false);
+      }
       return;
     }
 
@@ -742,7 +745,11 @@ export default function DailyReportModule() {
     const loadKey = `${userId}|${newDateStr}|${activeModuleKey}`;
 
     if (lastLoadKeyRef.current === loadKey) {
-      setLoading(false);
+      // اگر fetch هنوز در حال اجرا است، loading را تغییر نده
+      // در غیر اینصورت، داده‌ها قبلاً بارگذاری شده‌اند
+      if (!isFetchingReportRef.current) {
+        setLoading(false);
+      }
       return;
     }
 
