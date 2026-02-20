@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Building2, ChevronDown, ChevronUp, ChevronLeft, Pencil, Check, X, Trash2, Users, UserMinus } from 'lucide-react';
+import { ChevronDown, ChevronUp, ChevronLeft, Pencil, Check, X, Trash2, Users, UserMinus } from 'lucide-react';
+import { getModuleIconByKey } from '@/components/module-shortcut/ModuleIcon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -90,7 +91,7 @@ export function AssignedModuleItem({
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <div className={`p-2 rounded-lg ${module.bgColor || 'bg-gray-100'} flex-shrink-0`}>
-              <Building2 className={`h-5 w-5 ${module.color || 'text-gray-600'}`} />
+              {(() => { const Icon = getModuleIconByKey(module.moduleKey, module.moduleName); return <Icon className={`h-5 w-5 ${module.color || 'text-gray-600'}`} />; })()}
             </div>
             <span className="text-xs text-muted-foreground">ویرایش ماژول</span>
           </div>
@@ -155,7 +156,7 @@ export function AssignedModuleItem({
             onClick={() => setIsOpen(!isOpen)}
             className={`p-2 rounded-lg ${module.bgColor || 'bg-gray-100'} hover:opacity-80 transition-opacity flex-shrink-0`}
           >
-            <Building2 className={`h-5 w-5 ${module.color || 'text-gray-600'}`} />
+            {(() => { const Icon = getModuleIconByKey(module.moduleKey, module.moduleName); return <Icon className={`h-5 w-5 ${module.color || 'text-gray-600'}`} />; })()}
           </button>
 
           {/* Module info */}

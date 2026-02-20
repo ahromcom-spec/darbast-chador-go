@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Boxes, Building2, Loader2, ArrowLeft } from 'lucide-react';
+import { Boxes, Loader2, ArrowLeft } from 'lucide-react';
+import { getModuleIconByKey } from '@/components/module-shortcut/ModuleIcon';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -391,9 +392,11 @@ export function UserModulesTab() {
                   <CardContent className="p-4 sm:p-6">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                       <div className="flex items-center gap-3 sm:gap-4">
+                        {(() => { const Icon = getModuleIconByKey(assignment.module_key, displayName); return (
                         <div className={`p-2.5 sm:p-3 rounded-xl ${moduleInfo.bgColor} group-hover:scale-105 transition-transform flex-shrink-0`}>
-                          <Building2 className={`h-6 w-6 sm:h-8 sm:w-8 ${moduleInfo.color}`} />
+                          <Icon className={`h-6 w-6 sm:h-8 sm:w-8 ${moduleInfo.color}`} />
                         </div>
+                        ); })()}
                         <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-sm sm:text-lg text-foreground mb-0.5 sm:mb-1 whitespace-normal leading-relaxed">
                             {displayName}
