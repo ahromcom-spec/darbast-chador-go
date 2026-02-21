@@ -162,7 +162,8 @@ async function deleteAndReinsertOrderRows(
       notes: r.notes || '',
       row_color: r.row_color || 'yellow'
     })))
-    .select('id, order_id');
+    .select('id, order_id')
+    .order('created_at', { ascending: true });
 
   if (insertError) throw insertError;
 
