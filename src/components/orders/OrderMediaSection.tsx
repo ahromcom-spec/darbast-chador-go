@@ -95,10 +95,20 @@ function VideoWithDuration({
     };
   }, [url]);
 
+  if (!url) {
+    return (
+      <div className="relative w-full h-full flex items-center justify-center bg-black/10">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative w-full h-full">
       <video
         ref={videoRef}
+        key={url}
+        src={url}
         controls
         playsInline
         autoPlay
@@ -108,10 +118,7 @@ function VideoWithDuration({
         className="w-full h-full object-contain"
         onLoadedMetadata={handleLoadedMetadata}
         onError={onError}
-      >
-        <source src={url} type={mimeType || 'video/mp4'} />
-        مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند
-      </video>
+      />
       
       {/* نمایش مدت زمان ویدیو */}
       {duration > 0 && (
