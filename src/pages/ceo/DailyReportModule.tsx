@@ -4863,6 +4863,8 @@ export default function DailyReportModule() {
                                     readOnly={effectiveReadOnly}
                                     rowIndex={index}
                                     showAllUsers={isAggregated}
+                                    moduleKey={activeModuleKey}
+                                    onReportCreated={(id) => setExistingReportId(id)}
                                   />
                                 </TableCell>
                                 <TableCell className="border border-blue-200">

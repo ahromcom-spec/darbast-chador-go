@@ -25,6 +25,8 @@ interface OrderRowMediaUploadProps {
   readOnly?: boolean;
   rowIndex: number;
   showAllUsers?: boolean; // In aggregated/overview mode, show media from all users
+  moduleKey?: string; // Used to auto-create report if dailyReportId is null (mobile recovery)
+  onReportCreated?: (reportId: string) => void; // Callback when a report is auto-created
 }
 
 export function OrderRowMediaUpload({
@@ -35,6 +37,8 @@ export function OrderRowMediaUpload({
   readOnly = false,
   rowIndex,
   showAllUsers = false,
+  moduleKey,
+  onReportCreated,
 }: OrderRowMediaUploadProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -107,14 +111,73 @@ export function OrderRowMediaUpload({
     const files = e.target.files;
     if (!files || files.length === 0 || !user) return;
 
-    if (!dailyReportId) {
-      toast({
-        title: 'ابتدا گزارش را ذخیره کنید',
-        description: 'برای افزودن رسانه، ابتدا گزارش را یک بار ذخیره کنید.',
-        variant: 'destructive',
-      });
-      return;
+    // If dailyReportId is null, try to auto-create/find the report (handles mobile state loss)
+    let effectiveReportId = dailyReportId;
+    if (!effectiveReportId) {
+      if (!moduleKey) {
+        toast({
+          title: 'ابتدا گزارش را ذخیره کنید',
+          description: 'برای افزودن رسانه، ابتدا گزارش را یک بار ذخیره کنید.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      try {
+        // Try to find existing report first
+        const { data: existingReport } = await supabase
+          .from('daily_reports')
+          .select('id')
+          .eq('report_date', reportDate)
+          .eq('created_by', user.id)
+          .eq('module_key', moduleKey)
+          .maybeSingle();
+
+        if (existingReport?.id) {
+          effectiveReportId = existingReport.id;
+        } else {
+          // Create new report
+          const { data: newReport, error: createError } = await supabase
+            .from('daily_reports')
+            .insert({ report_date: reportDate, created_by: user.id, module_key: moduleKey })
+            .select('id')
+            .single();
+
+          if (createError) {
+            if (createError.code === '23505') {
+              const { data: retry } = await supabase
+                .from('daily_reports')
+                .select('id')
+                .eq('report_date', reportDate)
+                .eq('created_by', user.id)
+                .eq('module_key', moduleKey)
+                .single();
+              if (retry?.id) effectiveReportId = retry.id;
+              else throw createError;
+            } else {
+              throw createError;
+            }
+          } else {
+            effectiveReportId = newReport.id;
+          }
+        }
+
+        // Notify parent about the created report
+        if (effectiveReportId && onReportCreated) {
+          onReportCreated(effectiveReportId);
+        }
+      } catch (err) {
+        console.error('Auto-create report error:', err);
+        toast({
+          title: 'خطا در ایجاد گزارش',
+          description: 'لطفاً دوباره تلاش کنید.',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
+
+    if (!effectiveReportId) return;
 
     setUploading(true);
     const totalFiles = files.length;
@@ -158,7 +221,7 @@ export function OrderRowMediaUpload({
         const { data: insertedMedia, error: dbError } = await supabase
           .from('daily_report_order_media')
           .insert({
-            daily_report_id: dailyReportId,
+            daily_report_id: effectiveReportId,
             daily_report_order_id: validOrderRowId,
             order_id: validOrderId,
             user_id: user.id,
