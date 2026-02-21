@@ -3093,9 +3093,33 @@ export default function DailyReportModule() {
           // بازگرداندن state های اصلی
           orderReportsRef.current = originalOrderReports;
 
-          // به‌روزرسانی existingReportId برای تاریخ فعلی
+          // به‌روزرسانی existingReportId و بارگذاری مجدد ردیف‌ها با ID های جدید برای تاریخ فعلی
           if (savedReportId && cachedDateStr === toLocalDateString(reportDate)) {
             setExistingReportId(savedReportId);
+            
+            // بارگذاری مجدد ردیف‌های سفارش از دیتابیس برای دریافت ID های جدید (جهت نمایش صحیح رسانه‌ها)
+            try {
+              const { data: freshOrders } = await supabase
+                .from('daily_report_orders')
+                .select('*')
+                .eq('daily_report_id', savedReportId);
+              
+              if (freshOrders && freshOrders.length > 0) {
+                const refreshedRows: OrderReportRow[] = freshOrders.map((o: any) => ({
+                  id: o.id,
+                  order_id: o.order_id || '',
+                  activity_description: o.activity_description || '',
+                  service_details: o.service_details || '',
+                  team_name: o.team_name || '',
+                  notes: o.notes || '',
+                  row_color: o.row_color || ROW_COLORS[0].value,
+                }));
+                orderReportsRef.current = refreshedRows;
+                setOrderReports(refreshedRows);
+              }
+            } catch (refreshErr) {
+              console.error('Error refreshing order rows after save:', refreshErr);
+            }
           }
 
           // علامت‌گذاری به عنوان ذخیره شده
