@@ -49,6 +49,14 @@ export function OrderRowMediaUpload({
   const fetchMedia = useCallback(async () => {
     if (!dailyReportId || !user) return;
 
+    // If neither dailyReportOrderId nor orderId is valid, this is a brand-new row — no media to show
+    const hasValidOrderRowId = dailyReportOrderId && isValidUuid(dailyReportOrderId);
+    const hasValidOrderId = orderId && isValidUuid(orderId);
+    if (!hasValidOrderRowId && !hasValidOrderId) {
+      setMedia([]);
+      return;
+    }
+
     try {
       let query = supabase
         .from('daily_report_order_media')
@@ -61,10 +69,10 @@ export function OrderRowMediaUpload({
         query = query.eq('user_id', user.id);
       }
 
-      if (dailyReportOrderId && isValidUuid(dailyReportOrderId)) {
+      if (hasValidOrderRowId) {
         query = query.eq('daily_report_order_id', dailyReportOrderId);
       }
-      if (orderId && isValidUuid(orderId)) {
+      if (hasValidOrderId) {
         query = query.eq('order_id', orderId);
       }
 
