@@ -56,6 +56,7 @@ interface OrderData {
   location_lat: number;
   location_lng: number;
   first_image_url?: string | null;
+  first_video_url?: string | null;
   images_count?: number;
   notes?: string | OrderNotes | null;
   subcategories: {
@@ -240,24 +241,30 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick, activeModuleK
         .from('project_media')
         .select('id, project_id, file_path, thumbnail_path, file_type, created_at, mime_type')
         .in('project_id', orderIdsForMedia)
-        .in('file_type', ['image'])
+        .in('file_type', ['image', 'video'])
         .order('created_at', { ascending: false })
         .limit(2000);
 
       if (mediaError) throw mediaError;
 
       const firstByOrder = new Map<string, OrderMedia>();
+      const firstVideoByOrder = new Map<string, OrderMedia>();
       const countByOrder = new Map<string, number>();
 
       (mediaData || []).forEach((m: any) => {
         const oid = m.project_id as string;
-        countByOrder.set(oid, (countByOrder.get(oid) || 0) + 1);
-        if (!firstByOrder.has(oid)) firstByOrder.set(oid, m as OrderMedia);
+        if (m.file_type === 'image') {
+          countByOrder.set(oid, (countByOrder.get(oid) || 0) + 1);
+          if (!firstByOrder.has(oid)) firstByOrder.set(oid, m as OrderMedia);
+        } else if (m.file_type === 'video') {
+          if (!firstVideoByOrder.has(oid)) firstVideoByOrder.set(oid, m as OrderMedia);
+        }
       });
 
-      const out: Record<string, { first_image_url: string | null; images_count: number }> = {};
+      const out: Record<string, { first_image_url: string | null; first_video_url: string | null; images_count: number }> = {};
       orderIdsForMedia.forEach((oid) => {
         const first = firstByOrder.get(oid);
+        const firstVideo = firstVideoByOrder.get(oid);
         const count = countByOrder.get(oid) || 0;
         const path = first ? (first.thumbnail_path || first.file_path) : null;
 
@@ -267,7 +274,13 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick, activeModuleK
               .getPublicUrl(path, { transform: { width: 240, quality: 70 } }).data.publicUrl
           : null;
 
-        out[oid] = { first_image_url: publicUrl, images_count: count };
+        const videoUrl = firstVideo
+          ? supabase.storage
+              .from('project-media')
+              .getPublicUrl(firstVideo.file_path).data.publicUrl
+          : null;
+
+        out[oid] = { first_image_url: publicUrl, first_video_url: videoUrl, images_count: count };
       });
 
       return out;
@@ -566,7 +579,9 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick, activeModuleK
       const address = escapeHtml(o.address || 'بدون آدرس');
       const code = escapeHtml(o.code || '');
       const customer = o.customer_name ? escapeHtml(o.customer_name) : '';
-      const img = o.first_image_url
+      const img = o.first_video_url
+        ? `<div class="exec-popup__thumb"><video src="${escapeHtml(o.first_video_url)}" autoplay muted loop playsinline preload="auto" style="width:100%;height:100%;object-fit:cover;"></video></div>`
+        : o.first_image_url
         ? `<div class="exec-popup__thumb"><img src="${escapeHtml(o.first_image_url)}" alt="تصویر سفارش" loading="lazy" decoding="async" /></div>`
         : `<div class="exec-popup__thumb exec-popup__thumb--empty"></div>`;
 
@@ -715,19 +730,45 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick, activeModuleK
     // ایجاد مارکرها - همه سفارشات با عکس نمایش داده میشن
     orderMarkers.forEach((group) => {
       const count = group.orders.length;
-      // پیدا کردن اولین سفارش با عکس
+      // پیدا کردن اولین سفارش با ویدیو یا عکس
+      const orderWithVideo = group.orders.find(o => o.first_video_url);
       const orderWithImage = group.orders.find(o => o.first_image_url);
-      const representative = orderWithImage || group.orders[0];
+      const representative = orderWithVideo || orderWithImage || group.orders[0];
       
       // استخراج کد سفارش برای نمایش بالای مارکر
       const orderLabel = count > 1 
         ? `${count} سفارش` 
         : representative.code;
 
-      // همه مارکرها با عکس نمایش داده میشن
-      const icon = representative.first_image_url
-        ? thumbIcon(representative.first_image_url, count, orderLabel)
-        : defaultThumbIcon(count, orderLabel);
+      // اگر ویدیو وجود دارد، مارکر ویدیویی نمایش بده
+      let icon;
+      if (representative.first_video_url) {
+        const safeVideoUrl = escapeHtml(representative.first_video_url);
+        const badge = count > 1 ? `<div class="exec-order-marker__thumb-badge">${count}</div>` : '';
+        const labelHtml = orderLabel ? `
+          <div class="exec-order-marker__label" style="position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:linear-gradient(135deg, rgba(217,119,6,0.95) 0%, rgba(180,83,9,0.95) 100%);color:white;padding:3px 8px;border-radius:6px;font-family:Vazirmatn, sans-serif;font-size:10px;font-weight:700;white-space:nowrap;max-width:100px;overflow:hidden;text-overflow:ellipsis;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);margin-bottom:4px;z-index:10;direction:rtl;">${escapeHtml(orderLabel)}</div>
+        ` : '';
+        icon = L.divIcon({
+          className: 'exec-order-marker',
+          html: `
+            <div class="exec-order-marker__thumb" style="position:relative;display:flex;flex-direction:column;align-items:center;">
+              ${labelHtml}
+              <div style="position:relative;width:56px;height:56px;">
+                <video src="${safeVideoUrl}" autoplay muted loop playsinline preload="auto" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;border-radius:8px;pointer-events:none;"></video>
+                ${badge}
+                <div class="exec-order-marker__pin" aria-hidden="true"></div>
+              </div>
+            </div>
+          `,
+          iconSize: [56, 80],
+          iconAnchor: [28, 73],
+          popupAnchor: [0, -71],
+        });
+      } else {
+        icon = representative.first_image_url
+          ? thumbIcon(representative.first_image_url, count, orderLabel)
+          : defaultThumbIcon(count, orderLabel);
+      }
 
       const popupContent = `
         <div class="exec-popup" data-popup-id="${group.orders[0].id}">

@@ -1633,17 +1633,23 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         let iconToUse: any = projectIcon;
         // پیدا کردن اولین تصویر از همه سفارشات پروژه
         let firstOrderImage: HierarchyMedia | undefined;
+        let firstOrderVideo: any = null;
         let totalOrderImages = 0;
         
         if (project.orders && project.orders.length > 0) {
-          // جستجو در تمام سفارشات برای پیدا کردن اولین تصویر
+          // جستجو در تمام سفارشات برای پیدا کردن اولین تصویر و ویدیو
           for (const order of project.orders) {
             const orderImages = (order.media || []).filter(m => m.file_type === 'image');
+            const orderVideos = (order.media || []).filter(m => m.file_type === 'video');
             totalOrderImages += orderImages.length;
             
             // اگر هنوز تصویری پیدا نشده، اولین تصویر را بگیر
             if (!firstOrderImage && orderImages.length > 0) {
               firstOrderImage = orderImages[0];
+            }
+            // اگر ویدیو وجود داشت ذخیره کن
+            if (!firstOrderVideo && orderVideos.length > 0) {
+              firstOrderVideo = orderVideos[0];
             }
           }
           
@@ -1680,7 +1686,32 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           ">${addressTitle}</div>
         `;
         
-        if (firstOrderImage) {
+        if (firstOrderVideo) {
+          // اگر ویدیو وجود دارد، ویدیو را روی مارکر نمایش بده
+          const videoUrl = supabase.storage
+            .from('project-media')
+            .getPublicUrl(firstOrderVideo.file_path).data.publicUrl;
+          
+          console.debug('[HybridGlobe] Marker video URL:', videoUrl);
+          
+          const html = `
+            <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
+              ${addressLabelHtml}
+              <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid #fff;background:#000;position:relative;">
+                <video src="${videoUrl}" autoplay muted loop playsinline preload="auto" style="width:100%;height:100%;object-fit:cover;pointer-events:none;"></video>
+                <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));height:18px;display:flex;align-items:center;justify-content:center;">
+                  <span style="color:#fff;font-size:10px;font-weight:bold;">${totalOrderImages}</span>
+                </div>
+              </div>
+            </div>`;
+          iconToUse = L.divIcon({
+            html,
+            className: 'project-thumb-icon',
+            iconSize: [56, 80],
+            iconAnchor: [28, 80],
+            popupAnchor: [0, -80],
+          });
+        } else if (firstOrderImage) {
           const url1 = supabase.storage
             .from('project-media')
             .getPublicUrl(firstOrderImage.file_path).data.publicUrl;
@@ -1924,7 +1955,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                                     data-url="${baseUrl}"
                                     style="position:relative;width:100%;height:100%;background:#f0f0f0;display:${idx === 0 ? 'block' : 'none'};cursor:pointer;"
                                   >
-                                    <video src="${thumbUrl}" style="width:100%;height:100%;object-fit:cover;user-select:none;background:#000;" preload="metadata" draggable="false" loading="lazy"></video>
+                                    <video src="${thumbUrl}" style="width:100%;height:100%;object-fit:cover;user-select:none;background:#000;" autoplay muted loop playsinline preload="auto" draggable="false"></video>
                                     <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;">
                                       <svg style="width:28px;height:28px;color:#fff;" fill="currentColor" viewBox="0 0 24 24">
                                         <path d="M8 5v14l11-7z"/>
