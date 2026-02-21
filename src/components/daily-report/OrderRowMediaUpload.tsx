@@ -317,8 +317,21 @@ export function OrderRowMediaUpload({
                   className="w-8 h-8 rounded object-cover border"
                 />
               ) : (
-                <div className="w-8 h-8 rounded bg-purple-100 border flex items-center justify-center">
-                  <Film className="h-3 w-3 text-purple-600" />
+                <div className="relative w-8 h-8 rounded border overflow-hidden bg-purple-50">
+                  <video
+                    src={item.publicUrl}
+                    muted
+                    playsInline
+                    preload="metadata"
+                    className="w-full h-full object-cover"
+                    onLoadedMetadata={(e) => {
+                      const video = e.currentTarget;
+                      video.currentTime = 0.5;
+                    }}
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                    <Film className="h-3 w-3 text-white" />
+                  </div>
                 </div>
               )}
               {!readOnly && (
