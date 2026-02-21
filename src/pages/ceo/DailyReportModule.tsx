@@ -2078,13 +2078,12 @@ export default function DailyReportModule() {
           setDailyNotes(allNotesParts.length > 0 ? allNotesParts.join(' | ') : '');
         }
 
-        // نمایش تمام سفارشات از همه ماژول‌ها (بدون حذف تکراری‌ها)
-        // هر ماژول ممکن است گزارش متفاوتی برای یک سفارش داشته باشد
-        setOrderReports((allOrderData || []).map((o: any) => {
+        // نمایش سفارشات از همه ماژول‌ها
+        // در ماژول مادر (showAllReports && !isAggregated): حذف تکراری‌ها بر اساس order_id
+        const allOrderRows = (allOrderData || []).map((o: any) => {
           const moduleKey = reportToModuleMap.get(o.daily_report_id) || '';
           const creatorId = reportToCreatorMap.get(o.daily_report_id) || '';
           const creatorName = getCreatorName(o.daily_report_id);
-          // نمایش نام ثبت‌کننده در کنار نام ماژول
           const displayName = creatorName 
             ? `${getModuleDisplayName(moduleKey)} (${creatorName})`
             : getModuleDisplayName(moduleKey);
@@ -2101,7 +2100,22 @@ export default function DailyReportModule() {
             source_daily_report_id: o.daily_report_id,
             source_created_by: creatorId,
           };
-        }));
+        });
+
+        // حذف تکراری‌ها در ماژول مادر (نه تجمیعی) بر اساس order_id و activity_description
+        if (showAllReports && !isAggregated) {
+          const seenKeys = new Set<string>();
+          const dedupedOrders = allOrderRows.filter((r: any) => {
+            if (!r.order_id && !r.activity_description?.trim()) return true; // keep empty rows
+            const key = `${r.order_id || ''}|${(r.activity_description || '').trim()}`;
+            if (seenKeys.has(key)) return false;
+            seenKeys.add(key);
+            return true;
+          });
+          setOrderReports(dedupedOrders);
+        } else {
+          setOrderReports(allOrderRows);
+        }
 
         // نیروها قبلاً در Promise.all واکشی شده‌اند
 
@@ -2142,10 +2156,31 @@ export default function DailyReportModule() {
             };
           });
 
+          // حذف تکراری‌ها بر اساس staff_name (یا bank_card_id برای صندوق)
+          const seenStaffKeys = new Set<string>();
+          const dedupedStaff = allStaffRows.filter((s) => {
+            if (s.is_company_expense) {
+              const key = 'company_expense';
+              if (seenStaffKeys.has(key)) return false;
+              seenStaffKeys.add(key);
+              return true;
+            }
+            if (s.is_cash_box) {
+              const key = `cashbox_${s.bank_card_id || 'none'}`;
+              if (seenStaffKeys.has(key)) return false;
+              seenStaffKeys.add(key);
+              return true;
+            }
+            const staffKey = (s.staff_name || '').trim().toLowerCase();
+            if (staffKey && seenStaffKeys.has(staffKey)) return false;
+            if (staffKey) seenStaffKeys.add(staffKey);
+            return true;
+          });
+
           // مرتب‌سازی: اول ماهیت شرکت، بعد کارت‌ها، بعد نیروها
-          const companyRows = allStaffRows.filter(r => r.is_company_expense);
-          const cashBoxRows = allStaffRows.filter(r => r.is_cash_box && !r.is_company_expense);
-          const regularRows = allStaffRows.filter(r => !r.is_cash_box && !r.is_company_expense);
+          const companyRows = dedupedStaff.filter(r => r.is_company_expense);
+          const cashBoxRows = dedupedStaff.filter(r => r.is_cash_box && !r.is_company_expense);
+          const regularRows = dedupedStaff.filter(r => !r.is_cash_box && !r.is_company_expense);
 
           const finalStaff: StaffReportRow[] = [];
           
@@ -3543,6 +3578,36 @@ export default function DailyReportModule() {
         staffToSave: uniqueStaffToSave,
         moduleName,
       });
+    }
+
+    // پاکسازی گزارش‌های تکراری (زامبی) برای همین تاریخ و ماژول
+    // وقتی ماژول به چند نفر اختصاص داده شده، ممکن است چندین رکورد ایجاد شده باشد
+    try {
+      const { data: zombieReports } = await supabase
+        .from('daily_reports')
+        .select('id')
+        .eq('report_date', dateStr)
+        .eq('module_key', activeModuleKey)
+        .neq('id', reportId);
+
+      if (zombieReports && zombieReports.length > 0) {
+        const zombieIds = zombieReports.map(r => r.id);
+        // حذف رسانه‌های مرتبط
+        await supabase.from('daily_report_order_media').delete().in('daily_report_id', zombieIds);
+        // حذف سطرهای فرزند
+        await supabase.from('daily_report_orders').delete().in('daily_report_id', zombieIds);
+        await supabase.from('daily_report_staff').delete().in('daily_report_id', zombieIds);
+        // حذف تراکنش‌های بانکی مرتبط
+        await supabase.from('bank_card_transactions').delete()
+          .eq('reference_type', 'daily_report_staff')
+          .in('reference_id', zombieIds);
+        // حذف خود گزارش‌های زامبی
+        await supabase.from('daily_reports').delete().in('id', zombieIds);
+        console.log(`Cleaned up ${zombieIds.length} zombie reports for ${dateStr}/${activeModuleKey}`);
+      }
+    } catch (cleanupErr) {
+      console.warn('Error cleaning up zombie reports:', cleanupErr);
+      // Non-critical error - don't fail the save
     }
 
     return reportId;
