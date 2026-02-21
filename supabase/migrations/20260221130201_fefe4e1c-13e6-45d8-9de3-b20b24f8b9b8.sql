@@ -1,0 +1,1 @@
+ALTER TABLE public.daily_report_order_media ADD COLUMN IF NOT EXISTS row_index INTEGER;

@@ -167,6 +167,7 @@ export function OrderRowMediaUpload({
             file_size: file.size,
             mime_type: file.type,
             report_date: reportDate,
+            row_index: rowIndex,
           })
           .select('id, file_path, file_type')
           .single();

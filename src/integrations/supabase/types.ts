@@ -797,6 +797,7 @@ export type Database = {
           order_id: string | null
           project_media_id: string | null
           report_date: string
+          row_index: number | null
           synced_to_project_media: boolean | null
           updated_at: string | null
           user_id: string
@@ -813,6 +814,7 @@ export type Database = {
           order_id?: string | null
           project_media_id?: string | null
           report_date: string
+          row_index?: number | null
           synced_to_project_media?: boolean | null
           updated_at?: string | null
           user_id: string
@@ -829,6 +831,7 @@ export type Database = {
           order_id?: string | null
           project_media_id?: string | null
           report_date?: string
+          row_index?: number | null
           synced_to_project_media?: boolean | null
           updated_at?: string | null
           user_id?: string

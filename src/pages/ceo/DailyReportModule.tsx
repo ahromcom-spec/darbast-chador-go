@@ -63,45 +63,43 @@ async function deleteAndReinsertOrderRows(
   }>,
   sourceRows?: Array<{ order_id?: string; activity_description?: string; service_details?: string; team_name?: string; notes?: string }> // original rows before filtering, for position mapping
 ): Promise<{ insertedOrders: Array<{ id: string; order_id: string | null }> | null }> {
-  // 1. Save old order row IDs and their media before deletion
+  // 1. Get ALL media for this report (linked and orphaned) with row_index
+  const { data: allMediaRecords } = await supabase
+    .from('daily_report_order_media')
+    .select('id, daily_report_order_id, order_id, row_index')
+    .eq('daily_report_id', reportId);
+
+  // Build a map: row_index → media IDs (for media that has row_index)
+  const mediaByRowIndex: Record<number, string[]> = {};
+  // Also track media linked to old row IDs
+  const oldRowMediaMap: Record<string, string[]> = {};
+  // Track all row indices that have media
+  const rowIndicesWithMedia = new Set<number>();
+
+  if (allMediaRecords) {
+    for (const m of allMediaRecords) {
+      if (m.row_index !== null && m.row_index !== undefined) {
+        if (!mediaByRowIndex[m.row_index]) mediaByRowIndex[m.row_index] = [];
+        mediaByRowIndex[m.row_index].push(m.id);
+        rowIndicesWithMedia.add(m.row_index);
+      }
+      if (m.daily_report_order_id) {
+        if (!oldRowMediaMap[m.daily_report_order_id]) oldRowMediaMap[m.daily_report_order_id] = [];
+        oldRowMediaMap[m.daily_report_order_id].push(m.id);
+      }
+    }
+  }
+
+  // Get old order rows for position mapping
   const { data: oldOrderRows } = await supabase
     .from('daily_report_orders')
     .select('id, order_id')
     .eq('daily_report_id', reportId)
     .order('created_at', { ascending: true });
 
-  const oldRowMediaMap: Record<string, string[]> = {};
-  if (oldOrderRows && oldOrderRows.length > 0) {
-    const oldIds = oldOrderRows.map(r => r.id);
-    const { data: mediaRecords } = await supabase
-      .from('daily_report_order_media')
-      .select('id, daily_report_order_id')
-      .eq('daily_report_id', reportId)
-      .in('daily_report_order_id', oldIds);
-    
-    if (mediaRecords) {
-      for (const m of mediaRecords) {
-        if (m.daily_report_order_id) {
-          if (!oldRowMediaMap[m.daily_report_order_id]) {
-            oldRowMediaMap[m.daily_report_order_id] = [];
-          }
-          oldRowMediaMap[m.daily_report_order_id].push(m.id);
-        }
-      }
-    }
-  }
-
-  // Also check for orphaned media (no daily_report_order_id) that belong to this report
-  const { data: orphanedMedia } = await supabase
-    .from('daily_report_order_media')
-    .select('id, order_id')
-    .eq('daily_report_id', reportId)
-    .is('daily_report_order_id', null);
-
   const oldRowIdsByIndex = (oldOrderRows || []).map(r => r.id);
 
-  // 1.5 If sourceRows provided, check which empty rows had media and should be preserved
-  // Include rows that have no text/order but had media attached (by old row position OR orphaned media)
+  // 1.5 Preserve empty rows that have media (by row_index or by old row position)
   let finalOrdersToInsert = [...ordersToInsert];
   if (sourceRows) {
     let insertIdx = 0;
@@ -112,14 +110,14 @@ async function deleteAndReinsertOrderRows(
         insertIdx++;
         continue;
       }
-      // This row was filtered out - check if the old row at this position had media
+      // Check if this row position has media by row_index
+      const hasMediaByIndex = rowIndicesWithMedia.has(origIdx);
+      // Check if old row at this position had media
       const oldRowId = oldRowIdsByIndex[origIdx];
       const hadOldMedia = oldRowId && oldRowMediaMap[oldRowId] && oldRowMediaMap[oldRowId].length > 0;
-      // Also check if orphaned media exists (first save scenario - no old rows but media uploaded)
-      const hasOrphanedMedia = orphanedMedia && orphanedMedia.length > 0 && !oldOrderRows?.length;
-      
-      if (hadOldMedia || (hasOrphanedMedia && origIdx === 0)) {
-        // This empty row has media - preserve it by inserting it
+
+      if (hasMediaByIndex || hadOldMedia) {
+        // This empty row has media - preserve it
         finalOrdersToInsert.splice(insertIdx, 0, {
           order_id: origRow.order_id,
           activity_description: (origRow as any).activity_description || '',
@@ -131,8 +129,8 @@ async function deleteAndReinsertOrderRows(
         insertIdx++;
       }
     }
-  } else if (orphanedMedia && orphanedMedia.length > 0 && ordersToInsert.length === 0) {
-    // No sourceRows, no content rows, but orphaned media exists - create a placeholder row
+  } else if (rowIndicesWithMedia.size > 0 && ordersToInsert.length === 0) {
+    // No sourceRows, no content rows, but media exists by row_index - create placeholder
     finalOrdersToInsert.push({
       activity_description: '',
       service_details: '',
@@ -168,10 +166,41 @@ async function deleteAndReinsertOrderRows(
 
   if (insertError) throw insertError;
 
-  // 4. Re-link media
+  // 4. Re-link media to new rows
   if (insertedOrders && insertedOrders.length > 0) {
-    // Strategy 1: by order_id
-    for (const newRow of insertedOrders) {
+    // Build position mapping: determine which original row index maps to which new row
+    const referenceRows = sourceRows || finalOrdersToInsert;
+    let newRowIdx = 0;
+    for (let origIdx = 0; origIdx < referenceRows.length && newRowIdx < insertedOrders.length; origIdx++) {
+      const origRow = referenceRows[origIdx];
+      const hasContent = rowHasContent(origRow);
+      const hasMediaByIndex = rowIndicesWithMedia.has(origIdx);
+      const oldRowId = oldRowIdsByIndex[origIdx];
+      const hadOldMedia = oldRowId && oldRowMediaMap[oldRowId] && oldRowMediaMap[oldRowId].length > 0;
+
+      if (!hasContent && !hasMediaByIndex && !hadOldMedia && sourceRows) continue;
+
+      const newRow = insertedOrders[newRowIdx];
+
+      // Re-link by row_index (most reliable for orphaned media)
+      if (mediaByRowIndex[origIdx] && mediaByRowIndex[origIdx].length > 0) {
+        await supabase
+          .from('daily_report_order_media')
+          .update({ daily_report_order_id: newRow.id, row_index: newRowIdx })
+          .eq('daily_report_id', reportId)
+          .in('id', mediaByRowIndex[origIdx]);
+      }
+
+      // Re-link by old row ID
+      if (oldRowId && oldRowMediaMap[oldRowId] && oldRowMediaMap[oldRowId].length > 0) {
+        await supabase
+          .from('daily_report_order_media')
+          .update({ daily_report_order_id: newRow.id, row_index: newRowIdx })
+          .eq('daily_report_id', reportId)
+          .in('id', oldRowMediaMap[oldRowId]);
+      }
+
+      // Re-link by order_id (for media that has order_id but lost row link)
       if (newRow.order_id) {
         await supabase
           .from('daily_report_order_media')
@@ -180,45 +209,24 @@ async function deleteAndReinsertOrderRows(
           .eq('order_id', newRow.order_id)
           .is('daily_report_order_id', null);
       }
+
+      newRowIdx++;
     }
 
-    // Strategy 2: by position mapping using old row media
-    const referenceRows = sourceRows || finalOrdersToInsert;
-    let reInsertIdx = 0;
-    for (let origIdx = 0; origIdx < referenceRows.length && reInsertIdx < insertedOrders.length; origIdx++) {
-      const origRow = referenceRows[origIdx];
-      const hasContent = rowHasContent(origRow);
-      const oldRowId = oldRowIdsByIndex[sourceRows ? origIdx : reInsertIdx];
-      const hadMedia = oldRowId && oldRowMediaMap[oldRowId] && oldRowMediaMap[oldRowId].length > 0;
-      
-      if (!hasContent && !hadMedia && sourceRows) continue; // skip truly empty rows
+    // Final cleanup: any remaining orphaned media without row_index, link to first empty row
+    const { data: remainingOrphaned } = await supabase
+      .from('daily_report_order_media')
+      .select('id')
+      .eq('daily_report_id', reportId)
+      .is('daily_report_order_id', null);
 
-      const newRow = insertedOrders[reInsertIdx];
-
-      if (oldRowId && oldRowMediaMap[oldRowId] && oldRowMediaMap[oldRowId].length > 0) {
-        await supabase
-          .from('daily_report_order_media')
-          .update({ daily_report_order_id: newRow.id })
-          .eq('daily_report_id', reportId)
-          .in('id', oldRowMediaMap[oldRowId]);
-      }
-
-      reInsertIdx++;
-    }
-
-    // Strategy 3: re-link orphaned media (no row ID, no order_id) to first row without order
-    if (orphanedMedia && orphanedMedia.length > 0) {
-      const orphanedWithoutOrder = orphanedMedia.filter(m => !m.order_id);
-      if (orphanedWithoutOrder.length > 0) {
-        const firstEmptyRow = insertedOrders.find(r => !r.order_id);
-        if (firstEmptyRow) {
-          await supabase
-            .from('daily_report_order_media')
-            .update({ daily_report_order_id: firstEmptyRow.id })
-            .eq('daily_report_id', reportId)
-            .in('id', orphanedWithoutOrder.map(m => m.id));
-        }
-      }
+    if (remainingOrphaned && remainingOrphaned.length > 0) {
+      const firstRow = insertedOrders[0];
+      await supabase
+        .from('daily_report_order_media')
+        .update({ daily_report_order_id: firstRow.id })
+        .eq('daily_report_id', reportId)
+        .is('daily_report_order_id', null);
     }
   }
 
