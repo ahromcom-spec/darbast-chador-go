@@ -252,44 +252,36 @@ export function OrderRowMediaUpload({
       {/* Upload buttons */}
       {!readOnly && (
         <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-blue-600 hover:bg-blue-50"
-            onClick={() => imageInputRef.current?.click()}
-            disabled={uploading}
+          <label
+            className={`inline-flex items-center justify-center h-8 w-8 rounded-md text-blue-600 hover:bg-blue-50 cursor-pointer ${uploading ? 'pointer-events-none opacity-50' : ''}`}
             title="افزودن عکس"
           >
-            {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-purple-600 hover:bg-purple-50"
-            onClick={() => videoInputRef.current?.click()}
-            disabled={uploading}
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp,image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => handleUpload(e, 'image')}
+              disabled={uploading}
+            />
+          </label>
+          <label
+            className={`inline-flex items-center justify-center h-8 w-8 rounded-md text-purple-600 hover:bg-purple-50 cursor-pointer ${uploading ? 'pointer-events-none opacity-50' : ''}`}
             title="افزودن فیلم"
           >
-            <Film className="h-3.5 w-3.5" />
-          </Button>
-          <input
-            ref={imageInputRef}
-            type="file"
-            accept="image/jpeg,image/jpg,image/png,image/webp"
-            multiple
-            className="hidden"
-            onChange={(e) => handleUpload(e, 'image')}
-          />
-          <input
-            ref={videoInputRef}
-            type="file"
-            accept="video/*"
-            multiple
-            className="hidden"
-            onChange={(e) => handleUpload(e, 'video')}
-          />
+            <Film className="h-4 w-4" />
+            <input
+              ref={videoInputRef}
+              type="file"
+              accept="video/*"
+              multiple
+              className="hidden"
+              onChange={(e) => handleUpload(e, 'video')}
+              disabled={uploading}
+            />
+          </label>
         </div>
       )}
 
