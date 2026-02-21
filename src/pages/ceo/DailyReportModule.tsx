@@ -45,6 +45,115 @@ import StaticLocationMap from '@/components/locations/StaticLocationMap';
 import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
 import { OrderRowMediaUpload } from '@/components/daily-report/OrderRowMediaUpload';
 
+// Helper: delete order rows and re-insert, preserving media links
+async function deleteAndReinsertOrderRows(
+  reportId: string,
+  ordersToInsert: Array<{
+    order_id?: string;
+    activity_description?: string;
+    service_details?: string;
+    team_name?: string;
+    notes?: string;
+    row_color?: string;
+  }>,
+  sourceRows?: Array<{ order_id?: string }> // original rows before filtering, for position mapping
+): Promise<{ insertedOrders: Array<{ id: string; order_id: string | null }> | null }> {
+  // 1. Save old order row IDs and their media before deletion
+  const { data: oldOrderRows } = await supabase
+    .from('daily_report_orders')
+    .select('id, order_id')
+    .eq('daily_report_id', reportId)
+    .order('created_at', { ascending: true });
+
+  const oldRowMediaMap: Record<string, string[]> = {};
+  if (oldOrderRows && oldOrderRows.length > 0) {
+    const oldIds = oldOrderRows.map(r => r.id);
+    const { data: mediaRecords } = await supabase
+      .from('daily_report_order_media')
+      .select('id, daily_report_order_id')
+      .eq('daily_report_id', reportId)
+      .in('daily_report_order_id', oldIds);
+    
+    if (mediaRecords) {
+      for (const m of mediaRecords) {
+        if (m.daily_report_order_id) {
+          if (!oldRowMediaMap[m.daily_report_order_id]) {
+            oldRowMediaMap[m.daily_report_order_id] = [];
+          }
+          oldRowMediaMap[m.daily_report_order_id].push(m.id);
+        }
+      }
+    }
+  }
+
+  const oldRowIdsByIndex = (oldOrderRows || []).map(r => r.id);
+
+  // 2. Delete existing order rows
+  const { error: deleteError } = await supabase
+    .from('daily_report_orders')
+    .delete()
+    .eq('daily_report_id', reportId);
+
+  if (deleteError) throw deleteError;
+
+  if (ordersToInsert.length === 0) return { insertedOrders: null };
+
+  // 3. Insert new rows
+  const { data: insertedOrders, error: insertError } = await supabase
+    .from('daily_report_orders')
+    .insert(ordersToInsert.map(r => ({
+      daily_report_id: reportId,
+      order_id: r.order_id || null,
+      activity_description: r.activity_description || '',
+      service_details: r.service_details || '',
+      team_name: r.team_name || '',
+      notes: r.notes || '',
+      row_color: r.row_color || 'yellow'
+    })))
+    .select('id, order_id');
+
+  if (insertError) throw insertError;
+
+  // 4. Re-link media
+  if (insertedOrders && insertedOrders.length > 0) {
+    // Strategy 1: by order_id
+    for (const newRow of insertedOrders) {
+      if (newRow.order_id) {
+        await supabase
+          .from('daily_report_order_media')
+          .update({ daily_report_order_id: newRow.id })
+          .eq('daily_report_id', reportId)
+          .eq('order_id', newRow.order_id)
+          .is('daily_report_order_id', null);
+      }
+    }
+
+    // Strategy 2: by position mapping using old row media
+    const referenceRows = sourceRows || ordersToInsert;
+    let insertIdx = 0;
+    for (let origIdx = 0; origIdx < referenceRows.length && insertIdx < insertedOrders.length; origIdx++) {
+      const origRow = referenceRows[origIdx];
+      const hasContent = origRow.order_id || (origRow as any).activity_description?.trim() || (origRow as any).service_details?.trim() || (origRow as any).team_name?.trim() || (origRow as any).notes?.trim();
+      if (!hasContent && sourceRows) continue; // skip filtered-out rows when sourceRows provided
+
+      const newRow = insertedOrders[insertIdx];
+      const oldRowId = oldRowIdsByIndex[sourceRows ? origIdx : insertIdx];
+
+      if (oldRowId && oldRowMediaMap[oldRowId] && oldRowMediaMap[oldRowId].length > 0) {
+        await supabase
+          .from('daily_report_order_media')
+          .update({ daily_report_order_id: newRow.id })
+          .eq('daily_report_id', reportId)
+          .in('id', oldRowMediaMap[oldRowId]);
+      }
+
+      insertIdx++;
+    }
+  }
+
+  return { insertedOrders };
+}
+
 interface SavedReport {
   id: string;
   report_date: string;
@@ -1141,32 +1250,9 @@ export default function DailyReportModule() {
         }
       }
 
-      // Delete existing order reports and insert new ones
-      const { error: deleteOrdersError } = await supabase
-        .from('daily_report_orders')
-        .delete()
-        .eq('daily_report_id', reportId);
-
-      if (deleteOrdersError) throw deleteOrdersError;
-
+      // Delete existing order reports and insert new ones (with media re-linking)
       const ordersWithData = orderReports.filter((r) => r.order_id || r.activity_description?.trim() || r.service_details?.trim() || r.team_name?.trim() || r.notes?.trim());
-      if (ordersWithData.length > 0) {
-        const { error: insertOrdersError } = await supabase
-          .from('daily_report_orders')
-          .insert(
-            ordersWithData.map((r) => ({
-              daily_report_id: reportId,
-              order_id: r.order_id || null,
-              activity_description: r.activity_description,
-              service_details: r.service_details,
-              team_name: r.team_name,
-              notes: r.notes,
-              row_color: r.row_color
-            }))
-          );
-
-        if (insertOrdersError) throw insertOrdersError;
-      }
+      await deleteAndReinsertOrderRows(reportId!, ordersWithData, orderReports);
 
       // Delete existing staff reports and insert new ones
       const { error: deleteStaffError } = await supabase
@@ -3253,23 +3339,12 @@ export default function DailyReportModule() {
         .eq('id', reportId);
     }
 
-    // Delete existing order reports and insert new ones
-    const { error: deleteOrderError } = await supabase
-      .from('daily_report_orders')
-      .delete()
-      .eq('daily_report_id', reportId);
-
-    if (deleteOrderError) {
-      console.error('Error deleting order reports:', deleteOrderError);
-      throw deleteOrderError;
-    }
-
     // Deduplication: فیلتر کردن سفارشات تکراری بر اساس order_id
     const seenOrderIds = new Set<string>();
     const ordersToInsert = cachedEntry.orderReports
       .filter((r) => r.order_id || r.activity_description?.trim() || r.service_details?.trim() || r.team_name?.trim() || r.notes?.trim())
       .filter((r) => {
-        if (!r.order_id) return true; // rows without order_id are always kept
+        if (!r.order_id) return true;
         if (seenOrderIds.has(r.order_id)) {
           console.warn(`Duplicate order_id detected and skipped: ${r.order_id}`);
           return false;
@@ -3277,41 +3352,8 @@ export default function DailyReportModule() {
         seenOrderIds.add(r.order_id);
         return true;
       });
-    
-    if (ordersToInsert.length > 0) {
-      const { data: insertedOrders, error: orderError } = await supabase
-        .from('daily_report_orders')
-        .insert(ordersToInsert.map(r => ({
-          daily_report_id: reportId,
-          order_id: r.order_id || null,
-          activity_description: r.activity_description || '',
-          service_details: r.service_details || '',
-          team_name: r.team_name || '',
-          notes: r.notes || '',
-          row_color: r.row_color || 'yellow'
-        })))
-        .select('id, order_id');
 
-      if (orderError) {
-        console.error('Error inserting order reports:', orderError);
-        throw orderError;
-      }
-
-      // Re-link orphaned media records to new order row IDs
-      if (insertedOrders && insertedOrders.length > 0) {
-        for (const newRow of insertedOrders) {
-          if (newRow.order_id) {
-            // Update media records that belong to this report+order but lost their order row link
-            await supabase
-              .from('daily_report_order_media')
-              .update({ daily_report_order_id: newRow.id })
-              .eq('daily_report_id', reportId!)
-              .eq('order_id', newRow.order_id)
-              .is('daily_report_order_id', null);
-          }
-        }
-      }
-    }
+    await deleteAndReinsertOrderRows(reportId!, ordersToInsert, cachedEntry.orderReports);
 
     // Deduplication: فقط یک ردیف ماهیت شرکت نگه دار
     let hasCompanyExpense = false;
@@ -3564,34 +3606,11 @@ export default function DailyReportModule() {
       const ordersForReport = ordersByReportId.get(reportId) || [];
       const staffForReport = staffByReportId.get(reportId) || [];
 
-      // به‌روزرسانی سفارشات - حذف قبلی‌ها و درج جدید
-      // ابتدا سفارشات موجود این گزارش را حذف کن
-      const { error: deleteOrderError } = await supabase
-        .from('daily_report_orders')
-        .delete()
-        .eq('daily_report_id', reportId);
-
-      if (deleteOrderError) {
-        console.error('Error deleting order reports for', reportId, ':', deleteOrderError);
-      }
-
-      // درج سفارشات جدید
-      if (ordersForReport.length > 0) {
-        const { error: orderError } = await supabase
-          .from('daily_report_orders')
-          .insert(ordersForReport.map(r => ({
-          daily_report_id: reportId,
-            order_id: r.order_id || null,
-            activity_description: r.activity_description || '',
-            service_details: r.service_details || '',
-            team_name: r.team_name || '',
-            notes: r.notes || '',
-            row_color: r.row_color || 'yellow'
-          })));
-
-        if (orderError) {
-          console.error('Error inserting order reports for', reportId, ':', orderError);
-        }
+      // به‌روزرسانی سفارشات - حذف قبلی‌ها و درج جدید (با حفظ رسانه‌ها)
+      try {
+        await deleteAndReinsertOrderRows(reportId, ordersForReport);
+      } catch (orderError) {
+        console.error('Error updating order reports for', reportId, ':', orderError);
       }
 
       // به‌روزرسانی نیروها - حذف قبلی‌ها و درج جدید
@@ -3731,38 +3750,13 @@ export default function DailyReportModule() {
         .eq('id', reportId);
     }
 
-    // Delete existing order reports and insert new ones
-    const { error: deleteOrderError } = await supabase
-      .from('daily_report_orders')
-      .delete()
-      .eq('daily_report_id', reportId);
-
-    if (deleteOrderError) {
-      console.error('Error deleting order reports:', deleteOrderError);
-      throw deleteOrderError;
-    }
-
+    // Delete existing order reports and insert new ones (with media re-linking)
     const currentOrderReports = orderReportsRef.current;
     const ordersToInsert = currentOrderReports.filter((r) => r.order_id || r.activity_description?.trim() || r.service_details?.trim() || r.team_name?.trim() || r.notes?.trim());
+    await deleteAndReinsertOrderRows(reportId!, ordersToInsert, currentOrderReports);
+
+    // همچنین گزارش‌ها را در جدول order_daily_logs ذخیره کنید
     if (ordersToInsert.length > 0) {
-      const { error: orderError } = await supabase
-        .from('daily_report_orders')
-        .insert(ordersToInsert.map(r => ({
-          daily_report_id: reportId,
-          order_id: r.order_id || null,
-          activity_description: r.activity_description || '',
-          service_details: r.service_details || '',
-          team_name: r.team_name || '',
-          notes: r.notes || '',
-          row_color: r.row_color || 'yellow'
-        })));
-
-      if (orderError) {
-        console.error('Error inserting order reports:', orderError);
-        throw orderError;
-      }
-
-      // همچنین گزارش‌ها را در جدول order_daily_logs ذخیره کنید
       for (const r of ordersToInsert) {
         if (r.order_id && user?.id) {
           const logData = {
@@ -3774,14 +3768,12 @@ export default function DailyReportModule() {
             created_by: user.id
           };
           
-          // استفاده از upsert برای جلوگیری از تکرار
           const { error: logError } = await supabase
             .from('order_daily_logs')
             .upsert(logData, { onConflict: 'order_id,report_date' });
           
           if (logError) {
             console.error('Error saving order daily log:', logError);
-            // ادامه بده حتی اگر خطا داشت
           }
         }
       }
