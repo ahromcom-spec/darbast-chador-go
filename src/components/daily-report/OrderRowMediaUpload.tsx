@@ -275,8 +275,7 @@ export function OrderRowMediaUpload({
             <input
               ref={videoInputRef}
               type="file"
-              accept="video/*"
-              multiple
+              accept="video/mp4,video/3gpp,video/webm,video/quicktime,video/*"
               className="hidden"
               onChange={(e) => handleUpload(e, 'video')}
               disabled={uploading}
