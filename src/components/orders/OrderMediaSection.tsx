@@ -76,7 +76,10 @@ function VideoWithDuration({
         ref={videoRef}
         controls
         playsInline
-        preload="metadata"
+        autoPlay
+        muted
+        loop
+        preload="auto"
         className="w-full h-full object-contain"
         onLoadedMetadata={handleLoadedMetadata}
         onError={onError}
