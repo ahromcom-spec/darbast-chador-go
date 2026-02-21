@@ -213,20 +213,28 @@ async function deleteAndReinsertOrderRows(
       newRowIdx++;
     }
 
-    // Final cleanup: any remaining orphaned media without row_index, link to first empty row
+    // Final cleanup: link remaining orphaned media to the matching row by row_index
+    // Do NOT dump all orphaned media into the first row — that causes cross-row merging
     const { data: remainingOrphaned } = await supabase
       .from('daily_report_order_media')
-      .select('id')
+      .select('id, row_index')
       .eq('daily_report_id', reportId)
       .is('daily_report_order_id', null);
 
     if (remainingOrphaned && remainingOrphaned.length > 0) {
-      const firstRow = insertedOrders[0];
-      await supabase
-        .from('daily_report_order_media')
-        .update({ daily_report_order_id: firstRow.id })
-        .eq('daily_report_id', reportId)
-        .is('daily_report_order_id', null);
+      for (const orphan of remainingOrphaned) {
+        // Try to match by row_index to the correct inserted row
+        const targetIdx = orphan.row_index !== null && orphan.row_index !== undefined && orphan.row_index < insertedOrders.length
+          ? orphan.row_index
+          : null;
+        if (targetIdx !== null) {
+          await supabase
+            .from('daily_report_order_media')
+            .update({ daily_report_order_id: insertedOrders[targetIdx].id })
+            .eq('id', orphan.id);
+        }
+        // If no matching row_index, leave orphaned — don't merge into wrong row
+      }
     }
   }
 
