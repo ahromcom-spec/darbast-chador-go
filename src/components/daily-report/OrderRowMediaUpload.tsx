@@ -69,10 +69,10 @@ export function OrderRowMediaUpload({
         query = query.eq('user_id', user.id);
       }
 
+      // Use daily_report_order_id as primary filter if available; fall back to order_id
       if (hasValidOrderRowId) {
         query = query.eq('daily_report_order_id', dailyReportOrderId);
-      }
-      if (hasValidOrderId) {
+      } else if (hasValidOrderId) {
         query = query.eq('order_id', orderId);
       }
 
