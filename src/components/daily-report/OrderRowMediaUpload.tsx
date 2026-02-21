@@ -155,7 +155,7 @@ export function OrderRowMediaUpload({
         const validOrderRowId = isValidUuid(dailyReportOrderId) ? dailyReportOrderId : null;
         const validOrderId = isValidUuid(orderId) ? orderId : null;
 
-        const { error: dbError } = await supabase
+        const { data: insertedMedia, error: dbError } = await supabase
           .from('daily_report_order_media')
           .insert({
             daily_report_id: dailyReportId,
@@ -167,12 +167,25 @@ export function OrderRowMediaUpload({
             file_size: file.size,
             mime_type: file.type,
             report_date: reportDate,
-          });
+          })
+          .select('id, file_path, file_type')
+          .single();
 
         if (dbError) {
           console.error('DB error:', dbError);
           toast({ title: `خطا در ثبت رسانه: ${dbError.message}`, variant: 'destructive' });
           continue;
+        }
+
+        // Add to local state immediately so it shows up even for unsaved rows
+        if (insertedMedia) {
+          const { data: urlData } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(storagePath);
+          setMedia(prev => [...prev, {
+            id: insertedMedia.id,
+            file_path: insertedMedia.file_path,
+            file_type: insertedMedia.file_type as 'image' | 'video',
+            publicUrl: urlData.publicUrl,
+          }]);
         }
 
         // If order is selected and valid UUID, also insert into project_media with report date
@@ -182,7 +195,6 @@ export function OrderRowMediaUpload({
       }
 
       toast({ title: 'آپلود شد ✅' });
-      fetchMedia();
     } catch (err) {
       console.error('Upload error:', err);
       toast({ title: 'خطا', variant: 'destructive' });
