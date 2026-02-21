@@ -70,6 +70,31 @@ function VideoWithDuration({
     }
   };
 
+  // Programmatically play when video is ready
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !url) return;
+
+    const attemptPlay = async () => {
+      try {
+        video.muted = true;
+        await video.play();
+      } catch (e) {
+        // Autoplay blocked, user can use controls
+      }
+    };
+
+    video.addEventListener('canplay', attemptPlay);
+    // Also try immediately if already loaded
+    if (video.readyState >= 3) {
+      attemptPlay();
+    }
+
+    return () => {
+      video.removeEventListener('canplay', attemptPlay);
+    };
+  }, [url]);
+
   return (
     <div className="relative w-full h-full">
       <video
