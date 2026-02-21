@@ -101,7 +101,7 @@ async function deleteAndReinsertOrderRows(
   const oldRowIdsByIndex = (oldOrderRows || []).map(r => r.id);
 
   // 1.5 If sourceRows provided, check which empty rows had media and should be preserved
-  // Include rows that have no text/order but had media attached (by old row position)
+  // Include rows that have no text/order but had media attached (by old row position OR orphaned media)
   let finalOrdersToInsert = [...ordersToInsert];
   if (sourceRows) {
     let insertIdx = 0;
@@ -114,7 +114,11 @@ async function deleteAndReinsertOrderRows(
       }
       // This row was filtered out - check if the old row at this position had media
       const oldRowId = oldRowIdsByIndex[origIdx];
-      if (oldRowId && oldRowMediaMap[oldRowId] && oldRowMediaMap[oldRowId].length > 0) {
+      const hadOldMedia = oldRowId && oldRowMediaMap[oldRowId] && oldRowMediaMap[oldRowId].length > 0;
+      // Also check if orphaned media exists (first save scenario - no old rows but media uploaded)
+      const hasOrphanedMedia = orphanedMedia && orphanedMedia.length > 0 && !oldOrderRows?.length;
+      
+      if (hadOldMedia || (hasOrphanedMedia && origIdx === 0)) {
         // This empty row has media - preserve it by inserting it
         finalOrdersToInsert.splice(insertIdx, 0, {
           order_id: origRow.order_id,
@@ -127,6 +131,15 @@ async function deleteAndReinsertOrderRows(
         insertIdx++;
       }
     }
+  } else if (orphanedMedia && orphanedMedia.length > 0 && ordersToInsert.length === 0) {
+    // No sourceRows, no content rows, but orphaned media exists - create a placeholder row
+    finalOrdersToInsert.push({
+      activity_description: '',
+      service_details: '',
+      team_name: '',
+      notes: '',
+      row_color: 'yellow',
+    });
   }
 
   // 2. Delete existing order rows
