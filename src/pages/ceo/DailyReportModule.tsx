@@ -45,6 +45,11 @@ import StaticLocationMap from '@/components/locations/StaticLocationMap';
 import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
 import { OrderRowMediaUpload } from '@/components/daily-report/OrderRowMediaUpload';
 
+// Helper: check if a row has content (order, text, etc.)
+function rowHasContent(r: { order_id?: string; activity_description?: string; service_details?: string; team_name?: string; notes?: string }) {
+  return r.order_id || r.activity_description?.trim() || r.service_details?.trim() || r.team_name?.trim() || r.notes?.trim();
+}
+
 // Helper: delete order rows and re-insert, preserving media links
 async function deleteAndReinsertOrderRows(
   reportId: string,
@@ -56,7 +61,7 @@ async function deleteAndReinsertOrderRows(
     notes?: string;
     row_color?: string;
   }>,
-  sourceRows?: Array<{ order_id?: string }> // original rows before filtering, for position mapping
+  sourceRows?: Array<{ order_id?: string; activity_description?: string; service_details?: string; team_name?: string; notes?: string }> // original rows before filtering, for position mapping
 ): Promise<{ insertedOrders: Array<{ id: string; order_id: string | null }> | null }> {
   // 1. Save old order row IDs and their media before deletion
   const { data: oldOrderRows } = await supabase
@@ -86,7 +91,43 @@ async function deleteAndReinsertOrderRows(
     }
   }
 
+  // Also check for orphaned media (no daily_report_order_id) that belong to this report
+  const { data: orphanedMedia } = await supabase
+    .from('daily_report_order_media')
+    .select('id, order_id')
+    .eq('daily_report_id', reportId)
+    .is('daily_report_order_id', null);
+
   const oldRowIdsByIndex = (oldOrderRows || []).map(r => r.id);
+
+  // 1.5 If sourceRows provided, check which empty rows had media and should be preserved
+  // Include rows that have no text/order but had media attached (by old row position)
+  let finalOrdersToInsert = [...ordersToInsert];
+  if (sourceRows) {
+    let insertIdx = 0;
+    for (let origIdx = 0; origIdx < sourceRows.length; origIdx++) {
+      const origRow = sourceRows[origIdx];
+      const hasContent = rowHasContent(origRow);
+      if (hasContent) {
+        insertIdx++;
+        continue;
+      }
+      // This row was filtered out - check if the old row at this position had media
+      const oldRowId = oldRowIdsByIndex[origIdx];
+      if (oldRowId && oldRowMediaMap[oldRowId] && oldRowMediaMap[oldRowId].length > 0) {
+        // This empty row has media - preserve it by inserting it
+        finalOrdersToInsert.splice(insertIdx, 0, {
+          order_id: origRow.order_id,
+          activity_description: (origRow as any).activity_description || '',
+          service_details: (origRow as any).service_details || '',
+          team_name: (origRow as any).team_name || '',
+          notes: (origRow as any).notes || '',
+          row_color: (origRow as any).row_color || 'yellow',
+        });
+        insertIdx++;
+      }
+    }
+  }
 
   // 2. Delete existing order rows
   const { error: deleteError } = await supabase
@@ -96,12 +137,12 @@ async function deleteAndReinsertOrderRows(
 
   if (deleteError) throw deleteError;
 
-  if (ordersToInsert.length === 0) return { insertedOrders: null };
+  if (finalOrdersToInsert.length === 0) return { insertedOrders: null };
 
   // 3. Insert new rows
   const { data: insertedOrders, error: insertError } = await supabase
     .from('daily_report_orders')
-    .insert(ordersToInsert.map(r => ({
+    .insert(finalOrdersToInsert.map(r => ({
       daily_report_id: reportId,
       order_id: r.order_id || null,
       activity_description: r.activity_description || '',
@@ -129,15 +170,17 @@ async function deleteAndReinsertOrderRows(
     }
 
     // Strategy 2: by position mapping using old row media
-    const referenceRows = sourceRows || ordersToInsert;
-    let insertIdx = 0;
-    for (let origIdx = 0; origIdx < referenceRows.length && insertIdx < insertedOrders.length; origIdx++) {
+    const referenceRows = sourceRows || finalOrdersToInsert;
+    let reInsertIdx = 0;
+    for (let origIdx = 0; origIdx < referenceRows.length && reInsertIdx < insertedOrders.length; origIdx++) {
       const origRow = referenceRows[origIdx];
-      const hasContent = origRow.order_id || (origRow as any).activity_description?.trim() || (origRow as any).service_details?.trim() || (origRow as any).team_name?.trim() || (origRow as any).notes?.trim();
-      if (!hasContent && sourceRows) continue; // skip filtered-out rows when sourceRows provided
+      const hasContent = rowHasContent(origRow);
+      const oldRowId = oldRowIdsByIndex[sourceRows ? origIdx : reInsertIdx];
+      const hadMedia = oldRowId && oldRowMediaMap[oldRowId] && oldRowMediaMap[oldRowId].length > 0;
+      
+      if (!hasContent && !hadMedia && sourceRows) continue; // skip truly empty rows
 
-      const newRow = insertedOrders[insertIdx];
-      const oldRowId = oldRowIdsByIndex[sourceRows ? origIdx : insertIdx];
+      const newRow = insertedOrders[reInsertIdx];
 
       if (oldRowId && oldRowMediaMap[oldRowId] && oldRowMediaMap[oldRowId].length > 0) {
         await supabase
@@ -147,7 +190,22 @@ async function deleteAndReinsertOrderRows(
           .in('id', oldRowMediaMap[oldRowId]);
       }
 
-      insertIdx++;
+      reInsertIdx++;
+    }
+
+    // Strategy 3: re-link orphaned media (no row ID, no order_id) to first row without order
+    if (orphanedMedia && orphanedMedia.length > 0) {
+      const orphanedWithoutOrder = orphanedMedia.filter(m => !m.order_id);
+      if (orphanedWithoutOrder.length > 0) {
+        const firstEmptyRow = insertedOrders.find(r => !r.order_id);
+        if (firstEmptyRow) {
+          await supabase
+            .from('daily_report_order_media')
+            .update({ daily_report_order_id: firstEmptyRow.id })
+            .eq('daily_report_id', reportId)
+            .in('id', orphanedWithoutOrder.map(m => m.id));
+        }
+      }
     }
   }
 
