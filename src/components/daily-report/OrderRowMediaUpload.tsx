@@ -307,46 +307,40 @@ export function OrderRowMediaUpload({
 
       {/* Thumbnails */}
       {media.length > 0 && (
-        <div className="flex flex-wrap gap-1 max-w-[120px]">
+        <div className="flex flex-wrap gap-1.5 max-w-[260px]">
           {media.slice(0, 4).map((item, idx) => (
             <div key={item.id} className="relative group cursor-pointer" onClick={() => setPreviewIndex(idx)}>
               {item.file_type === 'image' ? (
                 <img
                   src={item.publicUrl}
                   alt=""
-                  className="w-8 h-8 rounded object-cover border"
+                  className="w-24 h-24 rounded object-cover border"
                 />
               ) : (
-                <div className="relative w-8 h-8 rounded border overflow-hidden bg-purple-50">
+                <div className="relative w-24 h-24 rounded border overflow-hidden bg-purple-50">
                   <video
                     src={item.publicUrl}
                     muted
                     playsInline
-                    preload="metadata"
+                    autoPlay
+                    loop
                     className="w-full h-full object-cover"
-                    onLoadedMetadata={(e) => {
-                      const video = e.currentTarget;
-                      video.currentTime = 0.5;
-                    }}
                   />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                    <Film className="h-3 w-3 text-white" />
-                  </div>
                 </div>
               )}
               {!readOnly && (
                 <button
                   onClick={(e) => { e.stopPropagation(); removeMedia(item); }}
-                  className="absolute -top-1 -right-1 bg-destructive text-white rounded-full w-3.5 h-3.5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute -top-1 -right-1 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 >
-                  <X className="h-2 w-2" />
+                  <X className="h-2.5 w-2.5" />
                 </button>
               )}
             </div>
           ))}
           {media.length > 4 && (
             <div
-              className="w-8 h-8 rounded bg-muted border flex items-center justify-center text-[10px] text-muted-foreground cursor-pointer"
+              className="w-24 h-24 rounded bg-muted border flex items-center justify-center text-sm text-muted-foreground cursor-pointer"
               onClick={() => setPreviewIndex(4)}
             >
               +{media.length - 4}
