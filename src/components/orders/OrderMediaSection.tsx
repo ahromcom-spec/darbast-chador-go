@@ -718,7 +718,7 @@ export function OrderMediaSection({
                             <Button
                               variant="destructive"
                               size="icon"
-                              className="absolute top-2 left-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                              className="absolute top-2 left-2 h-8 w-8 z-10 shadow-lg"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteMedia(media.id, media.file_path);
