@@ -70,30 +70,14 @@ function VideoWithDuration({
     }
   };
 
-  // Programmatically play when video is ready
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !url) return;
-
-    const attemptPlay = async () => {
-      try {
-        video.muted = true;
-        await video.play();
-      } catch (e) {
-        // Autoplay blocked, user can use controls
-      }
-    };
-
-    video.addEventListener('canplay', attemptPlay);
-    // Also try immediately if already loaded
-    if (video.readyState >= 3) {
-      attemptPlay();
+  const attemptPlay = async (video: HTMLVideoElement) => {
+    try {
+      video.muted = true;
+      await video.play();
+    } catch (e) {
+      // Autoplay blocked by browser
     }
-
-    return () => {
-      video.removeEventListener('canplay', attemptPlay);
-    };
-  }, [url]);
+  };
 
   if (!url) {
     return (
@@ -117,6 +101,8 @@ function VideoWithDuration({
         preload="auto"
         className="w-full h-full object-contain"
         onLoadedMetadata={handleLoadedMetadata}
+        onCanPlay={(e) => attemptPlay(e.currentTarget)}
+        onLoadedData={(e) => attemptPlay(e.currentTarget)}
         onError={onError}
       />
       
