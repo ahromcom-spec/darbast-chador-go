@@ -110,24 +110,117 @@ export function OrderForOthersInfo({ orderId, onStatusChange }: OrderForOthersIn
   };
 
   const handleAccept = async () => {
-    if (!data) return;
+    if (!data || !user) return;
     
     try {
       setAccepting(true);
-      
-      const { error } = await supabase
+
+      // 1. دریافت اطلاعات سفارش
+      const { data: order, error: orderFetchError } = await supabase
+        .from('projects_v3')
+        .select('*')
+        .eq('id', orderId)
+        .maybeSingle();
+
+      if (orderFetchError) throw orderFetchError;
+      if (!order) throw new Error('سفارش یافت نشد');
+
+      // 2. دریافت اطلاعات زیرشاخه
+      const { data: subcategory } = await supabase
+        .from('subcategories')
+        .select('id, name, service_type_id')
+        .eq('id', order.subcategory_id)
+        .maybeSingle();
+
+      // 3. ایجاد یا دریافت پروفایل مشتری برای کاربر گیرنده
+      let { data: recipientCustomer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!recipientCustomer) {
+        const { data: newCustomer, error: createError } = await supabase
+          .from('customers')
+          .insert({ user_id: user.id })
+          .select('id')
+          .single();
+
+        if (createError) throw createError;
+        recipientCustomer = newCustomer;
+      }
+
+      const customerId = recipientCustomer?.id;
+      if (!customerId) throw new Error('خطا در ایجاد پروفایل مشتری');
+
+      // 4. دریافت شماره تلفن فرستنده
+      const { data: fromProfile } = await supabase
+        .from('profiles')
+        .select('phone_number')
+        .eq('user_id', data.from_user_id)
+        .maybeSingle();
+
+      // 5. ایجاد لوکیشن برای گیرنده
+      const { data: newLocation, error: locationError } = await supabase
+        .from('locations')
+        .insert({
+          user_id: user.id,
+          address_line: order.address,
+          title: order.detailed_address || 'آدرس انتقالی',
+          lat: order.location_lat || 34.6401,
+          lng: order.location_lng || 50.8764,
+          province_id: order.province_id,
+          district_id: order.district_id,
+        })
+        .select('id')
+        .single();
+
+      if (locationError) throw locationError;
+
+      // 6. ایجاد پروژه در hierarchy برای گیرنده
+      const serviceTypeId = subcategory?.service_type_id;
+      if (!serviceTypeId) throw new Error('خطا در دریافت نوع خدمات');
+
+      const { data: newHierarchy, error: hierarchyError } = await supabase
+        .from('projects_hierarchy')
+        .insert({
+          user_id: user.id,
+          location_id: newLocation.id,
+          service_type_id: serviceTypeId,
+          subcategory_id: order.subcategory_id,
+          title: `پروژه انتقالی - ${order.code}`,
+          status: 'active',
+        })
+        .select('id')
+        .single();
+
+      if (hierarchyError) throw hierarchyError;
+
+      // 7. بروزرسانی وضعیت درخواست انتقال
+      const { error: transferError } = await supabase
         .from('order_transfer_requests')
         .update({
-          status: 'accepted',
+          status: 'completed',
           recipient_responded_at: new Date().toISOString()
         })
         .eq('id', data.id);
 
-      if (error) throw error;
+      if (transferError) throw transferError;
+
+      // 8. انتقال مالکیت سفارش
+      const { error: ownershipError } = await supabase.rpc('transfer_order_ownership' as any, {
+        p_order_id: orderId,
+        p_new_customer_id: customerId,
+        p_new_hierarchy_id: newHierarchy.id,
+        p_transferred_from_user_id: data.from_user_id,
+        p_transferred_from_phone: fromProfile?.phone_number || data.to_phone,
+      });
+
+      if (ownershipError) throw ownershipError;
 
       toast({
         title: '✅ سفارش پذیرفته شد',
-        description: 'سفارش شما با موفقیت پذیرفته شد. در حال انتقال به لیست سفارشات...',
+        description: 'سفارش شما با موفقیت پذیرفته شد و در پروژه‌های شما قرار گرفت. در حال انتقال...',
       });
 
       // ارسال نوتیفیکیشن به ثبت‌کننده
@@ -141,14 +234,15 @@ export function OrderForOthersInfo({ orderId, onStatusChange }: OrderForOthersIn
 
       onStatusChange?.();
 
-      // انتقال کاربر به صفحه سفارشات تا سفارش پذیرفته شده را ببیند
+      // انتقال کاربر به صفحه سفارشات
       setTimeout(() => {
         navigate(`/user/orders/${orderId}`);
       }, 1500);
     } catch (error: any) {
+      console.error('Error accepting transfer:', error);
       toast({
         title: 'خطا',
-        description: error.message,
+        description: error.message || 'خطا در پذیرش سفارش',
         variant: 'destructive'
       });
     } finally {
