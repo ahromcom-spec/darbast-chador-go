@@ -4728,6 +4728,14 @@ export type Database = {
             Returns: undefined
           }
         | { Args: { _role: string; _user_id: string }; Returns: undefined }
+      auto_complete_order_transfer: {
+        Args: {
+          p_order_id: string
+          p_recipient_phone: string
+          p_recipient_user_id: string
+        }
+        Returns: Json
+      }
       calculate_reputation_score: {
         Args: { _user_id: string }
         Returns: undefined
