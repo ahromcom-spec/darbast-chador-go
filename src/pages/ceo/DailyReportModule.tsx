@@ -3270,7 +3270,9 @@ export default function DailyReportModule() {
       // ابتدا داده‌های تاریخ فعلی را در کش به‌روزرسانی کن
       const currentDateStr = toLocalDateString(reportDate);
       // CRITICAL FIX: فقط داده‌های واقعی را بررسی کن (بدون ردیف‌های پیش‌فرض is_company_expense/is_cash_box)
-      const hasRealCurrentData = orderReportsRef.current.some(r => r.order_id || r.activity_description?.trim() || r.service_details?.trim() || r.team_name?.trim() || r.notes?.trim()) || 
+      // اگر گزارش از قبل وجود دارد (مثلاً برای آپلود رسانه ایجاد شده)، آن را به عنوان داده واقعی در نظر بگیر
+      const hasRealCurrentData = !!existingReportIdRef.current ||
+        orderReportsRef.current.some(r => r.order_id || r.activity_description?.trim() || r.service_details?.trim() || r.team_name?.trim() || r.notes?.trim()) || 
         staffReportsRef.current.some(s => !s.is_company_expense && !s.is_cash_box && (s.staff_user_id || s.staff_name?.trim() || (s.overtime_hours ?? 0) > 0 || (s.amount_received ?? 0) > 0 || (s.amount_spent ?? 0) > 0)) ||
         !!dailyNotesRef.current?.trim();
       
@@ -3296,13 +3298,15 @@ export default function DailyReportModule() {
         
         // CRITICAL FIX: فقط تاریخ‌هایی را ذخیره کن که داده واقعی دارند
         // (نه فقط ردیف‌های پیش‌فرض مثل ماهیت شرکت)
+        // اگر گزارش از قبل وجود دارد (مثلاً رسانه آپلود شده) آن را همیشه ذخیره کن
+        const hasExistingReport = !!cachedEntry.existingReportId;
         const hasRealOrderData = cachedEntry.orderReports.some(r => r.order_id || r.activity_description?.trim() || r.service_details?.trim() || r.team_name?.trim() || r.notes?.trim());
         const hasRealStaffData = cachedEntry.staffReports.some(s => !s.is_company_expense && !s.is_cash_box && (s.staff_user_id || s.staff_name?.trim()));
         const hasCashBoxData = cachedEntry.staffReports.some(s => s.is_cash_box && s.bank_card_id && ((s.amount_received ?? 0) > 0 || (s.amount_spent ?? 0) > 0));
         const hasNotes = !!cachedEntry.dailyNotes?.trim();
         
-        if (!hasRealOrderData && !hasRealStaffData && !hasCashBoxData && !hasNotes) {
-          // پاک کردن کش بدون ذخیره (داده واقعی ندارد)
+        if (!hasExistingReport && !hasRealOrderData && !hasRealStaffData && !hasCashBoxData && !hasNotes) {
+          // پاک کردن کش بدون ذخیره (داده واقعی ندارد و گزارشی هم وجود ندارد)
           dateCache.markDateAsSaved(cachedDateStr);
           continue;
         }
