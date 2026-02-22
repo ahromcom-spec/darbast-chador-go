@@ -145,6 +145,42 @@ export function OrderRowMediaUpload({
     fetchMedia();
   }, [fetchMedia]);
 
+  // Realtime subscription: sync media changes from other users instantly
+  useEffect(() => {
+    if (!dailyReportId || !showAllUsers) return;
+
+    const channel = supabase
+      .channel(`media-row-${dailyReportId}-${rowIndex}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'daily_report_order_media',
+          filter: `daily_report_id=eq.${dailyReportId}`,
+        },
+        (payload: any) => {
+          // Only react to changes from other users
+          if (payload.new?.user_id === user?.id || payload.old?.user_id === user?.id) {
+            // For DELETE events, payload.new is empty, check old
+            if (payload.eventType === 'DELETE' && payload.old?.user_id === user?.id) return;
+            if (payload.eventType !== 'DELETE' && payload.new?.user_id === user?.id) return;
+          }
+          // Only react if row_index matches
+          const relevantRowIndex = payload.new?.row_index ?? payload.old?.row_index;
+          if (relevantRowIndex !== null && relevantRowIndex !== undefined && relevantRowIndex !== rowIndex) return;
+          
+          // Refetch media for this row
+          fetchMedia();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [dailyReportId, rowIndex, showAllUsers, user?.id, fetchMedia]);
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
     const files = e.target.files;
     if (!files || files.length === 0 || !user) return;
