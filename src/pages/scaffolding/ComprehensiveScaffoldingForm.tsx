@@ -1283,56 +1283,67 @@ export default function ComprehensiveScaffoldingForm({
         // اگر سفارش برای شخص دیگری ثبت شده باشد، درخواست انتقال ایجاد می‌کنیم
         if (recipientData) {
           try {
+            // ابتدا رکورد transfer request ایجاد می‌کنیم
             const { error: transferError } = await supabase
               .from('order_transfer_requests')
               .insert({
                 order_id: createdProject.id,
                 from_user_id: user!.id,
                 to_phone_number: recipientData.phoneNumber,
-                to_user_id: recipientData.userId, // اگر کاربر ثبت‌نام کرده باشد
+                to_user_id: recipientData.userId,
                 status: recipientData.isRegistered ? 'pending_recipient' : 'pending_registration'
               });
 
             if (transferError) {
               console.error('Transfer request error:', transferError);
-              // خطای انتقال مانع از ادامه نمی‌شود - سفارش ثبت شده
-            } else {
-              // ارسال نوتیفیکیشن به کاربر مقصد (اگر ثبت‌نام کرده باشد)
-              if (recipientData.isRegistered && recipientData.userId) {
-                const senderName = user?.user_metadata?.full_name || 'یک کاربر';
-                const serviceTypeName = activeService === 'facade' ? 'داربست نما' :
-                                        activeService === 'column' ? 'داربست ستون' :
-                                        activeService === 'formwork' ? 'داربست حجمی کفراژ' :
-                                        activeService === 'pipe-length' ? 'داربست متراژ' :
-                                        activeService.includes('ceiling') ? 'داربست سقف' : 'داربست';
-                
-                // ارسال نوتیفیکیشن درون‌سایتی
-                await supabase.rpc('send_notification', {
-                  _user_id: recipientData.userId,
-                  _title: '📦 سفارش جدید برای شما ثبت شد',
-                  _body: `${senderName} یک سفارش ${serviceTypeName} با کد ${createdProject.code} برای شما ثبت کرده است. لطفاً آن را بررسی و تایید کنید.`,
-                  _link: '/user/profile',
-                  _type: 'info'
-                });
+            }
 
-                // ارسال Push Notification
-                try {
-                  await sendPushNotification({
-                    user_id: recipientData.userId,
-                    title: '📦 سفارش جدید برای شما ثبت شد',
-                    body: `${senderName} یک سفارش ${serviceTypeName} با کد ${createdProject.code} برای شما ثبت کرده است.`,
-                    link: '/user/profile'
-                  });
-                } catch (pushErr) {
-                  console.log('Push notification skipped');
-                }
+            // اگر کاربر ثبت‌نام کرده، انتقال خودکار بدون نیاز به تایید
+            if (recipientData.isRegistered && recipientData.userId) {
+              const { error: autoTransferError } = await supabase.rpc('auto_complete_order_transfer' as any, {
+                p_order_id: createdProject.id,
+                p_recipient_user_id: recipientData.userId,
+                p_recipient_phone: recipientData.phoneNumber
+              });
+
+              if (autoTransferError) {
+                console.error('Auto transfer error:', autoTransferError);
+              }
+
+              const senderName = user?.user_metadata?.full_name || 'یک کاربر';
+              const serviceTypeName = activeService === 'facade' ? 'داربست نما' :
+                                      activeService === 'column' ? 'داربست ستون' :
+                                      activeService === 'formwork' ? 'داربست حجمی کفراژ' :
+                                      activeService === 'pipe-length' ? 'داربست متراژ' :
+                                      activeService.includes('ceiling') ? 'داربست سقف' : 'داربست';
+              
+              await supabase.rpc('send_notification', {
+                _user_id: recipientData.userId,
+                _title: '📦 سفارش جدید برای شما ثبت شد',
+                _body: `${senderName} یک سفارش ${serviceTypeName} با کد ${createdProject.code} برای شما ثبت کرده است و به حساب شما منتقل شد.`,
+                _link: `/user/orders/${createdProject.id}`,
+                _type: 'success'
+              });
+
+              try {
+                await sendPushNotification({
+                  user_id: recipientData.userId,
+                  title: '📦 سفارش جدید برای شما ثبت شد',
+                  body: `${senderName} یک سفارش ${serviceTypeName} با کد ${createdProject.code} برای شما ثبت کرده و منتقل شد.`,
+                  link: `/user/orders/${createdProject.id}`
+                });
+              } catch (pushErr) {
+                console.log('Push notification skipped');
               }
 
               toast({
+                title: '✅ سفارش ثبت و منتقل شد',
+                description: `سفارش برای ${recipientData.fullName || recipientData.phoneNumber} ثبت و به‌صورت خودکار به حساب ایشان منتقل شد.`,
+              });
+            } else {
+              toast({
                 title: 'سفارش ثبت شد',
-                description: recipientData.isRegistered 
-                  ? `سفارش برای ${recipientData.fullName || recipientData.phoneNumber} ثبت شد و در انتظار تایید ایشان است`
-                  : `سفارش ثبت شد. پس از ثبت‌نام کاربر با شماره ${recipientData.phoneNumber}، سفارش به او منتقل خواهد شد`,
+                description: `سفارش ثبت شد. پس از ثبت‌نام کاربر با شماره ${recipientData.phoneNumber}، سفارش به او منتقل خواهد شد`,
               });
             }
           } catch (transferErr) {

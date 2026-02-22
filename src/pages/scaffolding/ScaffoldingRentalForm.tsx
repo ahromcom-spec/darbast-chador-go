@@ -342,21 +342,38 @@ export default function ScaffoldingRentalForm() {
 
           if (transferError) {
             console.error('Transfer request error:', transferError);
-          } else if (recipientData.isRegistered && recipientData.userId) {
+          }
+
+          // اگر کاربر ثبت‌نام کرده، انتقال خودکار بدون نیاز به تایید
+          if (recipientData.isRegistered && recipientData.userId) {
+            const { error: autoTransferError } = await supabase.rpc('auto_complete_order_transfer' as any, {
+              p_order_id: orderId,
+              p_recipient_user_id: recipientData.userId,
+              p_recipient_phone: recipientData.phoneNumber
+            });
+
+            if (autoTransferError) {
+              console.error('Auto transfer error:', autoTransferError);
+            }
+
             await supabase.rpc('send_notification', {
               _user_id: recipientData.userId,
               _title: '📦 سفارش جدید برای شما ثبت شد',
-              _body: `یک سفارش کرایه اجناس داربست با کد ${orderCode} برای شما ثبت شده است.`,
-              _link: `/profile?tab=orders`
+              _body: `یک سفارش کرایه اجناس داربست با کد ${orderCode} برای شما ثبت و به حساب شما منتقل شد.`,
+              _link: `/user/orders/${orderId}`,
+              _type: 'success'
+            });
+
+            toast({
+              title: '✅ سفارش ثبت و منتقل شد',
+              description: `سفارش برای ${recipientData.fullName || recipientData.phoneNumber} ثبت و به‌صورت خودکار منتقل شد.`,
+            });
+          } else {
+            toast({
+              title: 'سفارش ثبت شد',
+              description: `سفارش ثبت شد. پس از ثبت‌نام کاربر با شماره ${recipientData.phoneNumber}، سفارش به او منتقل خواهد شد`,
             });
           }
-
-          toast({
-            title: 'سفارش ثبت شد',
-            description: recipientData.isRegistered 
-              ? `سفارش برای ${recipientData.fullName || recipientData.phoneNumber} ثبت شد و در انتظار تایید ایشان است`
-              : `سفارش ثبت شد. پس از ثبت‌نام کاربر با شماره ${recipientData.phoneNumber}، سفارش به او منتقل خواهد شد`,
-          });
         } catch (err) {
           console.error('Transfer error:', err);
         }
