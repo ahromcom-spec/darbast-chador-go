@@ -834,12 +834,25 @@ export default function DailyReportModule() {
 
   // Save to localStorage on every change (immediate)
   // جلوگیری از ذخیره‌سازی وقتی فرم خالی است یا در حال لود هستیم
+  // CRITICAL FIX: فقط وقتی ذخیره کن که تاریخ فعلی با تاریخ localStorage هم‌خوانی داشته باشد
+  // بدون این بررسی، وقتی reportDate تغییر می‌کند ولی orderReports هنوز آپدیت نشده،
+  // داده‌های تاریخ قبلی با کلید تاریخ جدید ذخیره می‌شود!
+  const lastSavedDateRef = useRef<string>(toLocalDateString(reportDate));
+  useEffect(() => {
+    lastSavedDateRef.current = toLocalDateString(reportDate);
+  }, [reportDate]);
+  
   useEffect(() => {
     if (isInitialLoadRef.current) return;
     // اگر فرم کاملا خالی است، ذخیره نکن (هنگام تغییر تاریخ)
     if (orderReports.length === 0 && staffReports.length === 0) return;
+    // CRITICAL: فقط ذخیره کن اگر تاریخ localStorage با تاریخ فعلی مطابقت دارد
+    // وقتی reportDate تغییر می‌کند، saveToLocalStorage زودتر از date-change effect اجرا می‌شود
+    // و ممکن است داده‌های قدیمی را با کلید تاریخ جدید ذخیره کند
+    const currentKeyDate = toLocalDateString(reportDate);
+    if (currentKeyDate !== lastSavedDateRef.current) return;
     saveToLocalStorage();
-  }, [orderReports, staffReports, saveToLocalStorage]);
+  }, [orderReports, staffReports, saveToLocalStorage, reportDate]);
 
   // به‌روزرسانی هش اولیه بعد از پایان لود
   // این برای تشخیص تغییرات ذخیره نشده استفاده می‌شود
@@ -911,21 +924,22 @@ export default function DailyReportModule() {
   }, [existingReportId]);
 
   // تابع علامت‌گذاری تاریخ فعلی به عنوان dirty (وقتی کاربر داده‌ها را تغییر می‌دهد)
-  // overrideDailyNotes: مقدار جدید dailyNotes را می‌توان مستقیم پاس داد تا از مشکل stale ref جلوگیری شود
+  // CRITICAL: این تابع فقط isDirty را true می‌کند و داده‌ها بعداً هنگام ذخیره از refs خوانده می‌شوند
   const markCurrentDateDirty = useCallback((overrideDailyNotes?: string) => {
     if (isAggregated) return;
     const currentDateStr = toLocalDateString(reportDate);
-    // همیشه داده‌های فعلی از refs را در کش ذخیره کن (نه داده‌های قدیمی کش)
-    // این تضمین می‌کند که حذف ردیف‌ها در کش منعکس شود
     const existingCache = dateCache.getCachedDate(currentDateStr);
-    // اگر overrideDailyNotes پاس شده باشد، از آن استفاده کن (جلوگیری از stale ref)
-    const notesToCache = overrideDailyNotes !== undefined ? overrideDailyNotes : dailyNotesRef.current;
-    dateCache.cacheDate(currentDateStr, {
-      orderReports: orderReportsRef.current,
-      staffReports: staffReportsRef.current,
-      dailyNotes: notesToCache,
-      existingReportId: existingCache?.existingReportId ?? existingReportIdRef.current,
-    }, true);
+    // به‌روزرسانی کش با آخرین داده‌ها از refs
+    // استفاده از setTimeout(0) تا بعد از به‌روزرسانی ref اجرا شود
+    setTimeout(() => {
+      const notesToCache = overrideDailyNotes !== undefined ? overrideDailyNotes : dailyNotesRef.current;
+      dateCache.cacheDate(currentDateStr, {
+        orderReports: orderReportsRef.current,
+        staffReports: staffReportsRef.current,
+        dailyNotes: notesToCache,
+        existingReportId: existingCache?.existingReportId ?? existingReportIdRef.current,
+      }, true);
+    }, 0);
   }, [reportDate, isAggregated, dateCache]);
 
   useEffect(() => {
@@ -950,23 +964,28 @@ export default function DailyReportModule() {
       return;
     }
 
-    // ابتدا داده‌های تاریخ قبلی را در کش ذخیره کن (بدون تغییر وضعیت dirty)
+    // CRITICAL FIX: هنگام تغییر تاریخ، کش تاریخ قبلی را فقط اگر واقعاً dirty باشد حفظ کن
+    // و هرگز داده‌های یک تاریخ را در کش تاریخ دیگر ذخیره نکن
     const oldDateStr = prevDateStrRef.current;
     if (oldDateStr && oldDateStr !== newDateStr && !isAggregated) {
-      const hasData = orderReportsRef.current.some(r => r.order_id) || 
-        staffReportsRef.current.some(s => s.staff_user_id || s.staff_name?.trim() || s.is_cash_box || s.is_company_expense);
+      // فقط بررسی داده‌های واقعی (بدون is_company_expense و is_cash_box پیش‌فرض)
+      const hasRealData = orderReportsRef.current.some(r => r.order_id || r.activity_description?.trim() || r.service_details?.trim() || r.team_name?.trim() || r.notes?.trim()) || 
+        staffReportsRef.current.some(s => !s.is_company_expense && !s.is_cash_box && (s.staff_user_id || s.staff_name?.trim()));
       
-      if (hasData) {
-        // حفظ وضعیت dirty موجود (اگر کاربر تغییری ایجاد نکرده، dirty نشود)
-        const existingCache = dateCache.getCachedDate(oldDateStr);
-        const isDirty = existingCache?.isDirty ?? false;
-        
+      const existingCache = dateCache.getCachedDate(oldDateStr);
+      const isDirty = existingCache?.isDirty ?? false;
+      
+      if (hasRealData && isDirty) {
+        // فقط اگر واقعاً dirty است و داده واقعی دارد، در کش نگه دار
         dateCache.cacheDate(oldDateStr, {
           orderReports: orderReportsRef.current,
           staffReports: staffReportsRef.current,
           dailyNotes: dailyNotesRef.current,
           existingReportId: existingReportIdRef.current,
-        }, isDirty);
+        }, true);
+      } else {
+        // اگر dirty نیست، کش را پاک کن تا از DB تازه لود شود
+        dateCache.clearDateCache(oldDateStr);
       }
     }
 
@@ -3250,12 +3269,12 @@ export default function DailyReportModule() {
       
       // ابتدا داده‌های تاریخ فعلی را در کش به‌روزرسانی کن
       const currentDateStr = toLocalDateString(reportDate);
-      // استفاده از refs برای دسترسی به آخرین داده‌ها و جلوگیری از stale state
-      const hasCurrentData = orderReportsRef.current.some(r => r.order_id) || 
-        staffReportsRef.current.some(s => s.staff_user_id || s.staff_name?.trim() || s.is_cash_box || s.is_company_expense) ||
+      // CRITICAL FIX: فقط داده‌های واقعی را بررسی کن (بدون ردیف‌های پیش‌فرض is_company_expense/is_cash_box)
+      const hasRealCurrentData = orderReportsRef.current.some(r => r.order_id || r.activity_description?.trim() || r.service_details?.trim() || r.team_name?.trim() || r.notes?.trim()) || 
+        staffReportsRef.current.some(s => !s.is_company_expense && !s.is_cash_box && (s.staff_user_id || s.staff_name?.trim() || (s.overtime_hours ?? 0) > 0 || (s.amount_received ?? 0) > 0 || (s.amount_spent ?? 0) > 0)) ||
         !!dailyNotesRef.current?.trim();
       
-      if (hasCurrentData && !isAggregated) {
+      if (hasRealCurrentData && !isAggregated) {
         dateCache.cacheDate(currentDateStr, {
           orderReports: orderReportsRef.current,
           staffReports: staffReportsRef.current,
@@ -3271,9 +3290,22 @@ export default function DailyReportModule() {
       let savedCount = 0;
       let errors: string[] = [];
 
-      // ذخیره تمام روزهای dirty
+      // ذخیره تمام روزهای dirty که داده واقعی دارند
       for (const [cachedDateStr, cachedEntry] of allCachedData) {
         if (!cachedEntry.isDirty) continue;
+        
+        // CRITICAL FIX: فقط تاریخ‌هایی را ذخیره کن که داده واقعی دارند
+        // (نه فقط ردیف‌های پیش‌فرض مثل ماهیت شرکت)
+        const hasRealOrderData = cachedEntry.orderReports.some(r => r.order_id || r.activity_description?.trim() || r.service_details?.trim() || r.team_name?.trim() || r.notes?.trim());
+        const hasRealStaffData = cachedEntry.staffReports.some(s => !s.is_company_expense && !s.is_cash_box && (s.staff_user_id || s.staff_name?.trim()));
+        const hasCashBoxData = cachedEntry.staffReports.some(s => s.is_cash_box && s.bank_card_id && ((s.amount_received ?? 0) > 0 || (s.amount_spent ?? 0) > 0));
+        const hasNotes = !!cachedEntry.dailyNotes?.trim();
+        
+        if (!hasRealOrderData && !hasRealStaffData && !hasCashBoxData && !hasNotes) {
+          // پاک کردن کش بدون ذخیره (داده واقعی ندارد)
+          dateCache.markDateAsSaved(cachedDateStr);
+          continue;
+        }
 
         try {
           // موقتاً state ها را به داده‌های این تاریخ تغییر بده برای ذخیره
