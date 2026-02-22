@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -37,6 +37,79 @@ export function useModuleShortcuts() {
   useEffect(() => {
     fetchShortcuts();
   }, [fetchShortcuts]);
+
+  // Listen to module_assignments changes and auto-remove shortcuts for revoked assignments
+  const userPhoneRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!user) return;
+
+    // Fetch user phone number first
+    const init = async () => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('phone_number')
+        .eq('user_id', user.id)
+        .single();
+      userPhoneRef.current = profile?.phone_number || null;
+    };
+    init();
+
+    const channel = supabase
+      .channel('shortcut-assignment-sync')
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'module_assignments' },
+        async (payload: any) => {
+          const old = payload.old;
+          if (!old?.module_key) return;
+          // Check if this was for our user
+          if (old.assigned_phone_number === userPhoneRef.current || old.assigned_user_id === user.id) {
+            // Remove shortcut for this module if it exists
+            setShortcuts((prev) => {
+              const exists = prev.some((s) => s.module_key === old.module_key);
+              if (exists) {
+                // Also delete from DB
+                supabase
+                  .from('module_shortcuts')
+                  .delete()
+                  .eq('user_id', user.id)
+                  .eq('module_key', old.module_key)
+                  .then(() => {});
+              }
+              return prev.filter((s) => s.module_key !== old.module_key);
+            });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'module_assignments' },
+        async (payload: any) => {
+          const row = payload.new;
+          if (!row?.module_key) return;
+          // If assignment was deactivated
+          if (row.is_active === false && (row.assigned_phone_number === userPhoneRef.current || row.assigned_user_id === user.id)) {
+            setShortcuts((prev) => {
+              const exists = prev.some((s) => s.module_key === row.module_key);
+              if (exists) {
+                supabase
+                  .from('module_shortcuts')
+                  .delete()
+                  .eq('user_id', user.id)
+                  .eq('module_key', row.module_key)
+                  .then(() => {});
+              }
+              return prev.filter((s) => s.module_key !== row.module_key);
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const addShortcut = useCallback(
     async (moduleKey: string, moduleName: string, moduleDescription?: string, moduleHref?: string) => {
