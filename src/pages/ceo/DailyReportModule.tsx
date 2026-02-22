@@ -942,6 +942,17 @@ export default function DailyReportModule() {
     }, 0);
   }, [reportDate, isAggregated, dateCache]);
 
+  // ریست کش‌های مدیریتی هنگام تغییر کاربر (مثلاً impersonation)
+  const prevUserIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (userId && userId !== prevUserIdRef.current) {
+      cachedIsManagerRef.current = null;
+      cachedShowAllReportsRef.current = null;
+      lastLoadKeyRef.current = '';
+      prevUserIdRef.current = userId;
+    }
+  }, [userId]);
+
   useEffect(() => {
     if (!userId || !reportDate) {
       // اگر هنوز auth در حال بارگذاری است، loading را غیرفعال نکن
