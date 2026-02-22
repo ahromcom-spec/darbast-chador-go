@@ -52,94 +52,60 @@ export function OrderRowMediaUpload({
   // Fetch existing media for this row
   const fetchMedia = useCallback(async () => {
     if (!user) return;
-    // When showAllUsers is false, we need dailyReportId
     if (!dailyReportId && !showAllUsers) return;
-
-    const hasValidOrderRowId = dailyReportOrderId && isValidUuid(dailyReportOrderId);
-    const hasValidOrderId = orderId && isValidUuid(orderId);
 
     try {
       let allMedia: any[] = [];
 
-      // When showAllUsers is true, also search across ALL report IDs for this date+row
-      // This catches media uploaded by other users who may have a different report ID
-      if (showAllUsers) {
-        const { data: crossReportMedia } = await supabase
+      // PRIMARY QUERY: Always search by report_date + row_index across ALL reports
+      // RLS ensures only authenticated users can read, no need for user_id filter
+      {
+        const { data } = await supabase
           .from('daily_report_order_media')
           .select('id, file_path, file_type')
           .eq('report_date', reportDate)
           .eq('row_index', rowIndex)
           .order('created_at', { ascending: true });
-        if (crossReportMedia) allMedia.push(...crossReportMedia);
+        if (data) allMedia.push(...data);
       }
 
+      // SECONDARY: Also fetch by dailyReportId + order identifiers for completeness
       if (dailyReportId) {
-        // Query 1: media linked to this specific order row
+        const hasValidOrderRowId = dailyReportOrderId && isValidUuid(dailyReportOrderId);
+        const hasValidOrderId = orderId && isValidUuid(orderId);
+
         if (hasValidOrderRowId) {
-          let q1 = supabase
+          const { data } = await supabase
             .from('daily_report_order_media')
             .select('id, file_path, file_type')
             .eq('daily_report_id', dailyReportId)
-            .eq('report_date', reportDate)
-            .eq('daily_report_order_id', dailyReportOrderId!);
-          if (!showAllUsers) q1 = q1.eq('user_id', user.id);
-          const { data: d1 } = await q1.order('created_at', { ascending: true });
-          if (d1) allMedia.push(...d1);
+            .eq('daily_report_order_id', dailyReportOrderId!)
+            .order('created_at', { ascending: true });
+          if (data) allMedia.push(...data);
         }
 
-        // Query 2: orphaned media (daily_report_order_id IS NULL) matching by row_index
-        {
-          let q2 = supabase
-            .from('daily_report_order_media')
-            .select('id, file_path, file_type')
-            .eq('daily_report_id', dailyReportId)
-            .eq('report_date', reportDate)
-            .is('daily_report_order_id', null)
-            .eq('row_index', rowIndex);
-          if (!showAllUsers) q2 = q2.eq('user_id', user.id);
-          const { data: d2 } = await q2.order('created_at', { ascending: true });
-          if (d2) allMedia.push(...d2);
-        }
-
-        // Query 3: also fetch by row_index (even if linked) to catch re-linked media
-        {
-          let q3 = supabase
-            .from('daily_report_order_media')
-            .select('id, file_path, file_type')
-            .eq('daily_report_id', dailyReportId)
-            .eq('report_date', reportDate)
-            .eq('row_index', rowIndex);
-          if (!showAllUsers) q3 = q3.eq('user_id', user.id);
-          const { data: d3 } = await q3.order('created_at', { ascending: true });
-          if (d3) allMedia.push(...d3);
-        }
-
-        // Query 4: if no order row ID, also try by order_id
         if (!hasValidOrderRowId && hasValidOrderId) {
-          let q4 = supabase
+          const { data } = await supabase
             .from('daily_report_order_media')
             .select('id, file_path, file_type')
             .eq('daily_report_id', dailyReportId)
             .eq('report_date', reportDate)
-            .eq('order_id', orderId!);
-          if (!showAllUsers) q4 = q4.eq('user_id', user.id);
-          const { data: d4 } = await q4.order('created_at', { ascending: true });
-          if (d4) allMedia.push(...d4);
+            .eq('order_id', orderId!)
+            .order('created_at', { ascending: true });
+          if (data) allMedia.push(...data);
         }
       }
 
       // Deduplicate by id
       const seenIds = new Set<string>();
-      const data = allMedia.filter(m => {
+      const dedupedData = allMedia.filter(m => {
         if (seenIds.has(m.id)) return false;
         seenIds.add(m.id);
         return true;
       });
-      
 
-      if (data && data.length > 0) {
-        // Get public URLs
-        const items: MediaItem[] = data.map((m: any) => {
+      if (dedupedData.length > 0) {
+        const items: MediaItem[] = dedupedData.map((m: any) => {
           const { data: urlData } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(m.file_path);
           return {
             id: m.id,
