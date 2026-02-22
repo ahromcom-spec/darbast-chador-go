@@ -1933,14 +1933,14 @@ export default function DailyReportModule() {
             .eq('module_key', activeModuleKey)
             .eq('is_active', true);
           
-          if (isManager) {
+          // اگر کاربر فعلی به این ماژول اختصاص داده شده، همه گزارشات را ببیند
+          // (RLS ممکن است اختصاص‌های سایر کاربران را نشان ندهد، پس بررسی خود کاربر کافی است)
+          if (assignments && assignments.some(a => a.assigned_user_id === user.id)) {
+            showAllReports = true;
+          }
+          if (!showAllReports && isManager) {
             // مدیر: اگر ماژول به دیگران اختصاص داده شده، همه گزارشات را ببیند
             if (assignments && assignments.some(a => a.assigned_user_id && a.assigned_user_id !== user.id)) {
-              showAllReports = true;
-            }
-          } else {
-            // کاربر غیرمدیر: اگر به این ماژول اختصاص داده شده، همه گزارشات این ماژول را ببیند
-            if (assignments && assignments.some(a => a.assigned_user_id === user.id)) {
               showAllReports = true;
             }
           }
