@@ -15,7 +15,7 @@ const ToastViewport = React.forwardRef<
     ref={ref}
     className={cn(
       // همیشه پایین صفحه در همه اندازه‌ها
-      "fixed z-[100] flex max-h-screen w-full flex-col p-4",
+      "fixed z-[100] flex max-h-screen w-full flex-col p-4 pointer-events-none",
       "bottom-0 left-1/2 -translate-x-1/2 flex-col-reverse",
       "max-w-[420px]",
       className,
