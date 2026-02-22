@@ -1328,12 +1328,14 @@ export default function DailyReportModule() {
 
       if (!reportId) {
         // First check if a report already exists for this date AND module_key (any creator)
-        const { data: existingReport } = await supabase
+        const { data: existingReportData } = await supabase
           .from('daily_reports')
           .select('id')
           .eq('report_date', dateStr)
           .eq('module_key', activeModuleKey)
-          .maybeSingle();
+          .order('created_at', { ascending: true })
+          .limit(1);
+        const existingReport = existingReportData?.[0] ?? null;
 
         if (existingReport?.id) {
           // Use existing report for this date
@@ -1354,12 +1356,14 @@ export default function DailyReportModule() {
           if (createError) {
             // If unique constraint violation, try fetching again
             if (createError.code === '23505') {
-              const { data: retry } = await supabase
+              const { data: retryData } = await supabase
                 .from('daily_reports')
                 .select('id')
                 .eq('report_date', dateStr)
                 .eq('module_key', activeModuleKey)
-                .maybeSingle();
+                .order('created_at', { ascending: true })
+                .limit(1);
+              const retry = retryData?.[0] ?? null;
               if (retry?.id) {
                 reportId = retry.id;
                 setExistingReportId(reportId);
@@ -3497,12 +3501,14 @@ export default function DailyReportModule() {
         if (createError) {
           // If unique constraint violation, try fetching again
           if (createError.code === '23505') {
-            const { data: retry } = await supabase
+            const { data: retryData2 } = await supabase
               .from('daily_reports')
               .select('id')
               .eq('report_date', dateStr)
               .eq('module_key', activeModuleKey)
-              .maybeSingle();
+              .order('created_at', { ascending: true })
+              .limit(1);
+            const retry = retryData2?.[0] ?? null;
             if (retry?.id) {
               reportId = retry.id;
               // Update notes
@@ -3526,6 +3532,26 @@ export default function DailyReportModule() {
         .from('daily_reports')
         .update({ notes: cachedEntry.dailyNotes || null, updated_at: new Date().toISOString() })
         .eq('id', reportId);
+    }
+
+    // تجمیع گزارش‌های تکراری: حذف گزارش‌های اضافه برای همین ماژول/تاریخ
+    if (reportId) {
+      const { data: duplicateReports } = await supabase
+        .from('daily_reports')
+        .select('id')
+        .eq('report_date', dateStr)
+        .eq('module_key', activeModuleKey)
+        .neq('id', reportId);
+      
+      if (duplicateReports && duplicateReports.length > 0) {
+        const dupIds = duplicateReports.map(r => r.id);
+        console.log('Consolidating duplicate reports (forDate):', dupIds, 'into:', reportId);
+        await supabase.from('daily_report_order_media').delete().in('daily_report_id', dupIds);
+        await supabase.from('daily_report_orders').delete().in('daily_report_id', dupIds);
+        await supabase.from('bank_card_transactions').delete().eq('reference_type', 'daily_report_staff').in('reference_id', dupIds);
+        await supabase.from('daily_report_staff').delete().in('daily_report_id', dupIds);
+        await supabase.from('daily_reports').delete().in('id', dupIds);
+      }
     }
 
     // Deduplication: فیلتر کردن سفارشات تکراری بر اساس order_id
@@ -3703,12 +3729,14 @@ export default function DailyReportModule() {
     
     // اگر گزارش خود کاربر وجود ندارد، ایجاد کن
     if (!ownReportId) {
-      const { data: existingCheck } = await supabase
+      const { data: existingCheckData } = await supabase
         .from('daily_reports')
         .select('id')
         .eq('report_date', dateStr)
         .eq('module_key', activeModuleKey)
-        .maybeSingle();
+        .order('created_at', { ascending: true })
+        .limit(1);
+      const existingCheck = existingCheckData?.[0] ?? null;
 
       if (existingCheck?.id) {
         ownReportId = existingCheck.id;
@@ -3729,12 +3757,14 @@ export default function DailyReportModule() {
 
         if (createError) {
           if (createError.code === '23505') {
-            const { data: retry } = await supabase
+            const { data: retryData } = await supabase
               .from('daily_reports')
               .select('id')
               .eq('report_date', dateStr)
               .eq('module_key', activeModuleKey)
-              .maybeSingle();
+              .order('created_at', { ascending: true })
+              .limit(1);
+            const retry = retryData?.[0] ?? null;
             if (retry?.id) {
               ownReportId = retry.id;
               setExistingReportId(ownReportId);
@@ -3900,12 +3930,15 @@ export default function DailyReportModule() {
 
     if (!reportId) {
       // First check if a report already exists for this date AND module_key (fresh DB check)
-      const { data: existingCheck } = await supabase
+      // استفاده از limit(1) به جای maybeSingle تا در صورت وجود گزارش‌های تکراری خطا نگیریم
+      const { data: existingCheckData } = await supabase
         .from('daily_reports')
         .select('id')
         .eq('report_date', dateStr)
         .eq('module_key', activeModuleKey)
-        .maybeSingle();
+        .order('created_at', { ascending: true })
+        .limit(1);
+      const existingCheck = existingCheckData?.[0] ?? null;
 
       if (existingCheck?.id) {
         reportId = existingCheck.id;
@@ -3932,12 +3965,14 @@ export default function DailyReportModule() {
         if (createError) {
           // If unique constraint violation, try fetching again
           if (createError.code === '23505') {
-            const { data: retry } = await supabase
+            const { data: retryData } = await supabase
               .from('daily_reports')
               .select('id')
               .eq('report_date', dateStr)
               .eq('module_key', activeModuleKey)
-              .maybeSingle();
+              .order('created_at', { ascending: true })
+              .limit(1);
+            const retry = retryData?.[0] ?? null;
             if (retry?.id) {
               reportId = retry.id;
               setExistingReportId(reportId);
@@ -3963,6 +3998,29 @@ export default function DailyReportModule() {
         .from('daily_reports')
         .update({ notes: dailyNotes || null, updated_at: new Date().toISOString() })
         .eq('id', reportId);
+    }
+
+    // تجمیع گزارش‌های تکراری: اگر چند گزارش برای یک ماژول/تاریخ وجود دارد، 
+    // داده‌های ردیفی گزارش‌های اضافی را حذف و خود آن‌ها را پاک کن
+    if (reportId && shouldShowAllUserReports) {
+      const { data: duplicateReports } = await supabase
+        .from('daily_reports')
+        .select('id')
+        .eq('report_date', dateStr)
+        .eq('module_key', activeModuleKey)
+        .neq('id', reportId);
+      
+      if (duplicateReports && duplicateReports.length > 0) {
+        const dupIds = duplicateReports.map(r => r.id);
+        console.log('Consolidating duplicate reports:', dupIds, 'into:', reportId);
+        // حذف ردیف‌های وابسته گزارش‌های تکراری
+        await supabase.from('daily_report_order_media').delete().in('daily_report_id', dupIds);
+        await supabase.from('daily_report_orders').delete().in('daily_report_id', dupIds);
+        await supabase.from('bank_card_transactions').delete().eq('reference_type', 'daily_report_staff').in('reference_id', dupIds);
+        await supabase.from('daily_report_staff').delete().in('daily_report_id', dupIds);
+        // حذف خود گزارش‌های تکراری
+        await supabase.from('daily_reports').delete().in('id', dupIds);
+      }
     }
 
     // Delete existing order reports and insert new ones (with media re-linking)
@@ -4108,12 +4166,14 @@ export default function DailyReportModule() {
         const dateStr = report.date;
 
         // Check if report exists for this date
-        const { data: existingReport } = await supabase
+        const { data: existingReportData } = await supabase
           .from('daily_reports')
           .select('id')
           .eq('report_date', dateStr)
           .eq('module_key', activeModuleKey)
-          .maybeSingle();
+          .order('created_at', { ascending: true })
+          .limit(1);
+        const existingReport = existingReportData?.[0] ?? null;
 
         let reportId = existingReport?.id;
 
@@ -4133,12 +4193,14 @@ export default function DailyReportModule() {
 
           if (createError) {
             // If error persists, try fetching again
-            const { data: retry } = await supabase
+            const { data: retryData3 } = await supabase
               .from('daily_reports')
               .select('id')
               .eq('report_date', dateStr)
               .eq('module_key', activeModuleKey)
-              .maybeSingle();
+              .order('created_at', { ascending: true })
+              .limit(1);
+            const retry = retryData3?.[0] ?? null;
             if (retry?.id) {
               reportId = retry.id;
             } else {
