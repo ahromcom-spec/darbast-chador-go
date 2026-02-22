@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +43,7 @@ export function OrderForOthersInfo({ orderId, onStatusChange }: OrderForOthersIn
   const [rejecting, setRejecting] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchOrderForOthersData();
@@ -124,8 +126,8 @@ export function OrderForOthersInfo({ orderId, onStatusChange }: OrderForOthersIn
       if (error) throw error;
 
       toast({
-        title: 'سفارش پذیرفته شد',
-        description: 'شما این سفارش را پذیرفتید و اکنون به آن دسترسی کامل دارید',
+        title: '✅ سفارش پذیرفته شد',
+        description: 'سفارش شما با موفقیت پذیرفته شد. در حال انتقال به لیست سفارشات...',
       });
 
       // ارسال نوتیفیکیشن به ثبت‌کننده
@@ -137,8 +139,12 @@ export function OrderForOthersInfo({ orderId, onStatusChange }: OrderForOthersIn
         _type: 'success'
       });
 
-      fetchOrderForOthersData();
       onStatusChange?.();
+
+      // انتقال کاربر به صفحه سفارشات تا سفارش پذیرفته شده را ببیند
+      setTimeout(() => {
+        navigate(`/user/orders/${orderId}`);
+      }, 1500);
     } catch (error: any) {
       toast({
         title: 'خطا',
