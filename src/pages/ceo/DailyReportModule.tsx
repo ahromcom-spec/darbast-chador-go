@@ -94,8 +94,7 @@ async function deleteAndReinsertOrderRows(
   const { data: oldOrderRows } = await supabase
     .from('daily_report_orders')
     .select('id, order_id')
-    .eq('daily_report_id', reportId)
-    .order('created_at', { ascending: true });
+    .eq('daily_report_id', reportId);
 
   const oldRowIdsByIndex = (oldOrderRows || []).map(r => r.id);
 
@@ -162,8 +161,7 @@ async function deleteAndReinsertOrderRows(
       notes: r.notes || '',
       row_color: r.row_color || 'yellow'
     })))
-    .select('id, order_id')
-    .order('created_at', { ascending: true });
+    .select('id, order_id');
 
   if (insertError) throw insertError;
 
