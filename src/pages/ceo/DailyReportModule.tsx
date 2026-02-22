@@ -5060,7 +5060,7 @@ export default function DailyReportModule() {
                                     reportDate={toLocalDateString(reportDate)}
                                     readOnly={effectiveReadOnly}
                                     rowIndex={index}
-                                    showAllUsers={isAggregated}
+                                    showAllUsers={isAggregated || shouldShowAllUserReports}
                                     moduleKey={activeModuleKey}
                                     onReportCreated={(id) => setExistingReportId(id)}
                                   />
