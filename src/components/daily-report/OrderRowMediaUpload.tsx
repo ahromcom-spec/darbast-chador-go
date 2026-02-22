@@ -53,23 +53,10 @@ export function OrderRowMediaUpload({
   const fetchMedia = useCallback(async () => {
     if (!dailyReportId || !user) return;
 
-    // If neither dailyReportOrderId nor orderId is valid, this is a brand-new row — no media to show
     const hasValidOrderRowId = dailyReportOrderId && isValidUuid(dailyReportOrderId);
     const hasValidOrderId = orderId && isValidUuid(orderId);
-    if (!hasValidOrderRowId && !hasValidOrderId) {
-      setMedia([]);
-      return;
-    }
 
     try {
-      // Build base filters
-      const baseFilters: Record<string, any> = {
-        daily_report_id: dailyReportId,
-        report_date: reportDate,
-      };
-
-      // Strategy: query by daily_report_order_id first; also pick up orphaned media by row_index
-      // This prevents media from disappearing when re-link fails after save
       let allMedia: any[] = [];
 
       // Query 1: media linked to this specific order row
@@ -99,17 +86,30 @@ export function OrderRowMediaUpload({
         if (d2) allMedia.push(...d2);
       }
 
-      // Query 3: if no order row ID, also try by order_id
-      if (!hasValidOrderRowId && hasValidOrderId) {
+      // Query 3: also fetch by row_index (even if linked) to catch re-linked media
+      {
         let q3 = supabase
           .from('daily_report_order_media')
           .select('id, file_path, file_type')
           .eq('daily_report_id', dailyReportId)
           .eq('report_date', reportDate)
-          .eq('order_id', orderId!);
+          .eq('row_index', rowIndex);
         if (!showAllUsers) q3 = q3.eq('user_id', user.id);
         const { data: d3 } = await q3.order('created_at', { ascending: true });
         if (d3) allMedia.push(...d3);
+      }
+
+      // Query 4: if no order row ID, also try by order_id
+      if (!hasValidOrderRowId && hasValidOrderId) {
+        let q4 = supabase
+          .from('daily_report_order_media')
+          .select('id, file_path, file_type')
+          .eq('daily_report_id', dailyReportId)
+          .eq('report_date', reportDate)
+          .eq('order_id', orderId!);
+        if (!showAllUsers) q4 = q4.eq('user_id', user.id);
+        const { data: d4 } = await q4.order('created_at', { ascending: true });
+        if (d4) allMedia.push(...d4);
       }
 
       // Deduplicate by id
