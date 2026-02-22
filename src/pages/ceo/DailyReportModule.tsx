@@ -1315,12 +1315,11 @@ export default function DailyReportModule() {
       let reportId = existingReportId;
 
       if (!reportId) {
-        // First check if a report already exists for this date AND module_key
+        // First check if a report already exists for this date AND module_key (any creator)
         const { data: existingReport } = await supabase
           .from('daily_reports')
           .select('id')
           .eq('report_date', dateStr)
-          .eq('created_by', user.id)
           .eq('module_key', activeModuleKey)
           .maybeSingle();
 
@@ -1347,9 +1346,8 @@ export default function DailyReportModule() {
                 .from('daily_reports')
                 .select('id')
                 .eq('report_date', dateStr)
-                .eq('created_by', user.id)
                 .eq('module_key', activeModuleKey)
-                .single();
+                .maybeSingle();
               if (retry?.id) {
                 reportId = retry.id;
                 setExistingReportId(reportId);
@@ -1993,16 +1991,19 @@ export default function DailyReportModule() {
          // ماژول مادر (showAllReports): داده‌ها بدون ادغام نمایش داده می‌شوند و قابل ویرایش هستند
          const allReportIds = existingReports.map((r) => r.id);
          
-          // پیدا کردن گزارش خود کاربر (برای امکان ذخیره)
+          // پیدا کردن گزارش خود کاربر یا اولین گزارش موجود (برای امکان ذخیره)
           const ownReport = existingReports.find((r: any) => r.created_by === user.id);
           if (ownReport?.id) {
             setExistingReportId(ownReport.id);
+          } else if (existingReports.length > 0) {
+            // کاربر اختصاص‌یافته: از گزارش موجود استفاده کن (حتی اگر توسط دیگری ساخته شده)
+            setExistingReportId(existingReports[0].id);
           } else {
             setExistingReportId(null);
           }
-          
+           
           if (!isAggregated) {
-            setDailyNotes(ownReport?.notes || '');
+            setDailyNotes(ownReport?.notes || existingReports[0]?.notes || '');
           }
           // توضیحات روز ماژول کلی بعد از واکشی نام ماژول‌ها تجمیع خواهد شد
         
@@ -3488,7 +3489,6 @@ export default function DailyReportModule() {
               .from('daily_reports')
               .select('id')
               .eq('report_date', dateStr)
-              .eq('created_by', user.id)
               .eq('module_key', activeModuleKey)
               .maybeSingle();
             if (retry?.id) {
@@ -3695,7 +3695,6 @@ export default function DailyReportModule() {
         .from('daily_reports')
         .select('id')
         .eq('report_date', dateStr)
-        .eq('created_by', user.id)
         .eq('module_key', activeModuleKey)
         .maybeSingle();
 
@@ -3722,7 +3721,6 @@ export default function DailyReportModule() {
               .from('daily_reports')
               .select('id')
               .eq('report_date', dateStr)
-              .eq('created_by', user.id)
               .eq('module_key', activeModuleKey)
               .maybeSingle();
             if (retry?.id) {
@@ -3894,7 +3892,6 @@ export default function DailyReportModule() {
         .from('daily_reports')
         .select('id')
         .eq('report_date', dateStr)
-        .eq('created_by', user.id)
         .eq('module_key', activeModuleKey)
         .maybeSingle();
 
@@ -3927,7 +3924,6 @@ export default function DailyReportModule() {
               .from('daily_reports')
               .select('id')
               .eq('report_date', dateStr)
-              .eq('created_by', user.id)
               .eq('module_key', activeModuleKey)
               .maybeSingle();
             if (retry?.id) {
@@ -4104,7 +4100,7 @@ export default function DailyReportModule() {
           .from('daily_reports')
           .select('id')
           .eq('report_date', dateStr)
-          .eq('created_by', user.id)
+          .eq('module_key', activeModuleKey)
           .maybeSingle();
 
         let reportId = existingReport?.id;
@@ -4129,7 +4125,7 @@ export default function DailyReportModule() {
               .from('daily_reports')
               .select('id')
               .eq('report_date', dateStr)
-              .eq('created_by', user.id)
+              .eq('module_key', activeModuleKey)
               .maybeSingle();
             if (retry?.id) {
               reportId = retry.id;
