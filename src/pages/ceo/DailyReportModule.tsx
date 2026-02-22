@@ -1095,10 +1095,10 @@ export default function DailyReportModule() {
     return () => { cancelled = true; };
   }, [bankCardsCache, reportDate]);
 
-  // Realtime subscription برای ماژول کلی یا ماژول مادر با کاربران اختصاص‌یافته:
-  // وقتی گزارشی حذف شود، دوباره واکشی کن
+  // Realtime subscription برای همه ماژول‌ها (تجمیعی، مادر، و ماژول‌های اشتراکی):
+  // وقتی کاربر دیگری داده‌ای ذخیره یا حذف کند، بلافاصله واکشی مجدد انجام شود
   useEffect(() => {
-    if ((!isAggregated && !shouldShowAllUserReports) || !user) return;
+    if (!user) return;
 
     const dateStr = toLocalDateString(reportDate);
 
@@ -1107,31 +1107,43 @@ export default function DailyReportModule() {
         window.clearTimeout(aggregatedRealtimeRefetchTimerRef.current);
       }
 
-      // Debounce طولانی‌تر برای جلوگیری از رفرش‌های پی‌در‌پی (حداقل 3 ثانیه)
+      // Debounce برای جلوگیری از رفرش‌های پی‌در‌پی (حداقل 2 ثانیه)
       aggregatedRealtimeRefetchTimerRef.current = window.setTimeout(() => {
         fetchExistingReport(true); // isRealtimeTrigger = true
-      }, 3000);
+      }, 2000);
     };
 
+    // بررسی تغییرات فرزند (orders/staff) مرتبط با گزارش‌های این تاریخ
     const isRelevantChildChange = (payload: any): boolean => {
       const reportId = payload?.new?.daily_report_id || payload?.old?.daily_report_id;
       if (!reportId) return false;
+      // اگر در حالت تجمیعی هستیم، فقط گزارش‌های منبع را بررسی کن
+      if (isAggregated) {
+        return aggregatedSourceReportIdsRef.current.has(reportId);
+      }
+      // در حالت عادی، هر تغییری مرتبط با گزارش فعلی یا گزارش‌های همین ماژول/تاریخ
+      const currentReportId = existingReportIdRef.current;
+      if (currentReportId && reportId === currentReportId) return true;
+      // همچنین اگر report ID در لیست شناخته‌شده باشد
       return aggregatedSourceReportIdsRef.current.has(reportId);
     };
 
     const channel = supabase
-      .channel(`daily-reports-realtime-${dateStr}`)
+      .channel(`daily-reports-realtime-${dateStr}-${activeModuleKey}`)
       .on(
         'postgres_changes',
         {
-          event: '*', // INSERT, UPDATE, DELETE
+          event: '*',
           schema: 'public',
           table: 'daily_reports',
           filter: `report_date=eq.${dateStr}`,
         },
         (payload) => {
-          // هر تغییری (حذف، ویرایش، افزودن) داده‌ها را دوباره واکشی کن
-          console.log('Realtime update received:', payload.eventType);
+          // نادیده گرفتن تغییراتی که توسط خود کاربر انجام شده (جلوگیری از لوپ)
+          const changedBy = (payload.new as any)?.created_by || (payload.old as any)?.created_by;
+          if (changedBy === user.id && !isAggregated) return;
+          
+          console.log('Realtime update received:', payload.eventType, 'by:', changedBy);
           scheduleRefetch();
         }
       )
@@ -1173,7 +1185,7 @@ export default function DailyReportModule() {
         aggregatedRealtimeRefetchTimerRef.current = null;
       }
     };
-  }, [isAggregated, shouldShowAllUserReports, user, reportDate]);
+  }, [isAggregated, user, reportDate, activeModuleKey]);
 
   // Auto-save function - DISABLED to prevent duplication issues
   // Users must manually save their reports using the save button
