@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { CalculatorInput } from '@/components/ui/CalculatorInput';
 import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -272,25 +273,15 @@ export function StaffReportsTable({
                    </TableCell>
                    <TableCell className="border border-amber-200">
                      <div className="relative">
-                       <Input
-                         type="text"
-                         inputMode="numeric"
-                         value={row.amount_spent === 0 ? '' : row.amount_spent.toLocaleString('en-US')}
-                         onChange={(e) => {
-                           const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
-                           const numVal = parseInt(val) || 0;
-                           if (numVal <= 300000000) {
-                             onUpdateRow(index, 'amount_spent', numVal);
-                           } else {
-                             toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
-                           }
-                         }}
-                            className="w-full pl-10 text-left tabular-nums text-sm"
+                       <CalculatorInput
+                         value={row.amount_spent}
+                         onChange={(val) => onUpdateRow(index, 'amount_spent', val)}
+                         className="w-full pl-10 text-left tabular-nums text-sm"
                          dir="ltr"
                          placeholder="0"
                        />
                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">تومان</span>
-                    </div>
+                     </div>
                   </TableCell>
                   <TableCell className="border border-amber-200">
                     {/* فیلد توضیحات دریافتی برای سطرهای شرکت و کارت بانکی فعال است */}
@@ -323,47 +314,27 @@ export function StaffReportsTable({
                   <TableCell className="border border-amber-200">
                     {/* فیلد مبلغ دریافتی برای سطرهای شرکت و کارت بانکی فعال است */}
                     {row.is_cash_box || row.is_company_expense ? (
-                      <div className="relative">
-                        <Input
-                          type="text"
-                          inputMode="numeric"
-                          value={row.amount_received === 0 ? '' : row.amount_received.toLocaleString('en-US')}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
-                            const numVal = parseInt(val) || 0;
-                            if (numVal <= 300000000) {
-                              onUpdateRow(index, 'amount_received', numVal);
-                            } else {
-                              toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
-                            }
-                          }}
-                            className="w-full pl-10 text-left tabular-nums text-sm"
-                            dir="ltr"
-                            placeholder="0"
-                          />
-                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">تومان</span>
-                       </div>
-                     ) : (
                        <div className="relative">
-                         <Input
-                           type="text"
-                           inputMode="numeric"
-                           value={row.amount_received === 0 ? '' : row.amount_received.toLocaleString('en-US')}
-                           onChange={(e) => {
-                             const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
-                             const numVal = parseInt(val) || 0;
-                             if (numVal <= 300000000) {
-                               onUpdateRow(index, 'amount_received', numVal);
-                             } else {
-                               toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
-                             }
-                           }}
-                            className="w-full pl-10 text-left tabular-nums text-sm"
+                         <CalculatorInput
+                           value={row.amount_received}
+                           onChange={(val) => onUpdateRow(index, 'amount_received', val)}
+                           className="w-full pl-10 text-left tabular-nums text-sm"
                            dir="ltr"
                            placeholder="0"
                          />
                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">تومان</span>
-                      </div>
+                       </div>
+                     ) : (
+                       <div className="relative">
+                         <CalculatorInput
+                           value={row.amount_received}
+                           onChange={(val) => onUpdateRow(index, 'amount_received', val)}
+                           className="w-full pl-10 text-left tabular-nums text-sm"
+                           dir="ltr"
+                           placeholder="0"
+                         />
+                         <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">تومان</span>
+                       </div>
                     )}
                   </TableCell>
                   <TableCell className="border border-amber-200">
