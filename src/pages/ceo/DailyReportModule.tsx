@@ -1895,9 +1895,10 @@ export default function DailyReportModule() {
       }
       
       // بررسی اینکه آیا این ماژول به کاربران دیگر اختصاص داده شده
+      // یا آیا کاربر فعلی به این ماژول اختصاص داده شده (حتی اگر مدیر نباشد)
       let showAllReports = false;
       
-      if (isManager && !isAggregated) {
+      if (!isAggregated) {
         if (cachedShowAllReportsRef.current !== null && isRealtimeTrigger) {
           showAllReports = cachedShowAllReportsRef.current;
         } else {
@@ -1907,8 +1908,16 @@ export default function DailyReportModule() {
             .eq('module_key', activeModuleKey)
             .eq('is_active', true);
           
-          if (assignments && assignments.some(a => a.assigned_user_id && a.assigned_user_id !== user.id)) {
-            showAllReports = true;
+          if (isManager) {
+            // مدیر: اگر ماژول به دیگران اختصاص داده شده، همه گزارشات را ببیند
+            if (assignments && assignments.some(a => a.assigned_user_id && a.assigned_user_id !== user.id)) {
+              showAllReports = true;
+            }
+          } else {
+            // کاربر غیرمدیر: اگر به این ماژول اختصاص داده شده، همه گزارشات این ماژول را ببیند
+            if (assignments && assignments.some(a => a.assigned_user_id === user.id)) {
+              showAllReports = true;
+            }
           }
           cachedShowAllReportsRef.current = showAllReports;
         }
