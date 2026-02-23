@@ -67,6 +67,14 @@ interface SalarySettings {
   periods: SalaryPeriod[];
 }
 
+interface SalaryBreakdown {
+  dailySalary: number;
+  daysWorked: number;
+  totalSalary: number;
+  overtimeHours: number;
+  overtimePay: number;
+}
+
 interface AuditSummary {
   // Basic counts
   totalDaysWorked: number;
@@ -89,6 +97,7 @@ interface AuditSummary {
   extraReceivedThisMonth: number;
   netBalance: number;
   displayDailySalary: number;
+  salaryBreakdowns: SalaryBreakdown[];
 }
 
 export function StaffAuditTab() {
@@ -210,16 +219,29 @@ export function StaffAuditTab() {
     let estimatedSalary = 0;
     let overtimePay = 0;
     const salaryUsageCount: Record<number, number> = {};
+    const breakdownMap: Record<number, SalaryBreakdown> = {};
     for (const r of records) {
       const { base, fraction } = getSalaryForDate(r.report_date, settings.periods, settings);
       if (r.work_status === 'حاضر') {
         estimatedSalary += base;
         salaryUsageCount[base] = (salaryUsageCount[base] || 0) + 1;
+        if (!breakdownMap[base]) {
+          breakdownMap[base] = { dailySalary: base, daysWorked: 0, totalSalary: 0, overtimeHours: 0, overtimePay: 0 };
+        }
+        breakdownMap[base].daysWorked++;
+        breakdownMap[base].totalSalary += base;
       }
       if (r.overtime_hours > 0) {
-        overtimePay += r.overtime_hours * base * fraction;
+        const otPay = r.overtime_hours * base * fraction;
+        overtimePay += otPay;
+        if (!breakdownMap[base]) {
+          breakdownMap[base] = { dailySalary: base, daysWorked: 0, totalSalary: 0, overtimeHours: 0, overtimePay: 0 };
+        }
+        breakdownMap[base].overtimeHours += r.overtime_hours;
+        breakdownMap[base].overtimePay += otPay;
       }
     }
+    const salaryBreakdowns = Object.values(breakdownMap).sort((a, b) => a.dailySalary - b.dailySalary);
     // Find the most-used daily salary for display purposes
     let displayDailySalary = settings.base_daily_salary;
     let maxCount = 0;
@@ -268,7 +290,8 @@ export function StaffAuditTab() {
       remainingBalanceThisMonth,
       extraReceivedThisMonth,
       netBalance,
-      displayDailySalary
+      displayDailySalary,
+      salaryBreakdowns
     });
   };
 
@@ -623,7 +646,10 @@ export function StaffAuditTab() {
 
             <!-- Salary Info -->
             <div class="salary-info">
-              <span>حقوق روزمزدی: ${formatCurrency(summary.displayDailySalary)}</span>
+              ${summary.salaryBreakdowns.length > 1 
+                ? summary.salaryBreakdowns.map(b => `<span>حقوق روزمزدی: ${formatCurrency(b.dailySalary)} (${b.daysWorked} روز)</span>`).join(' | ')
+                : `<span>حقوق روزمزدی: ${formatCurrency(summary.displayDailySalary)}</span>`
+              }
             </div>
 
             <!-- Two-Column Ledger -->
@@ -635,10 +661,17 @@ export function StaffAuditTab() {
                 </div>
                 <table style="width: 100%; border-collapse: collapse;">
                   <tbody>
-                    <tr style="background-color: #f0fdf4;">
-                      <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: 500;">حقوق پایه (${summary.totalDaysWorked} روز × ${summary.displayDailySalary.toLocaleString('fa-IR')})</td>
-                      <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: bold; text-align: left; color: #16a34a;">${formatCurrency(summary.estimatedSalary)}</td>
-                    </tr>
+                    ${summary.salaryBreakdowns.length > 1 
+                      ? summary.salaryBreakdowns.map((b, i) => `
+                        <tr style="background-color: ${i % 2 === 0 ? '#f0fdf4' : '#fff'};">
+                          <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: 500;">حقوق پایه (${b.daysWorked} روز × ${b.dailySalary.toLocaleString('fa-IR')})</td>
+                          <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: bold; text-align: left; color: #16a34a;">${formatCurrency(b.totalSalary)}</td>
+                        </tr>`).join('')
+                      : `<tr style="background-color: #f0fdf4;">
+                          <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: 500;">حقوق پایه (${summary.totalDaysWorked} روز × ${summary.displayDailySalary.toLocaleString('fa-IR')})</td>
+                          <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: bold; text-align: left; color: #16a34a;">${formatCurrency(summary.estimatedSalary)}</td>
+                        </tr>`
+                    }
                     <tr>
                       <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: 500;">اضافه‌کاری (${summary.totalOvertime} ساعت)</td>
                       <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: bold; text-align: left; color: #16a34a;">${formatCurrency(summary.overtimePay)}</td>
@@ -1220,10 +1253,19 @@ export function StaffAuditTab() {
                 
                 <Table className="border border-green-200 rounded-lg overflow-hidden">
                   <TableBody>
-                    <TableRow className="bg-green-50/50 dark:bg-green-900/20">
-                      <TableCell className="font-medium text-right">حقوق پایه ({summary.totalDaysWorked} روز × {summary.displayDailySalary.toLocaleString('fa-IR')})</TableCell>
-                      <TableCell className="text-left font-bold text-green-700">{formatCurrency(summary.estimatedSalary)}</TableCell>
-                    </TableRow>
+                    {summary.salaryBreakdowns.length > 1 ? (
+                      summary.salaryBreakdowns.map((b, i) => (
+                        <TableRow key={i} className={i % 2 === 0 ? "bg-green-50/50 dark:bg-green-900/20" : ""}>
+                          <TableCell className="font-medium text-right">حقوق پایه ({b.daysWorked} روز × {b.dailySalary.toLocaleString('fa-IR')})</TableCell>
+                          <TableCell className="text-left font-bold text-green-700">{formatCurrency(b.totalSalary)}</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow className="bg-green-50/50 dark:bg-green-900/20">
+                        <TableCell className="font-medium text-right">حقوق پایه ({summary.totalDaysWorked} روز × {summary.displayDailySalary.toLocaleString('fa-IR')})</TableCell>
+                        <TableCell className="text-left font-bold text-green-700">{formatCurrency(summary.estimatedSalary)}</TableCell>
+                      </TableRow>
+                    )}
                     <TableRow>
                       <TableCell className="font-medium text-right">اضافه‌کاری ({summary.totalOvertime} ساعت)</TableCell>
                       <TableCell className="text-left font-bold text-green-700">{formatCurrency(summary.overtimePay)}</TableCell>
