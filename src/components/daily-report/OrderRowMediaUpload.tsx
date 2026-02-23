@@ -49,7 +49,7 @@ export function OrderRowMediaUpload({
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch existing media for this row
+  // Fetch existing media for this row - SCOPED to the specific module
   const fetchMedia = useCallback(async () => {
     if (!user) return;
     if (!dailyReportId && !showAllUsers) return;
@@ -57,20 +57,17 @@ export function OrderRowMediaUpload({
     try {
       let allMedia: any[] = [];
 
-      // PRIMARY QUERY: Always search by report_date + row_index across ALL reports
-      // RLS ensures only authenticated users can read, no need for user_id filter
-      {
+      if (dailyReportId) {
+        // PRIMARY: Fetch by dailyReportId + row_index (module-scoped)
         const { data } = await supabase
           .from('daily_report_order_media')
           .select('id, file_path, file_type')
-          .eq('report_date', reportDate)
+          .eq('daily_report_id', dailyReportId)
           .eq('row_index', rowIndex)
           .order('created_at', { ascending: true });
         if (data) allMedia.push(...data);
-      }
 
-      // SECONDARY: Also fetch by dailyReportId + order identifiers for completeness
-      if (dailyReportId) {
+        // SECONDARY: Also fetch by order identifiers for completeness
         const hasValidOrderRowId = dailyReportOrderId && isValidUuid(dailyReportOrderId);
         const hasValidOrderId = orderId && isValidUuid(orderId);
 
@@ -91,6 +88,24 @@ export function OrderRowMediaUpload({
             .eq('daily_report_id', dailyReportId)
             .eq('report_date', reportDate)
             .eq('order_id', orderId!)
+            .order('created_at', { ascending: true });
+          if (data) allMedia.push(...data);
+        }
+      } else if (showAllUsers && moduleKey) {
+        // For showAllUsers mode: get all report IDs for this module+date, then fetch media
+        const { data: moduleReports } = await supabase
+          .from('daily_reports')
+          .select('id')
+          .eq('report_date', reportDate)
+          .eq('module_key', moduleKey);
+
+        if (moduleReports && moduleReports.length > 0) {
+          const reportIds = moduleReports.map(r => r.id);
+          const { data } = await supabase
+            .from('daily_report_order_media')
+            .select('id, file_path, file_type')
+            .in('daily_report_id', reportIds)
+            .eq('row_index', rowIndex)
             .order('created_at', { ascending: true });
           if (data) allMedia.push(...data);
         }
@@ -121,7 +136,7 @@ export function OrderRowMediaUpload({
     } catch (err) {
       console.error('Error fetching row media:', err);
     }
-  }, [dailyReportId, dailyReportOrderId, orderId, reportDate, user, showAllUsers, rowIndex]);
+  }, [dailyReportId, dailyReportOrderId, orderId, reportDate, user, showAllUsers, rowIndex, moduleKey]);
 
   useEffect(() => {
     fetchMedia();
