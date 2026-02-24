@@ -16,6 +16,13 @@ import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { useNavigate } from 'react-router-dom';
 import { sendOrderSms, buildOrderSmsAddress } from '@/lib/orderSms';
 
+interface RecipientDataForExpert {
+  phoneNumber: string;
+  userId: string | null;
+  fullName: string | null;
+  isRegistered: boolean;
+}
+
 interface ExpertPricingRequestDialogProps {
   subcategoryId: string;
   provinceId: string;
@@ -26,6 +33,7 @@ interface ExpertPricingRequestDialogProps {
   locationLng?: number;
   serviceTypeName?: string;
   hierarchyProjectId?: string;
+  recipientData?: RecipientDataForExpert | null;
 }
 
 const EXPERT_RENTAL_ITEMS: Record<string, { label: string; price: number }> = {
@@ -54,7 +62,8 @@ export const ExpertPricingRequestDialog = ({
   locationLat,
   locationLng,
   serviceTypeName,
-  hierarchyProjectId
+  hierarchyProjectId,
+  recipientData
 }: ExpertPricingRequestDialogProps) => {
   // Determine if this is a rental form based on serviceTypeName
   const isRentalForm = serviceTypeName === 'کرایه اجناس داربست';
@@ -236,7 +245,54 @@ export const ExpertPricingRequestDialog = ({
         setProgress(80);
       }
 
-      // Step 5: Send SMS (90%)
+      // Step 5: Handle transfer if ordering for others (85%)
+      if (recipientData) {
+        setProgressStep('ایجاد درخواست انتقال...');
+        setProgress(85);
+
+        const { error: transferError } = await supabase
+          .from('order_transfer_requests')
+          .insert({
+            order_id: orderId,
+            from_user_id: user.id,
+            to_phone_number: recipientData.phoneNumber,
+            to_user_id: recipientData.userId,
+            status: recipientData.isRegistered ? 'pending_recipient' : 'pending_registration'
+          });
+
+        if (transferError) {
+          console.error('Transfer request error:', transferError);
+        }
+
+        // اگر کاربر ثبت‌نام کرده، انتقال خودکار
+        if (recipientData.isRegistered && recipientData.userId) {
+          const { error: autoTransferError } = await supabase.rpc('auto_complete_order_transfer' as any, {
+            p_order_id: orderId,
+            p_recipient_user_id: recipientData.userId,
+            p_recipient_phone: recipientData.phoneNumber
+          });
+
+          if (autoTransferError) {
+            console.error('Auto transfer error:', autoTransferError);
+          }
+
+          // ارسال نوتیفیکیشن به گیرنده
+          try {
+            const senderName = user?.user_metadata?.full_name || 'یک کاربر';
+            await supabase.rpc('send_notification', {
+              _user_id: recipientData.userId,
+              _title: '📦 سفارش جدید برای شما ثبت شد',
+              _body: `${senderName} یک درخواست قیمت‌گذاری ${serviceTypeName || 'داربست'} با کد ${orderCode} برای شما ثبت کرده و به حساب شما منتقل شد.`,
+              _link: `/user/orders/${orderId}`,
+              _type: 'success'
+            });
+          } catch (notifErr) {
+            console.log('Notification skipped');
+          }
+        }
+      }
+
+      // Step 6: Send SMS (90%)
       setProgressStep('ارسال پیامک...');
       setProgress(90);
       
@@ -255,10 +311,19 @@ export const ExpertPricingRequestDialog = ({
       setProgress(100);
       setProgressStep('سفارش با موفقیت ثبت شد!');
 
-      toast({
-        title: '✅ درخواست ثبت شد',
-        description: `سفارش با کد ${orderCode} ثبت شد. کارشناسان قیمت‌گذاری را انجام خواهند داد.`
-      });
+      if (recipientData) {
+        toast({
+          title: recipientData.isRegistered ? '✅ درخواست ثبت و منتقل شد' : '✅ درخواست ثبت شد',
+          description: recipientData.isRegistered 
+            ? `درخواست با کد ${orderCode} برای ${recipientData.fullName || recipientData.phoneNumber} ثبت و منتقل شد.`
+            : `درخواست با کد ${orderCode} ثبت شد. پس از ثبت‌نام کاربر با شماره ${recipientData.phoneNumber}، سفارش به او منتقل خواهد شد.`
+        });
+      } else {
+        toast({
+          title: '✅ درخواست ثبت شد',
+          description: `سفارش با کد ${orderCode} ثبت شد. کارشناسان قیمت‌گذاری را انجام خواهند داد.`
+        });
+      }
 
       // Small delay to show 100%
       await new Promise(resolve => setTimeout(resolve, 500));
