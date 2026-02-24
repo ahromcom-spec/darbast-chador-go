@@ -545,6 +545,7 @@ export default function ScaffoldingRentalForm() {
                         detailedAddress={locationTitle || undefined}
                         serviceTypeName="کرایه اجناس داربست"
                         hierarchyProjectId={hierarchyProjectId || undefined}
+                        recipientData={recipientData}
                       />
                     </div>
                   )}

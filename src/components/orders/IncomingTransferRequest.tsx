@@ -670,16 +670,7 @@ export function IncomingTransferRequests() {
 
       if (hierarchyError) throw hierarchyError;
 
-      const { error: transferError } = await supabase
-        .from('order_transfer_requests')
-        .update({
-          status: 'completed',
-          recipient_responded_at: new Date().toISOString(),
-        })
-        .eq('id', request.id);
-
-      if (transferError) throw transferError;
-
+      // ابتدا transfer_order_ownership را صدا می‌زنیم (که خودش وضعیت را به completed تغییر می‌دهد)
       const { error: orderError } = await supabase.rpc('transfer_order_ownership' as any, {
         p_order_id: request.order_id,
         p_new_customer_id: customerId,
@@ -689,6 +680,14 @@ export function IncomingTransferRequests() {
       });
 
       if (orderError) throw orderError;
+
+      // بروزرسانی responded_at (وضعیت قبلاً توسط RPC تغییر کرده)
+      await supabase
+        .from('order_transfer_requests')
+        .update({
+          recipient_responded_at: new Date().toISOString(),
+        })
+        .eq('id', request.id);
 
       toast({
         title: '✓ موفق',

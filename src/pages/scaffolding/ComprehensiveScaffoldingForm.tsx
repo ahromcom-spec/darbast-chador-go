@@ -1496,6 +1496,7 @@ export default function ComprehensiveScaffoldingForm({
                 detailedAddress={detailedAddress}
                 serviceTypeName="داربست فلزی"
                 hierarchyProjectId={hierarchyProjectId || undefined}
+                recipientData={recipientData}
               />
             </div>
           )}
