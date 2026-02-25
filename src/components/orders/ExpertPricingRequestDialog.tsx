@@ -262,6 +262,11 @@ export const ExpertPricingRequestDialog = ({
 
         if (transferError) {
           console.error('Transfer request error:', transferError);
+          toast({
+            title: 'خطا در ایجاد درخواست انتقال',
+            description: transferError.message || 'لطفاً دوباره تلاش کنید',
+            variant: 'destructive',
+          });
         }
 
         // اگر کاربر ثبت‌نام کرده، انتقال خودکار
