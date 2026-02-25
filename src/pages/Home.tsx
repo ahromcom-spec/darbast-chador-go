@@ -192,8 +192,8 @@ const Home = () => {
             "@context": "https://schema.org",
             "@type": "Organization",
             "name": "شرکت خدمات ساختمانی اهرم",
-            "url": "https://ahrom.org",
-            "logo": "https://ahrom.org/assets/ahrom-logo.png",
+            "url": "https://ahrom.ir",
+            "logo": "https://ahrom.ir/assets/ahrom-logo.png",
             "contactPoint": {
               "@type": "ContactPoint",
               "contactType": "Customer Service",

@@ -1,5 +1,5 @@
 # robots.txt for خدمات ساختمانی اهرم
-# https://ahrom.org
+# https://ahrom.ir
 
 User-agent: *
 Allow: /
@@ -41,7 +41,7 @@ User-agent: ia_archiver
 Allow: /
 
 # Sitemap location
-Sitemap: https://ahrom.org/sitemap.xml
+Sitemap: https://ahrom.ir/sitemap.xml
 
 # Host
-Host: https://ahrom.org
+Host: https://ahrom.ir
