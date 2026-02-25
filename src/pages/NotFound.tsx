@@ -1,13 +1,22 @@
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
 const NotFound = () => {
   const location = useLocation();
 
+  // اگر مسیر شامل کاراکترهای فارسی/غیرASCII باشد، به صفحه اصلی ریدایرکت شود
+  const hasNonAscii = /[^\x00-\x7F]/.test(decodeURIComponent(location.pathname));
+  
   useEffect(() => {
-    console.error("404 Error: User attempted to access non-existent route:", location.pathname);
-  }, [location.pathname]);
+    if (!hasNonAscii) {
+      console.error("404 Error: User attempted to access non-existent route:", location.pathname);
+    }
+  }, [location.pathname, hasNonAscii]);
+
+  if (hasNonAscii) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-background">
