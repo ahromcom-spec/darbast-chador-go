@@ -64,7 +64,7 @@ serve(async (req) => {
     // Get order details
     const { data: order, error: orderError } = await supabaseClient
       .from('projects_v3')
-      .select('id, payment_amount, customer_id')
+      .select('id, payment_amount, total_price, total_paid, customer_id')
       .eq('id', order_id)
       .single();
 
@@ -96,16 +96,54 @@ serve(async (req) => {
     if (verifyData.data && verifyData.data.code === 100) {
       // Payment successful
       const refID = verifyData.data.ref_id;
+      // مبلغ واقعی پرداخت شده از زرین‌پال (ریال به تومان)
+      const paidAmount = Math.round(verifyData.data.amount / 10);
       
-      // Update order with payment confirmation
+      // ثبت پرداخت در جدول order_payments
+      const { error: paymentInsertError } = await supabaseClient
+        .from('order_payments')
+        .insert({
+          order_id: order_id,
+          paid_by: order.customer_id,
+          amount: paidAmount,
+          payment_method: 'zarinpal',
+          receipt_number: refID.toString(),
+          notes: `پرداخت آنلاین زرین‌پال - کد پیگیری: ${refID}`,
+          payment_date: new Date().toISOString(),
+        });
+
+      if (paymentInsertError) {
+        console.error('Error inserting order_payment:', paymentInsertError);
+      }
+
+      // محاسبه مجموع پرداخت‌ها
+      const { data: allPayments } = await supabaseClient
+        .from('order_payments')
+        .select('amount')
+        .eq('order_id', order_id);
+      
+      const newTotalPaid = (allPayments || []).reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+      
+      // بررسی تسویه کامل
+      const totalPrice = order.total_price || order.payment_amount || 0;
+      const isFullyPaid = newTotalPaid >= totalPrice && totalPrice > 0;
+
+      // Update order
+      const updateData: any = {
+        payment_method: 'zarinpal',
+        transaction_reference: refID.toString(),
+        total_paid: newTotalPaid,
+      };
+      
+      // فقط در صورت تسویه کامل payment_confirmed_at را ست کن
+      if (isFullyPaid) {
+        updateData.payment_confirmed_at = new Date().toISOString();
+        updateData.status = 'paid';
+      }
+
       const { error: updateError } = await supabaseClient
         .from('projects_v3')
-        .update({
-          payment_confirmed_at: new Date().toISOString(),
-          payment_method: 'zarinpal',
-          transaction_reference: refID.toString(),
-          status: 'paid'
-        })
+        .update(updateData)
         .eq('id', order_id);
 
       if (updateError) {
@@ -120,17 +158,20 @@ serve(async (req) => {
         meta: {
           authority: authority,
           ref_id: refID,
-          amount: order.payment_amount,
+          amount: paidAmount,
+          total_paid: newTotalPaid,
+          is_fully_paid: isFullyPaid,
         },
       });
 
-      // در حالت جدید، فقط JSON برمی‌گردانیم و ریدایرکت را به عهده فرانت می‌گذاریم
       return new Response(
         JSON.stringify({
           success: true,
           status: 'success',
           order_id,
           ref_id: refID,
+          total_paid: newTotalPaid,
+          is_fully_paid: isFullyPaid,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

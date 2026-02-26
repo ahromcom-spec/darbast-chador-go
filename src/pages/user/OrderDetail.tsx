@@ -235,6 +235,7 @@ export default function OrderDetail() {
   const [showAdvancePayment, setShowAdvancePayment] = useState(false);
   const [advancePaymentAmount, setAdvancePaymentAmount] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
@@ -442,7 +443,7 @@ export default function OrderDetail() {
       }
 
       // Fetch all related data in parallel for speed
-      const [subcategoryRes, provinceRes, districtRes, mediaRes, approvalsRes, repairRes, collectionRes, renewalsRes] = await Promise.all([
+      const [subcategoryRes, provinceRes, districtRes, mediaRes, approvalsRes, repairRes, collectionRes, renewalsRes, paymentsRes] = await Promise.all([
         orderData.subcategory_id 
           ? supabase.from('subcategories').select('name, code, service_types_v3:service_type_id(name, code)').eq('id', orderData.subcategory_id).maybeSingle()
           : Promise.resolve({ data: null }),
@@ -456,7 +457,8 @@ export default function OrderDetail() {
         supabase.from('order_approvals').select('approver_role, approved_at, approver_user_id').eq('order_id', id).order('created_at', { ascending: true }),
         supabase.from('repair_requests').select('final_cost, status, created_at, description').eq('order_id', id),
         supabase.from('collection_requests').select('requested_date, confirmed_date, status').eq('order_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-        supabase.from('order_renewals').select('renewal_price, renewal_number, new_start_date, new_end_date, status').eq('order_id', id).eq('status', 'approved').order('renewal_number', { ascending: true })
+        supabase.from('order_renewals').select('renewal_price, renewal_number, new_start_date, new_end_date, status').eq('order_id', id).eq('status', 'approved').order('renewal_number', { ascending: true }),
+        supabase.from('order_payments').select('*').eq('order_id', id).order('created_at', { ascending: false })
       ]);
 
       // Build enriched order
@@ -557,7 +559,11 @@ export default function OrderDetail() {
         setApprovedCollectionDate(null);
       }
 
-      setTotalPaid(orderData.total_paid || 0);
+      // ست کردن تاریخچه پرداخت و محاسبه مجموع
+      const payments = paymentsRes.data || [];
+      setPaymentHistory(payments);
+      const calculatedTotalPaid = payments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+      setTotalPaid(calculatedTotalPaid > 0 ? calculatedTotalPaid : (orderData.total_paid || 0));
 
     } catch (error: any) {
       toast({
@@ -1880,7 +1886,43 @@ export default function OrderDetail() {
                         </div>
                       )}
 
-                      {/* Collapsible Price Details */}
+                      {/* تاریخچه پرداخت‌ها */}
+                      {paymentHistory.length > 0 && (
+                        <div className="space-y-2 mt-3">
+                          <h4 className="font-medium text-sm flex items-center gap-2">
+                            <CreditCard className="h-4 w-4" />
+                            تاریخچه پرداخت‌ها
+                          </h4>
+                          <div className="space-y-2">
+                            {paymentHistory.map((payment: any, idx: number) => (
+                              <div key={payment.id || idx} className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-green-700 dark:text-green-300">
+                                    {(payment.amount || 0).toLocaleString('fa-IR')} تومان
+                                  </span>
+                                  <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 text-xs">
+                                    {payment.payment_method === 'zarinpal' ? 'پرداخت آنلاین' : 'پرداخت دستی'}
+                                  </Badge>
+                                </div>
+                                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
+                                  {payment.receipt_number && (
+                                    <span dir="ltr">کد پیگیری: {payment.receipt_number}</span>
+                                  )}
+                                  {(payment.payment_date || payment.created_at) && (
+                                    <span>
+                                      تاریخ: {new Date(payment.payment_date || payment.created_at).toLocaleDateString('fa-IR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  )}
+                                </div>
+                                {payment.notes && (
+                                  <p className="text-xs text-muted-foreground mt-1">{payment.notes}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       <CollapsibleContent className="space-y-4">
                         {parsedNotes?.price_breakdown && parsedNotes.price_breakdown.length > 0 && (
                           <div className="space-y-2">
