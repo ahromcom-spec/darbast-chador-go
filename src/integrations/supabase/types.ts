@@ -4764,7 +4764,7 @@ export type Database = {
           _action: string
           _limit: number
           _user_id: string
-          _window: unknown
+          _window: string
         }
         Returns: boolean
       }
