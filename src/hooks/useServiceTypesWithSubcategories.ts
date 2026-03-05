@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { cacheSet, cacheGet } from '@/lib/offlineDb';
 
 export interface Subcategory {
   id: string;
@@ -17,33 +18,50 @@ export interface ServiceTypeWithSubcategories {
   subcategories: Subcategory[];
 }
 
+const CACHE_KEY = 'service_types_with_subcategories';
+
 export const useServiceTypesWithSubcategories = () => {
   const { data: serviceTypes = [], isLoading: loading } = useQuery({
     queryKey: ['service-types-with-subcategories'],
     queryFn: async (): Promise<ServiceTypeWithSubcategories[]> => {
-      const [typesRes, subsRes] = await Promise.all([
-        supabase
-          .from('service_types_v3')
-          .select('*')
-          .eq('is_active', true)
-          .order('name'),
-        supabase
-          .from('subcategories')
-          .select('*')
-          .eq('is_active', true)
-          .order('name'),
-      ]);
+      try {
+        const [typesRes, subsRes] = await Promise.all([
+          supabase
+            .from('service_types_v3')
+            .select('*')
+            .eq('is_active', true)
+            .order('name'),
+          supabase
+            .from('subcategories')
+            .select('*')
+            .eq('is_active', true)
+            .order('name'),
+        ]);
 
-      if (typesRes.error) throw typesRes.error;
-      if (subsRes.error) throw subsRes.error;
+        if (typesRes.error) throw typesRes.error;
+        if (subsRes.error) throw subsRes.error;
 
-      const types = typesRes.data || [];
-      const subs = subsRes.data || [];
+        const types = typesRes.data || [];
+        const subs = subsRes.data || [];
 
-      return types.map(type => ({
-        ...type,
-        subcategories: subs.filter(sub => sub.service_type_id === type.id)
-      }));
+        const result = types.map(type => ({
+          ...type,
+          subcategories: subs.filter(sub => sub.service_type_id === type.id)
+        }));
+
+        // Cache for offline use
+        cacheSet(CACHE_KEY, result, 30 * 24 * 60 * 60 * 1000).catch(() => {});
+
+        return result;
+      } catch (err) {
+        // Offline fallback
+        const cached = await cacheGet<ServiceTypeWithSubcategories[]>(CACHE_KEY);
+        if (cached) {
+          console.debug('Service types loaded from offline cache');
+          return cached;
+        }
+        throw err;
+      }
     },
     staleTime: 1000 * 60 * 10, // 10 دقیقه cache
     gcTime: 1000 * 60 * 30, // 30 دقیقه نگهداری

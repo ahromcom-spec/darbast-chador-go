@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
+import { cacheSet, cacheGet } from '@/lib/offlineDb';
 
 // Types
 export interface OrderReportRow {
@@ -333,7 +334,7 @@ export function useDailyReport() {
     }
   };
 
-  // Fetch orders from database
+  // Fetch orders from database (with offline cache)
   const fetchOrders = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -354,7 +355,7 @@ export function useDailyReport() {
 
       if (error) throw error;
 
-      setOrders((data || []).map((o: any) => ({
+      const mapped = (data || []).map((o: any) => ({
         id: o.id,
         code: o.code,
         customer_name: o.customer_name,
@@ -362,13 +363,22 @@ export function useDailyReport() {
         address: o.address,
         subcategory_name: o.subcategories?.name,
         activity_description: extractActivityDescription(o.notes)
-      })));
+      }));
+      setOrders(mapped);
+      // Cache for offline use
+      cacheSet('orders_list', mapped, 7 * 24 * 60 * 60 * 1000).catch(() => {});
     } catch (error) {
       console.error('Error fetching orders:', error);
+      // Offline fallback
+      const cached = await cacheGet<Order[]>('orders_list');
+      if (cached) {
+        setOrders(cached);
+        console.debug('Orders loaded from offline cache');
+      }
     }
   }, []);
 
-  // Fetch staff members
+  // Fetch staff members (with offline cache)
   const fetchStaffMembers = useCallback(async () => {
     try {
       const { data: roleData, error: roleError } = await supabase
@@ -387,25 +397,36 @@ export function useDailyReport() {
 
         if (profileError) throw profileError;
 
-        setStaffMembers((profiles || []).map((p: any) => ({
+        const mapped = (profiles || []).map((p: any) => ({
           user_id: p.user_id,
           full_name: p.full_name || 'بدون نام',
           phone_number: p.phone_number || ''
-        })));
+        }));
+        setStaffMembers(mapped);
+        // Cache for offline use
+        cacheSet('staff_members_list', mapped, 7 * 24 * 60 * 60 * 1000).catch(() => {});
       }
     } catch (error) {
       console.error('Error fetching staff:', error);
+      // Offline fallback
+      const cached = await cacheGet<StaffMember[]>('staff_members_list');
+      if (cached) {
+        setStaffMembers(cached);
+        console.debug('Staff members loaded from offline cache');
+      }
     }
   }, []);
 
-  // Fetch existing report for current date and module
+  // Fetch existing report for current date and module (with offline cache)
   const fetchExistingReport = useCallback(async () => {
     if (!user) return;
 
+    const dateStr = toLocalDateString(reportDate);
+    const expectedDate = dateStr;
+    const cacheKey = `daily_report:${dateStr}:${moduleKey}`;
+
     try {
       setLoading(true);
-      const dateStr = toLocalDateString(reportDate);
-      const expectedDate = dateStr; // capture for staleness check
 
       // ALWAYS clear localStorage backup first to prevent stale data from causing duplicates
       clearLocalStorageBackup();
@@ -512,18 +533,59 @@ export function useDailyReport() {
         if (expectedDateRef.current !== expectedDate) return;
         setStaffReports(normalizedStaff);
         
+        // Cache the report data for offline use
+        cacheSet(cacheKey, {
+          reportId: reportIdToLoad,
+          orderReports: deduplicateOrderRows(mappedOrders),
+          staffReports: normalizedStaff,
+        }, 30 * 24 * 60 * 60 * 1000).catch(() => {}); // 30 days cache
+        
         // Clear any stale localStorage backup since we have DB data
         clearLocalStorageBackup();
       } else {
         setExistingReportId(null);
         setOrderReports([createEmptyOrderRow(0)]);
         setStaffReports([createCompanyExpenseRow(), createEmptyStaffRow()]);
+        
+        // Cache empty state too (so offline knows there's no report)
+        cacheSet(cacheKey, {
+          reportId: null,
+          orderReports: [],
+          staffReports: [],
+        }, 30 * 24 * 60 * 60 * 1000).catch(() => {});
       }
     } catch (error) {
       console.error('Error fetching report:', error);
-      // On error, start fresh - don't restore from localStorage to avoid duplicates
-      setOrderReports([createEmptyOrderRow(0)]);
-      setStaffReports([createCompanyExpenseRow(), createEmptyStaffRow()]);
+      
+      // Offline fallback: try to load from IndexedDB cache
+      const cached = await cacheGet<{
+        reportId: string | null;
+        orderReports: OrderReportRow[];
+        staffReports: StaffReportRow[];
+      }>(cacheKey);
+      
+      if (cached) {
+        console.debug('Report loaded from offline cache for', dateStr, moduleKey);
+        if (expectedDateRef.current !== expectedDate) return;
+        
+        setExistingReportId(cached.reportId);
+        if (cached.orderReports.length > 0) {
+          setOrderReports(cached.orderReports);
+        } else {
+          setOrderReports([createEmptyOrderRow(0)]);
+        }
+        if (cached.staffReports.length > 0) {
+          setStaffReports(cached.staffReports);
+        } else {
+          setStaffReports([createCompanyExpenseRow(), createEmptyStaffRow()]);
+        }
+        
+        toast.info('داده‌ها از حافظه آفلاین بارگذاری شد');
+      } else {
+        // No cache available - start fresh
+        setOrderReports([createEmptyOrderRow(0)]);
+        setStaffReports([createCompanyExpenseRow(), createEmptyStaffRow()]);
+      }
     } finally {
       setLoading(false);
     }
