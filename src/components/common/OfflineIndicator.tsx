@@ -11,9 +11,9 @@ export function OfflineIndicator() {
     <div className="fixed bottom-4 left-4 right-4 z-50 max-w-md mx-auto animate-in slide-in-from-bottom">
       <Alert variant="destructive">
         <WifiOff className="h-4 w-4" />
-        <AlertTitle>اتصال اینترنت قطع است</AlertTitle>
+        <AlertTitle>حالت آفلاین</AlertTitle>
         <AlertDescription>
-          لطفاً اتصال اینترنت خود را بررسی کنید
+          اتصال اینترنت قطع است. داده‌های ذخیره شده قبلی نمایش داده می‌شوند.
         </AlertDescription>
       </Alert>
     </div>

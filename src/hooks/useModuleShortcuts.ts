@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { cacheSet, cacheGet } from '@/lib/offlineDb';
 
 export interface ModuleShortcut {
   id: string;
@@ -23,15 +24,29 @@ export function useModuleShortcuts() {
       setIsLoading(false);
       return;
     }
-    const { data, error } = await supabase
-      .from('module_shortcuts')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('display_order', { ascending: true });
+    const cacheKey = `module_shortcuts:${user.id}`;
+    try {
+      const { data, error } = await supabase
+        .from('module_shortcuts')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('display_order', { ascending: true });
 
-    if (error) console.error('Error fetching shortcuts:', error);
-    setShortcuts(data || []);
-    setIsLoading(false);
+      if (error) throw error;
+      setShortcuts(data || []);
+      setIsLoading(false);
+      // Cache for offline
+      cacheSet(cacheKey, data || [], 30 * 24 * 60 * 60 * 1000).catch(() => {});
+    } catch (err) {
+      console.error('Error fetching shortcuts:', err);
+      // Offline fallback
+      const cached = await cacheGet<ModuleShortcut[]>(cacheKey);
+      if (cached) {
+        setShortcuts(cached);
+        console.debug('Shortcuts loaded from offline cache');
+      }
+      setIsLoading(false);
+    }
   }, [user]);
 
   useEffect(() => {
