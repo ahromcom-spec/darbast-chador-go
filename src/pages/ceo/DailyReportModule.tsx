@@ -4969,7 +4969,7 @@ export default function DailyReportModule() {
                                 </TableCell>
                                 {/* ستون منبع ماژول در حالت تجمیعی */}
                                 {isAggregated && (
-                                  <TableCell className="border border-blue-200 max-w-[150px]">
+                                  <TableCell className="border border-blue-200 min-w-[120px]">
                                     {row.source_module_name ? (
                                       <span className="text-xs text-blue-700 leading-relaxed break-words">
                                         {row.source_module_name}
@@ -5260,7 +5260,7 @@ export default function DailyReportModule() {
                               </TableCell>
                               {/* ستون منبع ماژول در حالت تجمیعی */}
                               {isAggregated && (
-                                <TableCell className="border border-amber-200 max-w-[150px]">
+                                <TableCell className="border border-amber-200 min-w-[120px]">
                                   {row.source_module_name ? (
                                     <span className="text-xs text-blue-700 leading-relaxed break-words">
                                       {row.source_module_name}
