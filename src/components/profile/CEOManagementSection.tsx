@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp, Shield, Users, FileText, Settings, BarChart3 } 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { CEOBackupButton } from './CEOBackupButton';
 
 interface CEOManagementSectionProps {
   userId: string;
@@ -117,6 +118,18 @@ export function CEOManagementSection({ userId, userEmail }: CEOManagementSection
                   </div>
                 </button>
               ))}
+            </div>
+
+            {/* Backup Section */}
+            <div className="mt-6 pt-4 border-t border-border">
+              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                <Shield className="h-4 w-4 text-primary" />
+                پشتیبان‌گیری از داده‌ها
+              </h4>
+              <p className="text-xs text-muted-foreground mb-3">
+                تهیه نسخه پشتیبان کامل از تمامی داده‌ها (بدون فایل‌های رسانه‌ای) برای دسترسی آفلاین
+              </p>
+              <CEOBackupButton />
             </div>
           </CardContent>
         </CollapsibleContent>
