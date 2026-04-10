@@ -1,1 +1,127 @@
-[{"id":"d0bdf39e-e3cd-4231-a979-a287be516c17","card_name":"کارت صندوق شرکت","bank_name":"صندق","card_number":null,"initial_balance":0.00,"current_balance":0.00,"registration_date":"2025-12-22","notes":null,"is_active":true,"created_by":"55edfafc-6890-4b71-8ddd-4426494bb275","created_at":"2026-02-13T19:42:12.415932+00:00","updated_at":"2026-02-22T12:28:14.38+00:00","allowed_modules":null}, {"id":"86970e5b-e8d7-4c6f-864e-6875680afafe","card_name":"کارت سپه انصار/سپرده جاری","bank_name":"بانک سپه","card_number":null,"initial_balance":4040873.00,"current_balance":405873.00,"registration_date":"2025-12-22","notes":"کارت انصاری 1666","is_active":true,"created_by":"55edfafc-6890-4b71-8ddd-4426494bb275","created_at":"2026-02-18T15:06:51.259045+00:00","updated_at":"2026-02-23T03:30:21.46+00:00","allowed_modules":["management","order_payment"]}, {"id":"81aba8e7-850d-4cb8-bf47-479f5db3c217","card_name":"کارت اجرایی، قرض الحسنه","bank_name":"ملت","card_number":"","initial_balance":60497.00,"current_balance":-19461503.00,"registration_date":"2025-12-22","notes":"","is_active":true,"created_by":"55edfafc-6890-4b71-8ddd-4426494bb275","created_at":"2026-02-13T19:37:25.112544+00:00","updated_at":"2026-02-26T08:12:44.434+00:00","allowed_modules":["executive","management","order_payment"]}, {"id":"d193daf8-26d2-4b1c-8547-34f8802a9427","card_name":"کارت مهر ایران","bank_name":"بانک مهر","card_number":"","initial_balance":34633640.00,"current_balance":640.00,"registration_date":"2025-12-22","notes":"موجودی اولیه کارت مهر ایران ۳۴/۶۳۳/۶۴۰ ت","is_active":true,"created_by":"55edfafc-6890-4b71-8ddd-4426494bb275","created_at":"2026-02-13T16:02:47.436212+00:00","updated_at":"2026-02-23T02:10:31.419+00:00","allowed_modules":["management","order_payment"]}, {"id":"827be5ab-4837-47b3-b590-17a3167b4818","card_name":"کارت پشتیبانی کوتاه مدت ","bank_name":"ملت","card_number":"","initial_balance":59421.00,"current_balance":618825.00,"registration_date":"2025-12-22","notes":"","is_active":true,"created_by":"55edfafc-6890-4b71-8ddd-4426494bb275","created_at":"2026-02-13T19:38:52.2822+00:00","updated_at":"2026-02-24T02:56:14.485+00:00","allowed_modules":["management","order_payment","support"]}, {"id":"d6d89d74-1c6c-4fb1-9620-b5af7f3d4438","card_name":"بانک ملی کوتاه مدت","bank_name":"ملی","card_number":null,"initial_balance":52000.00,"current_balance":31938000.00,"registration_date":"2025-12-22","notes":"شماره حساب 0234450125004","is_active":true,"created_by":"55edfafc-6890-4b71-8ddd-4426494bb275","created_at":"2026-02-19T03:24:33.07444+00:00","updated_at":"2026-02-24T03:00:21.611+00:00","allowed_modules":["management","order_payment"]}, {"id":"5a8bb67f-3757-4ac6-b745-44451d55630a","card_name":"کارت ملت جاری _ مدیریت","bank_name":"بانک ملت","card_number":"","initial_balance":55632377.00,"current_balance":23626.00,"registration_date":"2025-12-22","notes":"","is_active":true,"created_by":"55edfafc-6890-4b71-8ddd-4426494bb275","created_at":"2026-02-12T01:41:48.192784+00:00","updated_at":"2026-02-24T03:29:22.96+00:00","allowed_modules":["management","order_payment"]}]
+[
+  {
+    "id": "d0bdf39e-e3cd-4231-a979-a287be516c17",
+    "card_name": "کارت صندوق شرکت",
+    "bank_name": "صندق",
+    "card_number": null,
+    "initial_balance": 0.0,
+    "current_balance": 0.0,
+    "registration_date": "2025-12-22",
+    "notes": null,
+    "is_active": true,
+    "created_by": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "created_at": "2026-02-13T19:42:12.415932+00:00",
+    "updated_at": "2026-02-22T12:28:14.38+00:00",
+    "allowed_modules": null
+  },
+  {
+    "id": "86970e5b-e8d7-4c6f-864e-6875680afafe",
+    "card_name": "کارت سپه انصار/سپرده جاری",
+    "bank_name": "بانک سپه",
+    "card_number": null,
+    "initial_balance": 4040873.0,
+    "current_balance": 405873.0,
+    "registration_date": "2025-12-22",
+    "notes": "کارت انصاری 1666",
+    "is_active": true,
+    "created_by": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "created_at": "2026-02-18T15:06:51.259045+00:00",
+    "updated_at": "2026-02-23T03:30:21.46+00:00",
+    "allowed_modules": [
+      "management",
+      "order_payment"
+    ]
+  },
+  {
+    "id": "81aba8e7-850d-4cb8-bf47-479f5db3c217",
+    "card_name": "کارت اجرایی، قرض الحسنه",
+    "bank_name": "ملت",
+    "card_number": "",
+    "initial_balance": 60497.0,
+    "current_balance": -19461503.0,
+    "registration_date": "2025-12-22",
+    "notes": "",
+    "is_active": true,
+    "created_by": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "created_at": "2026-02-13T19:37:25.112544+00:00",
+    "updated_at": "2026-02-26T08:12:44.434+00:00",
+    "allowed_modules": [
+      "executive",
+      "management",
+      "order_payment"
+    ]
+  },
+  {
+    "id": "d193daf8-26d2-4b1c-8547-34f8802a9427",
+    "card_name": "کارت مهر ایران",
+    "bank_name": "بانک مهر",
+    "card_number": "",
+    "initial_balance": 34633640.0,
+    "current_balance": 640.0,
+    "registration_date": "2025-12-22",
+    "notes": "موجودی اولیه کارت مهر ایران ۳۴/۶۳۳/۶۴۰ ت",
+    "is_active": true,
+    "created_by": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "created_at": "2026-02-13T16:02:47.436212+00:00",
+    "updated_at": "2026-02-23T02:10:31.419+00:00",
+    "allowed_modules": [
+      "management",
+      "order_payment"
+    ]
+  },
+  {
+    "id": "827be5ab-4837-47b3-b590-17a3167b4818",
+    "card_name": "کارت پشتیبانی کوتاه مدت ",
+    "bank_name": "ملت",
+    "card_number": "",
+    "initial_balance": 59421.0,
+    "current_balance": 618825.0,
+    "registration_date": "2025-12-22",
+    "notes": "",
+    "is_active": true,
+    "created_by": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "created_at": "2026-02-13T19:38:52.2822+00:00",
+    "updated_at": "2026-02-24T02:56:14.485+00:00",
+    "allowed_modules": [
+      "management",
+      "order_payment",
+      "support"
+    ]
+  },
+  {
+    "id": "d6d89d74-1c6c-4fb1-9620-b5af7f3d4438",
+    "card_name": "بانک ملی کوتاه مدت",
+    "bank_name": "ملی",
+    "card_number": null,
+    "initial_balance": 52000.0,
+    "current_balance": 31938000.0,
+    "registration_date": "2025-12-22",
+    "notes": "شماره حساب 0234450125004",
+    "is_active": true,
+    "created_by": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "created_at": "2026-02-19T03:24:33.07444+00:00",
+    "updated_at": "2026-02-24T03:00:21.611+00:00",
+    "allowed_modules": [
+      "management",
+      "order_payment"
+    ]
+  },
+  {
+    "id": "5a8bb67f-3757-4ac6-b745-44451d55630a",
+    "card_name": "کارت ملت جاری _ مدیریت",
+    "bank_name": "بانک ملت",
+    "card_number": "",
+    "initial_balance": 55632377.0,
+    "current_balance": 23626.0,
+    "registration_date": "2025-12-22",
+    "notes": "",
+    "is_active": true,
+    "created_by": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "created_at": "2026-02-12T01:41:48.192784+00:00",
+    "updated_at": "2026-02-24T03:29:22.96+00:00",
+    "allowed_modules": [
+      "management",
+      "order_payment"
+    ]
+  }
+]

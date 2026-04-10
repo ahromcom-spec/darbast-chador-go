@@ -1,1 +1,100 @@
-[{"id":"f977576c-323d-4c28-86d4-dd20be481275","name":"اجراء با نیروهای اهرم و با اجناس، ابزارالات و ماشین آلات اهرم","description":null,"is_active":true,"created_at":"2025-10-16T08:14:24.629188+00:00"}, {"id":"fba554e9-ec5c-4a8a-8468-7bcb5d41f59e","name":"اجراء با نیروهای اهرم بدون اجناس، ابزارالات و ماشین آلات اهرم","description":null,"is_active":true,"created_at":"2025-10-16T08:14:24.629188+00:00"}, {"id":"5e426c59-14ac-4a25-8da6-9d73a75c2b18","name":"اجراء با نیروهای پیمانکاران و با اجناس، ابزارالات و ماشین آلات اهرم","description":null,"is_active":true,"created_at":"2025-10-16T08:14:24.629188+00:00"}, {"id":"71dc8826-6038-4a2d-8688-a25863644913","name":"اجراء با نیروهای پیمانکاران و با اجناس، ابزارالات و ماشین آلات کاربر مشتری یا کارفرما","description":null,"is_active":true,"created_at":"2025-10-16T08:14:24.629188+00:00"}, {"id":"b39fd1c0-7c54-4021-83c2-ffa4ea307dfd","name":"خرید کالا و اجناس برای اهرم","description":null,"is_active":true,"created_at":"2025-10-16T08:14:24.629188+00:00"}, {"id":"fa09973d-dffc-4242-85bb-be7f1af1b56d","name":"فروش از کالاها و اجناس اهرم","description":null,"is_active":true,"created_at":"2025-10-16T08:14:24.629188+00:00"}, {"id":"6036ba7a-68a3-4b3f-9f72-caf7bfac3f25","name":"کرایه دادن اهرم از اجناس یا موارد خدمات مشخص","description":null,"is_active":true,"created_at":"2025-10-16T08:14:24.629188+00:00"}, {"id":"a853f50f-6dc1-470f-b1b0-e0719dbd6249","name":"کرایه گرفتن اهرم از اجناس یا موارد خدمات مشخص","description":null,"is_active":true,"created_at":"2025-10-16T08:14:24.629188+00:00"}, {"id":"470e015b-2751-4a18-945b-cf3fb0012487","name":"تولید کالای خدمات مشخص","description":null,"is_active":true,"created_at":"2025-10-16T08:14:24.629188+00:00"}, {"id":"3d512b11-38a6-4f2c-b5c0-ccac7c13b921","name":"تعمیر","description":null,"is_active":true,"created_at":"2025-10-16T08:14:24.629188+00:00"}, {"id":"ab993ee8-1af6-4c22-8c22-74cd2e86063d","name":"پورسانت واسطه گری اهرم برای پیمانکاران","description":null,"is_active":true,"created_at":"2025-10-16T08:14:24.629188+00:00"}, {"id":"769c74bf-efd3-4abd-8e80-c2e44b1423ae","name":"پورسانت واسطه گری پیمانکاران برای اهرم","description":null,"is_active":true,"created_at":"2025-10-16T08:14:24.629188+00:00"}, {"id":"1504de35-3901-49f2-81a9-995063e9602f","name":"تأمین نیرو از طرف اهرم برای پیمانکاران","description":null,"is_active":true,"created_at":"2025-10-16T08:14:24.629188+00:00"}, {"id":"4d417adf-604c-4230-b771-4f212957b8cf","name":"تأمین نیرو از طرف پیمانکاران برای اهرم","description":null,"is_active":true,"created_at":"2025-10-16T08:14:24.629188+00:00"}]
+[
+  {
+    "id": "f977576c-323d-4c28-86d4-dd20be481275",
+    "name": "اجراء با نیروهای اهرم و با اجناس، ابزارالات و ماشین آلات اهرم",
+    "description": null,
+    "is_active": true,
+    "created_at": "2025-10-16T08:14:24.629188+00:00"
+  },
+  {
+    "id": "fba554e9-ec5c-4a8a-8468-7bcb5d41f59e",
+    "name": "اجراء با نیروهای اهرم بدون اجناس، ابزارالات و ماشین آلات اهرم",
+    "description": null,
+    "is_active": true,
+    "created_at": "2025-10-16T08:14:24.629188+00:00"
+  },
+  {
+    "id": "5e426c59-14ac-4a25-8da6-9d73a75c2b18",
+    "name": "اجراء با نیروهای پیمانکاران و با اجناس، ابزارالات و ماشین آلات اهرم",
+    "description": null,
+    "is_active": true,
+    "created_at": "2025-10-16T08:14:24.629188+00:00"
+  },
+  {
+    "id": "71dc8826-6038-4a2d-8688-a25863644913",
+    "name": "اجراء با نیروهای پیمانکاران و با اجناس، ابزارالات و ماشین آلات کاربر مشتری یا کارفرما",
+    "description": null,
+    "is_active": true,
+    "created_at": "2025-10-16T08:14:24.629188+00:00"
+  },
+  {
+    "id": "b39fd1c0-7c54-4021-83c2-ffa4ea307dfd",
+    "name": "خرید کالا و اجناس برای اهرم",
+    "description": null,
+    "is_active": true,
+    "created_at": "2025-10-16T08:14:24.629188+00:00"
+  },
+  {
+    "id": "fa09973d-dffc-4242-85bb-be7f1af1b56d",
+    "name": "فروش از کالاها و اجناس اهرم",
+    "description": null,
+    "is_active": true,
+    "created_at": "2025-10-16T08:14:24.629188+00:00"
+  },
+  {
+    "id": "6036ba7a-68a3-4b3f-9f72-caf7bfac3f25",
+    "name": "کرایه دادن اهرم از اجناس یا موارد خدمات مشخص",
+    "description": null,
+    "is_active": true,
+    "created_at": "2025-10-16T08:14:24.629188+00:00"
+  },
+  {
+    "id": "a853f50f-6dc1-470f-b1b0-e0719dbd6249",
+    "name": "کرایه گرفتن اهرم از اجناس یا موارد خدمات مشخص",
+    "description": null,
+    "is_active": true,
+    "created_at": "2025-10-16T08:14:24.629188+00:00"
+  },
+  {
+    "id": "470e015b-2751-4a18-945b-cf3fb0012487",
+    "name": "تولید کالای خدمات مشخص",
+    "description": null,
+    "is_active": true,
+    "created_at": "2025-10-16T08:14:24.629188+00:00"
+  },
+  {
+    "id": "3d512b11-38a6-4f2c-b5c0-ccac7c13b921",
+    "name": "تعمیر",
+    "description": null,
+    "is_active": true,
+    "created_at": "2025-10-16T08:14:24.629188+00:00"
+  },
+  {
+    "id": "ab993ee8-1af6-4c22-8c22-74cd2e86063d",
+    "name": "پورسانت واسطه گری اهرم برای پیمانکاران",
+    "description": null,
+    "is_active": true,
+    "created_at": "2025-10-16T08:14:24.629188+00:00"
+  },
+  {
+    "id": "769c74bf-efd3-4abd-8e80-c2e44b1423ae",
+    "name": "پورسانت واسطه گری پیمانکاران برای اهرم",
+    "description": null,
+    "is_active": true,
+    "created_at": "2025-10-16T08:14:24.629188+00:00"
+  },
+  {
+    "id": "1504de35-3901-49f2-81a9-995063e9602f",
+    "name": "تأمین نیرو از طرف اهرم برای پیمانکاران",
+    "description": null,
+    "is_active": true,
+    "created_at": "2025-10-16T08:14:24.629188+00:00"
+  },
+  {
+    "id": "4d417adf-604c-4230-b771-4f212957b8cf",
+    "name": "تأمین نیرو از طرف پیمانکاران برای اهرم",
+    "description": null,
+    "is_active": true,
+    "created_at": "2025-10-16T08:14:24.629188+00:00"
+  }
+]

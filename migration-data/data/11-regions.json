@@ -1,1 +1,479 @@
-[{"id":"c8083e04-2e6d-4880-8ee1-6338aef7a361","name":"استان قم","type":"province","parent_id":null,"created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":"qom"}, {"id":"23cd372a-b70f-42d0-a58b-419b3d43d23d","name":"استان تهران","type":"province","parent_id":null,"created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":"tehran"}, {"id":"3c82ca46-bd3b-4ead-bf5f-213192833916","name":"استان البرز","type":"province","parent_id":null,"created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":"alborz"}, {"id":"65879214-c3d8-47f2-b148-06a573670584","name":"شهر قم","type":"district","parent_id":"c8083e04-2e6d-4880-8ee1-6338aef7a361","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"06ec33b6-b8ca-495a-8047-b625fe7e9d05","name":"جعفریه","type":"city","parent_id":"65879214-c3d8-47f2-b148-06a573670584","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"ff7ef633-146b-4b28-ae28-babd69b51dc0","name":"سلفچگان","type":"city","parent_id":"65879214-c3d8-47f2-b148-06a573670584","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"1b752e38-e784-47cd-9771-4624b9632fd0","name":"کهک","type":"city","parent_id":"65879214-c3d8-47f2-b148-06a573670584","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"3b864618-07bc-4312-8e8a-dac0410d2ea1","name":"تهران","type":"district","parent_id":"23cd372a-b70f-42d0-a58b-419b3d43d23d","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"e8d48d6a-29dd-4813-8f9f-52682371bbc0","name":"تهران","type":"city","parent_id":"3b864618-07bc-4312-8e8a-dac0410d2ea1","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"b0991d46-6080-458d-8a5c-6b10c33ec6f6","name":"ری","type":"district","parent_id":"23cd372a-b70f-42d0-a58b-419b3d43d23d","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"23e1b0b2-ed87-4846-ba96-6e6e5bf988b3","name":"ری","type":"city","parent_id":"b0991d46-6080-458d-8a5c-6b10c33ec6f6","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"a29a618c-4681-4709-8c53-30d94bba0269","name":"شمیرانات","type":"district","parent_id":"23cd372a-b70f-42d0-a58b-419b3d43d23d","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"b7c925a0-e724-4598-866c-26db80149165","name":"شمیرانات","type":"city","parent_id":"a29a618c-4681-4709-8c53-30d94bba0269","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"145b5664-7af8-4730-8fc7-ff055cfc9d2f","name":"اسلام‌شهر","type":"district","parent_id":"23cd372a-b70f-42d0-a58b-419b3d43d23d","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"504f246c-5a3a-4f37-8509-63284e8b0caa","name":"اسلام‌شهر","type":"city","parent_id":"145b5664-7af8-4730-8fc7-ff055cfc9d2f","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"8a43529a-b0ea-442d-9983-8d6d66f45aa8","name":"بهارستان","type":"district","parent_id":"23cd372a-b70f-42d0-a58b-419b3d43d23d","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"425c26b4-f32d-4b7a-a7cc-96c48b041724","name":"بهارستان","type":"city","parent_id":"8a43529a-b0ea-442d-9983-8d6d66f45aa8","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"6b16acdf-1d43-4626-98b2-be8347f2d943","name":"قدس","type":"district","parent_id":"23cd372a-b70f-42d0-a58b-419b3d43d23d","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"327e1af4-368e-4624-b13a-becbed612cb9","name":"قدس","type":"city","parent_id":"6b16acdf-1d43-4626-98b2-be8347f2d943","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"78daf2c6-6037-488a-b5fc-7cfb3ae67e75","name":"ملارد","type":"district","parent_id":"23cd372a-b70f-42d0-a58b-419b3d43d23d","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"b0a1e96c-0de7-4f67-9447-146dce8d6ea9","name":"ملارد","type":"city","parent_id":"78daf2c6-6037-488a-b5fc-7cfb3ae67e75","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"ca62b187-425f-4242-b066-1f9a996b5b34","name":"رباط‌کریم","type":"district","parent_id":"23cd372a-b70f-42d0-a58b-419b3d43d23d","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"8704ae37-d4a7-4ff6-89e2-7ab0de665775","name":"رباط‌کریم","type":"city","parent_id":"ca62b187-425f-4242-b066-1f9a996b5b34","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"54342f83-2355-47d9-8baf-a022fea04816","name":"شهریار","type":"district","parent_id":"23cd372a-b70f-42d0-a58b-419b3d43d23d","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"811f0344-f776-483e-bb31-683752d77368","name":"شهریار","type":"city","parent_id":"54342f83-2355-47d9-8baf-a022fea04816","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"2559bd2d-840a-486d-b7cc-7fbc13279d3b","name":"پردیس","type":"district","parent_id":"23cd372a-b70f-42d0-a58b-419b3d43d23d","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"fa6fba07-2674-4098-8527-4355f841febb","name":"پردیس","type":"city","parent_id":"2559bd2d-840a-486d-b7cc-7fbc13279d3b","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"bc302f2a-075d-48ae-aa45-901c9c7945bc","name":"دماوند","type":"district","parent_id":"23cd372a-b70f-42d0-a58b-419b3d43d23d","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"bec67d83-4d2c-4397-a126-49ec76246001","name":"دماوند","type":"city","parent_id":"bc302f2a-075d-48ae-aa45-901c9c7945bc","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"77cd4155-0305-413a-be1c-2ab7ea1307c5","name":"فیروزکوه","type":"district","parent_id":"23cd372a-b70f-42d0-a58b-419b3d43d23d","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"ac1ac938-6eca-4756-af7e-303164a8410e","name":"فیروزکوه","type":"city","parent_id":"77cd4155-0305-413a-be1c-2ab7ea1307c5","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"cac4af22-fb2c-4380-9008-9e73620ad83e","name":"ورامین","type":"district","parent_id":"23cd372a-b70f-42d0-a58b-419b3d43d23d","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"e4fcb6f6-78c5-446f-a4d3-3f6d4aaab5f6","name":"ورامین","type":"city","parent_id":"cac4af22-fb2c-4380-9008-9e73620ad83e","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"e2acb37b-6753-43a9-8f8c-dd9cd5dd67d5","name":"پیشوا","type":"district","parent_id":"23cd372a-b70f-42d0-a58b-419b3d43d23d","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"bce4c40f-7a1e-44af-885b-e0463771ace0","name":"پیشوا","type":"city","parent_id":"e2acb37b-6753-43a9-8f8c-dd9cd5dd67d5","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"fc82346e-87be-447a-818f-3d37a4aa2e66","name":"قرچک","type":"district","parent_id":"23cd372a-b70f-42d0-a58b-419b3d43d23d","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"13ad3364-ca5e-4171-b92d-49f617dca577","name":"قرچک","type":"city","parent_id":"fc82346e-87be-447a-818f-3d37a4aa2e66","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"35cf48a7-ab9c-4d2c-becb-d3e00c5e2f75","name":"پاکدشت","type":"district","parent_id":"23cd372a-b70f-42d0-a58b-419b3d43d23d","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"e07b4080-1fff-418e-9f30-4aa5c1139f8f","name":"پاکدشت","type":"city","parent_id":"35cf48a7-ab9c-4d2c-becb-d3e00c5e2f75","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"538e3a76-03aa-446d-a199-7d68339579ff","name":"کرج","type":"district","parent_id":"3c82ca46-bd3b-4ead-bf5f-213192833916","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"c31c6e1b-a29d-4624-bba3-0838d1a14d05","name":"کرج","type":"city","parent_id":"538e3a76-03aa-446d-a199-7d68339579ff","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"28cb7231-af3a-4693-bccd-56e68c3fed10","name":"فردیس","type":"district","parent_id":"3c82ca46-bd3b-4ead-bf5f-213192833916","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"3e4feaea-137b-4857-a110-22d66205a022","name":"فردیس","type":"city","parent_id":"28cb7231-af3a-4693-bccd-56e68c3fed10","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"5d2a95f9-1e98-4184-add3-be9812a9c78a","name":"ساوجبلاغ","type":"district","parent_id":"3c82ca46-bd3b-4ead-bf5f-213192833916","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"14000504-a224-40da-82ca-efb1f8667653","name":"ساوجبلاغ","type":"city","parent_id":"5d2a95f9-1e98-4184-add3-be9812a9c78a","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"245ac8d5-84c0-4fa4-86c1-778bdd43524b","name":"نظرآباد","type":"district","parent_id":"3c82ca46-bd3b-4ead-bf5f-213192833916","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"a745be04-56cd-4249-81eb-5ea710958287","name":"نظرآباد","type":"city","parent_id":"245ac8d5-84c0-4fa4-86c1-778bdd43524b","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"7fd9c1d1-c7d3-4aef-a6f0-370eb44971db","name":"اشتهارد","type":"district","parent_id":"3c82ca46-bd3b-4ead-bf5f-213192833916","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"483a83ab-749a-4d79-972e-21af99faa637","name":"اشتهارد","type":"city","parent_id":"7fd9c1d1-c7d3-4aef-a6f0-370eb44971db","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"81a8eecd-7182-43bd-a047-d8e939bb8f17","name":"چهارباغ","type":"district","parent_id":"3c82ca46-bd3b-4ead-bf5f-213192833916","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"c84386e9-57a9-466f-86f7-9ac21d58be2b","name":"چهارباغ","type":"city","parent_id":"81a8eecd-7182-43bd-a047-d8e939bb8f17","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"73867b05-7804-4124-86e0-2a2f2bf20bc8","name":"طالقان","type":"district","parent_id":"3c82ca46-bd3b-4ead-bf5f-213192833916","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}, {"id":"b73c9c4c-a44f-4385-ae6b-0f64eda98acc","name":"طالقان","type":"city","parent_id":"73867b05-7804-4124-86e0-2a2f2bf20bc8","created_at":"2025-10-16T08:15:56.561868+00:00","is_active":true,"code":null}]
+[
+  {
+    "id": "c8083e04-2e6d-4880-8ee1-6338aef7a361",
+    "name": "استان قم",
+    "type": "province",
+    "parent_id": null,
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": "qom"
+  },
+  {
+    "id": "23cd372a-b70f-42d0-a58b-419b3d43d23d",
+    "name": "استان تهران",
+    "type": "province",
+    "parent_id": null,
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": "tehran"
+  },
+  {
+    "id": "3c82ca46-bd3b-4ead-bf5f-213192833916",
+    "name": "استان البرز",
+    "type": "province",
+    "parent_id": null,
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": "alborz"
+  },
+  {
+    "id": "65879214-c3d8-47f2-b148-06a573670584",
+    "name": "شهر قم",
+    "type": "district",
+    "parent_id": "c8083e04-2e6d-4880-8ee1-6338aef7a361",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "06ec33b6-b8ca-495a-8047-b625fe7e9d05",
+    "name": "جعفریه",
+    "type": "city",
+    "parent_id": "65879214-c3d8-47f2-b148-06a573670584",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "ff7ef633-146b-4b28-ae28-babd69b51dc0",
+    "name": "سلفچگان",
+    "type": "city",
+    "parent_id": "65879214-c3d8-47f2-b148-06a573670584",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "1b752e38-e784-47cd-9771-4624b9632fd0",
+    "name": "کهک",
+    "type": "city",
+    "parent_id": "65879214-c3d8-47f2-b148-06a573670584",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "3b864618-07bc-4312-8e8a-dac0410d2ea1",
+    "name": "تهران",
+    "type": "district",
+    "parent_id": "23cd372a-b70f-42d0-a58b-419b3d43d23d",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "e8d48d6a-29dd-4813-8f9f-52682371bbc0",
+    "name": "تهران",
+    "type": "city",
+    "parent_id": "3b864618-07bc-4312-8e8a-dac0410d2ea1",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "b0991d46-6080-458d-8a5c-6b10c33ec6f6",
+    "name": "ری",
+    "type": "district",
+    "parent_id": "23cd372a-b70f-42d0-a58b-419b3d43d23d",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "23e1b0b2-ed87-4846-ba96-6e6e5bf988b3",
+    "name": "ری",
+    "type": "city",
+    "parent_id": "b0991d46-6080-458d-8a5c-6b10c33ec6f6",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "a29a618c-4681-4709-8c53-30d94bba0269",
+    "name": "شمیرانات",
+    "type": "district",
+    "parent_id": "23cd372a-b70f-42d0-a58b-419b3d43d23d",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "b7c925a0-e724-4598-866c-26db80149165",
+    "name": "شمیرانات",
+    "type": "city",
+    "parent_id": "a29a618c-4681-4709-8c53-30d94bba0269",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "145b5664-7af8-4730-8fc7-ff055cfc9d2f",
+    "name": "اسلام‌شهر",
+    "type": "district",
+    "parent_id": "23cd372a-b70f-42d0-a58b-419b3d43d23d",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "504f246c-5a3a-4f37-8509-63284e8b0caa",
+    "name": "اسلام‌شهر",
+    "type": "city",
+    "parent_id": "145b5664-7af8-4730-8fc7-ff055cfc9d2f",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "8a43529a-b0ea-442d-9983-8d6d66f45aa8",
+    "name": "بهارستان",
+    "type": "district",
+    "parent_id": "23cd372a-b70f-42d0-a58b-419b3d43d23d",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "425c26b4-f32d-4b7a-a7cc-96c48b041724",
+    "name": "بهارستان",
+    "type": "city",
+    "parent_id": "8a43529a-b0ea-442d-9983-8d6d66f45aa8",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "6b16acdf-1d43-4626-98b2-be8347f2d943",
+    "name": "قدس",
+    "type": "district",
+    "parent_id": "23cd372a-b70f-42d0-a58b-419b3d43d23d",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "327e1af4-368e-4624-b13a-becbed612cb9",
+    "name": "قدس",
+    "type": "city",
+    "parent_id": "6b16acdf-1d43-4626-98b2-be8347f2d943",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "78daf2c6-6037-488a-b5fc-7cfb3ae67e75",
+    "name": "ملارد",
+    "type": "district",
+    "parent_id": "23cd372a-b70f-42d0-a58b-419b3d43d23d",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "b0a1e96c-0de7-4f67-9447-146dce8d6ea9",
+    "name": "ملارد",
+    "type": "city",
+    "parent_id": "78daf2c6-6037-488a-b5fc-7cfb3ae67e75",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "ca62b187-425f-4242-b066-1f9a996b5b34",
+    "name": "رباط‌کریم",
+    "type": "district",
+    "parent_id": "23cd372a-b70f-42d0-a58b-419b3d43d23d",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "8704ae37-d4a7-4ff6-89e2-7ab0de665775",
+    "name": "رباط‌کریم",
+    "type": "city",
+    "parent_id": "ca62b187-425f-4242-b066-1f9a996b5b34",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "54342f83-2355-47d9-8baf-a022fea04816",
+    "name": "شهریار",
+    "type": "district",
+    "parent_id": "23cd372a-b70f-42d0-a58b-419b3d43d23d",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "811f0344-f776-483e-bb31-683752d77368",
+    "name": "شهریار",
+    "type": "city",
+    "parent_id": "54342f83-2355-47d9-8baf-a022fea04816",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "2559bd2d-840a-486d-b7cc-7fbc13279d3b",
+    "name": "پردیس",
+    "type": "district",
+    "parent_id": "23cd372a-b70f-42d0-a58b-419b3d43d23d",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "fa6fba07-2674-4098-8527-4355f841febb",
+    "name": "پردیس",
+    "type": "city",
+    "parent_id": "2559bd2d-840a-486d-b7cc-7fbc13279d3b",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "bc302f2a-075d-48ae-aa45-901c9c7945bc",
+    "name": "دماوند",
+    "type": "district",
+    "parent_id": "23cd372a-b70f-42d0-a58b-419b3d43d23d",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "bec67d83-4d2c-4397-a126-49ec76246001",
+    "name": "دماوند",
+    "type": "city",
+    "parent_id": "bc302f2a-075d-48ae-aa45-901c9c7945bc",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "77cd4155-0305-413a-be1c-2ab7ea1307c5",
+    "name": "فیروزکوه",
+    "type": "district",
+    "parent_id": "23cd372a-b70f-42d0-a58b-419b3d43d23d",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "ac1ac938-6eca-4756-af7e-303164a8410e",
+    "name": "فیروزکوه",
+    "type": "city",
+    "parent_id": "77cd4155-0305-413a-be1c-2ab7ea1307c5",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "cac4af22-fb2c-4380-9008-9e73620ad83e",
+    "name": "ورامین",
+    "type": "district",
+    "parent_id": "23cd372a-b70f-42d0-a58b-419b3d43d23d",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "e4fcb6f6-78c5-446f-a4d3-3f6d4aaab5f6",
+    "name": "ورامین",
+    "type": "city",
+    "parent_id": "cac4af22-fb2c-4380-9008-9e73620ad83e",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "e2acb37b-6753-43a9-8f8c-dd9cd5dd67d5",
+    "name": "پیشوا",
+    "type": "district",
+    "parent_id": "23cd372a-b70f-42d0-a58b-419b3d43d23d",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "bce4c40f-7a1e-44af-885b-e0463771ace0",
+    "name": "پیشوا",
+    "type": "city",
+    "parent_id": "e2acb37b-6753-43a9-8f8c-dd9cd5dd67d5",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "fc82346e-87be-447a-818f-3d37a4aa2e66",
+    "name": "قرچک",
+    "type": "district",
+    "parent_id": "23cd372a-b70f-42d0-a58b-419b3d43d23d",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "13ad3364-ca5e-4171-b92d-49f617dca577",
+    "name": "قرچک",
+    "type": "city",
+    "parent_id": "fc82346e-87be-447a-818f-3d37a4aa2e66",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "35cf48a7-ab9c-4d2c-becb-d3e00c5e2f75",
+    "name": "پاکدشت",
+    "type": "district",
+    "parent_id": "23cd372a-b70f-42d0-a58b-419b3d43d23d",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "e07b4080-1fff-418e-9f30-4aa5c1139f8f",
+    "name": "پاکدشت",
+    "type": "city",
+    "parent_id": "35cf48a7-ab9c-4d2c-becb-d3e00c5e2f75",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "538e3a76-03aa-446d-a199-7d68339579ff",
+    "name": "کرج",
+    "type": "district",
+    "parent_id": "3c82ca46-bd3b-4ead-bf5f-213192833916",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "c31c6e1b-a29d-4624-bba3-0838d1a14d05",
+    "name": "کرج",
+    "type": "city",
+    "parent_id": "538e3a76-03aa-446d-a199-7d68339579ff",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "28cb7231-af3a-4693-bccd-56e68c3fed10",
+    "name": "فردیس",
+    "type": "district",
+    "parent_id": "3c82ca46-bd3b-4ead-bf5f-213192833916",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "3e4feaea-137b-4857-a110-22d66205a022",
+    "name": "فردیس",
+    "type": "city",
+    "parent_id": "28cb7231-af3a-4693-bccd-56e68c3fed10",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "5d2a95f9-1e98-4184-add3-be9812a9c78a",
+    "name": "ساوجبلاغ",
+    "type": "district",
+    "parent_id": "3c82ca46-bd3b-4ead-bf5f-213192833916",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "14000504-a224-40da-82ca-efb1f8667653",
+    "name": "ساوجبلاغ",
+    "type": "city",
+    "parent_id": "5d2a95f9-1e98-4184-add3-be9812a9c78a",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "245ac8d5-84c0-4fa4-86c1-778bdd43524b",
+    "name": "نظرآباد",
+    "type": "district",
+    "parent_id": "3c82ca46-bd3b-4ead-bf5f-213192833916",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "a745be04-56cd-4249-81eb-5ea710958287",
+    "name": "نظرآباد",
+    "type": "city",
+    "parent_id": "245ac8d5-84c0-4fa4-86c1-778bdd43524b",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "7fd9c1d1-c7d3-4aef-a6f0-370eb44971db",
+    "name": "اشتهارد",
+    "type": "district",
+    "parent_id": "3c82ca46-bd3b-4ead-bf5f-213192833916",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "483a83ab-749a-4d79-972e-21af99faa637",
+    "name": "اشتهارد",
+    "type": "city",
+    "parent_id": "7fd9c1d1-c7d3-4aef-a6f0-370eb44971db",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "81a8eecd-7182-43bd-a047-d8e939bb8f17",
+    "name": "چهارباغ",
+    "type": "district",
+    "parent_id": "3c82ca46-bd3b-4ead-bf5f-213192833916",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "c84386e9-57a9-466f-86f7-9ac21d58be2b",
+    "name": "چهارباغ",
+    "type": "city",
+    "parent_id": "81a8eecd-7182-43bd-a047-d8e939bb8f17",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "73867b05-7804-4124-86e0-2a2f2bf20bc8",
+    "name": "طالقان",
+    "type": "district",
+    "parent_id": "3c82ca46-bd3b-4ead-bf5f-213192833916",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  },
+  {
+    "id": "b73c9c4c-a44f-4385-ae6b-0f64eda98acc",
+    "name": "طالقان",
+    "type": "city",
+    "parent_id": "73867b05-7804-4124-86e0-2a2f2bf20bc8",
+    "created_at": "2025-10-16T08:15:56.561868+00:00",
+    "is_active": true,
+    "code": null
+  }
+]
