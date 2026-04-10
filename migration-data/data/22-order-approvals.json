@@ -1,0 +1,2450 @@
+[
+  {
+    "id": "3fb1dd0c-052f-4a41-bf92-eb32a4ca88e8",
+    "order_id": "14af5f88-d4ca-4286-a6a7-e9357ce52931",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T01:22:32.933737+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "db05903f-ec38-4f05-b25c-8174d752ccf2",
+    "order_id": "14af5f88-d4ca-4286-a6a7-e9357ce52931",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T01:22:32.933737+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "e5aaa4b6-11a2-46ec-94c6-5ea676a59d74",
+    "order_id": "14af5f88-d4ca-4286-a6a7-e9357ce52931",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T01:22:32.933737+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "783eb0e7-b9b5-47cf-90e5-5e01ac132366",
+    "order_id": "14af5f88-d4ca-4286-a6a7-e9357ce52931",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-01-04T01:27:29.26+00:00",
+    "created_at": "2026-01-04T01:22:32.933737+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "61509b86-9637-4fa4-9fc3-c0efc4e1337a",
+    "order_id": "cbdc6714-42da-495e-b6ca-f9596b8c54b8",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-05T05:13:07.042783+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "50eb4b66-0346-40b9-81a8-6025f7ab4e22",
+    "order_id": "cbdc6714-42da-495e-b6ca-f9596b8c54b8",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-05T05:13:07.042783+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "8d38fd67-9012-436d-b39f-6f9034d487df",
+    "order_id": "cbdc6714-42da-495e-b6ca-f9596b8c54b8",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-05T05:13:07.042783+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "25436124-877a-4aae-bca2-222829a6941f",
+    "order_id": "cbdc6714-42da-495e-b6ca-f9596b8c54b8",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-01-05T05:46:28.707+00:00",
+    "created_at": "2026-01-05T05:13:07.042783+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "014672f2-333d-4138-b9c2-b62df34e4ce9",
+    "order_id": "ac1aa91c-036b-4a82-9ea1-af572437e4a3",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-08T04:49:29.102281+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "dbf5088c-886f-45bd-8495-72c6d6a46d2d",
+    "order_id": "ac1aa91c-036b-4a82-9ea1-af572437e4a3",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-08T04:49:29.102281+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "9fa7f56b-e8c9-435a-abae-c9d243892492",
+    "order_id": "ac1aa91c-036b-4a82-9ea1-af572437e4a3",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-08T04:49:29.102281+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "1594a714-c528-4a8f-a9ed-db9c7212567d",
+    "order_id": "ac1aa91c-036b-4a82-9ea1-af572437e4a3",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-08T05:07:45.304+00:00",
+    "created_at": "2026-02-08T04:49:29.102281+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "ed45693e-c112-45ba-8bf0-3878fe6b6204",
+    "order_id": "d2a25d32-6b4f-48e7-a94e-b040b6a97738",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-12T04:16:08.191728+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "a1fdf99e-145b-4d1e-af79-7ca948fa20ab",
+    "order_id": "d2a25d32-6b4f-48e7-a94e-b040b6a97738",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-12T04:16:08.191728+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "efbf6b70-0974-4d21-962a-9302692589a7",
+    "order_id": "d2a25d32-6b4f-48e7-a94e-b040b6a97738",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-12T04:16:08.191728+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "e7561cd3-7968-4187-a040-00a949fa61e9",
+    "order_id": "d2a25d32-6b4f-48e7-a94e-b040b6a97738",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-12T04:16:08.191728+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "77318b85-707f-4745-9d52-3d7daf4936a4",
+    "order_id": "5be1a704-78c1-4e50-9cbe-c852c5ca78db",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-16T12:41:08.851398+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "2c5658f4-b991-4943-be19-fb423bbb42dc",
+    "order_id": "5be1a704-78c1-4e50-9cbe-c852c5ca78db",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-16T12:41:08.851398+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "26824089-c30f-4817-a893-883a95846cd6",
+    "order_id": "5be1a704-78c1-4e50-9cbe-c852c5ca78db",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-16T12:41:08.851398+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "e996d0c4-fe33-4280-b1c9-b0b64022344c",
+    "order_id": "5be1a704-78c1-4e50-9cbe-c852c5ca78db",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-16T12:42:15.635+00:00",
+    "created_at": "2026-02-16T12:41:08.851398+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "56c8baac-242c-456c-b3cb-c3c57144bfb6",
+    "order_id": "8316309e-5026-4b82-8ac9-6cfb0015a90d",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-22T03:02:59.266553+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "67ee1b6d-0bf1-498c-a000-fac01faaa6af",
+    "order_id": "8316309e-5026-4b82-8ac9-6cfb0015a90d",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-22T03:02:59.266553+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "91bc1827-d942-4d5a-8c97-ab34b62f8a88",
+    "order_id": "8316309e-5026-4b82-8ac9-6cfb0015a90d",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-22T03:02:59.266553+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "15c9c128-4d44-4bc7-9c84-756792ca7cc9",
+    "order_id": "8316309e-5026-4b82-8ac9-6cfb0015a90d",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-22T03:02:59.266553+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "5cf22a06-1ef3-4cce-8080-b335e3832fde",
+    "order_id": "f0421c74-4b19-444c-83ab-b09315766500",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:53:46.790537+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "4214f33f-aae6-43b7-a7dd-2af72a60ead8",
+    "order_id": "f0421c74-4b19-444c-83ab-b09315766500",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:53:46.790537+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "6392ba04-304f-4cad-a0db-c10e17230d6a",
+    "order_id": "f0421c74-4b19-444c-83ab-b09315766500",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:53:46.790537+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "9640cde5-ee7e-4f58-b713-18cf03c9ce36",
+    "order_id": "f0421c74-4b19-444c-83ab-b09315766500",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:53:46.790537+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "f7747d16-cecb-4f45-8b68-079069bdd08a",
+    "order_id": "fa7b90cc-deb7-4dab-9626-e2c15d2ee514",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:55:34.296123+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "fb967fc7-f913-45ad-94b2-ae86945109e8",
+    "order_id": "fa7b90cc-deb7-4dab-9626-e2c15d2ee514",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:55:34.296123+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "8b397748-c3d4-44f4-ac79-cc2b73674a04",
+    "order_id": "fa7b90cc-deb7-4dab-9626-e2c15d2ee514",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:55:34.296123+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "62c8c8e5-155c-4286-be26-3e5b866fd8a3",
+    "order_id": "fa7b90cc-deb7-4dab-9626-e2c15d2ee514",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:55:34.296123+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "d380390a-a97e-4fca-8756-74004e23cb4e",
+    "order_id": "706d0024-6c9f-4327-a481-1b8922faadd9",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-25T06:27:39.975612+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "624ec013-c3dd-447d-9180-8a6b61a496df",
+    "order_id": "706d0024-6c9f-4327-a481-1b8922faadd9",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-25T06:27:39.975612+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "335acbfd-1661-4a31-abc7-1c549f8f75e2",
+    "order_id": "706d0024-6c9f-4327-a481-1b8922faadd9",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-25T06:27:39.975612+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "14efb288-9e68-4db3-9d72-b172381b2b2b",
+    "order_id": "706d0024-6c9f-4327-a481-1b8922faadd9",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-25T06:27:39.975612+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "10eb65ce-d7f4-40fc-aca1-55090a2f4532",
+    "order_id": "38c288f5-e708-4a95-b9b9-3889ae55119b",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T01:52:20.417957+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "5ced690c-69de-4034-ab47-c78db24e85d4",
+    "order_id": "38c288f5-e708-4a95-b9b9-3889ae55119b",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T01:52:20.417957+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "f2b0eb1a-5bcc-4eeb-abd4-111b84918847",
+    "order_id": "38c288f5-e708-4a95-b9b9-3889ae55119b",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T01:52:20.417957+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "dde984da-6ee9-4974-9b90-40ecdc9ed5d0",
+    "order_id": "38c288f5-e708-4a95-b9b9-3889ae55119b",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T01:52:20.417957+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "4605a3e5-cb9a-4c3e-b1c6-a7ae070da760",
+    "order_id": "b1795c97-dacb-4480-9eb3-a42c6a49efb8",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-07T05:36:36.953693+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "c028ae96-dc16-46b9-abcf-df406bc9af2b",
+    "order_id": "b1795c97-dacb-4480-9eb3-a42c6a49efb8",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-07T05:36:36.953693+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "df96ee64-331d-4f52-be7a-9b705e735b1a",
+    "order_id": "b1795c97-dacb-4480-9eb3-a42c6a49efb8",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-07T05:36:36.953693+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "5958376f-32d9-4dec-b9fd-fb3176d97b2e",
+    "order_id": "b1795c97-dacb-4480-9eb3-a42c6a49efb8",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-01-07T05:56:18.085+00:00",
+    "created_at": "2026-01-07T05:36:36.953693+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "0fb7c11c-61a8-4103-b4a6-6d0ab41cedcf",
+    "order_id": "2638f57f-f8d8-4d43-8aeb-79dc4fcb6595",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-08T05:09:16.010486+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "2f6c2544-ce8b-406f-b1d6-d54a4f8a2476",
+    "order_id": "2638f57f-f8d8-4d43-8aeb-79dc4fcb6595",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-08T05:09:16.010486+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "4586a74a-6551-4136-932d-ed5f9b4daa0c",
+    "order_id": "2638f57f-f8d8-4d43-8aeb-79dc4fcb6595",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-08T05:09:16.010486+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "f4f1474c-cd1d-4b60-924b-ceedb5b77746",
+    "order_id": "2638f57f-f8d8-4d43-8aeb-79dc4fcb6595",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-08T05:14:03.231+00:00",
+    "created_at": "2026-02-08T05:09:16.010486+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "0c7d7de2-3a2b-4c9d-b7a6-cadb23dec2eb",
+    "order_id": "74ccf99a-cc39-4e45-b3a4-55e4d3d32d85",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-12T05:39:55.449102+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "dbd26fc9-69c2-4d8f-bc4a-91d28df8cf40",
+    "order_id": "74ccf99a-cc39-4e45-b3a4-55e4d3d32d85",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-12T05:39:55.449102+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "89a360c4-bd87-4f86-b16d-34f962a408dd",
+    "order_id": "74ccf99a-cc39-4e45-b3a4-55e4d3d32d85",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-12T05:39:55.449102+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "5ff848e1-6f9f-40a6-8931-3fbc2c9b3098",
+    "order_id": "74ccf99a-cc39-4e45-b3a4-55e4d3d32d85",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-12T05:39:55.449102+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "43ff2ed1-fd2a-4f9e-8e05-842c68ef4ac2",
+    "order_id": "33dfadc4-8db1-4274-8bf4-75a14b52ea30",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-18T01:24:06.339626+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "5aef302c-a678-4d15-8c8f-286cd7d3b54f",
+    "order_id": "33dfadc4-8db1-4274-8bf4-75a14b52ea30",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-18T01:24:06.339626+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "6991065d-e43e-4ae2-802e-7b2b673f1f1a",
+    "order_id": "33dfadc4-8db1-4274-8bf4-75a14b52ea30",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-18T01:24:06.339626+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "ac0d0682-c819-492a-affb-6f3533710821",
+    "order_id": "33dfadc4-8db1-4274-8bf4-75a14b52ea30",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-18T01:25:00.178+00:00",
+    "created_at": "2026-02-18T01:24:06.339626+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "d2d37aca-0747-4747-b939-c4cddcf1bc6c",
+    "order_id": "183be89f-1ae5-48b6-b816-13efe39ee62a",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-22T03:44:04.26253+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "61c8d6f8-ada7-4f4b-82f4-53594e0d7514",
+    "order_id": "183be89f-1ae5-48b6-b816-13efe39ee62a",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-22T03:44:04.26253+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "ca1878dc-6b0a-4aad-8bc1-f5dd8db35e31",
+    "order_id": "183be89f-1ae5-48b6-b816-13efe39ee62a",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-22T03:44:04.26253+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "a13082a1-3374-4866-8379-da6308c3485c",
+    "order_id": "183be89f-1ae5-48b6-b816-13efe39ee62a",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-22T03:46:25.446+00:00",
+    "created_at": "2026-02-22T03:44:04.26253+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "13162c5f-a488-498d-a709-7445594775b2",
+    "order_id": "f83fdcc3-71b3-4e02-89d0-d1b8d45b51c3",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:59:28.87884+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "121fff8d-b771-454c-99c6-def302c9611d",
+    "order_id": "f83fdcc3-71b3-4e02-89d0-d1b8d45b51c3",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:59:28.87884+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "3a133152-ad84-4d4d-a070-ff41f56a7dd2",
+    "order_id": "f83fdcc3-71b3-4e02-89d0-d1b8d45b51c3",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:59:28.87884+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "6e7dbb8a-f869-4adf-80a2-48c99a6e110d",
+    "order_id": "f83fdcc3-71b3-4e02-89d0-d1b8d45b51c3",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-24T02:01:24.729+00:00",
+    "created_at": "2026-02-24T01:59:28.87884+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "f27992c3-2316-4355-8a67-5dbe888f7b36",
+    "order_id": "e8b2b372-605b-4561-ba47-e607be037f70",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-25T08:11:02.321616+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "cc6305e4-29a1-4c78-b646-9240b0437ab2",
+    "order_id": "e8b2b372-605b-4561-ba47-e607be037f70",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-25T08:11:02.321616+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "ea97bdec-ab87-45b7-8505-62d054c72599",
+    "order_id": "e8b2b372-605b-4561-ba47-e607be037f70",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-25T08:11:02.321616+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "e2b5be23-4e9b-492f-a4f4-fb8d39f5ddd4",
+    "order_id": "e8b2b372-605b-4561-ba47-e607be037f70",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-25T08:12:07.677+00:00",
+    "created_at": "2026-02-25T08:11:02.321616+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "13e7f6f8-8cff-499a-ba1f-58afd9e6b1af",
+    "order_id": "de098a52-7e4c-4a70-b673-03a92af98c7a",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T13:44:44.661879+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "61a45e7d-2f75-4391-806e-547d095f0f75",
+    "order_id": "de098a52-7e4c-4a70-b673-03a92af98c7a",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T13:44:44.661879+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "6af32087-12ef-4563-a8eb-92d3a70818fc",
+    "order_id": "de098a52-7e4c-4a70-b673-03a92af98c7a",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T13:44:44.661879+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "858ef2dd-7df5-4317-a039-88dc8702978f",
+    "order_id": "83ac3a70-732c-40a9-b49c-eb4a7c5e5edb",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-07T05:40:54.753377+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "b45695d1-acc7-4fe4-b412-9839e1783b75",
+    "order_id": "83ac3a70-732c-40a9-b49c-eb4a7c5e5edb",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-07T05:40:54.753377+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "e858b4fc-9865-4c5a-bbdc-b4674bf27c65",
+    "order_id": "83ac3a70-732c-40a9-b49c-eb4a7c5e5edb",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-07T05:40:54.753377+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "9bb8f186-3d1b-440c-8e82-3924851f08d9",
+    "order_id": "83ac3a70-732c-40a9-b49c-eb4a7c5e5edb",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-01-07T05:56:14.4+00:00",
+    "created_at": "2026-01-07T05:40:54.753377+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "f1a19cb8-cc1b-4cd1-9131-7b8c69f3233d",
+    "order_id": "de098a52-7e4c-4a70-b673-03a92af98c7a",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-01-07T06:05:55.653+00:00",
+    "created_at": "2026-01-04T13:44:44.661879+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "bd1e3448-248f-4cca-b66b-5042ac13d865",
+    "order_id": "0bd96cae-f40f-48a9-a254-a5e62c726de0",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-08T08:52:25.401082+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "ad7178ee-b65c-4d77-8caa-d01d822d2ab7",
+    "order_id": "0bd96cae-f40f-48a9-a254-a5e62c726de0",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-08T08:52:25.401082+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "f10b7b34-6df0-4ea1-8e1d-a7feced0191c",
+    "order_id": "0bd96cae-f40f-48a9-a254-a5e62c726de0",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-08T08:52:25.401082+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "c147a055-2383-4504-bdae-45539e59c7e4",
+    "order_id": "0bd96cae-f40f-48a9-a254-a5e62c726de0",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-08T08:56:49.142+00:00",
+    "created_at": "2026-02-08T08:52:25.401082+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "b8f088e3-6980-4162-9b70-aaa8aa512502",
+    "order_id": "4896c5a7-1ecc-4d30-9b50-9338bb9380b2",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-14T12:01:14.911107+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "c5227726-1b99-4515-bf03-4eddf9153fec",
+    "order_id": "4896c5a7-1ecc-4d30-9b50-9338bb9380b2",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-14T12:01:14.911107+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "40f8f2a1-a027-4e3a-a138-4ff4a6af0b4f",
+    "order_id": "4896c5a7-1ecc-4d30-9b50-9338bb9380b2",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-14T12:01:14.911107+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "d7f2bc19-2a79-4ae0-a15f-e61c2a9e6454",
+    "order_id": "4896c5a7-1ecc-4d30-9b50-9338bb9380b2",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-14T12:01:14.911107+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "872561e5-45fa-4b66-8937-073e038ea6ab",
+    "order_id": "4b1b88eb-2048-4e36-a1eb-4766dfd2d0a0",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-18T01:49:08.844029+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "0dbf0fe6-24d6-4965-8979-1d2bc8c2c686",
+    "order_id": "4b1b88eb-2048-4e36-a1eb-4766dfd2d0a0",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-18T01:49:08.844029+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "83f02145-7cb8-4b51-9d86-93b31513c0d9",
+    "order_id": "4b1b88eb-2048-4e36-a1eb-4766dfd2d0a0",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-18T01:49:08.844029+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "a6c5121a-8f4d-478a-9c3d-c2aab070952a",
+    "order_id": "4b1b88eb-2048-4e36-a1eb-4766dfd2d0a0",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-18T01:49:40.681+00:00",
+    "created_at": "2026-02-18T01:49:08.844029+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "168d042c-4779-48d7-9392-ff868ca1b853",
+    "order_id": "76b4c03a-fa62-4a2a-8273-e61039d2e24e",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-22T04:02:17.576525+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "e3a83cf3-574f-48dc-a789-708a131e5edb",
+    "order_id": "76b4c03a-fa62-4a2a-8273-e61039d2e24e",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-22T04:02:17.576525+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "cb0924f1-25b2-47a5-b5f5-e1f39067856e",
+    "order_id": "76b4c03a-fa62-4a2a-8273-e61039d2e24e",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-22T04:02:17.576525+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "214b6306-5135-43fd-84d5-7498797e4b2c",
+    "order_id": "76b4c03a-fa62-4a2a-8273-e61039d2e24e",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-22T04:09:22.679+00:00",
+    "created_at": "2026-02-22T04:02:17.576525+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "94ee0ac1-9153-42a5-803f-6a41b3ba7d9d",
+    "order_id": "68d8d52b-377e-4e53-a8ca-ab8c5a6b03f7",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T20:05:50.763735+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "1a55baa7-5dc5-42c1-8e82-ace6dac18261",
+    "order_id": "68d8d52b-377e-4e53-a8ca-ab8c5a6b03f7",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T20:05:50.763735+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "f8f93d1f-93b6-4ada-8abf-23e8c911f6d5",
+    "order_id": "68d8d52b-377e-4e53-a8ca-ab8c5a6b03f7",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T20:05:50.763735+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "2c7dd846-f758-4597-9f9f-4baea3c59627",
+    "order_id": "68d8d52b-377e-4e53-a8ca-ab8c5a6b03f7",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-24T20:27:11.011+00:00",
+    "created_at": "2026-02-24T20:05:50.763735+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "c06cfc1e-1f22-465b-92a2-ef8c49543cf9",
+    "order_id": "0d478c02-7f39-4f0e-b58c-18b6f0cbdea7",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-26T04:36:44.253223+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "30ef7c9f-5a4f-4166-8902-4853f469038d",
+    "order_id": "0d478c02-7f39-4f0e-b58c-18b6f0cbdea7",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-26T04:36:44.253223+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "ebfa72a3-2a95-45c9-a348-593966e7c602",
+    "order_id": "0d478c02-7f39-4f0e-b58c-18b6f0cbdea7",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-26T04:36:44.253223+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "27d1da5a-e3fe-456a-93cb-f4c65875a419",
+    "order_id": "0d478c02-7f39-4f0e-b58c-18b6f0cbdea7",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-26T04:36:44.253223+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "2e19d5a2-f9d8-45bc-8b63-89b9d166d6f9",
+    "order_id": "ac884b49-c76f-47d5-86f8-67311d1bb936",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T22:02:20.499442+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "d717fbd5-5d47-498f-98a4-4c755cceb4d9",
+    "order_id": "ac884b49-c76f-47d5-86f8-67311d1bb936",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T22:02:20.499442+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "f3ddb106-36e1-4b84-b4ec-b992d85939d8",
+    "order_id": "ac884b49-c76f-47d5-86f8-67311d1bb936",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T22:02:20.499442+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "60dec152-7204-4708-9771-25082d291b48",
+    "order_id": "ac884b49-c76f-47d5-86f8-67311d1bb936",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T22:02:20.499442+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "9b6f9e18-4bbd-418e-a739-09af7ef7e236",
+    "order_id": "945aab70-b4dd-459f-a0ef-ec1adf21ca5c",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-07T06:15:31.057388+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "dc88c13b-8d32-418b-81fb-a0701a56da3a",
+    "order_id": "945aab70-b4dd-459f-a0ef-ec1adf21ca5c",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-07T06:15:31.057388+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "762098e3-fdec-4e4e-a02e-b180cfa3d136",
+    "order_id": "945aab70-b4dd-459f-a0ef-ec1adf21ca5c",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-07T06:15:31.057388+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "96ac76de-d4f4-44f2-8950-2855c88efeb7",
+    "order_id": "945aab70-b4dd-459f-a0ef-ec1adf21ca5c",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-07T06:15:31.057388+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "9c24efe3-9ea1-4216-ac0d-97bbecb80759",
+    "order_id": "1e643f2d-29fd-440d-bfab-8f96d0b24070",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-10T06:50:19.021889+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "74a1a959-d5a4-4b80-9454-9022267fd643",
+    "order_id": "1e643f2d-29fd-440d-bfab-8f96d0b24070",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-10T06:50:19.021889+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "20b465dc-d523-4dd4-b4d6-01aad1794868",
+    "order_id": "1e643f2d-29fd-440d-bfab-8f96d0b24070",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-10T06:50:19.021889+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "a7b51e80-c366-4cfb-be3b-92d4324406b8",
+    "order_id": "1e643f2d-29fd-440d-bfab-8f96d0b24070",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-10T06:56:31.072+00:00",
+    "created_at": "2026-02-10T06:50:19.021889+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "6ae27830-b1f4-4987-a2a9-5d42985d2ac4",
+    "order_id": "f1b4536f-587c-4dd8-bba8-158d616f6560",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-14T12:10:44.497739+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "8deacadd-f530-4057-a708-2694aa70e00b",
+    "order_id": "f1b4536f-587c-4dd8-bba8-158d616f6560",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-14T12:10:44.497739+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "d33c7b29-ec26-4368-b5fb-56b5cfbcfaf8",
+    "order_id": "f1b4536f-587c-4dd8-bba8-158d616f6560",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-14T12:10:44.497739+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "4fc31838-be54-4c16-88d9-f3bbbea7a9f5",
+    "order_id": "f1b4536f-587c-4dd8-bba8-158d616f6560",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-17T22:49:49.538+00:00",
+    "created_at": "2026-02-14T12:10:44.497739+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "2154ebbf-dacb-42a0-b4c1-5d707cd3d9e0",
+    "order_id": "637d87fb-bdab-4b3a-af1a-af73d080f654",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-18T12:28:48.318899+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "ef664cd4-00b9-4f48-8706-9d9aeb677f3b",
+    "order_id": "637d87fb-bdab-4b3a-af1a-af73d080f654",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-18T12:28:48.318899+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "069683aa-1b56-4054-9552-135edfd70e8b",
+    "order_id": "637d87fb-bdab-4b3a-af1a-af73d080f654",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-18T12:28:48.318899+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "0a8a4777-eb9e-40de-9fca-1658e213c658",
+    "order_id": "637d87fb-bdab-4b3a-af1a-af73d080f654",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-18T12:30:00.198+00:00",
+    "created_at": "2026-02-18T12:28:48.318899+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "193f8d14-6f82-4931-abb5-0700d116ecf5",
+    "order_id": "b278aec3-7aaa-430f-acdc-54fc8e8faf2a",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-22T04:29:57.302739+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "a01d6d0e-31e1-49fa-b05a-0a040681a26e",
+    "order_id": "b278aec3-7aaa-430f-acdc-54fc8e8faf2a",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-22T04:29:57.302739+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "a7e78af3-972c-46a8-8bb2-87b508b39504",
+    "order_id": "b278aec3-7aaa-430f-acdc-54fc8e8faf2a",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-22T04:29:57.302739+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "39fe2cb8-26ad-4632-aed2-2de1db040978",
+    "order_id": "b278aec3-7aaa-430f-acdc-54fc8e8faf2a",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-22T04:33:09.942+00:00",
+    "created_at": "2026-02-22T04:29:57.302739+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "fca8c44d-61b1-4333-9d49-e62984407529",
+    "order_id": "82bceab5-3a77-447b-98da-5eb17c8c1215",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T20:10:16.01369+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "ed7d81cb-fb10-4749-8f8f-55e042429f4e",
+    "order_id": "82bceab5-3a77-447b-98da-5eb17c8c1215",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T20:10:16.01369+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "42ad2bd3-4ff1-47c6-982b-6dce39cfb2a1",
+    "order_id": "82bceab5-3a77-447b-98da-5eb17c8c1215",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T20:10:16.01369+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "8d7c4d08-f6df-4cba-9ea0-4a2d56f42b11",
+    "order_id": "82bceab5-3a77-447b-98da-5eb17c8c1215",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-24T20:26:11.417+00:00",
+    "created_at": "2026-02-24T20:10:16.01369+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "454a2cad-97ee-438e-8869-1843841a48da",
+    "order_id": "d8704a03-977f-4c48-b9ee-7c3d8132d3a0",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T22:25:43.179054+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "73330d46-d6bc-4444-a213-873facd1ee34",
+    "order_id": "d8704a03-977f-4c48-b9ee-7c3d8132d3a0",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T22:25:43.179054+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "0d77408a-4dfa-4cb6-8053-9c4655a6be33",
+    "order_id": "d8704a03-977f-4c48-b9ee-7c3d8132d3a0",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T22:25:43.179054+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "6fec0635-f7c9-4c5b-a399-98e8b512306a",
+    "order_id": "d8704a03-977f-4c48-b9ee-7c3d8132d3a0",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T22:25:43.179054+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "93dce06f-28e7-4749-8fdd-a1ac348313b3",
+    "order_id": "a268cd00-3f2a-42f6-a468-1dcc9b73100b",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-08T02:14:32.209102+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "cba79139-7940-4ac6-8009-88073f8a1476",
+    "order_id": "a268cd00-3f2a-42f6-a468-1dcc9b73100b",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-08T02:14:32.209102+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "aa60d513-0b20-4d9d-b052-006d510fa189",
+    "order_id": "a268cd00-3f2a-42f6-a468-1dcc9b73100b",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-08T02:14:32.209102+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "de9fbb41-0c90-46b7-b4d8-5689f0f5c73c",
+    "order_id": "a268cd00-3f2a-42f6-a468-1dcc9b73100b",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-01-08T02:21:03.03+00:00",
+    "created_at": "2026-01-08T02:14:32.209102+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "33888655-95db-4b1c-9707-c8b2e414f9d6",
+    "order_id": "9e72e9a4-9e62-4a6f-b34e-d93e6fd28855",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-10T10:07:21.913208+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "16f294e2-b890-4545-af28-97a589a18656",
+    "order_id": "9e72e9a4-9e62-4a6f-b34e-d93e6fd28855",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-10T10:07:21.913208+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "020c5b8d-a41a-4b5a-b350-7e803e461773",
+    "order_id": "9e72e9a4-9e62-4a6f-b34e-d93e6fd28855",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-10T10:07:21.913208+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "20d89ec8-0325-4f14-b0d4-e3231336e765",
+    "order_id": "9e72e9a4-9e62-4a6f-b34e-d93e6fd28855",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-10T11:41:44.156+00:00",
+    "created_at": "2026-02-10T10:07:21.913208+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "7946ad99-26cf-4947-85f1-27e7645e0e02",
+    "order_id": "edceb047-9c77-4852-8a44-7f0dda354b3e",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-14T12:21:07.173937+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "d7e76b1f-bd3d-488d-af22-ab38c45ce374",
+    "order_id": "edceb047-9c77-4852-8a44-7f0dda354b3e",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-14T12:21:07.173937+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "6a4daff3-a6b0-4458-96f9-042c7a9645f2",
+    "order_id": "edceb047-9c77-4852-8a44-7f0dda354b3e",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-14T12:21:07.173937+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "724ff7e9-e5d5-426b-99db-ed53a36023ee",
+    "order_id": "edceb047-9c77-4852-8a44-7f0dda354b3e",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-14T12:35:45.837+00:00",
+    "created_at": "2026-02-14T12:21:07.173937+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "ac997dd6-ab7c-43f9-8ad7-5861d5fcfd3a",
+    "order_id": "9a2a5d7a-4554-4efe-a14e-0068bbfc9352",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-18T12:52:59.960523+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "2c45b9ac-a2a1-4e14-8417-13244e7f17c5",
+    "order_id": "9a2a5d7a-4554-4efe-a14e-0068bbfc9352",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-18T12:52:59.960523+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "832f131b-a389-4a96-8ee8-ec9d5afa7bf8",
+    "order_id": "9a2a5d7a-4554-4efe-a14e-0068bbfc9352",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-18T12:52:59.960523+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "568d94d4-e450-46be-9128-ea1569071f5a",
+    "order_id": "9a2a5d7a-4554-4efe-a14e-0068bbfc9352",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-18T12:53:38.899+00:00",
+    "created_at": "2026-02-18T12:52:59.960523+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "36783a76-c92c-4150-88ac-5c3ca41f4b8b",
+    "order_id": "ffdd6dba-d19c-4354-8ceb-a082d82446f8",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-23T01:06:03.26412+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "d55f8ac0-e093-42a4-bf46-414750329a99",
+    "order_id": "ffdd6dba-d19c-4354-8ceb-a082d82446f8",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-23T01:06:03.26412+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "432ffa32-edb9-4d67-938a-7a4a05a2f683",
+    "order_id": "ffdd6dba-d19c-4354-8ceb-a082d82446f8",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-23T01:06:03.26412+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "ba821064-2a6b-4a78-ae20-b5e47d1f7571",
+    "order_id": "ffdd6dba-d19c-4354-8ceb-a082d82446f8",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-23T01:07:26.577+00:00",
+    "created_at": "2026-02-23T01:06:03.26412+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "bd301275-7f36-4169-9a78-238a5ae7e236",
+    "order_id": "9d7e07ac-e7a9-4e59-9ef1-643e9e60ae6f",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T20:14:24.552666+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "5efc761f-ae5f-4d0f-8dd9-8f40a9c5bf7b",
+    "order_id": "9d7e07ac-e7a9-4e59-9ef1-643e9e60ae6f",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T20:14:24.552666+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "47baf5b9-c926-4a9a-b5f0-d0b075e9e0f1",
+    "order_id": "9d7e07ac-e7a9-4e59-9ef1-643e9e60ae6f",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T20:14:24.552666+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "41063731-06fe-405f-916a-829374784924",
+    "order_id": "9d7e07ac-e7a9-4e59-9ef1-643e9e60ae6f",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-24T20:23:16.029+00:00",
+    "created_at": "2026-02-24T20:14:24.552666+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "240b601c-6472-43cf-964e-2e1d1333a6d0",
+    "order_id": "3f2f3713-bfe2-4801-b271-c7bdd23107cf",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T23:40:39.39895+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "4631507b-948c-448a-bcd9-4fc8f3df3e64",
+    "order_id": "3f2f3713-bfe2-4801-b271-c7bdd23107cf",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T23:40:39.39895+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "168959d4-e161-4e03-9c7e-ae8ef7a445bb",
+    "order_id": "3f2f3713-bfe2-4801-b271-c7bdd23107cf",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T23:40:39.39895+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "479e50ea-2d19-4317-a914-b3ba1733c57d",
+    "order_id": "3f2f3713-bfe2-4801-b271-c7bdd23107cf",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T23:40:39.39895+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "d6b16a6e-dd4f-4894-9242-73d1e6402dd2",
+    "order_id": "7ce2bf17-ef6c-409d-8aed-cf7e48eac88b",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-03T11:01:41.964922+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "439b14f2-21e5-4fd1-9fcc-f17fc2c3b339",
+    "order_id": "7ce2bf17-ef6c-409d-8aed-cf7e48eac88b",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-03T11:01:41.964922+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "31e00a05-9cc5-40b3-91e5-2c03b8baa889",
+    "order_id": "7ce2bf17-ef6c-409d-8aed-cf7e48eac88b",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-03T11:01:41.964922+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "ca03d19a-1e85-4949-bcb4-0d8da7dcce70",
+    "order_id": "7ce2bf17-ef6c-409d-8aed-cf7e48eac88b",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-03T13:16:19.928+00:00",
+    "created_at": "2026-02-03T11:01:41.964922+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "1a24f062-c9ae-4462-91dd-2ce6b3cd29e9",
+    "order_id": "f4aee594-dd72-4868-ac3b-a746e828a861",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-10T12:28:34.247308+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "55105008-da36-45f9-b495-e8c6738f3a1f",
+    "order_id": "f4aee594-dd72-4868-ac3b-a746e828a861",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-10T12:28:34.247308+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "6464e237-61ee-4342-9154-6e9f6ae1df31",
+    "order_id": "f4aee594-dd72-4868-ac3b-a746e828a861",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-10T12:28:34.247308+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "dec6e3d7-a367-4b98-acf3-63bd01443d81",
+    "order_id": "f4aee594-dd72-4868-ac3b-a746e828a861",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-10T12:34:12.649+00:00",
+    "created_at": "2026-02-10T12:28:34.247308+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "7a7dee45-453f-43fc-ad4f-6c63b0ccab06",
+    "order_id": "e34493b4-edd0-4d37-bf73-8c5c7597831e",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-14T12:34:37.072416+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "7205964e-1dc9-496e-9fad-26a0f296d21c",
+    "order_id": "e34493b4-edd0-4d37-bf73-8c5c7597831e",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-14T12:34:37.072416+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "c95e4125-f452-46b2-934d-064aa3d00827",
+    "order_id": "e34493b4-edd0-4d37-bf73-8c5c7597831e",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-14T12:34:37.072416+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "6da0eadf-6cbe-4fac-a4f3-4a4a22f9a4a7",
+    "order_id": "e34493b4-edd0-4d37-bf73-8c5c7597831e",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-14T12:35:48.385+00:00",
+    "created_at": "2026-02-14T12:34:37.072416+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "39b822a1-781e-4a91-a105-8ae368a92bd0",
+    "order_id": "e7f417c2-fdc3-44d3-a080-a0aa80a2da54",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-18T15:33:50.598629+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "cb7289a6-9bb3-431b-b401-6d0cb7e3872c",
+    "order_id": "e7f417c2-fdc3-44d3-a080-a0aa80a2da54",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-18T15:33:50.598629+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "bc6e64ce-32b6-4dc2-8b9b-112d63f73cfb",
+    "order_id": "e7f417c2-fdc3-44d3-a080-a0aa80a2da54",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-18T15:33:50.598629+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "1fa6a026-5759-4c8e-9e62-4721cbfdf781",
+    "order_id": "e7f417c2-fdc3-44d3-a080-a0aa80a2da54",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-18T15:33:50.598629+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "4282802b-3eb6-41c2-ad1b-7a3e1ad314eb",
+    "order_id": "4fc2a3c1-b0c2-4ff9-bcba-4b5b1f7557aa",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-23T03:57:02.504179+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "0cc8e5e8-b1e5-448e-91dc-fcd98c75c67f",
+    "order_id": "4fc2a3c1-b0c2-4ff9-bcba-4b5b1f7557aa",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-23T03:57:02.504179+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "afa5a6f4-5b12-4891-be93-748ce817c204",
+    "order_id": "4fc2a3c1-b0c2-4ff9-bcba-4b5b1f7557aa",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-23T03:57:02.504179+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "46d290a6-96f6-4c40-8adc-46214bb66ef3",
+    "order_id": "4fc2a3c1-b0c2-4ff9-bcba-4b5b1f7557aa",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-23T03:57:02.504179+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "7c9066fc-22fa-458e-908a-359085287bb9",
+    "order_id": "aac91fce-54a6-4eba-9909-eb8d6f938b68",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T20:18:17.997744+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "88f24292-c1ad-4d96-8a4a-bf5010aad4f3",
+    "order_id": "aac91fce-54a6-4eba-9909-eb8d6f938b68",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T20:18:17.997744+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "8e89a351-c449-4911-99c7-3ee960c3e1f5",
+    "order_id": "aac91fce-54a6-4eba-9909-eb8d6f938b68",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T20:18:17.997744+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "578f36a6-d0a7-476e-ae3c-75ba7a07344f",
+    "order_id": "aac91fce-54a6-4eba-9909-eb8d6f938b68",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-24T20:19:17.038+00:00",
+    "created_at": "2026-02-24T20:18:17.997744+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "26bf7538-d9c6-46a6-ac32-11992a35c97e",
+    "order_id": "384147d3-b6f1-474e-83c6-d882f9eea753",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2025-12-26T16:26:37.776162+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "0f7b13cd-a0d2-4032-920e-ffb29c0e4e45",
+    "order_id": "384147d3-b6f1-474e-83c6-d882f9eea753",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2025-12-26T16:26:37.776162+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "19447b39-42fb-4e12-8870-f0bf4e8fd7c2",
+    "order_id": "384147d3-b6f1-474e-83c6-d882f9eea753",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2025-12-26T16:26:37.776162+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "8270f41e-639e-4d69-a4be-e09476a79005",
+    "order_id": "ff73f91d-d898-420c-9fe7-e21ec31dd6ca",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T23:43:58.321358+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "7159a6c7-8420-44e2-a106-61fbc25f1b2a",
+    "order_id": "ff73f91d-d898-420c-9fe7-e21ec31dd6ca",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T23:43:58.321358+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "ab8073e2-d302-46ce-a32c-cc87366a249d",
+    "order_id": "ff73f91d-d898-420c-9fe7-e21ec31dd6ca",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T23:43:58.321358+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "c145b62d-1ec5-4bfa-be74-48c4f14084bb",
+    "order_id": "ff73f91d-d898-420c-9fe7-e21ec31dd6ca",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-04T23:43:58.321358+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "b1af421b-aa88-465f-8cc3-1aa46de66382",
+    "order_id": "2b08887a-ba15-4830-bc45-26f27d61cf61",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-03T12:40:46.402161+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "c28d4921-e571-4503-91b9-57c4afd916ea",
+    "order_id": "2b08887a-ba15-4830-bc45-26f27d61cf61",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-03T12:40:46.402161+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "4def85e8-ab6b-4052-8fbb-21aa0ffeea80",
+    "order_id": "384147d3-b6f1-474e-83c6-d882f9eea753",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2025-12-27T05:37:21.674497+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "156516bd-258f-4549-88ad-2814535efc41",
+    "order_id": "2b08887a-ba15-4830-bc45-26f27d61cf61",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-03T12:40:46.402161+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "6296140f-7337-45c5-b584-30121fa3b785",
+    "order_id": "2b08887a-ba15-4830-bc45-26f27d61cf61",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-03T12:40:46.402161+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "cd06675e-f051-4b90-9ae3-dad16e6d676b",
+    "order_id": "0769e5ca-6007-41de-a075-dc25b3cb1334",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-10T13:13:29.780626+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "27bfa697-46de-446b-ab38-14696a80ce4b",
+    "order_id": "0769e5ca-6007-41de-a075-dc25b3cb1334",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-10T13:13:29.780626+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "775c1b6b-3eba-4bd7-a9a1-df2539bd98af",
+    "order_id": "0769e5ca-6007-41de-a075-dc25b3cb1334",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-10T13:13:29.780626+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "ab112916-3d34-47cf-9515-5f2dea6ae5c2",
+    "order_id": "0769e5ca-6007-41de-a075-dc25b3cb1334",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-10T13:22:57.176+00:00",
+    "created_at": "2026-02-10T13:13:29.780626+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "3eddd06c-3fc1-4b21-a864-73de46e1ac77",
+    "order_id": "69b106f6-1d0f-4a50-923c-665e005386f4",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-18T23:54:50.767574+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "7093d8f9-a1d4-4d47-8023-5462937a3e0b",
+    "order_id": "69b106f6-1d0f-4a50-923c-665e005386f4",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-18T23:54:50.767574+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "1a62a118-073c-4fe5-992d-88deb89ab512",
+    "order_id": "69b106f6-1d0f-4a50-923c-665e005386f4",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-18T23:54:50.767574+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "2e169971-b56f-40e5-ac0d-db52f1f45329",
+    "order_id": "69b106f6-1d0f-4a50-923c-665e005386f4",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-18T23:54:50.767574+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "75c79594-59c2-45bd-b827-579703d04833",
+    "order_id": "1b6efd5c-be24-4313-b8f7-ccaf9c52887d",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:07:29.292228+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "c5c59800-dda0-4948-b357-1d234d2aff69",
+    "order_id": "1b6efd5c-be24-4313-b8f7-ccaf9c52887d",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:07:29.292228+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "3820ec62-ded7-46ec-b3c6-0251ac72260e",
+    "order_id": "1b6efd5c-be24-4313-b8f7-ccaf9c52887d",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:07:29.292228+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "df932368-4fb8-4da7-9e74-70b3898a785b",
+    "order_id": "1b6efd5c-be24-4313-b8f7-ccaf9c52887d",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-24T01:08:50.7+00:00",
+    "created_at": "2026-02-24T01:07:29.292228+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "c3d57b02-e0e8-4126-b838-ee0b1f70a0bd",
+    "order_id": "523e5651-66bd-444b-ba5c-5c9252cdbb0e",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:11:52.698722+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "daca70d4-392d-493d-840f-c37a24199682",
+    "order_id": "523e5651-66bd-444b-ba5c-5c9252cdbb0e",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:11:52.698722+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "012b1fe6-9ca0-4743-99ca-c5e5cbf8166e",
+    "order_id": "523e5651-66bd-444b-ba5c-5c9252cdbb0e",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:11:52.698722+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "2efeeced-9bf5-4b52-b153-9f35d3bf2e30",
+    "order_id": "523e5651-66bd-444b-ba5c-5c9252cdbb0e",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:11:52.698722+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "b8d7a910-02a3-4eb1-bc7d-196e5d8e5be7",
+    "order_id": "5e75c08d-a2ca-455a-9cc5-5629a5e0c475",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-25T03:07:09.494903+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "12e2dd4b-e643-4819-800a-50de85f89700",
+    "order_id": "5e75c08d-a2ca-455a-9cc5-5629a5e0c475",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-25T03:07:09.494903+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "04245978-9a79-44aa-bab1-b9af6d2740c1",
+    "order_id": "5e75c08d-a2ca-455a-9cc5-5629a5e0c475",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-25T03:07:09.494903+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "653a0a42-dd3a-4688-bceb-e48d30fcb74f",
+    "order_id": "5e75c08d-a2ca-455a-9cc5-5629a5e0c475",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-25T03:07:09.494903+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "dbb9c214-2dc1-4534-882d-d02521828cf6",
+    "order_id": "9f631679-b7b4-40d1-a00b-efe1d7542e51",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-05T02:39:35.092475+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "2c9e5ad9-1d34-413e-8138-7ea64b787841",
+    "order_id": "9f631679-b7b4-40d1-a00b-efe1d7542e51",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-05T02:39:35.092475+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "316428ce-1371-4c63-a49e-3beb2bf85a40",
+    "order_id": "9f631679-b7b4-40d1-a00b-efe1d7542e51",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-05T02:39:35.092475+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "b02c028b-7f66-43bb-b576-bd9769b15aab",
+    "order_id": "8b7d01c6-cf9f-4911-bf81-1d95750f4f88",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-05T08:13:41.20205+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "a483d092-858a-4319-9a2d-091969239b22",
+    "order_id": "8b7d01c6-cf9f-4911-bf81-1d95750f4f88",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-05T08:13:41.20205+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "465b413c-02ca-406f-916b-8c243735ab04",
+    "order_id": "8b7d01c6-cf9f-4911-bf81-1d95750f4f88",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-05T08:13:41.20205+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "bea7d1f2-e6e4-4684-a06c-5ce1ade32bed",
+    "order_id": "8b7d01c6-cf9f-4911-bf81-1d95750f4f88",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-05T08:21:46.252+00:00",
+    "created_at": "2026-02-05T08:13:41.20205+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "02a266f2-2db2-4307-9787-f47d1bf3acd1",
+    "order_id": "c96a3ede-6986-4ff2-8b3f-05a355ba6fc1",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-11T10:36:45.90786+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "ce2002c3-ae7f-4ff8-a548-a6802f8bb8a3",
+    "order_id": "c96a3ede-6986-4ff2-8b3f-05a355ba6fc1",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-11T10:36:45.90786+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "aed1cc9b-39ad-4fa7-a15c-0ab8cf4678f5",
+    "order_id": "c96a3ede-6986-4ff2-8b3f-05a355ba6fc1",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-11T10:36:45.90786+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "bd0a2f2f-bedf-47a0-b5ee-3d6c5edec1e0",
+    "order_id": "c96a3ede-6986-4ff2-8b3f-05a355ba6fc1",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-11T11:37:25.24+00:00",
+    "created_at": "2026-02-11T10:36:45.90786+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "0f8d2439-8eee-47a7-9ee2-5354d26bf414",
+    "order_id": "5cb23d9e-db4b-4949-8bee-0af5c5ca2e79",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-19T02:04:18.674098+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "67ad14d9-dc0e-492a-87a7-6ac9c29f9d3b",
+    "order_id": "5cb23d9e-db4b-4949-8bee-0af5c5ca2e79",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-19T02:04:18.674098+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "015a91b1-9e12-4232-b12f-76dcb23d3e50",
+    "order_id": "5cb23d9e-db4b-4949-8bee-0af5c5ca2e79",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-19T02:04:18.674098+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "6d61d880-072b-4eb0-82fc-de8aec21af42",
+    "order_id": "5cb23d9e-db4b-4949-8bee-0af5c5ca2e79",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-19T02:06:20.478+00:00",
+    "created_at": "2026-02-19T02:04:18.674098+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "5eb8ba87-ce69-4957-bb53-2a3740ade116",
+    "order_id": "9f631679-b7b4-40d1-a00b-efe1d7542e51",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-19T03:49:19.284+00:00",
+    "created_at": "2026-01-05T02:39:35.092475+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "e9ebf4f6-606f-42d1-909a-e1503c16f415",
+    "order_id": "b7ea4436-c18f-4309-9ef6-184e6e5e86e4",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:38:38.590634+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "82aeddf1-5860-4903-8bf6-94c5b6acf63e",
+    "order_id": "b7ea4436-c18f-4309-9ef6-184e6e5e86e4",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:38:38.590634+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "dad1bac1-7a04-437b-b0b7-45a20e3a9556",
+    "order_id": "b7ea4436-c18f-4309-9ef6-184e6e5e86e4",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:38:38.590634+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "3ca6d330-8d25-4cf4-9ea2-f2aa7b853c08",
+    "order_id": "b7ea4436-c18f-4309-9ef6-184e6e5e86e4",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-24T01:42:26.7+00:00",
+    "created_at": "2026-02-24T01:38:38.590634+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "af942fc0-fa84-401c-95cd-ccdd7697e74c",
+    "order_id": "9ac939bd-49da-42fa-8d27-d8066c80ebcc",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-25T03:56:39.623232+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "296be7db-381e-4611-b3ce-7f36a1e603ff",
+    "order_id": "9ac939bd-49da-42fa-8d27-d8066c80ebcc",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-25T03:56:39.623232+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "e7c00d87-9971-4d32-9380-2cea989c3f87",
+    "order_id": "9ac939bd-49da-42fa-8d27-d8066c80ebcc",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-25T03:56:39.623232+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "f510945a-b94e-4572-a968-8fc637e78d4b",
+    "order_id": "9ac939bd-49da-42fa-8d27-d8066c80ebcc",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-25T03:56:39.623232+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "e3595f23-e14e-49cf-9174-f84c9053e1f4",
+    "order_id": "34f9e5e8-d1fa-4982-a8b4-63655130a1c9",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-05T03:03:32.244346+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "fb6f1342-1f38-4fac-a9df-21389e8382a7",
+    "order_id": "34f9e5e8-d1fa-4982-a8b4-63655130a1c9",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-05T03:03:32.244346+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "d1e7fb7b-e09b-435d-9408-1250e9450051",
+    "order_id": "34f9e5e8-d1fa-4982-a8b4-63655130a1c9",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-05T03:03:32.244346+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "ab3c3e1c-4142-4ee9-bda1-d98a8b4da11a",
+    "order_id": "34f9e5e8-d1fa-4982-a8b4-63655130a1c9",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-01-05T03:03:32.244346+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "c83864a6-ec4e-440c-ab67-031877ec7399",
+    "order_id": "bc799e75-f05d-444f-ac60-a0d62b485aea",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-07T19:28:05.53008+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "f3348afa-028f-4af2-ba31-bbb618c60a19",
+    "order_id": "99615012-a6df-4fca-9869-4f1cc2fd8783",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2025-12-28T07:36:16.819973+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "5b61ab4f-2ac4-428b-8850-c6548100d7a7",
+    "order_id": "99615012-a6df-4fca-9869-4f1cc2fd8783",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2025-12-28T07:36:16.819973+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "44a8ccb0-bec4-4887-aa8b-c539959409f1",
+    "order_id": "99615012-a6df-4fca-9869-4f1cc2fd8783",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2025-12-28T07:36:16.819973+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "f0964e0d-02b3-40e1-a3e2-8538183fe3b1",
+    "order_id": "bc799e75-f05d-444f-ac60-a0d62b485aea",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-07T19:28:05.53008+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "a14a8a68-5d16-4e82-9999-8b2a364dd4fe",
+    "order_id": "bc799e75-f05d-444f-ac60-a0d62b485aea",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-07T19:28:05.53008+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "f801755e-8395-4c83-967a-c7d77f8b14b1",
+    "order_id": "c9b2019a-a016-4f93-b904-57691bde0750",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-12T02:05:49.211803+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "97a5e9b6-4765-4194-909a-0c62843a8260",
+    "order_id": "c9b2019a-a016-4f93-b904-57691bde0750",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-12T02:05:49.211803+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "c82031eb-c18a-410a-b35f-b662a290ed7e",
+    "order_id": "c9b2019a-a016-4f93-b904-57691bde0750",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-12T02:05:49.211803+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "ed8445f0-3f2f-4643-bcc4-19496a0c1d5c",
+    "order_id": "c9b2019a-a016-4f93-b904-57691bde0750",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-12T02:07:26.566+00:00",
+    "created_at": "2026-02-12T02:05:49.211803+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "ec8221f2-3d01-49e6-baac-c7ba71aa7f12",
+    "order_id": "99615012-a6df-4fca-9869-4f1cc2fd8783",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-17T22:40:32.301+00:00",
+    "created_at": "2025-12-28T07:36:16.819973+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "69897212-de9c-48da-b587-6a074d40d0f5",
+    "order_id": "b92242b2-f3c5-4462-bae2-dacd6ffc3137",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-21T14:07:35.033233+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "6bf1cfe0-3632-4500-92b0-1c8f725a48ca",
+    "order_id": "b92242b2-f3c5-4462-bae2-dacd6ffc3137",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-21T14:07:35.033233+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "0a5a0c65-f74f-4f6d-bab2-eb56c849cb46",
+    "order_id": "b92242b2-f3c5-4462-bae2-dacd6ffc3137",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-21T14:07:35.033233+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "abcafae9-ac3e-49ee-97a3-69ed690bbad4",
+    "order_id": "b92242b2-f3c5-4462-bae2-dacd6ffc3137",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-21T14:07:35.033233+00:00",
+    "subcategory_id": "5dbe340f-5f16-41d4-ad8f-3d33cc43b063"
+  },
+  {
+    "id": "b0e7ce53-a242-4ed4-80c8-6d4ab80df58f",
+    "order_id": "c9125ea7-3d9f-4f3d-bbd9-8aa0331c8ea5",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:52:08.419471+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "473852df-203a-4dd8-8dc6-1f939a97b6cb",
+    "order_id": "c9125ea7-3d9f-4f3d-bbd9-8aa0331c8ea5",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:52:08.419471+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "754e55ee-bc6f-439c-8571-c74d8a4391cc",
+    "order_id": "c9125ea7-3d9f-4f3d-bbd9-8aa0331c8ea5",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:52:08.419471+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "579a3126-ed28-4395-b005-d5b3297a54a5",
+    "order_id": "31e05175-b9f1-4a9b-ba79-21c40dcbdcf6",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2025-12-31T20:14:52.852631+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "c700a345-7575-42c6-babc-35a6f7eff2fc",
+    "order_id": "31e05175-b9f1-4a9b-ba79-21c40dcbdcf6",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2025-12-31T20:14:52.852631+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "173a46f1-b1b0-4f42-8219-5fca1187d703",
+    "order_id": "31e05175-b9f1-4a9b-ba79-21c40dcbdcf6",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2025-12-31T20:14:52.852631+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "d4012473-a381-4efa-9a08-f67681149c63",
+    "order_id": "31e05175-b9f1-4a9b-ba79-21c40dcbdcf6",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2025-12-31T20:14:52.852631+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "3a8747fe-a154-41a3-9ea5-75e610a0d2a0",
+    "order_id": "c9125ea7-3d9f-4f3d-bbd9-8aa0331c8ea5",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-24T01:52:08.419471+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "ad329f54-7156-4eef-81ee-dd8695d65622",
+    "order_id": "bc799e75-f05d-444f-ac60-a0d62b485aea",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-24T20:29:09.556+00:00",
+    "created_at": "2026-02-07T19:28:05.53008+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  },
+  {
+    "id": "408095a4-2ea3-4a73-a299-408b935d332a",
+    "order_id": "cce47185-e51c-4891-956f-fd02c9df1f6f",
+    "approver_role": "ceo",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-25T06:27:39.445807+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "0672006c-2af2-4ab0-ae91-650e26ecc337",
+    "order_id": "cce47185-e51c-4891-956f-fd02c9df1f6f",
+    "approver_role": "sales_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-25T06:27:39.445807+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "75157c8a-29f5-4937-a801-f87009c490e8",
+    "order_id": "cce47185-e51c-4891-956f-fd02c9df1f6f",
+    "approver_role": "scaffold_executive_manager",
+    "approver_user_id": null,
+    "approved_at": null,
+    "created_at": "2026-02-25T06:27:39.445807+00:00",
+    "subcategory_id": null
+  },
+  {
+    "id": "6c3f638c-bc8e-435d-b57a-55c798fb4a65",
+    "order_id": "cce47185-e51c-4891-956f-fd02c9df1f6f",
+    "approver_role": "executive_manager_scaffold_execution_with_materials",
+    "approver_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "approved_at": "2026-02-25T06:28:48.411+00:00",
+    "created_at": "2026-02-25T06:27:39.445807+00:00",
+    "subcategory_id": "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d"
+  }
+]

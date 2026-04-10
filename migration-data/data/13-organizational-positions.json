@@ -1,0 +1,178 @@
+[
+  {
+    "id": "bbcc55f3-b7a2-4c9f-a3bd-ffeba6e19506",
+    "name": "مدیریت",
+    "description": null,
+    "created_at": "2025-10-14T12:10:54.637424+00:00",
+    "is_active": true,
+    "parent_id": null
+  },
+  {
+    "id": "ba9b0987-01f1-4b84-95a2-49c2c86cda8d",
+    "name": "فروش",
+    "description": null,
+    "created_at": "2025-10-14T12:10:54.637424+00:00",
+    "is_active": true,
+    "parent_id": null
+  },
+  {
+    "id": "a750e79c-d0ca-4cad-9860-471c5a6f3346",
+    "name": "اجرایی",
+    "description": null,
+    "created_at": "2025-10-14T12:10:54.637424+00:00",
+    "is_active": true,
+    "parent_id": null
+  },
+  {
+    "id": "3ca92cdf-1a3a-48f1-ae76-89198a6e5ca8",
+    "name": "پشتیبانی",
+    "description": null,
+    "created_at": "2025-10-14T12:10:54.637424+00:00",
+    "is_active": true,
+    "parent_id": null
+  },
+  {
+    "id": "f757ec4c-ea9b-44e4-8150-c9b2bd8c6cd8",
+    "name": "حراست",
+    "description": null,
+    "created_at": "2025-10-14T12:10:54.637424+00:00",
+    "is_active": true,
+    "parent_id": null
+  },
+  {
+    "id": "071c3e8e-483a-4cf0-bcea-652ce7f4db21",
+    "name": "انبارداری",
+    "description": null,
+    "created_at": "2025-10-14T12:10:54.637424+00:00",
+    "is_active": true,
+    "parent_id": null
+  },
+  {
+    "id": "405a88ab-7564-497d-b82c-5c4786cbe852",
+    "name": "مالی",
+    "description": null,
+    "created_at": "2025-10-14T12:10:54.637424+00:00",
+    "is_active": true,
+    "parent_id": null
+  },
+  {
+    "id": "93f43bb5-3305-4b19-a9be-cb4a7d439bb0",
+    "name": "منابع انسانی",
+    "description": null,
+    "created_at": "2025-10-14T12:10:54.637424+00:00",
+    "is_active": true,
+    "parent_id": null
+  },
+  {
+    "id": "399792dd-2ef7-4842-80d0-48445270d554",
+    "name": "ای‌تی",
+    "description": null,
+    "created_at": "2025-10-14T12:10:54.637424+00:00",
+    "is_active": true,
+    "parent_id": null
+  },
+  {
+    "id": "56fcc158-3f66-4d69-82c8-3724c80139f7",
+    "name": "سرپرست",
+    "description": null,
+    "created_at": "2025-10-14T12:10:54.637424+00:00",
+    "is_active": true,
+    "parent_id": null
+  },
+  {
+    "id": "40ac6e19-4e7b-4587-8353-237232911f25",
+    "name": "مدیریت کل",
+    "description": "مدیریت کل سازمان",
+    "created_at": "2025-11-02T23:51:19.40223+00:00",
+    "is_active": true,
+    "parent_id": null
+  },
+  {
+    "id": "a3fbdde1-1a58-4e73-92e0-5187b055395c",
+    "name": "مدیر اجرایی کل",
+    "description": "مدیر اجرایی کل سازمان",
+    "created_at": "2025-11-02T23:51:19.40223+00:00",
+    "is_active": true,
+    "parent_id": null
+  },
+  {
+    "id": "e8bd0f00-33cf-4937-9cfd-e7e9dd93a7e6",
+    "name": "مدیر فروش کل",
+    "description": "مدیر فروش کل سازمان",
+    "created_at": "2025-11-02T23:51:19.40223+00:00",
+    "is_active": true,
+    "parent_id": null
+  },
+  {
+    "id": "e5c06120-e955-4524-a8cf-cc847c4e5504",
+    "name": "مدیر مالی کل",
+    "description": "مدیر مالی کل سازمان",
+    "created_at": "2025-11-02T23:51:19.40223+00:00",
+    "is_active": true,
+    "parent_id": null
+  },
+  {
+    "id": "c0260242-83be-4f32-a63b-22de6072b672",
+    "name": "مدیر انبارداری کل",
+    "description": "مدیر انبارداری کل سازمان",
+    "created_at": "2025-11-02T23:51:19.40223+00:00",
+    "is_active": true,
+    "parent_id": null
+  },
+  {
+    "id": "f2df3f51-1eb8-4231-9894-2dec44569e68",
+    "name": "مدیر پشتیبانی و حراست کل",
+    "description": "مدیر پشتیبانی و حراست کل سازمان",
+    "created_at": "2025-11-02T23:51:19.40223+00:00",
+    "is_active": true,
+    "parent_id": null
+  },
+  {
+    "id": "86f25c80-83fa-411d-8e32-c1082ee1a160",
+    "name": "مدیریت خدمات اجرایی داربست به همراه اجناس",
+    "description": "مدیریت خدمات اجرایی داربست به همراه اجناس",
+    "created_at": "2025-11-02T23:51:19.40223+00:00",
+    "is_active": true,
+    "parent_id": "40ac6e19-4e7b-4587-8353-237232911f25"
+  },
+  {
+    "id": "78f4fc58-8527-4428-ada4-ed31e4c56ebd",
+    "name": "مدیر اجرایی خدمات اجرایی داربست به همراه اجناس",
+    "description": "مدیر اجرایی خدمات اجرایی داربست به همراه اجناس",
+    "created_at": "2025-11-02T23:51:19.40223+00:00",
+    "is_active": true,
+    "parent_id": "a3fbdde1-1a58-4e73-92e0-5187b055395c"
+  },
+  {
+    "id": "067efd22-cde2-4206-ab2f-4e2b4f52ccdb",
+    "name": "مدیر فروش خدمات اجرایی داربست به همراه اجناس",
+    "description": "مدیر فروش خدمات اجرایی داربست به همراه اجناس",
+    "created_at": "2025-11-02T23:51:19.40223+00:00",
+    "is_active": true,
+    "parent_id": "e8bd0f00-33cf-4937-9cfd-e7e9dd93a7e6"
+  },
+  {
+    "id": "06daf331-7234-4ba6-bd4e-ab6441235bbd",
+    "name": "مدیر مالی خدمات اجرایی داربست به همراه اجناس",
+    "description": "مدیر مالی خدمات اجرایی داربست به همراه اجناس",
+    "created_at": "2025-11-02T23:51:19.40223+00:00",
+    "is_active": true,
+    "parent_id": "e5c06120-e955-4524-a8cf-cc847c4e5504"
+  },
+  {
+    "id": "de377d77-8e17-4774-adf2-dd45a9a2b028",
+    "name": "مدیر انبارداری خدمات اجرایی داربست به همراه اجناس",
+    "description": "مدیر انبارداری خدمات اجرایی داربست به همراه اجناس",
+    "created_at": "2025-11-02T23:51:19.40223+00:00",
+    "is_active": true,
+    "parent_id": "c0260242-83be-4f32-a63b-22de6072b672"
+  },
+  {
+    "id": "29e60f7b-b13a-44df-a568-256c4100524c",
+    "name": "مدیر پشتیبانی و حراست خدمات اجرایی داربست به همراه اجناس",
+    "description": "مدیر پشتیبانی و حراست خدمات اجرایی داربست به همراه اجناس",
+    "created_at": "2025-11-02T23:51:19.40223+00:00",
+    "is_active": true,
+    "parent_id": "f2df3f51-1eb8-4231-9894-2dec44569e68"
+  }
+]
