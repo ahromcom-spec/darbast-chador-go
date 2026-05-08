@@ -730,6 +730,62 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_statements: {
+        Row: {
+          address: string | null
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          customer_id: string
+          detailed_address: string | null
+          id: string
+          statement_number: number
+          status: string
+          subcategory_id: string | null
+          total_amount: number
+          total_paid: number
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          customer_id: string
+          detailed_address?: string | null
+          id?: string
+          statement_number: number
+          status?: string
+          subcategory_id?: string | null
+          total_amount?: number
+          total_paid?: number
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          customer_id?: string
+          detailed_address?: string | null
+          id?: string
+          statement_number?: number
+          status?: string
+          subcategory_id?: string | null
+          total_amount?: number
+          total_paid?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_statements_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           created_at: string | null
@@ -937,6 +993,7 @@ export type Database = {
           spending_notes: string | null
           staff_name: string | null
           staff_user_id: string | null
+          transaction_time: string | null
           updated_at: string
           work_status: string
         }
@@ -955,6 +1012,7 @@ export type Database = {
           spending_notes?: string | null
           staff_name?: string | null
           staff_user_id?: string | null
+          transaction_time?: string | null
           updated_at?: string
           work_status?: string
         }
@@ -973,6 +1031,7 @@ export type Database = {
           spending_notes?: string | null
           staff_name?: string | null
           staff_user_id?: string | null
+          transaction_time?: string | null
           updated_at?: string
           work_status?: string
         }
@@ -2330,6 +2389,7 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           created_at: string
+          customer_code: string
           full_name: string | null
           id: string
           password_set_at: string | null
@@ -2344,6 +2404,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          customer_code?: string
           full_name?: string | null
           id?: string
           password_set_at?: string | null
@@ -2358,6 +2419,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          customer_code?: string
           full_name?: string | null
           id?: string
           password_set_at?: string | null
@@ -2850,6 +2912,7 @@ export type Database = {
           province_id: string
           rejection_reason: string | null
           rental_start_date: string | null
+          statement_id: string | null
           status: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
           total_paid: number | null
@@ -2906,6 +2969,7 @@ export type Database = {
           province_id: string
           rejection_reason?: string | null
           rental_start_date?: string | null
+          statement_id?: string | null
           status?: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
           total_paid?: number | null
@@ -2962,6 +3026,7 @@ export type Database = {
           province_id?: string
           rejection_reason?: string | null
           rental_start_date?: string | null
+          statement_id?: string | null
           status?: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id?: string
           total_paid?: number | null
@@ -3012,6 +3077,13 @@ export type Database = {
             columns: ["province_id"]
             isOneToOne: false
             referencedRelation: "provinces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_v3_statement_id_fkey"
+            columns: ["statement_id"]
+            isOneToOne: false
+            referencedRelation: "customer_statements"
             referencedColumns: ["id"]
           },
           {
@@ -3395,6 +3467,8 @@ export type Database = {
           order_id: string
           paid_at: string | null
           payment_reference: string | null
+          repaired_at: string | null
+          request_date: string | null
           status: string
           updated_at: string
         }
@@ -3411,6 +3485,8 @@ export type Database = {
           order_id: string
           paid_at?: string | null
           payment_reference?: string | null
+          repaired_at?: string | null
+          request_date?: string | null
           status?: string
           updated_at?: string
         }
@@ -3427,6 +3503,8 @@ export type Database = {
           order_id?: string
           paid_at?: string | null
           payment_reference?: string | null
+          repaired_at?: string | null
+          request_date?: string | null
           status?: string
           updated_at?: string
         }
@@ -4781,6 +4859,10 @@ export type Database = {
       }
       cleanup_expired_email_codes: { Args: never; Returns: undefined }
       cleanup_expired_otps: { Args: never; Returns: undefined }
+      close_customer_statement: {
+        Args: { _statement_id: string }
+        Returns: string
+      }
       create_project_v3: {
         Args: {
           _address: string
@@ -4837,6 +4919,7 @@ export type Database = {
           province_id: string
           rejection_reason: string | null
           rental_start_date: string | null
+          statement_id: string | null
           status: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
           total_paid: number | null
@@ -4853,6 +4936,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      current_user_has_password: { Args: never; Returns: boolean }
       daily_report_contains_staff: {
         Args: { p_report_id: string; p_user_id: string }
         Returns: boolean
@@ -4867,6 +4951,7 @@ export type Database = {
         Returns: string
       }
       generate_service_code: { Args: { _project_id: string }; Returns: string }
+      generate_unique_customer_code: { Args: never; Returns: string }
       generate_unique_order_code: { Args: never; Returns: string }
       get_contractor_contact_info: {
         Args: { _contractor_id: string }
@@ -4964,6 +5049,7 @@ export type Database = {
           province_id: string
           rejection_reason: string | null
           rental_start_date: string | null
+          statement_id: string | null
           status: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
           total_paid: number | null
@@ -4980,6 +5066,17 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_or_create_open_statement:
+        | { Args: { _customer_id: string }; Returns: string }
+        | {
+            Args: {
+              _address?: string
+              _customer_id: string
+              _detailed_address?: string
+              _subcategory_id?: string
+            }
+            Returns: string
+          }
       get_or_create_project: {
         Args: {
           _location_id: string
@@ -5084,6 +5181,10 @@ export type Database = {
           _title: string
           _type?: string
         }
+        Returns: undefined
+      }
+      recalc_customer_statement: {
+        Args: { _statement_id: string }
         Returns: undefined
       }
       recalculate_all_bank_card_balances: { Args: never; Returns: undefined }
