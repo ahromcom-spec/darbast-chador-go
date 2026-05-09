@@ -81,6 +81,7 @@ interface PaymentRecord {
   created_at: string;
   order_code: string;
   order_id: string;
+}
 
 interface CustomerData {
   customer_id: string;
