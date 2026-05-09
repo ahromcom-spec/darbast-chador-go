@@ -54,6 +54,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Separator } from '@/components/ui/separator';
+import { MultiPaymentDialog } from '@/components/orders/MultiPaymentDialog';
 
 // Types
 interface OrderItem {
