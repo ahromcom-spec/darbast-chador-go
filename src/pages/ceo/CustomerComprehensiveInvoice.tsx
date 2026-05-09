@@ -1150,6 +1150,30 @@ export default function CustomerComprehensiveInvoice() {
           }}
         />
       )}
+
+      {/* Bulk Customer Payment Dialog */}
+      {bulkPaymentCustomer && (
+        <CustomerBulkPaymentDialog
+          open={!!bulkPaymentCustomer}
+          onOpenChange={(open) => { if (!open) setBulkPaymentCustomer(null); }}
+          customerId={bulkPaymentCustomer.customer_id}
+          customerName={bulkPaymentCustomer.full_name}
+          customerPhone={bulkPaymentCustomer.phone_number}
+          orders={bulkPaymentCustomer.orders.map(o => ({
+            id: o.id,
+            code: o.code,
+            payment_amount: o.payment_amount,
+            total_paid: o.total_paid,
+            remaining: o.remaining,
+            service_type_name: o.service_type_name,
+            address: o.address,
+          }))}
+          onSuccess={() => {
+            setBulkPaymentCustomer(null);
+            fetchCustomersData();
+          }}
+        />
+      )}
     </ModuleLayout>
   );
 }
