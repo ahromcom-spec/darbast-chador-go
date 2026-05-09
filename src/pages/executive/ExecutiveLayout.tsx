@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useLocation, Navigate, useSearchParams, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ShoppingCart, Users, ClipboardCheck, Play, Loader, CheckCircle, Banknote, PackageOpen, ArrowLeftRight, ChevronDown, ListOrdered, Archive, PackageCheck, Package, ArrowRight } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Users, ClipboardCheck, Play, Loader, CheckCircle, Banknote, PackageOpen, ArrowLeftRight, ChevronDown, ListOrdered, Archive, PackageCheck, Package, ArrowRight, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -100,6 +100,12 @@ const mainNavItems = [
     title: 'بایگانی',
     href: '/executive/archived',
     icon: Archive
+  },
+  {
+    title: 'صورتحساب جامع',
+    href: '/customer-comprehensive-invoice',
+    icon: FileText,
+    external: true
   }
 ];
 
@@ -206,10 +212,10 @@ export function ExecutiveLayout() {
         <div className="container mx-auto">
           <nav className="flex gap-1 overflow-x-auto py-1">
             {/* آیتم‌های اصلی ناوبری */}
-            {mainNavItems.map((item) => (
+            {mainNavItems.map((item: any) => (
               <NavLink
                 key={item.href}
-                to={`${item.href}?moduleKey=${activeModuleKey}`}
+                to={item.external ? item.href : `${item.href}?moduleKey=${activeModuleKey}`}
                 end={item.href === '/executive'}
                 className={({ isActive }) =>
                   cn(
