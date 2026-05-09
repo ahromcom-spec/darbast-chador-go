@@ -1098,6 +1098,25 @@ export default function CustomerComprehensiveInvoice() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Multi Payment Dialog - register payment from invoice */}
+      {paymentOrder && (
+        <MultiPaymentDialog
+          open={!!paymentOrder}
+          onOpenChange={(open) => { if (!open) setPaymentOrder(null); }}
+          orderId={paymentOrder.order.id}
+          orderCode={paymentOrder.order.code}
+          customerName={paymentOrder.customer.full_name}
+          customerId={paymentOrder.customer.customer_id}
+          totalPrice={paymentOrder.order.payment_amount}
+          customerPhone={paymentOrder.customer.phone_number}
+          address={paymentOrder.order.address}
+          serviceType={paymentOrder.order.service_type_name}
+          onPaymentSuccess={() => {
+            fetchCustomersData();
+          }}
+        />
+      )}
     </ModuleLayout>
   );
 }
