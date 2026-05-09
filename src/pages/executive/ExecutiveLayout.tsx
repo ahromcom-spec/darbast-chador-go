@@ -212,10 +212,10 @@ export function ExecutiveLayout() {
         <div className="container mx-auto">
           <nav className="flex gap-1 overflow-x-auto py-1">
             {/* آیتم‌های اصلی ناوبری */}
-            {mainNavItems.map((item) => (
+            {mainNavItems.map((item: any) => (
               <NavLink
                 key={item.href}
-                to={`${item.href}?moduleKey=${activeModuleKey}`}
+                to={item.external ? item.href : `${item.href}?moduleKey=${activeModuleKey}`}
                 end={item.href === '/executive'}
                 className={({ isActive }) =>
                   cn(
