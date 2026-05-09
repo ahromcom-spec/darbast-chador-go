@@ -146,6 +146,7 @@ export default function CustomerComprehensiveInvoice() {
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerData | null>(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [paymentOrder, setPaymentOrder] = useState<{ order: OrderItem; customer: CustomerData } | null>(null);
+  const [bulkPaymentCustomer, setBulkPaymentCustomer] = useState<CustomerData | null>(null);
   
   // Summary stats
   const [summary, setSummary] = useState({
