@@ -55,6 +55,7 @@ import {
 } from "@/components/ui/table";
 import { Separator } from '@/components/ui/separator';
 import { MultiPaymentDialog } from '@/components/orders/MultiPaymentDialog';
+import { CustomerBulkPaymentDialog } from '@/components/orders/CustomerBulkPaymentDialog';
 
 // Types
 interface OrderItem {
@@ -145,6 +146,7 @@ export default function CustomerComprehensiveInvoice() {
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerData | null>(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [paymentOrder, setPaymentOrder] = useState<{ order: OrderItem; customer: CustomerData } | null>(null);
+  const [bulkPaymentCustomer, setBulkPaymentCustomer] = useState<CustomerData | null>(null);
   
   // Summary stats
   const [summary, setSummary] = useState({
@@ -837,6 +839,20 @@ export default function CustomerComprehensiveInvoice() {
                         <Button
                           variant="outline"
                           size="sm"
+                          className="gap-1 text-green-700 border-green-300 hover:bg-green-50"
+                          disabled={customer.total_remaining <= 0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setBulkPaymentCustomer(customer);
+                          }}
+                        >
+                          <Banknote className="h-4 w-4 ml-1" />
+                          ثبت پرداخت کل
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             openInvoiceDialog(customer);
@@ -947,6 +963,16 @@ export default function CustomerComprehensiveInvoice() {
             <DialogTitle className="flex items-center justify-between">
               <span>صورتحساب جامع - {selectedCustomer?.full_name}</span>
               <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 text-green-700 border-green-300 hover:bg-green-50"
+                  disabled={!selectedCustomer || selectedCustomer.total_remaining <= 0}
+                  onClick={() => selectedCustomer && setBulkPaymentCustomer(selectedCustomer)}
+                >
+                  <Banknote className="h-4 w-4 ml-1" />
+                  ثبت پرداخت کل
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -1120,6 +1146,30 @@ export default function CustomerComprehensiveInvoice() {
           address={paymentOrder.order.address}
           serviceType={paymentOrder.order.service_type_name}
           onPaymentSuccess={() => {
+            fetchCustomersData();
+          }}
+        />
+      )}
+
+      {/* Bulk Customer Payment Dialog */}
+      {bulkPaymentCustomer && (
+        <CustomerBulkPaymentDialog
+          open={!!bulkPaymentCustomer}
+          onOpenChange={(open) => { if (!open) setBulkPaymentCustomer(null); }}
+          customerId={bulkPaymentCustomer.customer_id}
+          customerName={bulkPaymentCustomer.full_name}
+          customerPhone={bulkPaymentCustomer.phone_number}
+          orders={bulkPaymentCustomer.orders.map(o => ({
+            id: o.id,
+            code: o.code,
+            payment_amount: o.payment_amount,
+            total_paid: o.total_paid,
+            remaining: o.remaining,
+            service_type_name: o.service_type_name,
+            address: o.address,
+          }))}
+          onSuccess={() => {
+            setBulkPaymentCustomer(null);
             fetchCustomersData();
           }}
         />
