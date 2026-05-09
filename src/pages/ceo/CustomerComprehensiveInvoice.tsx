@@ -80,6 +80,7 @@ interface PaymentRecord {
   notes: string | null;
   created_at: string;
   order_code: string;
+  order_id: string;
 }
 
 interface CustomerData {
@@ -284,7 +285,8 @@ export default function CustomerComprehensiveInvoice() {
             receipt_number: p.receipt_number,
             notes: p.notes,
             created_at: p.created_at,
-            order_code: orderCodeMap.get(p.order_id) || '-'
+            order_code: orderCodeMap.get(p.order_id) || '-',
+            order_id: p.order_id
           }))
         });
       });
@@ -898,7 +900,19 @@ export default function CustomerComprehensiveInvoice() {
                           <TableBody>
                             {customer.orders.map((order) => (
                               <TableRow key={order.id}>
-                                <TableCell className="font-mono text-xs">{order.code}</TableCell>
+                                <TableCell className="font-mono text-xs">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/ceo/orders?orderId=${order.id}`);
+                                    }}
+                                    className="text-primary hover:underline"
+                                    title="باز کردن سفارش در مدیریت همه سفارشات"
+                                  >
+                                    {order.code}
+                                  </button>
+                                </TableCell>
                                 <TableCell className="text-sm">{order.service_type_name}</TableCell>
                                 <TableCell className="text-sm max-w-[200px] truncate">{order.address}</TableCell>
                                 <TableCell className="text-xs">{formatDate(order.created_at)}</TableCell>
@@ -1058,7 +1072,19 @@ export default function CustomerComprehensiveInvoice() {
                       {selectedCustomer.orders.map((order, idx) => (
                         <TableRow key={order.id}>
                           <TableCell>{idx + 1}</TableCell>
-                          <TableCell className="font-mono">{order.code}</TableCell>
+                          <TableCell className="font-mono">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setInvoiceDialogOpen(false);
+                                navigate(`/ceo/orders?orderId=${order.id}`);
+                              }}
+                              className="text-primary hover:underline"
+                              title="باز کردن سفارش در مدیریت همه سفارشات"
+                            >
+                              {order.code}
+                            </button>
+                          </TableCell>
                           <TableCell>{order.service_type_name}</TableCell>
                           <TableCell className="max-w-[200px] truncate">{order.address}</TableCell>
                           <TableCell>{formatDate(order.created_at)}</TableCell>
@@ -1115,7 +1141,19 @@ export default function CustomerComprehensiveInvoice() {
                           <TableRow key={payment.id}>
                             <TableCell>{idx + 1}</TableCell>
                             <TableCell>{formatDate(payment.created_at)}</TableCell>
-                            <TableCell className="font-mono">{payment.order_code}</TableCell>
+                            <TableCell className="font-mono">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setInvoiceDialogOpen(false);
+                                  navigate(`/ceo/orders?orderId=${payment.order_id}`);
+                                }}
+                                className="text-primary hover:underline"
+                                title="باز کردن سفارش در مدیریت همه سفارشات"
+                              >
+                                {payment.order_code}
+                              </button>
+                            </TableCell>
                             <TableCell className="text-green-600 font-medium">{formatCurrency(payment.amount)}</TableCell>
                             <TableCell>{payment.payment_method || '-'}</TableCell>
                             <TableCell>{payment.receipt_number || '-'}</TableCell>
