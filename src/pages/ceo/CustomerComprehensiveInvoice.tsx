@@ -839,6 +839,20 @@ export default function CustomerComprehensiveInvoice() {
                         <Button
                           variant="outline"
                           size="sm"
+                          className="gap-1 text-green-700 border-green-300 hover:bg-green-50"
+                          disabled={customer.total_remaining <= 0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setBulkPaymentCustomer(customer);
+                          }}
+                        >
+                          <Banknote className="h-4 w-4 ml-1" />
+                          ثبت پرداخت کل
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             openInvoiceDialog(customer);
