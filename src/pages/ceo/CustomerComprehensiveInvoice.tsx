@@ -966,6 +966,16 @@ export default function CustomerComprehensiveInvoice() {
                 <Button
                   variant="outline"
                   size="sm"
+                  className="gap-1 text-green-700 border-green-300 hover:bg-green-50"
+                  disabled={!selectedCustomer || selectedCustomer.total_remaining <= 0}
+                  onClick={() => selectedCustomer && setBulkPaymentCustomer(selectedCustomer)}
+                >
+                  <Banknote className="h-4 w-4 ml-1" />
+                  ثبت پرداخت کل
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => selectedCustomer && handlePrintInvoice(selectedCustomer)}
                 >
                   <Printer className="h-4 w-4 ml-1" />
