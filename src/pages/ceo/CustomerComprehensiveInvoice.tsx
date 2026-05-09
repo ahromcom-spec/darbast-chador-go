@@ -285,7 +285,8 @@ export default function CustomerComprehensiveInvoice() {
             receipt_number: p.receipt_number,
             notes: p.notes,
             created_at: p.created_at,
-            order_code: orderCodeMap.get(p.order_id) || '-'
+            order_code: orderCodeMap.get(p.order_id) || '-',
+            order_id: p.order_id
           }))
         });
       });
