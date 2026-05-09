@@ -54,6 +54,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Separator } from '@/components/ui/separator';
+import { MultiPaymentDialog } from '@/components/orders/MultiPaymentDialog';
 
 // Types
 interface OrderItem {
@@ -143,6 +144,7 @@ export default function CustomerComprehensiveInvoice() {
   const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerData | null>(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [paymentOrder, setPaymentOrder] = useState<{ order: OrderItem; customer: CustomerData } | null>(null);
   
   // Summary stats
   const [summary, setSummary] = useState({
@@ -162,6 +164,13 @@ export default function CustomerComprehensiveInvoice() {
   useEffect(() => {
     filterCustomers();
   }, [searchQuery, customers]);
+
+  // keep selectedCustomer in sync after data refresh (e.g. after registering a payment)
+  useEffect(() => {
+    if (!selectedCustomer) return;
+    const updated = customers.find(c => c.customer_id === selectedCustomer.customer_id);
+    if (updated && updated !== selectedCustomer) setSelectedCustomer(updated);
+  }, [customers]);
 
   const fetchCustomersData = async () => {
     setLoading(true);
@@ -867,6 +876,7 @@ export default function CustomerComprehensiveInvoice() {
                               <TableHead>مبلغ</TableHead>
                               <TableHead>پرداختی</TableHead>
                               <TableHead>مانده</TableHead>
+                              <TableHead>عملیات</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -885,6 +895,20 @@ export default function CustomerComprehensiveInvoice() {
                                 <TableCell className="text-sm text-green-600">{formatCurrency(order.total_paid)}</TableCell>
                                 <TableCell className={`text-sm ${order.remaining > 0 ? 'text-orange-600 font-medium' : 'text-green-600'}`}>
                                   {formatCurrency(order.remaining)}
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="gap-1 text-green-700 border-green-300 hover:bg-green-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setPaymentOrder({ order, customer });
+                                    }}
+                                  >
+                                    <Banknote className="h-3.5 w-3.5" />
+                                    ثبت پرداخت
+                                  </Button>
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -1001,6 +1025,7 @@ export default function CustomerComprehensiveInvoice() {
                         <TableHead>مبلغ</TableHead>
                         <TableHead>پرداختی</TableHead>
                         <TableHead>مانده</TableHead>
+                        <TableHead>عملیات</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1020,6 +1045,17 @@ export default function CustomerComprehensiveInvoice() {
                           <TableCell className="text-green-600">{formatCurrency(order.total_paid)}</TableCell>
                           <TableCell className={order.remaining > 0 ? 'text-orange-600 font-medium' : 'text-green-600'}>
                             {formatCurrency(order.remaining)}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 text-green-700 border-green-300 hover:bg-green-50"
+                              onClick={() => setPaymentOrder({ order, customer: selectedCustomer })}
+                            >
+                              <Banknote className="h-3.5 w-3.5" />
+                              ثبت پرداخت
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1069,6 +1105,25 @@ export default function CustomerComprehensiveInvoice() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Multi Payment Dialog - register payment from invoice */}
+      {paymentOrder && (
+        <MultiPaymentDialog
+          open={!!paymentOrder}
+          onOpenChange={(open) => { if (!open) setPaymentOrder(null); }}
+          orderId={paymentOrder.order.id}
+          orderCode={paymentOrder.order.code}
+          customerName={paymentOrder.customer.full_name}
+          customerId={paymentOrder.customer.customer_id}
+          totalPrice={paymentOrder.order.payment_amount}
+          customerPhone={paymentOrder.customer.phone_number}
+          address={paymentOrder.order.address}
+          serviceType={paymentOrder.order.service_type_name}
+          onPaymentSuccess={() => {
+            fetchCustomersData();
+          }}
+        />
+      )}
     </ModuleLayout>
   );
 }
