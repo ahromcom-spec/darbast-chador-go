@@ -1141,7 +1141,19 @@ export default function CustomerComprehensiveInvoice() {
                           <TableRow key={payment.id}>
                             <TableCell>{idx + 1}</TableCell>
                             <TableCell>{formatDate(payment.created_at)}</TableCell>
-                            <TableCell className="font-mono">{payment.order_code}</TableCell>
+                            <TableCell className="font-mono">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setInvoiceDialogOpen(false);
+                                  navigate(`/ceo/orders?orderId=${payment.order_id}`);
+                                }}
+                                className="text-primary hover:underline"
+                                title="باز کردن سفارش در مدیریت همه سفارشات"
+                              >
+                                {payment.order_code}
+                              </button>
+                            </TableCell>
                             <TableCell className="text-green-600 font-medium">{formatCurrency(payment.amount)}</TableCell>
                             <TableCell>{payment.payment_method || '-'}</TableCell>
                             <TableCell>{payment.receipt_number || '-'}</TableCell>
