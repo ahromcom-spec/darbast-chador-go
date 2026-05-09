@@ -1070,7 +1070,19 @@ export default function CustomerComprehensiveInvoice() {
                       {selectedCustomer.orders.map((order, idx) => (
                         <TableRow key={order.id}>
                           <TableCell>{idx + 1}</TableCell>
-                          <TableCell className="font-mono">{order.code}</TableCell>
+                          <TableCell className="font-mono">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setInvoiceDialogOpen(false);
+                                navigate(`/ceo/orders?orderId=${order.id}`);
+                              }}
+                              className="text-primary hover:underline"
+                              title="باز کردن سفارش در مدیریت همه سفارشات"
+                            >
+                              {order.code}
+                            </button>
+                          </TableCell>
                           <TableCell>{order.service_type_name}</TableCell>
                           <TableCell className="max-w-[200px] truncate">{order.address}</TableCell>
                           <TableCell>{formatDate(order.created_at)}</TableCell>
