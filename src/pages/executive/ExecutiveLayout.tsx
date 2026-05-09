@@ -100,6 +100,12 @@ const mainNavItems = [
     title: 'بایگانی',
     href: '/executive/archived',
     icon: Archive
+  },
+  {
+    title: 'صورتحساب جامع',
+    href: '/customer-comprehensive-invoice',
+    icon: FileText,
+    external: true
   }
 ];
 
