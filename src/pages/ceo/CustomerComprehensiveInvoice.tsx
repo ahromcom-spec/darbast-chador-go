@@ -165,6 +165,13 @@ export default function CustomerComprehensiveInvoice() {
     filterCustomers();
   }, [searchQuery, customers]);
 
+  // keep selectedCustomer in sync after data refresh (e.g. after registering a payment)
+  useEffect(() => {
+    if (!selectedCustomer) return;
+    const updated = customers.find(c => c.customer_id === selectedCustomer.customer_id);
+    if (updated && updated !== selectedCustomer) setSelectedCustomer(updated);
+  }, [customers]);
+
   const fetchCustomersData = async () => {
     setLoading(true);
     try {
