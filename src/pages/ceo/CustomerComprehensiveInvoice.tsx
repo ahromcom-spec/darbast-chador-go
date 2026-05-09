@@ -1018,6 +1018,7 @@ export default function CustomerComprehensiveInvoice() {
                         <TableHead>مبلغ</TableHead>
                         <TableHead>پرداختی</TableHead>
                         <TableHead>مانده</TableHead>
+                        <TableHead>عملیات</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1037,6 +1038,17 @@ export default function CustomerComprehensiveInvoice() {
                           <TableCell className="text-green-600">{formatCurrency(order.total_paid)}</TableCell>
                           <TableCell className={order.remaining > 0 ? 'text-orange-600 font-medium' : 'text-green-600'}>
                             {formatCurrency(order.remaining)}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 text-green-700 border-green-300 hover:bg-green-50"
+                              onClick={() => setPaymentOrder({ order, customer: selectedCustomer })}
+                            >
+                              <Banknote className="h-3.5 w-3.5" />
+                              ثبت پرداخت
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
