@@ -25,17 +25,24 @@ docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres \
   -c "ALTER TYPE project_status_v3 ADD VALUE IF NOT EXISTS 'paid';" || true
 
 $PSQL <<'SQL'
+\timing on
+SET lock_timeout = '15s';
+SET statement_timeout = '10min';
+
+\echo '  1b/1f: daily_report_staff numeric columns...'
 -- 1b) daily_report_staff numeric columns
 ALTER TABLE public.daily_report_staff
   ALTER COLUMN overtime_hours TYPE NUMERIC USING overtime_hours::numeric,
   ALTER COLUMN amount_received TYPE NUMERIC USING amount_received::numeric,
   ALTER COLUMN amount_spent TYPE NUMERIC USING amount_spent::numeric;
 
+\echo '  1c/1f: daily_report_staff extra columns...'
 ALTER TABLE public.daily_report_staff
   ADD COLUMN IF NOT EXISTS bank_card_id UUID,
   ADD COLUMN IF NOT EXISTS is_company_expense BOOLEAN DEFAULT false,
   ADD COLUMN IF NOT EXISTS transaction_time TEXT;
 
+\echo '  1d/1f: creating missing tables...'
 -- 1c) Missing tables
 CREATE TABLE IF NOT EXISTS public.staff_salary_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -141,6 +148,7 @@ CREATE TABLE IF NOT EXISTS public.repair_requests (
   repaired_at TIMESTAMPTZ
 );
 
+\echo '  1e/1f: enabling RLS...'
 ALTER TABLE public.staff_salary_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_report_date_locks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.daily_report_order_media ENABLE ROW LEVEL SECURITY;
@@ -148,6 +156,7 @@ ALTER TABLE public.module_shortcuts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.staff_verification_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.module_edit_locks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.repair_requests ENABLE ROW LEVEL SECURITY;
+\echo '  1f/1f: schema fixes done.'
 SQL
 
 # ----------------------------------------------------------
