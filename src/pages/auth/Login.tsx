@@ -153,16 +153,35 @@ export default function Login() {
   // بررسی اینکه کاربر رمز عبور ثابت دارد یا نه
   const checkHasPassword = async (phone: string): Promise<boolean> => {
     try {
-      const { data, error } = await supabase.functions.invoke('manage-password', {
-        body: { 
-          action: 'check_has_password',
-          phone_number: phone
+      // تایم‌اوت 10 ثانیه‌ای برای جلوگیری از گیر کردن صفحه روی VPS
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manage-password`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({
+            action: 'check_has_password',
+            phone_number: phone,
+          }),
+          signal: controller.signal,
         }
-      });
-      
-      if (error || data?.error) return false;
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) return false;
+      const data = await response.json();
+      if (data?.error) return false;
       return !!data?.has_password;
     } catch (e) {
+      // در صورت timeout یا عدم دسترسی به edge function، ادامه بده با OTP
       console.error('Error checking password:', e);
       return false;
     }
