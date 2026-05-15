@@ -10,6 +10,10 @@ CREATE TABLE profiles (
   phone_number VARCHAR(20),
   avatar_url TEXT,
   bio TEXT,
+  user_password_hash TEXT,
+  recovery_email TEXT,
+  recovery_email_verified BOOLEAN DEFAULT false,
+  password_set_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );

@@ -6,8 +6,11 @@
 
 \echo '🔧 Adding missing columns...'
 
--- 1. profiles.password_set_at
+-- 1. profiles fixed-password columns
 ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS user_password_hash TEXT,
+  ADD COLUMN IF NOT EXISTS recovery_email TEXT,
+  ADD COLUMN IF NOT EXISTS recovery_email_verified BOOLEAN DEFAULT false,
   ADD COLUMN IF NOT EXISTS password_set_at TIMESTAMPTZ;
 
 -- 2. module_assignments.module_description
