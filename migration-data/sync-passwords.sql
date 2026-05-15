@@ -1,5 +1,6 @@
 -- همگام‌سازی رمز عبور ثابت کاربرانی که بعد از export ثبت کرده‌اند
--- این فایل را روی VPS با psql اجرا کنید:
+-- ابتدا ستون‌های لازم را بسازید، سپس این فایل را اجرا کنید:
+-- docker exec -i <db_container> psql -U postgres -d postgres < fix-schema-mismatches.sql
 -- docker exec -i <db_container> psql -U postgres -d postgres < sync-passwords.sql
 
 UPDATE public.profiles
