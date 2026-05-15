@@ -20,20 +20,11 @@ PSQL="docker exec -i $DB_CONTAINER psql -U postgres -d postgres -v ON_ERROR_STOP
 # 1) Schema fixes
 # ----------------------------------------------------------
 echo "🔧 Step 1/4: Schema fixes (enum + numeric + missing tables)"
-$PSQL <<'SQL'
--- 1a) Add 'paid' to project_status_v3 enum if missing
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_enum e
-    JOIN pg_type t ON t.oid = e.enumtypid
-    WHERE t.typname = 'project_status_v3' AND e.enumlabel = 'paid'
-  ) THEN
-    ALTER TYPE project_status_v3 ADD VALUE 'paid';
-    RAISE NOTICE '✅ Added paid to project_status_v3';
-  END IF;
-END$$;
+# 1a) ALTER TYPE must run OUTSIDE a transaction block — run it standalone first
+docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres \
+  -c "ALTER TYPE project_status_v3 ADD VALUE IF NOT EXISTS 'paid';" || true
 
+$PSQL <<'SQL'
 -- 1b) daily_report_staff numeric columns
 ALTER TABLE public.daily_report_staff
   ALTER COLUMN overtime_hours TYPE NUMERIC USING overtime_hours::numeric,
