@@ -3,6 +3,14 @@
 -- docker exec -i <db_container> psql -U postgres -d postgres < fix-schema-mismatches.sql
 -- docker exec -i <db_container> psql -U postgres -d postgres < sync-passwords.sql
 
+-- این فایل خودش ستون‌های لازم را هم می‌سازد تا خطای
+-- column "user_password_hash" does not exist تکرار نشود.
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS user_password_hash TEXT,
+  ADD COLUMN IF NOT EXISTS recovery_email TEXT,
+  ADD COLUMN IF NOT EXISTS recovery_email_verified BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS password_set_at TIMESTAMPTZ;
+
 UPDATE public.profiles
 SET user_password_hash = '49eb173adac96c8787d02161a02dff47a7a089139e1ce31512d7785922cb4e82',
     password_set_at = '2026-01-31 18:39:50.644+00',
@@ -18,7 +26,7 @@ WHERE user_id = 'e2567080-4ae6-4a73-a804-79d90831021c'
    OR phone_number = '09111111111';
 
 UPDATE public.profiles
-SET user_password_hash = 'pbkdf2$210000$uo4GZXk3JW9w1mBifsWMNg==$pI59VKhwtTscxlcHQvt3YTYjEt6SVUC10YsBSfgPzbk=',
+SET user_password_hash = '49eb173adac96c8787d02161a02dff47a7a089139e1ce31512d7785922cb4e82',
     password_set_at = '2026-01-31 23:15:56.297+00',
     recovery_email = 'ahrom.com@gmail.com',
     recovery_email_verified = false
