@@ -9,7 +9,7 @@ import usePWAInstall from '@/hooks/usePWAInstall';
 import { useServiceTypesWithSubcategories } from '@/hooks/useServiceTypesWithSubcategories';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
-
+import Snowfall from '@/components/effects/Snowfall';
 import { RecentActivities } from '@/components/home/RecentActivities';
 import { ModuleShortcuts } from '@/components/home/ModuleShortcuts';
 
@@ -143,6 +143,8 @@ const Home = () => {
 
   return (
     <>
+      {/* افکت برف‌ریزی زمستانی */}
+      <Snowfall />
       
       {/* Subcategory Selection Dialog - فقط در صورتی که داده‌های معتبر وجود داشته باشد نمایش داده شود */}
       {pendingServiceTypeObj && pendingServiceTypeObj.subcategories && pendingServiceTypeObj.subcategories.length > 0 && (
