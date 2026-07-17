@@ -381,6 +381,290 @@ const SYSTEM_PROMPT = `تو منشی هوشمند و حرفه‌ای سایت ا
 
 همیشه با احترام و صبر پاسخ بده. اگر نمی‌دانی، صادقانه بگو و کاربر را به پشتیبانی راهنمایی کن.`;
 
+// ═══════════════════════════════════════════════════════════
+// 🛠️ DYNAMIC SERVICE PRICING & ORDERING TOOLS (NEW)
+// این بخش برای پشتیبانی از قیمت‌گذاری و ثبت سفارش پویا برای همه خدمات فعال اضافه شده است.
+// ═══════════════════════════════════════════════════════════
+
+const TOOLS_GUIDE = `
+
+═══════════════════════════════════════
+🛠️ ابزارهای پویای قیمت‌گذاری و ثبت سفارش
+═══════════════════════════════════════
+تو به ۴ ابزار (function) متصل به دیتابیس زنده سایت دسترسی داری. هرگز اسم خدمات، قیمت یا شناسه‌ها را از حفظ یا حدسی نگو؛ همیشه از این ابزارها استفاده کن:
+
+1. list_active_services → لیست واقعی و به‌روز همه خدمات و زیرشاخه‌های فعال سایت (با subcategory_id) را برمی‌گرداند.
+2. search_locations → استان/شهرستان مورد نظر کاربر را بر اساس نام پیدا می‌کند (province_id / district_id).
+3. estimate_service_price → برای زیرشاخه انتخابی، برآورد قیمت (در صورت وجود فرمول ثبت‌شده) یا اعلام نیاز به بررسی کارشناس را برمی‌گرداند.
+4. create_pricing_order_request → فقط پس از تایید نهایی و صریح کاربر، و بعد از جمع‌آوری خدمت + استان + آدرس، درخواست سفارش/قیمت‌گذاری را در صف کارشناسان اهرم ثبت می‌کند.
+
+قوانین اجباری:
+- همیشه ابتدا list_active_services را صدا بزن تا subcategory_id درست خدمتی که کاربر گفته را پیدا کنی. اسم خدمت را با متن آزاد کاربر خودت تطبیق نده و حدس نزن.
+- اگر estimate_service_price مقدار requires_expert_review=true برگرداند، صادقانه به کاربر بگو قیمت دقیق این خدمت را کارشناس اهرم پس از بررسی جزئیات کار اعلام می‌کند (این دروغ نیست، این واقعیت فرآیند فعلی اهرم است)، و پیشنهاد بده که درخواستش را همین الان ثبت کنی.
+- create_pricing_order_request را بدون تایید صریح کاربر («بله ثبت کن»، «باشه سفارش بده» و مشابه) صدا نزن.
+- اگر کاربر لاگین نکرده و می‌خواهد سفارش ثبت کند، بگو باید ابتدا وارد حساب کاربری خود شود.
+- بعد از ثبت موفق، فقط خلاصه کوتاه بده: چه چیزی ثبت شد و مرحله بعدی (تماس کارشناس) چیست.
+`;
+
+const ASSISTANT_TOOLS = [
+  {
+    type: "function",
+    function: {
+      name: "list_active_services",
+      description:
+        "دریافت لیست کامل و به‌روز خدمات فعال سایت اهرم شامل نوع خدمت و زیرشاخه‌ها با شناسه دقیق (subcategory_id). همیشه قبل از استعلام قیمت یا ثبت سفارش از این تابع استفاده کن.",
+      parameters: { type: "object", properties: {}, required: [] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_locations",
+      description: "جستجوی استان و شهرستان بر اساس نام، برای پیدا کردن province_id و district_id لازم برای ثبت سفارش یا استعلام قیمت.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "نام استان یا شهرستان (مثلاً تهران)" },
+        },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "estimate_service_price",
+      description:
+        "محاسبه یا برآورد قیمت یک خدمت بر اساس زیرشاخه و متراژ/تعداد/مدت. اگر برای آن خدمت فرمول قیمت‌گذاری ثبت نشده باشد، اعلام می‌کند که قیمت باید توسط کارشناس تعیین شود.",
+      parameters: {
+        type: "object",
+        properties: {
+          subcategory_id: { type: "string", description: "شناسه زیرشاخه خدمت (از list_active_services)" },
+          quantity: { type: "number", description: "مقدار (متراژ/تعداد واحد)، پیش‌فرض ۱" },
+          days: { type: "number", description: "تعداد روز، در صورتی که خدمت اجاره‌ای/روزانه باشد" },
+        },
+        required: ["subcategory_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "create_pricing_order_request",
+      description:
+        "ثبت درخواست سفارش/قیمت‌گذاری برای کاربر لاگین‌کرده در صف کارشناسان اهرم. فقط زمانی صدا بزن که کاربر تمام اطلاعات لازم را داده و صراحتاً ثبت را تایید کرده باشد.",
+      parameters: {
+        type: "object",
+        properties: {
+          subcategory_id: { type: "string" },
+          province_id: { type: "string" },
+          district_id: { type: "string" },
+          address: { type: "string" },
+          detailed_address: { type: "string" },
+          description: { type: "string" },
+          dimensions: {
+            type: "object",
+            description: "ابعاد کار، مثلاً {length, width, height} یا {quantity, unit}",
+          },
+        },
+        required: ["subcategory_id", "province_id", "address"],
+      },
+    },
+  },
+];
+
+async function listActiveServices(supabase: any) {
+  const { data: types } = await supabase
+    .from("service_types_v3")
+    .select("id,code,name")
+    .eq("is_active", true);
+
+  const { data: subs } = await supabase
+    .from("subcategories")
+    .select("id,code,name,service_type_id")
+    .eq("is_active", true);
+
+  const { data: pricingRules } = await supabase
+    .from("service_pricing_rules")
+    .select("subcategory_id,pricing_model,unit_label")
+    .eq("is_active", true);
+
+  const pricingBySub = new Map<string, any>((pricingRules || []).map((r: any) => [r.subcategory_id, r]));
+
+  const service_types = (types || []).map((t: any) => ({
+    service_type_id: t.id,
+    service_type_name: t.name,
+    subcategories: (subs || [])
+      .filter((s: any) => s.service_type_id === t.id)
+      .map((s: any) => ({
+        subcategory_id: s.id,
+        name: s.name,
+        pricing_model: pricingBySub.get(s.id)?.pricing_model || "manual_quote",
+        unit_label: pricingBySub.get(s.id)?.unit_label || null,
+      })),
+  }));
+
+  return { service_types };
+}
+
+async function searchLocations(supabase: any, query: string) {
+  const q = (query || "").trim();
+  if (!q) return { provinces: [], districts: [] };
+
+  const { data: provinces } = await supabase
+    .from("provinces")
+    .select("id,name")
+    .ilike("name", `%${q}%`)
+    .eq("is_active", true)
+    .limit(5);
+
+  const { data: districts } = await supabase
+    .from("districts")
+    .select("id,name,province_id")
+    .ilike("name", `%${q}%`)
+    .limit(5);
+
+  return { provinces: provinces || [], districts: districts || [] };
+}
+
+async function estimateServicePrice(supabase: any, args: any) {
+  const subcategoryId = args?.subcategory_id;
+  const quantity = Number(args?.quantity) || 1;
+  const days = args?.days ? Number(args.days) : null;
+
+  if (!subcategoryId) {
+    return { error: "subcategory_id الزامی است." };
+  }
+
+  const { data: rule } = await supabase
+    .from("service_pricing_rules")
+    .select("*")
+    .eq("subcategory_id", subcategoryId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (!rule) {
+    return {
+      requires_expert_review: true,
+      message:
+        "برای این خدمت فرمول قیمت‌گذاری ثبت نشده و قیمت باید توسط کارشناس اهرم پس از بررسی جزئیات کار اعلام شود.",
+    };
+  }
+
+  let estimated = Number(rule.base_price) || 0;
+  switch (rule.pricing_model) {
+    case "fixed":
+      estimated = Number(rule.base_price) || 0;
+      break;
+    case "per_sqm":
+    case "per_cubic_meter":
+      estimated = (Number(rule.base_price) || 0) + (Number(rule.unit_price) || 0) * quantity;
+      break;
+    case "per_day":
+      estimated = (Number(rule.base_price) || 0) + (Number(rule.unit_price) || 0) * quantity * (days || 1);
+      break;
+    default:
+      return {
+        requires_expert_review: true,
+        message: "قیمت این خدمت باید توسط کارشناس اهرم تعیین شود.",
+      };
+  }
+
+  if (rule.min_price && estimated < Number(rule.min_price)) {
+    estimated = Number(rule.min_price);
+  }
+
+  return {
+    requires_expert_review: false,
+    estimated_price_toman: Math.round(estimated),
+    pricing_model: rule.pricing_model,
+    unit_label: rule.unit_label,
+    note: "این یک برآورد اولیه است. قیمت نهایی پس از بررسی کارشناس ممکن است اندکی تغییر کند.",
+  };
+}
+
+async function createPricingOrderRequest(supabase: any, userId: string | null, args: any) {
+  if (!userId) {
+    return { error: "برای ثبت سفارش، کاربر باید ابتدا وارد حساب کاربری خود شود." };
+  }
+
+  const { subcategory_id, province_id, district_id, address, detailed_address, description, dimensions } =
+    args || {};
+
+  if (!subcategory_id || !province_id || !address) {
+    return { error: "اطلاعات ناقص است. subcategory_id، province_id و address الزامی هستند." };
+  }
+
+  const { data: customer, error: custErr } = await supabase
+    .from("customers")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (custErr || !customer) {
+    return { error: "اطلاعات مشتری یافت نشد. لطفاً ابتدا وارد حساب کاربری خود شوید." };
+  }
+
+  const { data: inserted, error: insertErr } = await supabase
+    .from("expert_pricing_requests")
+    .insert({
+      customer_id: customer.id,
+      province_id,
+      district_id: district_id || null,
+      subcategory_id,
+      address,
+      detailed_address: detailed_address || null,
+      description: description || null,
+      dimensions: dimensions || null,
+      status: "pending",
+    })
+    .select("id")
+    .single();
+
+  if (insertErr) {
+    console.error("createPricingOrderRequest error:", insertErr);
+    return { error: "ثبت درخواست با خطا مواجه شد. لطفاً دوباره تلاش کنید." };
+  }
+
+  return {
+    success: true,
+    request_id: inserted.id,
+    message:
+      "درخواست شما ثبت شد و در صف بررسی کارشناسان اهرم قرار گرفت. به‌زودی قیمت نهایی اعلام یا با شما تماس گرفته می‌شود.",
+  };
+}
+
+async function executeAssistantTool(
+  supabase: any,
+  userId: string | null,
+  toolName: string,
+  argsRaw: string
+): Promise<any> {
+  let args: any = {};
+  try {
+    args = argsRaw ? JSON.parse(argsRaw) : {};
+  } catch {
+    args = {};
+  }
+
+  switch (toolName) {
+    case "list_active_services":
+      return await listActiveServices(supabase);
+    case "search_locations":
+      return await searchLocations(supabase, args.query);
+    case "estimate_service_price":
+      return await estimateServicePrice(supabase, args);
+    case "create_pricing_order_request":
+      return await createPricingOrderRequest(supabase, userId, args);
+    default:
+      return { error: `ابزار ناشناخته: ${toolName}` };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// END DYNAMIC SERVICE PRICING & ORDERING TOOLS (NEW)
+// ═══════════════════════════════════════════════════════════
+
 // Module definitions with their data access capabilities
 const MODULE_CAPABILITIES: Record<string, { name: string; dataAccess: string[]; description: string }> = {
   scaffold_execution_with_materials: {
@@ -2313,8 +2597,16 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    // کلاینت جداگانه برای اجرای ابزارهای قیمت‌گذاری/ثبت‌سفارش پویا (مستقل از این‌که کاربر لاگین کرده یا نه)
+    const toolsSupabase =
+      SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) : null;
+
     // افزودن اطلاعات نقش کاربر به پرامپت سیستم
     let contextualPrompt = SYSTEM_PROMPT;
+
+    if (toolsSupabase) {
+      contextualPrompt += TOOLS_GUIDE;
+    }
     
     // اگر کاربر لاگین کرده، اطلاعات ماژول‌ها و سفارشاتش را بگیر
     if (userId && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
@@ -2463,6 +2755,71 @@ ${accessibleTopics.map(topic => `• ${topic}`).join("\n")}
       return { role: msg.role, content: msg.content };
     });
 
+    let conversation: any[] = [
+      { role: "system", content: contextualPrompt },
+      ...formattedMessages,
+    ];
+
+    // ═══════════════════════════════════════════════════════════
+    // 🛠️ حلقه اجرای ابزارهای پویای قیمت‌گذاری/ثبت سفارش (NEW)
+    // حداکثر ۴ دور، تا از حلقه بی‌نهایت جلوگیری شود.
+    // ═══════════════════════════════════════════════════════════
+    if (toolsSupabase) {
+      for (let round = 0; round < 4; round++) {
+        const toolRoundResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-pro",
+            messages: conversation,
+            tools: ASSISTANT_TOOLS,
+            stream: false,
+          }),
+        });
+
+        if (!toolRoundResponse.ok) {
+          const errTxt = await toolRoundResponse.text();
+          console.error("AI gateway tool-round error:", toolRoundResponse.status, errTxt);
+          break; // در صورت خطا، به پاسخ نهایی استریم‌شده بدون ابزار سقوط می‌کنیم
+        }
+
+        const toolRoundData = await toolRoundResponse.json();
+        const choice = toolRoundData?.choices?.[0];
+        const toolCalls = choice?.message?.tool_calls;
+
+        if (!toolCalls || toolCalls.length === 0) {
+          // مدل بدون نیاز به ابزار، پاسخ نهایی را همینجا داد؛ همان را مستقیم استریم می‌کنیم
+          const finalText = choice?.message?.content || "";
+          return new Response(buildSseTextStream(finalText), {
+            headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+          });
+        }
+
+        conversation.push(choice.message);
+
+        for (const call of toolCalls) {
+          console.log("Tool call:", call.function?.name, call.function?.arguments);
+          const toolResult = await executeAssistantTool(
+            toolsSupabase,
+            userId || null,
+            call.function?.name,
+            call.function?.arguments
+          );
+          conversation.push({
+            role: "tool",
+            tool_call_id: call.id,
+            content: JSON.stringify(toolResult),
+          });
+        }
+      }
+    }
+    // ═══════════════════════════════════════════════════════════
+    // END حلقه ابزارها (NEW)
+    // ═══════════════════════════════════════════════════════════
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -2471,10 +2828,7 @@ ${accessibleTopics.map(topic => `• ${topic}`).join("\n")}
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-pro",
-        messages: [
-          { role: "system", content: contextualPrompt },
-          ...formattedMessages,
-        ],
+        messages: conversation,
         stream: true,
       }),
     });
