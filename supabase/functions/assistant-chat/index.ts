@@ -2440,7 +2440,7 @@ ${accessibleTopics.map(topic => `• ${topic}`).join("\n")}
       : (Array.isArray(messages) ? messages : []);
 
     const formattedMessages = baseMessages.map((msg: { role: string; content: string }, index: number) => {
-      // اگر تصویر داریم و این آخرین پیام کاربر است
+      //  ddd  اگر تصویر داریم و این آخرین پیام کاربر است
       if (imageBase64 && msg.role === 'user' && index === baseMessages.length - 1) {
         return {
           role: msg.role,
