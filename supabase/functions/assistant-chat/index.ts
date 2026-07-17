@@ -2566,7 +2566,7 @@ serve(async (req) => {
     const { messages, userRole, imageBase64, userId } = await req.json();
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-    const GEMINI_MODEL = "gemini-2.5-pro";
+    const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash";
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
