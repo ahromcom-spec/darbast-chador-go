@@ -34,7 +34,9 @@ interface ExpertPricingRequestDialogProps {
   serviceTypeName?: string;
   hierarchyProjectId?: string;
   recipientData?: RecipientDataForExpert | null;
+  multiOrderMode?: boolean;
 }
+
 
 const EXPERT_RENTAL_ITEMS: Record<string, { label: string; price: number }> = {
   cross_screw: {
@@ -63,7 +65,8 @@ export const ExpertPricingRequestDialog = ({
   locationLng,
   serviceTypeName,
   hierarchyProjectId,
-  recipientData
+  recipientData,
+  multiOrderMode = false
 }: ExpertPricingRequestDialogProps) => {
   // Determine if this is a rental form based on serviceTypeName
   const isRentalForm = serviceTypeName === 'کرایه اجناس داربست';
@@ -78,8 +81,16 @@ export const ExpertPricingRequestDialog = ({
   const [selectedItem2, setSelectedItem2] = useState('');
   const [quantity2, setQuantity2] = useState(1);
   
-  // Execution-specific state (dimensions)
+  // Execution-specific state (dimensions) - single scaffold mode
   const [dimensions, setDimensions] = useState<Dimension[]>([{ length: '', width: '', height: '' }]);
+  const [unitCount, setUnitCount] = useState<string>('');
+
+  // Multi-scaffold mode: each entry represents one separate scaffold at the same location
+  type ScaffoldGroup = { label: string; dimensions: Dimension[]; unitCount: string; description: string };
+  const [scaffoldGroups, setScaffoldGroups] = useState<ScaffoldGroup[]>([
+    { label: 'داربست 1', dimensions: [{ length: '', width: '', height: '' }], unitCount: '', description: '' }
+  ]);
+
   
   const [requestedDate, setRequestedDate] = useState('');
   
@@ -164,13 +175,35 @@ export const ExpertPricingRequestDialog = ({
         quantity_2: selectedItem2 ? quantity2 : null,
         requested_date: requestedDate || null,
         service_type: serviceTypeName || 'داربست فلزی'
-      }) : JSON.stringify({
-        is_expert_pricing_request: true,
-        description: description,
-        dimensions: dimensions.filter(d => d.length || d.width || d.height),
-        requested_date: requestedDate || null,
-        service_type: serviceTypeName || 'داربست فلزی'
-      });
+      }) : (() => {
+        const filteredDims = dimensions.filter(d => d.length || d.width || d.height);
+        const base: any = {
+          is_expert_pricing_request: true,
+          description: description,
+          requested_date: requestedDate || null,
+          service_type: serviceTypeName || 'داربست فلزی',
+          is_multi_scaffold: !!multiOrderMode,
+        };
+        if (multiOrderMode) {
+          // In multi mode, aggregate all scaffold dimensions into top-level so DB trigger
+          // (which concatenates dimensions into the notification body) never gets an empty array.
+          const allDims = scaffoldGroups.flatMap(g => g.dimensions.filter(d => d.length || d.width || d.height));
+          base.dimensions = allDims.length > 0 ? allDims : [{ length: '0', width: '0', height: '0' }];
+          base.unit_count = null;
+          base.scaffolds = scaffoldGroups.map((g, i) => ({
+            label: g.label || `داربست ${i + 1}`,
+            dimensions: g.dimensions.filter(d => d.length || d.width || d.height),
+            unit_count: parseLocalizedNumber(g.unitCount) || null,
+            description: g.description || ''
+          }));
+        } else {
+          base.dimensions = filteredDims.length > 0 ? filteredDims : [{ length: '0', width: '0', height: '0' }];
+          base.unit_count = parseLocalizedNumber(unitCount) || null;
+          base.scaffolds = null;
+        }
+        return JSON.stringify(base);
+      })();
+
 
       // Step 3: Create order (50%)
       setProgressStep('ثبت سفارش در سیستم...');
@@ -301,12 +334,13 @@ export const ExpertPricingRequestDialog = ({
       setProgressStep('ارسال پیامک...');
       setProgress(90);
       
-      const customerPhone = user?.user_metadata?.phone_number || user?.phone;
-      if (customerPhone && orderCode) {
+      const customerPhone = user?.user_metadata?.phone_number || user?.phone || '';
+      if (orderCode) {
         sendOrderSms(customerPhone, orderCode, 'submitted', {
           orderId: orderId,
           serviceType: serviceTypeName || 'درخواست قیمت‌گذاری کارشناس',
-          address: buildOrderSmsAddress(address, detailedAddress)
+          address: buildOrderSmsAddress(address, detailedAddress),
+          customerName: user?.user_metadata?.full_name || 'مشتری'
         }).catch(err => {
           console.error('SMS notification error:', err);
         });
@@ -341,6 +375,9 @@ export const ExpertPricingRequestDialog = ({
       setSelectedItem2('');
       setQuantity2(1);
       setDimensions([{ length: '', width: '', height: '' }]);
+      setScaffoldGroups([{ label: 'داربست 1', dimensions: [{ length: '', width: '', height: '' }], unitCount: '', description: '' }]);
+
+      setUnitCount('');
       setRequestedDate('');
       setUploadedMedia([]);
       setProgress(0);
@@ -483,6 +520,160 @@ export const ExpertPricingRequestDialog = ({
                 </div>
               )}
             </div>
+          ) : multiOrderMode ? (
+            /* Multi-scaffold mode at same location */
+            <div className="space-y-4">
+              <div className="p-3 bg-primary/5 border border-primary/30 rounded-lg text-sm text-primary">
+                🏗️ حالت چند داربست همزمان در یک مکان فعال است. برای هر داربست ابعاد و تعداد را جداگانه وارد کنید. هزینه حمل و نقل توسط کارشناس فقط یک‌بار محاسبه و بین داربست‌ها تقسیم خواهد شد.
+              </div>
+
+              {scaffoldGroups.map((group, gIdx) => (
+                <div key={gIdx} className="p-3 border-2 border-primary/30 rounded-lg space-y-3 bg-muted/20">
+                  <div className="flex items-center justify-between gap-2">
+                    <Input
+                      value={group.label}
+                      onChange={(e) => {
+                        const next = [...scaffoldGroups];
+                        next[gIdx] = { ...next[gIdx], label: e.target.value };
+                        setScaffoldGroups(next);
+                      }}
+                      placeholder={`داربست ${gIdx + 1}`}
+                      className="max-w-[200px] font-semibold"
+                    />
+                    {scaffoldGroups.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setScaffoldGroups(prev => prev.filter((_, i) => i !== gIdx))}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+
+                  <Label className="flex items-center gap-2 text-sm">
+                    <Ruler className="h-4 w-4" />
+                    ابعاد داربست
+                  </Label>
+
+                  {group.dimensions.map((dim, dIdx) => (
+                    <div key={dIdx} className="p-2 border rounded-lg space-y-2 bg-background/50">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-medium">ابعاد {dIdx + 1}</Label>
+                        {group.dimensions.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              const next = [...scaffoldGroups];
+                              next[gIdx] = {
+                                ...next[gIdx],
+                                dimensions: next[gIdx].dimensions.filter((_, i) => i !== dIdx)
+                              };
+                              setScaffoldGroups(next);
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {(['length', 'width', 'height'] as const).map((field) => (
+                          <div key={field}>
+                            <Label className="text-xs text-muted-foreground">
+                              {field === 'length' ? 'طول (متر)' : field === 'width' ? 'عرض (متر)' : 'ارتفاع (متر)'}
+                            </Label>
+                            <Input
+                              value={dim[field]}
+                              onChange={(e) => {
+                                const next = [...scaffoldGroups];
+                                const dims = [...next[gIdx].dimensions];
+                                dims[dIdx] = { ...dims[dIdx], [field]: e.target.value };
+                                next[gIdx] = { ...next[gIdx], dimensions: dims };
+                                setScaffoldGroups(next);
+                              }}
+                              placeholder={field === 'length' ? 'طول' : field === 'width' ? 'عرض' : 'ارتفاع'}
+                              className="text-center"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      {dim.length && dim.width && (
+                        <p className="text-xs text-muted-foreground text-center">
+                          متراژ: {(parseLocalizedNumber(dim.length) * parseLocalizedNumber(dim.width)).toFixed(2)} متر مربع
+                          {dim.height && ` | حجم: ${(parseLocalizedNumber(dim.length) * parseLocalizedNumber(dim.width) * parseLocalizedNumber(dim.height)).toFixed(2)} متر مکعب`}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full gap-2"
+                    onClick={() => {
+                      const next = [...scaffoldGroups];
+                      next[gIdx] = {
+                        ...next[gIdx],
+                        dimensions: [...next[gIdx].dimensions, { length: '', width: '', height: '' }]
+                      };
+                      setScaffoldGroups(next);
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    افزودن ابعاد دیگر به این داربست
+                  </Button>
+
+                  <div className="space-y-2 p-2 border rounded-lg bg-background/40">
+                    <Label className="text-xs">تعداد (اختیاری)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={group.unitCount}
+                      onChange={(e) => {
+                        const next = [...scaffoldGroups];
+                        next[gIdx] = { ...next[gIdx], unitCount: e.target.value };
+                        setScaffoldGroups(next);
+                      }}
+                      placeholder="مثلاً: 12"
+                      className="text-center"
+                    />
+                  </div>
+
+                  <div className="space-y-2 p-2 border rounded-lg bg-background/40">
+                    <Label className="text-xs">توضیحات این آیتم (اختیاری)</Label>
+                    <Textarea
+                      value={group.description}
+                      onChange={(e) => {
+                        const next = [...scaffoldGroups];
+                        next[gIdx] = { ...next[gIdx], description: e.target.value };
+                        setScaffoldGroups(next);
+                      }}
+                      placeholder="توضیحات مخصوص این داربست (محل نصب، شرایط، ...)"
+                      rows={2}
+                    />
+                  </div>
+                </div>
+              ))}
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2 border-primary/40"
+                onClick={() => setScaffoldGroups(prev => [
+                  ...prev,
+                  { label: `داربست ${prev.length + 1}`, dimensions: [{ length: '', width: '', height: '' }], unitCount: '', description: '' }
+                ])}
+              >
+                <Plus className="h-4 w-4" />
+                افزودن داربست جدید در همین مکان
+              </Button>
+            </div>
           ) : (
             /* Dimensions - for اجرای داربست به همراه اجناس */
             <div className="space-y-3">
@@ -568,6 +759,22 @@ export const ExpertPricingRequestDialog = ({
                 <Plus className="h-4 w-4" />
                 افزودن ابعاد دیگر
               </Button>
+
+              {/* Unit count (تعداد) */}
+              <div className="space-y-2 p-3 border rounded-lg bg-muted/20">
+                <Label className="text-sm">تعداد (اختیاری)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={unitCount}
+                  onChange={(e) => setUnitCount(e.target.value)}
+                  placeholder="مثلاً: 12"
+                  className="text-center"
+                />
+                <p className="text-xs text-muted-foreground">
+                  در صورتی‌که چند داربست با ابعاد یکسان می‌خواهید، تعداد را وارد کنید
+                </p>
+              </div>
               
               {/* Total measure summary */}
               {dimensions.some(d => d.length && d.width) && (
@@ -578,6 +785,7 @@ export const ExpertPricingRequestDialog = ({
                       const w = parseLocalizedNumber(d.width);
                       return sum + (l * w);
                     }, 0).toFixed(2)} متر مربع
+
                   </p>
                 </div>
               )}

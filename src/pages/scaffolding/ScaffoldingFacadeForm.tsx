@@ -355,23 +355,22 @@ export default function ScaffoldingFacadeForm() {
       });
 
       // ارسال پیامک تایید ثبت سفارش به مشتری (در پس‌زمینه)
-      const customerPhone = user?.user_metadata?.phone_number || user?.phone;
-      const customerName = user?.user_metadata?.full_name || 'مشتری';
+      const customerPhone = createdProject.customer_phone || user?.user_metadata?.phone_number || user?.phone || '';
+      const customerName = createdProject.customer_name || user?.user_metadata?.full_name || 'مشتری';
       const smsAddress = buildOrderSmsAddress(projectAddress, projectLocation?.address);
       
-      if (customerPhone) {
+      if (createdProject.code) {
         console.log('[ScaffoldingFacadeForm] Sending SMS to:', customerPhone);
         sendOrderSms(customerPhone, createdProject.code, 'submitted', {
           orderId: createdProject.id,
           serviceType: 'داربست نما',
-          address: smsAddress
+          address: smsAddress,
+          customerName
         }).then(result => {
           console.log('[ScaffoldingFacadeForm] SMS result:', result);
         }).catch(err => {
           console.error('[ScaffoldingFacadeForm] SMS notification error:', err);
         });
-      } else {
-        console.warn('[ScaffoldingFacadeForm] No customer phone found to send SMS');
       }
 
       // ارسال پیامک به مدیرعامل (در پس‌زمینه)
@@ -390,6 +389,7 @@ export default function ScaffoldingFacadeForm() {
         order_id: createdProject.id,
         customer_name: user?.user_metadata?.full_name || '',
         customer_phone: user?.user_metadata?.phone_number || user?.phone || '',
+        customer_user_id: user?.id,
         service_type: 'داربست نما'
       }).catch(err => {
         console.error('Notify managers error:', err);

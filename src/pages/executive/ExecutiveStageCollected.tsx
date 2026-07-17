@@ -15,7 +15,7 @@ import { StatusBadge } from '@/components/common/StatusBadge';
 import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
-import { sendOrderSms } from '@/lib/orderSms';
+import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
 import { useOrderArchive } from '@/hooks/useOrderArchive';
 import { OrderArchiveControls, OrderCardArchiveButton } from '@/components/orders/OrderArchiveControls';
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
@@ -171,6 +171,22 @@ export default function ExecutiveStageCollected() {
         .eq('id', orderId);
 
       if (error) throw error;
+
+      const selectedOrder = orders.find(o => o.id === orderId);
+      const smsStatusMap: Record<string, any> = {
+        awaiting_payment: 'awaiting_payment',
+        order_executed: 'executed',
+        awaiting_collection: 'awaiting_collection',
+        in_collection: 'in_collection',
+        collected: 'collected'
+      };
+      const smsStatus = smsStatusMap[newStage];
+      if (smsStatus) {
+        sendOrderSms(selectedOrder?.customer_phone || '', orderCode, smsStatus, {
+          orderId,
+          address: selectedOrder ? buildOrderSmsAddress(selectedOrder.address, selectedOrder.detailed_address) : undefined,
+        }).catch(err => console.error('SMS notification error:', err));
+      }
 
       toast({
         title: '✓ مرحله به‌روزرسانی شد',

@@ -1,0 +1,13 @@
+[
+  {
+    "id": "6eb1f94c-f358-46e0-98c0-b6b0478d8543",
+    "user_id": "1733c786-1dd0-4708-a67e-73e7ed6fff13",
+    "service_request_id": null,
+    "department": "management",
+    "subject": "تایید گواهینامه ssl",
+    "message": "hhh fghfghfghfghgfhfghfghfg",
+    "status": "open",
+    "created_at": "2025-10-16T10:35:29.321653+00:00",
+    "updated_at": "2025-10-16T10:35:29.321653+00:00"
+  }
+]

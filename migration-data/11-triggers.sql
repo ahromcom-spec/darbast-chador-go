@@ -1,170 +1,110 @@
 -- ============================================
--- 11-TRIGGERS.SQL - تریگرها
+-- 11-TRIGGERS.SQL - All Triggers
+-- Generated from live database
 -- ============================================
 
--- تریگر بروزرسانی timestamp
-CREATE TRIGGER update_profiles_timestamp
-  BEFORE UPDATE ON profiles
-  FOR EACH ROW EXECUTE FUNCTION update_timestamp();
-
-CREATE TRIGGER update_customers_timestamp
-  BEFORE UPDATE ON customers
-  FOR EACH ROW EXECUTE FUNCTION update_timestamp();
-
-CREATE TRIGGER update_projects_v3_timestamp
-  BEFORE UPDATE ON projects_v3
-  FOR EACH ROW EXECUTE FUNCTION update_timestamp();
-
-CREATE TRIGGER update_daily_reports_timestamp
-  BEFORE UPDATE ON daily_reports
-  FOR EACH ROW EXECUTE FUNCTION update_timestamp();
-
-CREATE TRIGGER update_daily_report_orders_timestamp
-  BEFORE UPDATE ON daily_report_orders
-  FOR EACH ROW EXECUTE FUNCTION update_timestamp();
-
-CREATE TRIGGER update_daily_report_staff_timestamp
-  BEFORE UPDATE ON daily_report_staff
-  FOR EACH ROW EXECUTE FUNCTION update_timestamp();
-
--- تخصیص کد مشتری
-CREATE OR REPLACE FUNCTION assign_customer_code()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.customer_code IS NULL THEN
-    NEW.customer_code := generate_customer_code();
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_assign_customer_code
-  BEFORE INSERT ON customers
-  FOR EACH ROW EXECUTE FUNCTION assign_customer_code();
-
--- ایجاد تأییدیه‌های سفارش
-CREATE OR REPLACE FUNCTION create_order_approvals()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.status = 'pending' THEN
-    INSERT INTO order_approvals (order_id, approver_role, subcategory_id)
-    VALUES 
-      (NEW.id, 'ceo', NEW.subcategory_id),
-      (NEW.id, 'sales_manager', NEW.subcategory_id),
-      (NEW.id, 'scaffold_executive_manager', NEW.subcategory_id),
-      (NEW.id, 'executive_manager_scaffold_execution_with_materials', NEW.subcategory_id)
-    ON CONFLICT DO NOTHING;
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_create_order_approvals
-  AFTER INSERT ON projects_v3
-  FOR EACH ROW EXECUTE FUNCTION create_order_approvals();
-
--- همگام‌سازی پرداخت با کیف پول
-CREATE OR REPLACE FUNCTION sync_order_payment_to_wallet()
-RETURNS TRIGGER AS $$
-DECLARE
-  v_customer_user_id UUID;
-  v_order_code TEXT;
-BEGIN
-  SELECT p.code, c.user_id 
-  INTO v_order_code, v_customer_user_id
-  FROM projects_v3 p
-  JOIN customers c ON c.id = p.customer_id
-  WHERE p.id = NEW.order_id;
-  
-  IF v_customer_user_id IS NOT NULL THEN
-    IF NOT EXISTS (
-      SELECT 1 FROM wallet_transactions 
-      WHERE reference_type = 'order_payment' AND reference_id = NEW.id
-    ) THEN
-      INSERT INTO wallet_transactions (
-        user_id, transaction_type, amount, title, description,
-        reference_type, reference_id
-      ) VALUES (
-        v_customer_user_id, 'credit', NEW.amount,
-        'پرداخت سفارش ' || COALESCE(v_order_code, NEW.order_id::TEXT),
-        'پرداخت برای سفارش شماره ' || COALESCE(v_order_code, NEW.order_id::TEXT),
-        'order_payment', NEW.id
-      );
-    END IF;
-  END IF;
-  
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_sync_order_payment_to_wallet
-  AFTER INSERT ON order_payments
-  FOR EACH ROW EXECUTE FUNCTION sync_order_payment_to_wallet();
-
--- همگام‌سازی گزارش روزانه با کیف پول
-CREATE OR REPLACE FUNCTION sync_daily_report_to_wallet()
-RETURNS TRIGGER AS $$
-DECLARE
-  v_user_id UUID;
-  v_report_date DATE;
-BEGIN
-  IF NEW.staff_user_id IS NULL THEN
-    RETURN NEW;
-  END IF;
-  
-  v_user_id := NEW.staff_user_id;
-  
-  SELECT report_date INTO v_report_date
-  FROM daily_reports WHERE id = NEW.daily_report_id;
-  
-  -- حذف تراکنش‌های قبلی
-  DELETE FROM wallet_transactions
-  WHERE reference_type = 'daily_report_staff' AND reference_id = NEW.id;
-  
-  -- درآمد
-  IF NEW.amount_received IS NOT NULL AND NEW.amount_received > 0 THEN
-    INSERT INTO wallet_transactions (
-      user_id, transaction_type, amount, title, description,
-      reference_type, reference_id, created_at
-    ) VALUES (
-      v_user_id, 'income', NEW.amount_received,
-      'دریافتی از گزارش روزانه',
-      COALESCE(NEW.receiving_notes, '') || ' | تاریخ: ' || v_report_date::TEXT,
-      'daily_report_staff', NEW.id, COALESCE(v_report_date::TIMESTAMPTZ, now())
-    );
-  END IF;
-  
-  -- هزینه
-  IF NEW.amount_spent IS NOT NULL AND NEW.amount_spent > 0 THEN
-    INSERT INTO wallet_transactions (
-      user_id, transaction_type, amount, title, description,
-      reference_type, reference_id, created_at
-    ) VALUES (
-      v_user_id, 'expense', -1 * NEW.amount_spent,
-      'پرداختی در گزارش روزانه',
-      COALESCE(NEW.spending_notes, '') || ' | تاریخ: ' || v_report_date::TEXT,
-      'daily_report_staff', NEW.id, COALESCE(v_report_date::TIMESTAMPTZ, now())
-    );
-  END IF;
-  
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_sync_daily_report_to_wallet
-  AFTER INSERT OR UPDATE ON daily_report_staff
-  FOR EACH ROW EXECUTE FUNCTION sync_daily_report_to_wallet();
-
--- حذف تراکنش‌های کیف پول مرتبط با گزارش روزانه
-CREATE OR REPLACE FUNCTION delete_daily_report_staff_wallet_transactions()
-RETURNS TRIGGER AS $$
-BEGIN
-  DELETE FROM wallet_transactions
-  WHERE reference_type = 'daily_report_staff' AND reference_id = OLD.id;
-  RETURN OLD;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_delete_daily_report_staff_wallet
-  BEFORE DELETE ON daily_report_staff
-  FOR EACH ROW EXECUTE FUNCTION delete_daily_report_staff_wallet_transactions();
+CREATE TRIGGER update_addresses_updated_at BEFORE UPDATE ON public.addresses FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_approved_media_updated_at BEFORE UPDATE ON public.approved_media FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_assignments_updated_at BEFORE UPDATE ON public.assignments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER notify_assignment_created AFTER INSERT ON public.assignments FOR EACH ROW EXECUTE FUNCTION notify_new_assignment();
+CREATE TRIGGER trg_recalc_balance_on_tx AFTER INSERT OR DELETE OR UPDATE ON public.bank_card_transactions FOR EACH ROW EXECUTE FUNCTION trigger_recalculate_bank_card_balance_on_tx();
+CREATE TRIGGER trg_bank_card_tx_recalc AFTER INSERT OR DELETE OR UPDATE ON public.bank_card_transactions FOR EACH ROW EXECUTE FUNCTION trigger_recalc_bank_card_on_tx();
+CREATE TRIGGER trg_recalc_balance_on_initial AFTER UPDATE ON public.bank_cards FOR EACH ROW EXECUTE FUNCTION trigger_recalculate_on_initial_balance_change();
+CREATE TRIGGER trg_bank_card_initial_balance BEFORE UPDATE ON public.bank_cards FOR EACH ROW EXECUTE FUNCTION trigger_recalc_bank_card_on_update();
+CREATE TRIGGER update_collection_requests_updated_at BEFORE UPDATE ON public.collection_requests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_contractor_profiles_updated_at BEFORE UPDATE ON public.contractor_profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_contractor_verification_updated_at BEFORE UPDATE ON public.contractor_verification_requests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER contractor_auto_approve BEFORE INSERT ON public.contractor_verification_requests FOR EACH ROW EXECUTE FUNCTION auto_approve_contractor_if_whitelisted();
+CREATE TRIGGER contractor_verification_status_change AFTER UPDATE ON public.contractor_verification_requests FOR EACH ROW WHEN ((old.status IS DISTINCT FROM new.status)) EXECUTE FUNCTION handle_contractor_verification();
+CREATE TRIGGER update_contractors_updated_at BEFORE UPDATE ON public.contractors FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER validate_contractor_phone_trigger BEFORE INSERT OR UPDATE ON public.contractors FOR EACH ROW EXECUTE FUNCTION validate_contractor_phone();
+CREATE TRIGGER contractor_approval_audit AFTER UPDATE ON public.contractors FOR EACH ROW EXECUTE FUNCTION log_contractor_approval();
+CREATE TRIGGER set_customer_code BEFORE INSERT ON public.customers FOR EACH ROW EXECUTE FUNCTION assign_customer_code();
+CREATE TRIGGER update_customers_timestamp BEFORE UPDATE ON public.customers FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+CREATE TRIGGER update_daily_report_orders_updated_at BEFORE UPDATE ON public.daily_report_orders FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER sync_wallet_on_daily_report_staff AFTER INSERT OR UPDATE ON public.daily_report_staff FOR EACH ROW EXECUTE FUNCTION sync_daily_report_to_wallet();
+CREATE TRIGGER delete_wallet_on_daily_report_staff_delete AFTER DELETE ON public.daily_report_staff FOR EACH ROW EXECUTE FUNCTION delete_daily_report_staff_wallet_transactions();
+CREATE TRIGGER trg_recalc_balance_on_staff AFTER INSERT OR DELETE OR UPDATE ON public.daily_report_staff FOR EACH ROW EXECUTE FUNCTION trigger_recalculate_bank_card_balance_on_staff();
+CREATE TRIGGER trg_bank_card_staff_recalc AFTER INSERT OR DELETE OR UPDATE ON public.daily_report_staff FOR EACH ROW EXECUTE FUNCTION trigger_recalc_bank_card_on_staff();
+CREATE TRIGGER update_daily_report_staff_updated_at BEFORE UPDATE ON public.daily_report_staff FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_daily_reports_updated_at BEFORE UPDATE ON public.daily_reports FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_expert_pricing_requests_updated_at BEFORE UPDATE ON public.expert_pricing_requests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_hr_employees_updated_at BEFORE UPDATE ON public.hr_employees FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_staff_profiles_updated_at BEFORE UPDATE ON public.internal_staff_profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_inventory_items_updated_at BEFORE UPDATE ON public.inventory_items FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_inventory_reservations_updated_at BEFORE UPDATE ON public.inventory_reservations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_invoices_updated_at BEFORE UPDATE ON public.invoices FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_locations_updated_at BEFORE UPDATE ON public.locations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_module_assignments_updated_at BEFORE UPDATE ON public.module_assignments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER set_module_hierarchy_states_updated_at BEFORE UPDATE ON public.module_hierarchy_states FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER update_najva_subscriptions_updated_at BEFORE UPDATE ON public.najva_subscriptions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trigger_check_order_approvals AFTER UPDATE ON public.order_approvals FOR EACH ROW WHEN (((new.approved_at IS NOT NULL) AND (old.approved_at IS NULL))) EXECUTE FUNCTION check_and_update_order_status();
+CREATE TRIGGER check_approvals_complete AFTER UPDATE ON public.order_approvals FOR EACH ROW EXECUTE FUNCTION check_all_approvals();
+CREATE TRIGGER check_approvals_on_update AFTER UPDATE ON public.order_approvals FOR EACH ROW WHEN (((old.approved_at IS NULL) AND (new.approved_at IS NOT NULL))) EXECUTE FUNCTION check_all_approvals();
+CREATE TRIGGER update_order_daily_logs_updated_at BEFORE UPDATE ON public.order_daily_logs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_order_messages_updated_at BEFORE UPDATE ON public.order_messages FOR EACH ROW EXECUTE FUNCTION update_order_messages_updated_at();
+CREATE TRIGGER on_order_payment_wallet AFTER INSERT ON public.order_payments FOR EACH ROW EXECUTE FUNCTION sync_order_payment_to_wallet();
+CREATE TRIGGER sync_wallet_on_order_payment AFTER INSERT ON public.order_payments FOR EACH ROW EXECUTE FUNCTION sync_order_payment_to_wallet();
+CREATE TRIGGER update_order_renewals_updated_at BEFORE UPDATE ON public.order_renewals FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON public.orders FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER auto_cleanup_expired_otps BEFORE INSERT ON public.otp_codes FOR EACH STATEMENT EXECUTE FUNCTION trigger_cleanup_expired_otps();
+CREATE TRIGGER on_payment_status_change AFTER UPDATE ON public.payments FOR EACH ROW EXECUTE FUNCTION handle_payment_received();
+CREATE TRIGGER update_phone_whitelist_updated_at BEFORE UPDATE ON public.phone_whitelist FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER validate_profile_phone_trigger BEFORE INSERT OR UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION validate_profile_phone();
+CREATE TRIGGER on_profile_created_check_transfers AFTER INSERT ON public.profiles FOR EACH ROW EXECUTE FUNCTION auto_assign_pending_transfers();
+CREATE TRIGGER update_project_assignments_updated_at BEFORE UPDATE ON public.project_assignments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_project_collaborators_updated_at BEFORE UPDATE ON public.project_collaborators FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_ph_media_set_updated_at BEFORE UPDATE ON public.project_hierarchy_media FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER update_project_media_updated_at BEFORE UPDATE ON public.project_media FOR EACH ROW EXECUTE FUNCTION update_project_media_updated_at();
+CREATE TRIGGER update_progress_media_updated_at BEFORE UPDATE ON public.project_progress_media FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_project_progress_stages_updated_at BEFORE UPDATE ON public.project_progress_stages FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_projects_updated_at BEFORE UPDATE ON public.projects FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER create_project_stages AFTER INSERT ON public.projects FOR EACH ROW EXECUTE FUNCTION create_default_project_stages();
+CREATE TRIGGER update_projects_hierarchy_updated_at BEFORE UPDATE ON public.projects_hierarchy FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_projects_v2_updated_at BEFORE UPDATE ON public.projects_v2 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_projects_v3_timestamp BEFORE UPDATE ON public.projects_v3 FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+CREATE TRIGGER trigger_set_unique_order_code BEFORE INSERT ON public.projects_v3 FOR EACH ROW EXECUTE FUNCTION set_unique_order_code();
+CREATE TRIGGER create_approvals_on_order_submit AFTER INSERT OR UPDATE ON public.projects_v3 FOR EACH ROW EXECUTE FUNCTION create_approval_records();
+CREATE TRIGGER trigger_notify_order_status_change AFTER UPDATE ON public.projects_v3 FOR EACH ROW WHEN ((old.status IS DISTINCT FROM new.status)) EXECUTE FUNCTION notify_order_status_change();
+CREATE TRIGGER trigger_notify_managers_on_new_order AFTER INSERT ON public.projects_v3 FOR EACH ROW EXECUTE FUNCTION notify_managers_on_new_order();
+CREATE TRIGGER on_order_status_change AFTER UPDATE ON public.projects_v3 FOR EACH ROW EXECUTE FUNCTION notify_order_status_change();
+CREATE TRIGGER create_order_approvals_trigger AFTER INSERT ON public.projects_v3 FOR EACH ROW EXECUTE FUNCTION create_order_approvals();
+CREATE TRIGGER trigger_order_automation_on_insert AFTER INSERT OR UPDATE ON public.projects_v3 FOR EACH ROW EXECUTE FUNCTION trigger_order_automation();
+CREATE TRIGGER on_order_approved_wallet AFTER UPDATE ON public.projects_v3 FOR EACH ROW EXECUTE FUNCTION sync_order_approval_to_wallet();
+CREATE TRIGGER order_approval_workflow_trigger BEFORE UPDATE ON public.projects_v3 FOR EACH ROW EXECUTE FUNCTION handle_order_approval_workflow();
+CREATE TRIGGER order_workflow_trigger BEFORE UPDATE ON public.projects_v3 FOR EACH ROW EXECUTE FUNCTION handle_order_approval_workflow();
+CREATE TRIGGER notify_on_new_order AFTER INSERT ON public.projects_v3 FOR EACH ROW EXECUTE FUNCTION notify_new_order();
+CREATE TRIGGER notify_on_order_update AFTER UPDATE ON public.projects_v3 FOR EACH ROW EXECUTE FUNCTION notify_new_order();
+CREATE TRIGGER handle_order_workflow AFTER UPDATE ON public.projects_v3 FOR EACH ROW EXECUTE FUNCTION handle_order_approval_workflow();
+CREATE TRIGGER trg_handle_order_approval AFTER UPDATE OF status ON public.projects_v3 FOR EACH ROW EXECUTE FUNCTION handle_order_approval();
+CREATE TRIGGER handle_approval_on_order AFTER INSERT OR UPDATE ON public.projects_v3 FOR EACH ROW EXECUTE FUNCTION handle_order_approval();
+CREATE TRIGGER trigger_set_payment_amount_on_approval BEFORE UPDATE ON public.projects_v3 FOR EACH ROW EXECUTE FUNCTION set_payment_amount_on_approval();
+CREATE TRIGGER on_helpful_vote_change AFTER INSERT OR DELETE OR UPDATE ON public.rating_helpful_votes FOR EACH ROW EXECUTE FUNCTION update_rating_helpful_count();
+CREATE TRIGGER update_rating_responses_timestamp BEFORE UPDATE ON public.rating_responses FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_ratings_timestamp BEFORE UPDATE ON public.ratings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER on_rating_insert_or_update AFTER INSERT OR UPDATE ON public.ratings FOR EACH ROW EXECUTE FUNCTION update_reputation_on_rating();
+CREATE TRIGGER update_repair_requests_updated_at BEFORE UPDATE ON public.repair_requests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_scaffolding_requests_updated_at BEFORE UPDATE ON public.scaffolding_requests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trigger_assign_service_request_to_project BEFORE INSERT ON public.service_requests FOR EACH ROW EXECUTE FUNCTION assign_service_request_to_project();
+CREATE TRIGGER update_service_requests_updated_at BEFORE UPDATE ON public.service_requests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER on_service_request_created BEFORE INSERT ON public.service_requests_v2 FOR EACH ROW EXECUTE FUNCTION handle_new_service_request();
+CREATE TRIGGER on_service_schedule_update BEFORE UPDATE ON public.services FOR EACH ROW EXECUTE FUNCTION handle_service_scheduled();
+CREATE TRIGGER update_services_updated_at BEFORE UPDATE ON public.services FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER on_service_closed AFTER UPDATE ON public.services FOR EACH ROW EXECUTE FUNCTION handle_service_closure();
+CREATE TRIGGER on_service_done BEFORE UPDATE ON public.services FOR EACH ROW EXECUTE FUNCTION handle_service_done();
+CREATE TRIGGER update_services_v3_updated_at BEFORE UPDATE ON public.services_v3 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_site_analytics_updated_at BEFORE UPDATE ON public.site_analytics FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_site_sessions_updated_at BEFORE UPDATE ON public.site_sessions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_staff_profiles_updated_at BEFORE UPDATE ON public.staff_profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER on_staff_request_decision AFTER UPDATE ON public.staff_profiles FOR EACH ROW EXECUTE FUNCTION notify_staff_request_decision();
+CREATE TRIGGER on_staff_request_created AFTER INSERT ON public.staff_profiles FOR EACH ROW EXECUTE FUNCTION notify_new_staff_request();
+CREATE TRIGGER enforce_max_staff_roles BEFORE INSERT OR UPDATE ON public.staff_roles FOR EACH ROW EXECUTE FUNCTION check_max_staff_roles();
+CREATE TRIGGER update_staff_roles_timestamp BEFORE UPDATE ON public.staff_roles FOR EACH ROW EXECUTE FUNCTION update_timestamp();
+CREATE TRIGGER update_staff_salary_settings_updated_at BEFORE UPDATE ON public.staff_salary_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER staff_auto_approve BEFORE INSERT ON public.staff_verification_requests FOR EACH ROW EXECUTE FUNCTION auto_approve_staff_if_whitelisted();
+CREATE TRIGGER update_staff_verification_updated_at BEFORE UPDATE ON public.staff_verification_requests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER staff_verification_status_change AFTER UPDATE ON public.staff_verification_requests FOR EACH ROW WHEN ((old.status IS DISTINCT FROM new.status)) EXECUTE FUNCTION handle_staff_verification();
+CREATE TRIGGER update_ticket_messages_updated_at BEFORE UPDATE ON public.ticket_messages FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_tickets_updated_at BEFORE UPDATE ON public.tickets FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_workflow_tasks_updated_at BEFORE UPDATE ON public.workflow_tasks FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

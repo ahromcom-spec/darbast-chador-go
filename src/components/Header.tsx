@@ -1,5 +1,5 @@
-import { useState, useEffect, memo, useCallback } from "react";
-import { Phone, Building, ChevronDown, User, LogOut, FolderKanban, MessageCircle, ShoppingCart, Receipt, Minus, Plus, RefreshCw } from "lucide-react";
+import { useState, useEffect, memo, useCallback, useRef } from "react";
+import { Phone, Building, ChevronDown, User, LogOut, FolderKanban, MessageCircle, ShoppingCart, Receipt, Minus, Plus, RefreshCw, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,6 +11,8 @@ import contactButton from "@/assets/contact-button.png";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { useToast } from "@/hooks/use-toast";
 import { useZoom } from "@/contexts/ZoomContext";
+import { cn } from "@/lib/utils";
+
 
 const Header = memo(() => {
   const navigate = useNavigate();
@@ -25,9 +27,31 @@ const Header = memo(() => {
   const [profileDropdownOpenDesktop, setProfileDropdownOpenDesktop] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
+  const [isStuck, setIsStuck] = useState(false);
+  const firstRowRef = useRef<HTMLDivElement>(null);
+  const secondRowRef = useRef<HTMLElement>(null);
+  const isStuckRef = useRef(false);
   
   // نمایش نام کاربر از پروفایل یا متادیتا
   const displayName = profileName || user?.user_metadata?.full_name || (user?.email ? user.email.split("@")[0] : "پروفایل");
+
+  // Scroll-based sticky fallback for when CSS sticky is broken by zoom/transform
+  useEffect(() => {
+    const handleScroll = () => {
+      const firstRowHeight = firstRowRef.current?.offsetHeight || 0;
+      const shouldStick = window.scrollY > firstRowHeight - 2;
+      
+      if (shouldStick !== isStuckRef.current) {
+        isStuckRef.current = shouldStick;
+        setIsStuck(shouldStick);
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
 
   // Fetch user profile (avatar and name) and subscribe to changes
@@ -164,6 +188,20 @@ const Header = memo(() => {
     </div>
   ) : null;
 
+  const HomeButton = (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="h-8 w-8 rounded-full border border-border/60 bg-background/40 hover:bg-primary/10 ml-auto"
+      onClick={() => navigate('/')}
+      aria-label="صفحه نخست"
+      title="صفحه نخست"
+    >
+      <Home className="h-4 w-4" />
+    </Button>
+  );
+
   // Hide header when on globe page (IMPORTANT: after all hooks)
   if (isGlobeRoute) {
     return null;
@@ -172,7 +210,7 @@ const Header = memo(() => {
   return (
     <>
       {/* First Header - Logo row */}
-      <div className="relative z-50 bg-card/95 backdrop-blur-sm border-b border-border/30 shadow-sm">
+      <div ref={firstRowRef} className="relative z-50 bg-card/95 backdrop-blur-sm border-b border-border/30 shadow-sm">
 
         <div className="container mx-auto px-4 sm:px-6">
           {/* Mobile & Tablet Layout - First Row */}
@@ -225,14 +263,26 @@ const Header = memo(() => {
                         </a>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <a 
-                          href="tel:02538865040" 
+                        <a
+                          href="tel:02538865040"
                           className="flex items-center gap-3 cursor-pointer hover:bg-accent rounded-md p-3 transition-colors"
                         >
                           <Building className="h-4 w-4 text-primary" />
                           <div className="text-right">
                             <div className="font-medium">دفتر</div>
                             <div className="text-sm text-muted-foreground">02538865040</div>
+                          </div>
+                        </a>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <a
+                          href="tel:09125511494"
+                          className="flex items-center gap-3 cursor-pointer hover:bg-accent rounded-md p-3 transition-colors"
+                        >
+                          <Phone className="h-4 w-4 text-primary" />
+                          <div className="text-right">
+                            <div className="font-medium">همراه مدیریت</div>
+                            <div className="text-sm text-muted-foreground">09125511494</div>
                           </div>
                         </a>
                       </DropdownMenuItem>
@@ -295,14 +345,26 @@ const Header = memo(() => {
                         </a>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <a 
-                          href="tel:02538865040" 
+                        <a
+                          href="tel:02538865040"
                           className="flex items-center gap-3 cursor-pointer hover:bg-accent rounded-md p-3 transition-colors"
                         >
                           <Building className="h-4 w-4 text-primary" />
                           <div className="text-right">
                             <div className="font-medium">دفتر</div>
                             <div className="text-sm text-muted-foreground">02538865040</div>
+                          </div>
+                        </a>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <a
+                          href="tel:09125511494"
+                          className="flex items-center gap-3 cursor-pointer hover:bg-accent rounded-md p-3 transition-colors"
+                        >
+                          <Phone className="h-4 w-4 text-primary" />
+                          <div className="text-right">
+                            <div className="font-medium">همراه مدیریت</div>
+                            <div className="text-sm text-muted-foreground">09125511494</div>
                           </div>
                         </a>
                       </DropdownMenuItem>
@@ -315,14 +377,20 @@ const Header = memo(() => {
         </div>
       </div>
 
+      {/* Spacer - prevents content jump when second row becomes fixed */}
+      {isStuck && (
+        <div style={{ height: secondRowRef.current?.offsetHeight || 44 }} aria-hidden="true" />
+      )}
+
       {/* Second Header - User menu row - Always visible and always on top */}
-      <header className="sticky top-0 z-[60] bg-card/95 backdrop-blur-sm border-b border-border shadow-lg">
+      <header ref={secondRowRef} className={cn("z-[60] bg-card/95 backdrop-blur-sm border-b border-border shadow-lg", isStuck ? "fixed top-0 left-0 right-0" : "sticky top-0")}>
         <div className="container mx-auto px-4 sm:px-6">
           {/* Mobile & Tablet Layout - Second Row */}
           <div className="md:hidden">
             <div className="flex items-center justify-end gap-2 py-0.5 pr-2">
             {user ? (
               <>
+              {HomeButton}
               {ZoomControls}
                 <div data-tour="notifications">
                   <NotificationBell />
@@ -345,8 +413,8 @@ const Header = memo(() => {
                       <ChevronDown className="h-3 w-3" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-background border shadow-xl z-50 min-w-[200px] mt-1">
-                    <div className="px-3 py-3 border-b border-border/50 bg-primary/5">
+                  <DropdownMenuContent align="end" className="bg-background border shadow-xl z-50 min-w-[180px] mt-1 overflow-visible">
+                    <div className="px-3 py-2 border-b border-border/50 bg-primary/5">
                       <p className="text-sm font-semibold text-foreground leading-relaxed">{displayName}</p>
                     </div>
                     <DropdownMenuItem 
@@ -354,7 +422,7 @@ const Header = memo(() => {
                         setProfileDropdownOpenMobile(false);
                         setTimeout(() => navigate("/profile"), 200);
                       }}
-                      className="cursor-pointer gap-2"
+                      className="cursor-pointer gap-2 py-2 px-3 text-sm"
                     >
                       <User className="h-4 w-4 text-primary" />
                       <span>پروفایل من</span>
@@ -364,7 +432,7 @@ const Header = memo(() => {
                         setProfileDropdownOpenMobile(false);
                         setTimeout(() => navigate("/user/projects"), 200);
                       }}
-                      className="cursor-pointer gap-2"
+                      className="cursor-pointer gap-2 py-2 px-3 text-sm"
                     >
                       <FolderKanban className="h-4 w-4 text-green-600" />
                       <span>پروژه‌های من</span>
@@ -374,7 +442,7 @@ const Header = memo(() => {
                         setProfileDropdownOpenMobile(false);
                         setTimeout(() => navigate("/profile?tab=orders"), 200);
                       }}
-                      className="cursor-pointer gap-2"
+                      className="cursor-pointer gap-2 py-2 px-3 text-sm"
                     >
                       <ShoppingCart className="h-4 w-4 text-blue-600" />
                       <span>سفارشات من</span>
@@ -384,7 +452,7 @@ const Header = memo(() => {
                         setProfileDropdownOpenMobile(false);
                         setTimeout(() => navigate("/profile?tab=invoice"), 200);
                       }}
-                      className="cursor-pointer gap-2"
+                      className="cursor-pointer gap-2 py-2 px-3 text-sm"
                     >
                       <Receipt className="h-4 w-4 text-purple-600" />
                       <span>صورتحساب من</span>
@@ -394,7 +462,7 @@ const Header = memo(() => {
                         setProfileDropdownOpenMobile(false);
                         setTimeout(() => navigate("/tickets"), 200);
                       }}
-                      className="cursor-pointer gap-2"
+                      className="cursor-pointer gap-2 py-2 px-3 text-sm"
                     >
                       <MessageCircle className="h-4 w-4 text-orange-600" />
                       <span>تیکت‌ها</span>
@@ -404,7 +472,7 @@ const Header = memo(() => {
                         setProfileDropdownOpenMobile(false);
                         setTimeout(() => handleSignOut(), 200);
                       }}
-                      className="cursor-pointer gap-2 text-red-600 focus:text-red-600"
+                      className="cursor-pointer gap-2 py-2 px-3 text-sm text-red-600 focus:text-red-600"
                     >
                       <LogOut className="h-4 w-4" />
                       <span>خروج</span>
@@ -414,7 +482,8 @@ const Header = memo(() => {
               </>
             ) : (
               <>
-                {ZoomControls}
+                {HomeButton}
+              {ZoomControls}
                 <Button
                   variant="outline"
                   size="sm"
@@ -440,6 +509,7 @@ const Header = memo(() => {
           <div className="flex items-center justify-end gap-4 py-1 pr-4">
             {user ? (
               <>
+              {HomeButton}
               {ZoomControls}
                 <div data-tour="notifications">
                   <NotificationBell />
@@ -461,8 +531,8 @@ const Header = memo(() => {
                       <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-background border shadow-xl z-50 min-w-[220px] mt-1">
-                    <div className="px-4 py-3 border-b border-border/50 bg-primary/5">
+                  <DropdownMenuContent align="end" className="bg-background border shadow-xl z-50 min-w-[200px] mt-1 overflow-visible">
+                    <div className="px-3 py-2 border-b border-border/50 bg-primary/5">
                       <p className="text-sm font-semibold text-foreground leading-relaxed">{displayName}</p>
                     </div>
                     <DropdownMenuItem 
@@ -470,7 +540,7 @@ const Header = memo(() => {
                         setProfileDropdownOpenDesktop(false);
                         setTimeout(() => navigate("/profile"), 200);
                       }}
-                      className="cursor-pointer gap-3 p-3"
+                      className="cursor-pointer gap-2 py-2 px-3 text-sm"
                     >
                       <User className="h-4 w-4 text-primary" />
                       <span>پروفایل من</span>
@@ -480,7 +550,7 @@ const Header = memo(() => {
                         setProfileDropdownOpenDesktop(false);
                         setTimeout(() => navigate("/user/projects"), 200);
                       }}
-                      className="cursor-pointer gap-3 p-3"
+                      className="cursor-pointer gap-2 py-2 px-3 text-sm"
                     >
                       <FolderKanban className="h-4 w-4 text-green-600" />
                       <span>پروژه‌های من</span>
@@ -490,7 +560,7 @@ const Header = memo(() => {
                         setProfileDropdownOpenDesktop(false);
                         setTimeout(() => navigate("/profile?tab=orders"), 200);
                       }}
-                      className="cursor-pointer gap-3 p-3"
+                      className="cursor-pointer gap-2 py-2 px-3 text-sm"
                     >
                       <ShoppingCart className="h-4 w-4 text-blue-600" />
                       <span>سفارشات من</span>
@@ -500,7 +570,7 @@ const Header = memo(() => {
                         setProfileDropdownOpenDesktop(false);
                         setTimeout(() => navigate("/profile?tab=invoice"), 200);
                       }}
-                      className="cursor-pointer gap-3 p-3"
+                      className="cursor-pointer gap-2 py-2 px-3 text-sm"
                     >
                       <Receipt className="h-4 w-4 text-purple-600" />
                       <span>صورتحساب من</span>
@@ -510,7 +580,7 @@ const Header = memo(() => {
                         setProfileDropdownOpenDesktop(false);
                         setTimeout(() => navigate("/tickets"), 200);
                       }}
-                      className="cursor-pointer gap-3 p-3"
+                      className="cursor-pointer gap-2 py-2 px-3 text-sm"
                     >
                       <MessageCircle className="h-4 w-4 text-orange-600" />
                       <span>تیکت‌ها</span>
@@ -520,7 +590,7 @@ const Header = memo(() => {
                         setProfileDropdownOpenDesktop(false);
                         setTimeout(() => handleSignOut(), 200);
                       }}
-                      className="cursor-pointer gap-3 p-3 text-red-600 focus:text-red-600"
+                      className="cursor-pointer gap-2 py-2 px-3 text-sm text-red-600 focus:text-red-600"
                     >
                       <LogOut className="h-4 w-4" />
                       <span>خروج</span>
@@ -530,7 +600,8 @@ const Header = memo(() => {
               </>
             ) : (
               <>
-                {ZoomControls}
+                {HomeButton}
+              {ZoomControls}
 
                 <Button
                   onClick={() => navigate("/auth/register")}

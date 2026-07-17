@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { createNeshanTileLayer, NESHAN_ATTRIBUTION } from '@/lib/neshan';
 import { Button } from '@/components/ui/button';
 import { Navigation } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -96,67 +97,19 @@ export default function StaticLocationMap({
 
       mapRef.current = map;
 
-      // Use multiple tile sources with fallback
-      const tileSources = [
-        {
-          url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-          options: {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 19,
-            crossOrigin: 'anonymous' as const,
-            subdomains: ['a', 'b', 'c'],
-            updateWhenIdle: false,
-            updateWhenZooming: false,
-            keepBuffer: 4,
-          }
-        },
-        {
-          url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-          options: {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 19,
-            crossOrigin: 'anonymous' as const,
-            updateWhenIdle: false,
-            updateWhenZooming: false,
-            keepBuffer: 4,
-          }
-        },
-        {
-          url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
-          options: {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 19,
-            subdomains: ['a', 'b', 'c', 'd'],
-            updateWhenIdle: false,
-            keepBuffer: 4,
-          }
-        }
-      ];
-
-      let tileLayerAdded = false;
-      for (const source of tileSources) {
-        try {
-          const tileLayer = L.tileLayer(source.url, source.options);
-          
-          tileLayer.on('load', () => {
-            console.log('[StaticLocationMap] Tiles loaded');
-          });
-          
-          tileLayer.on('tileerror', (e) => {
-            console.warn('Tile load error:', e);
-          });
-          
-          tileLayer.addTo(map);
-          tileLayerAdded = true;
-          console.log('[StaticLocationMap] Tile layer added:', source.url);
-          break;
-        } catch (err) {
-          console.warn('[StaticLocationMap] Tile source failed:', source.url, err);
-        }
-      }
-
-      if (!tileLayerAdded) {
-        console.error('[StaticLocationMap] All tile sources failed');
+      // Use Neshan tile layer
+      try {
+        const tileLayer = createNeshanTileLayer('standard-day', {
+          updateWhenIdle: false,
+          updateWhenZooming: false,
+          keepBuffer: 4,
+        });
+        tileLayer.on('load', () => console.log('[StaticLocationMap] Neshan tiles loaded'));
+        tileLayer.on('tileerror', (e) => console.warn('Neshan tile load error:', e));
+        tileLayer.addTo(map);
+        console.log('[StaticLocationMap] Neshan tile layer added');
+      } catch (err) {
+        console.error('[StaticLocationMap] Neshan tile load failed:', err);
       }
 
       // Custom marker icon

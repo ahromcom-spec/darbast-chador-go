@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { sanitizeHtml } from '@/lib/security';
 import { getOrCreateProjectSchema, createProjectV3Schema } from '@/lib/rpcValidation';
 import { sendOrderSms, sendCeoNotificationSms } from '@/lib/orderSms';
+import { notifyManagers } from '@/lib/notifications';
 
 interface Province {
   id: string;
@@ -362,8 +363,10 @@ export default function NewServiceRequestForm() {
       
       if (profileData?.phone_number) {
         sendOrderSms(profileData.phone_number, createdProject.code, 'submitted', {
+          orderId: createdProject.id,
           serviceType: serviceTypeName,
-          address: address || 'ثبت نشده'
+          address: address || 'ثبت نشده',
+          customerName
         }).catch(err => {
           console.error('SMS notification error:', err);
         });
@@ -377,6 +380,16 @@ export default function NewServiceRequestForm() {
       }).catch(err => {
         console.error('CEO SMS notification error:', err);
       });
+
+      // نوتیفیکیشن نجوا به مدیرعامل + مشتری
+      notifyManagers({
+        order_code: createdProject.code,
+        order_id: createdProject.id,
+        customer_name: customerName,
+        customer_phone: profileData?.phone_number || '',
+        customer_user_id: user?.id,
+        service_type: serviceTypeName,
+      }).catch(err => console.error('Notify managers error:', err));
 
       // اتوماسیون اداری حالا با database trigger اجرا می‌شود (order-automation function حذف شد)
 

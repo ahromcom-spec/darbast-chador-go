@@ -84,19 +84,19 @@ const mainNavItems = [
     icon: Users
   },
   {
-    title: 'انتقال سفارش',
+    title: 'انتقال و همکاری سفارش',
     href: '/ceo/order-transfers',
     icon: ArrowLeftRight
+  },
+  {
+    title: 'ارجاع سفارش به پیمانکار',
+    href: '/ceo/contractor-dispatch',
+    icon: UserCheck
   },
   {
     title: 'مدیریت دسترسی',
     href: '/ceo/whitelist',
     icon: Shield
-  },
-  {
-    title: 'تأیید پیمانکاران',
-    href: '/ceo/contractor-verifications',
-    icon: UserCheck
   },
   {
     title: 'تأیید پرسنل',
@@ -203,7 +203,7 @@ export const CEOLayout = () => {
     <div className="min-h-screen bg-background">
       {/* Module Name Header */}
       <div className="bg-primary/5 border-b border-primary/10">
-        <div className="container mx-auto px-4 py-2 flex items-center justify-between">
+        <div className="w-full max-w-none px-4 py-2 flex items-center justify-between">
           <Button
             variant="outline"
             size="sm"
@@ -219,8 +219,9 @@ export const CEOLayout = () => {
         </div>
       </div>
 
+      {!location.pathname.includes('contractor') && (
       <div className="border-b bg-card">
-        <div className="container mx-auto">
+        <div className="w-full max-w-none px-4">
           <nav className="flex gap-1 overflow-x-auto py-1">
             {/* آیتم‌های اصلی ناوبری */}
             {mainNavItems.map((item) => (
@@ -283,8 +284,9 @@ export const CEOLayout = () => {
           </nav>
         </div>
       </div>
+      )}
 
-      <div className="container mx-auto p-6">
+      <div className="w-full max-w-none px-4 py-6">
         <Outlet />
       </div>
     </div>

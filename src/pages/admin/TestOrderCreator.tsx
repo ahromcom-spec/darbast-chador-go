@@ -30,7 +30,7 @@ export default function TestOrderCreator() {
           user_id: user.id,
           full_name: 'مشتری تستی',
           phone_number: testPhone
-        })
+        } as any)
         .select()
         .single();
 

@@ -1,0 +1,16 @@
+# Large data exports — never commit these to Git
+# Re-export them locally via the /admin-export page when needed.
+data/site_analytics.json
+data/site_sessions.json
+data/audit_log.json
+data/notifications.json
+
+# Any file larger than ~50MB tends to be analytics/logs — block by pattern too
+data/*.log
+data/*.csv
+data/*.sql
+data/*.dump
+data/*.zip
+
+# Auth exports contain sensitive hashes — never commit
+data/auth/

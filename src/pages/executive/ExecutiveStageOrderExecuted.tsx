@@ -21,6 +21,7 @@ import { CollectionRequestDialog } from '@/components/orders/CollectionRequestDi
 import { RentalStartDatePicker } from '@/components/orders/RentalStartDatePicker';
 import { ManagerRenewalDialog } from '@/components/orders/ManagerRenewalDialog';
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
+import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
 interface Order {
   id: string;
   code: string;
@@ -62,6 +63,7 @@ export default function ExecutiveStageOrderExecuted() {
   const [collectionDialogOpen, setCollectionDialogOpen] = useState(false);
   const [renewalDialogOpen, setRenewalDialogOpen] = useState(false);
   const [savingRentalDate, setSavingRentalDate] = useState<string | null>(null);
+  const [applyingOrderId, setApplyingOrderId] = useState<string | null>(null);
   const { toast } = useToast();
   
   // Archive functionality
@@ -199,6 +201,21 @@ export default function ExecutiveStageOrderExecuted() {
 
       if (error) throw error;
 
+      const selectedOrder = orders.find(o => o.id === orderId);
+      const smsStatusMap: Record<string, any> = {
+        awaiting_payment: 'awaiting_payment',
+        order_executed: 'executed',
+        awaiting_collection: 'awaiting_collection',
+        in_collection: 'in_collection'
+      };
+      const smsStatus = smsStatusMap[newStage];
+      if (smsStatus) {
+        sendOrderSms(selectedOrder?.customer_phone || '', orderCode, smsStatus, {
+          orderId,
+          address: selectedOrder ? buildOrderSmsAddress(selectedOrder.address, selectedOrder.detailed_address) : undefined,
+        }).catch(err => console.error('SMS notification error:', err));
+      }
+
       toast({
         title: '✓ مرحله به‌روزرسانی شد',
         description: `مرحله سفارش ${orderCode} به "${stageLabels[newStage]}" تغییر یافت.`
@@ -225,6 +242,7 @@ export default function ExecutiveStageOrderExecuted() {
         : order
     ));
     setSavingRentalDate(orderId);
+    setApplyingOrderId(orderId);
 
     try {
       const { error } = await supabase
@@ -242,10 +260,11 @@ export default function ExecutiveStageOrderExecuted() {
           ? `تاریخ شروع کرایه سفارش ${orderCode} ثبت شد.`
           : `تاریخ شروع کرایه سفارش ${orderCode} پاک شد.`
       });
+      await fetchOrders();
     } catch (error) {
       console.error('Error updating rental start date:', error);
       // Revert on error
-      fetchOrders();
+      await fetchOrders();
       toast({
         variant: 'destructive',
         title: 'خطا',
@@ -253,6 +272,16 @@ export default function ExecutiveStageOrderExecuted() {
       });
     } finally {
       setSavingRentalDate(null);
+      setApplyingOrderId(null);
+    }
+  };
+
+  const handleCollectionSaved = async (orderId: string) => {
+    setApplyingOrderId(orderId);
+    try {
+      await fetchOrders();
+    } finally {
+      setApplyingOrderId(null);
     }
   };
 
@@ -307,8 +336,18 @@ export default function ExecutiveStageOrderExecuted() {
             </CardContent>
           </Card>
         ) : (
-          filteredOrders.map((order) => (
-            <Card key={order.id} className="hover:shadow-lg transition-all border-l-4 border-l-green-500">
+          filteredOrders.map((order) => {
+            const isApplying = applyingOrderId === order.id;
+            return (
+            <Card key={order.id} className="hover:shadow-lg transition-all border-l-4 border-l-green-500 relative overflow-hidden">
+              {isApplying && (
+                <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 rounded-lg" aria-live="polite">
+                  <LoadingSpinner />
+                  <p className="text-sm font-medium text-foreground">در حال اعمال تغییرات روی سفارش...</p>
+                  <p className="text-xs text-muted-foreground">لطفاً منتظر بمانید</p>
+                </div>
+              )}
+              <div style={{ pointerEvents: isApplying ? 'none' : 'auto', opacity: isApplying ? 0.6 : 1 }}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
                   <OrderCardArchiveButton
@@ -539,8 +578,10 @@ export default function ExecutiveStageOrderExecuted() {
                   </Button>
                 </div>
               </CardContent>
+              </div>
             </Card>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -589,6 +630,7 @@ export default function ExecutiveStageOrderExecuted() {
           orderCode={selectedOrder.code}
           customerId={selectedOrder.customer_id}
           isManager={true}
+          onSaved={() => handleCollectionSaved(selectedOrder.id)}
         />
       )}
 

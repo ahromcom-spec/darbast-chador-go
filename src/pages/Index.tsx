@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import InteractiveGlobe from '@/components/globe/InteractiveGlobe';
 import goldenGlobe from '@/assets/golden-globe-rotating.png';
-import { AssistantAvatar } from '@/components/assistant/AssistantAvatar';
-import Snowfall from '@/components/effects/Snowfall';
+
 import { ModuleShortcuts } from '@/components/home/ModuleShortcuts';
 
 const Index = () => {
@@ -14,10 +13,8 @@ const Index = () => {
 
   return (
     <div className="relative w-full overflow-hidden min-h-[120vh] md:min-h-screen">
-      {/* افکت برف‌ریزی زمستانی */}
-      <Snowfall />
-      {/* آواتار دستیار هوشمند */}
-      <AssistantAvatar />
+      {/* افکت برف‌ریزی غیرفعال شد */}
+      {/* آواتار دستیار هوشمند به‌صورت سراسری از App.tsx رندر می‌شود (فقط برای کاربران واردشده) */}
       {/* Hero Background Image */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"

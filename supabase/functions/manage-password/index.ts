@@ -73,18 +73,74 @@ async function sendVerificationEmail(email: string, code: string, type: 'email_v
   }
 }
 
-// Simple password hashing using Web Crypto API
+// Password hashing using PBKDF2-SHA256 with per-user random salt
+// Format: pbkdf2$<iterations>$<saltBase64>$<hashBase64>
+const PBKDF2_ITERATIONS = 210000;
+const PBKDF2_KEYLEN = 32; // bytes
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+function base64ToBytes(b64: string): Uint8Array {
+  const binary = atob(b64);
+  const out = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+  return out;
+}
+
+async function pbkdf2(password: string, salt: Uint8Array, iterations: number, keyLen: number): Promise<Uint8Array> {
+  const enc = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey(
+    'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveBits']
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+    baseKey,
+    keyLen * 8
+  );
+  return new Uint8Array(bits);
+}
+
 async function hashPassword(password: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const derived = await pbkdf2(password, salt, PBKDF2_ITERATIONS, PBKDF2_KEYLEN);
+  return `pbkdf2$${PBKDF2_ITERATIONS}$${bytesToBase64(salt)}$${bytesToBase64(derived)}`;
+}
+
+// Constant-time comparison
+function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
+
+// Legacy SHA-256 + static salt verification (for backward compatibility only)
+async function legacyVerify(password: string, hash: string): Promise<boolean> {
   const encoder = new TextEncoder();
   const data = encoder.encode(password + 'ahrom-salt-2024');
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  const hex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hex === hash;
 }
 
-async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  const newHash = await hashPassword(password);
-  return newHash === hash;
+async function verifyPassword(password: string, storedHash: string): Promise<{ valid: boolean; needsRehash: boolean }> {
+  if (storedHash && storedHash.startsWith('pbkdf2$')) {
+    const parts = storedHash.split('$');
+    if (parts.length !== 4) return { valid: false, needsRehash: false };
+    const iterations = parseInt(parts[1], 10);
+    const salt = base64ToBytes(parts[2]);
+    const expected = base64ToBytes(parts[3]);
+    const derived = await pbkdf2(password, salt, iterations, expected.length);
+    return { valid: timingSafeEqual(derived, expected), needsRehash: iterations < PBKDF2_ITERATIONS };
+  }
+  // Legacy format — verify and signal that the hash should be upgraded on success
+  const ok = await legacyVerify(password, storedHash);
+  return { valid: ok, needsRehash: ok };
 }
 
 serve(async (req) => {
@@ -95,9 +151,44 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { action, phone_number, user_id, password, new_password, otp_code, email, email_code } = await req.json();
+    const body = await req.json();
+    const { action, phone_number, password, new_password, otp_code, email, email_code } = body;
+    let { user_id } = body;
+
+    // Actions that require an authenticated caller acting on their own account
+    const SELF_AUTH_ACTIONS = new Set([
+      'set_password',
+      'set_recovery_email',
+      'verify_email',
+    ]);
+
+    let authedUserId: string | null = null;
+    if (SELF_AUTH_ACTIONS.has(action)) {
+      const authHeader = req.headers.get('Authorization') || '';
+      const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+      if (!token) {
+        return new Response(
+          JSON.stringify({ error: 'احراز هویت الزامی است' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      });
+      const { data: userData, error: userErr } = await authClient.auth.getUser();
+      if (userErr || !userData?.user) {
+        return new Response(
+          JSON.stringify({ error: 'نشست نامعتبر است' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      authedUserId = userData.user.id;
+      // Force user_id to be the verified caller, ignore any client-supplied value
+      user_id = authedUserId;
+    }
 
     // Normalize phone number
     const normalizePhone = (input: string) => {
@@ -190,12 +281,25 @@ serve(async (req) => {
         );
       }
 
-      const isValid = await verifyPassword(password, profile.user_password_hash);
+      const { valid: isValid, needsRehash } = await verifyPassword(password, profile.user_password_hash);
       if (!isValid) {
         return new Response(
           JSON.stringify({ error: 'رمز عبور اشتباه است' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+
+      // Transparently upgrade legacy/weak hashes to PBKDF2 with random salt
+      if (needsRehash) {
+        try {
+          const upgraded = await hashPassword(password);
+          await supabase
+            .from('profiles')
+            .update({ user_password_hash: upgraded })
+            .eq('user_id', profile.user_id);
+        } catch (e) {
+          console.error('Password rehash failed (non-fatal):', e);
+        }
       }
 
       // Create session using the same technique as verify-otp

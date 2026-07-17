@@ -56,6 +56,7 @@ export const ExpertPricingEditDialog = ({
   // Form state
   const [description, setDescription] = useState('');
   const [dimensions, setDimensions] = useState<Dimension[]>([{ length: '', width: '', height: '' }]);
+  const [unitCount, setUnitCount] = useState('');
   const [requestedDate, setRequestedDate] = useState('');
 
   // Rental item state
@@ -75,6 +76,7 @@ export const ExpertPricingEditDialog = ({
   useEffect(() => {
     if (open && parsedNotes) {
       setDescription(parsedNotes.description || '');
+      setUnitCount(parsedNotes.unit_count ? String(parsedNotes.unit_count) : '');
       setRequestedDate(parsedNotes.requested_date || '');
 
       // Combine (address + detailed_address) into ONE address string for display/edit
@@ -135,12 +137,16 @@ export const ExpertPricingEditDialog = ({
     setDimensions(updated);
   };
 
-  // Calculate total area for each dimension row (length × height)
+  // Calculate volume for each row: if width > 0 → L×W×H (m³), else L×H (m²)
+  const hasAnyWidth = dimensions.some((d) => (parseFloat(d.width) || 0) > 0);
+  const unitLabel = hasAnyWidth ? 'متر مکعب' : 'متر مربع';
+
   const calculateDimensionArea = (dim: Dimension) => {
     const l = parseFloat(dim.length) || 0;
+    const w = parseFloat(dim.width) || 0;
     const h = parseFloat(dim.height) || 0;
     if (l > 0 && h > 0) {
-      return l * h;
+      return hasAnyWidth ? l * (w || 1) * h : l * h;
     }
     return 0;
   };
@@ -199,6 +205,7 @@ export const ExpertPricingEditDialog = ({
       } else {
         updatedNotes.dimensions = dimensions.filter(d => d.length || d.width || d.height);
         updatedNotes.total_area = totalArea;
+        updatedNotes.unit_count = unitCount ? parseInt(unitCount) || 0 : 0;
       }
 
       // IMPORTANT: Only ONE address field is stored; detailed_address is cleared
@@ -216,7 +223,16 @@ export const ExpertPricingEditDialog = ({
 
       // If unit_price exists and total_area changed, recalculate payment_amount
       const existingUnitPrice = parsedNotes?.unit_price;
-      if (existingUnitPrice && existingUnitPrice > 0 && totalArea > 0) {
+      const existingPerItemPrice = parsedNotes?.per_item_price;
+      const newCount = unitCount ? parseInt(unitCount) || 0 : 0;
+      if (existingPerItemPrice && existingPerItemPrice > 0 && newCount > 0) {
+        const newPaymentAmount = Math.round(existingPerItemPrice * newCount);
+        updateData.payment_amount = newPaymentAmount;
+        updateData.total_price = newPaymentAmount;
+        updatedNotes.manager_set_price = newPaymentAmount;
+        updatedNotes.pricing_updated_at = new Date().toISOString();
+        updateData.notes = updatedNotes;
+      } else if (existingUnitPrice && existingUnitPrice > 0 && totalArea > 0) {
         const newPaymentAmount = Math.round(existingUnitPrice * totalArea);
         updateData.payment_amount = newPaymentAmount;
         updateData.total_price = newPaymentAmount;
@@ -427,7 +443,7 @@ export const ExpertPricingEditDialog = ({
                     </div>
                     {rowArea > 0 && (
                       <p className="text-xs text-muted-foreground text-left">
-                        متراژ: <span className="font-semibold text-primary">{rowArea.toLocaleString('fa-IR')} متر مربع</span>
+                        متراژ: <span className="font-semibold text-primary">{rowArea.toLocaleString('fa-IR')} {unitLabel}</span>
                       </p>
                     )}
                   </div>
@@ -438,10 +454,25 @@ export const ExpertPricingEditDialog = ({
                 <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
                   <p className="text-sm font-semibold text-primary flex items-center justify-between">
                     <span>مجموع متراژ:</span>
-                    <span className="text-lg">{totalArea.toLocaleString('fa-IR')} متر مربع</span>
+                    <span className="text-lg">{totalArea.toLocaleString('fa-IR')} {unitLabel}</span>
                   </p>
                 </div>
               )}
+
+              {/* تعداد سفارش */}
+              <div className="space-y-2 p-3 border rounded-lg bg-background">
+                <Label className="text-sm">تعداد (اختیاری)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={unitCount}
+                  onChange={(e) => setUnitCount(e.target.value)}
+                  placeholder="مثلا: ۱۲ عدد"
+                />
+                <p className="text-xs text-muted-foreground">
+                  در صورتی که سفارش شامل تعداد مشخصی است، مدیر می‌تواند بر اساس «فی هر عدد» قیمت‌گذاری کند.
+                </p>
+              </div>
             </div>
           )}
 

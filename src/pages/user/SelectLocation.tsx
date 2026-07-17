@@ -38,28 +38,61 @@ export default function SelectLocation() {
     JSON.parse(localStorage.getItem('pendingServiceSelection') || 'null');
 
   useEffect(() => {
-    // If not logged in, redirect to login with return path
-    if (!user) {
-      localStorage.setItem('pendingServiceSelection', JSON.stringify(serviceSelection));
-      navigate('/auth/login', { 
-        state: { from: '/select-location', serviceSelection } 
-      });
-      return;
-    }
-
-    // If no service selection, redirect to home silently
+    // اگر انتخاب خدمت وجود ندارد، کاربر را به خانه برگردان
     if (!serviceSelection?.serviceTypeId || !serviceSelection?.subcategoryId) {
       navigate('/');
       return;
     }
 
-    // Clear pending selection if user is logged in
-    localStorage.removeItem('pendingServiceSelection');
+    // اگر کاربر وارد شده است، انتخاب موقت را پاک کن
+    if (user) {
+      localStorage.removeItem('pendingServiceSelection');
+    }
   }, [user, serviceSelection]);
 
+
   const handleLocationSelected = async (locationId: string) => {
+    // حالت مهمان: بدون ساخت پروژه در دیتابیس مستقیم به فرم سفارش می‌رویم
+    if (!user) {
+      const guest = JSON.parse(localStorage.getItem('guestLocation') || 'null');
+      if (!guest) {
+        toast({
+          title: 'خطا',
+          description: 'اطلاعات آدرس یافت نشد، لطفاً دوباره تلاش کنید',
+          variant: 'destructive'
+        });
+        return;
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const formPath = getFormPath(serviceSelection.subcategoryCode);
+      navigate(formPath, {
+        state: {
+          hierarchyProjectId: null,
+          projectId: null,
+          locationId: null,
+          provinceId: guest.province_id,
+          districtId: guest.district_id,
+          serviceTypeId: serviceSelection.serviceTypeId,
+          subcategoryId: serviceSelection.subcategoryId,
+          subcategoryCode: serviceSelection.subcategoryCode,
+          serviceName: serviceSelection.serviceName,
+          subcategoryName: serviceSelection.subcategoryName,
+          locationAddress: guest.address_line,
+          locationTitle: guest.title || '',
+          provinceName: guest.province_name || '',
+          districtName: guest.district_name || '',
+          lat: guest.lat,
+          lng: guest.lng,
+          distanceFromCenter: guest.distanceFromCenter,
+          isGuest: true,
+        }
+      });
+      return;
+    }
+
     // Scroll to top for better UX
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
     
     try {
       // Get location details from database
@@ -92,8 +125,17 @@ export default function SelectLocation() {
         serviceSelection.subcategoryId
       );
 
+      // بررسی وضعیت فعال بودن این زیرشاخه (کنترل توسط CEO)
+      const { data: subStatus } = await supabase
+        .from('subcategories')
+        .select('is_service_active')
+        .eq('id', serviceSelection.subcategoryId)
+        .maybeSingle();
+
+      const isServiceActive = (subStatus as any)?.is_service_active !== false;
+
       // Navigate to appropriate service form with all needed data
-      const formPath = getFormPath(serviceSelection.subcategoryCode);
+      const formPath = isServiceActive ? getFormPath(serviceSelection.subcategoryCode) : '/form-not-available';
       navigate(formPath, { 
         state: { 
           hierarchyProjectId: projectId, // شناسه پروژه در hierarchy برای لینک کردن سفارش
@@ -128,6 +170,7 @@ export default function SelectLocation() {
     // Map subcategory codes to form paths
     const formPaths: Record<string, string> = {
       '10': '/scaffolding/form',  // داربست فلزی - اجرای داربست به همراه اجناس و حمل و نقل
+      '20': '/scaffolding/form',  // داربست فلزی - اجرای داربست بدون اجناس
       '30': '/scaffolding/rental-form',  // داربست فلزی - خدمات کرایه اجناس داربست فلزی
     };
     
@@ -170,7 +213,10 @@ export default function SelectLocation() {
 
         <Card className="mt-6 shadow-2xl bg-card/95 backdrop-blur-md border-2">
           <CardContent className="p-6">
-            <LocationSelector onLocationSelected={handleLocationSelected} />
+            <LocationSelector
+              onLocationSelected={handleLocationSelected}
+              serviceTypeName={serviceSelection.serviceName}
+            />
           </CardContent>
         </Card>
       </div>

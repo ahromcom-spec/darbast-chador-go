@@ -17,6 +17,10 @@ export const useAutoAssignProjects = () => {
           table: 'service_requests'
         },
         async (payload) => {
+          // Master gate: CEO must enable global auto-assign as well
+          if (typeof window !== 'undefined' && localStorage.getItem('ahrom.contractors.autoAssign') !== 'true') {
+            return;
+          }
           if (import.meta.env.DEV) {
             console.log('New service request detected:', payload.new);
           }
@@ -38,7 +42,8 @@ async function assignToMatchingContractors(serviceRequest: any) {
     const { data: matchingServices, error: servicesError } = await supabase
       .from('contractor_services')
       .select('contractor_id')
-      .eq('service_type', serviceRequest.service_type);
+      .eq('service_type', serviceRequest.service_type)
+      .eq('status', 'approved');
 
     if (servicesError) {
       if (import.meta.env.DEV) {
@@ -62,7 +67,8 @@ async function assignToMatchingContractors(serviceRequest: any) {
       .select('id')
       .in('id', contractorIds)
       .eq('is_approved', true)
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .eq('auto_assign_enabled', true);
 
     if (!approvedContractors || approvedContractors.length === 0) {
       if (import.meta.env.DEV) {

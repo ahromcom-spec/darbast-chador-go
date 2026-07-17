@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
 import { sendOrderSms, sendCeoNotificationSms, buildOrderSmsAddress } from '@/lib/orderSms';
+import { sendPushNotification, notifyCEOPayment } from '@/lib/notifications';
 import { BankCardSelect } from '@/components/bank-cards/BankCardSelect';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
@@ -258,14 +259,14 @@ export function MultiPaymentDialog({
         const { data: customerData } = await supabase.from('customers').select('user_id').eq('id', customerId).maybeSingle();
         if (customerData?.user_id) {
           const remaining = (totalPrice || 0) - newTotalPaid;
-          await supabase.from('notifications').insert({
+          await sendPushNotification({
             user_id: customerData.user_id,
             title: 'پرداخت ثبت شد ✓',
-            body: remaining > 0 
+            body: remaining > 0
               ? `مبلغ ${amount.toLocaleString('fa-IR')} تومان برای سفارش ${orderCode} ثبت شد. مانده: ${remaining.toLocaleString('fa-IR')} تومان`
               : `مبلغ ${amount.toLocaleString('fa-IR')} تومان برای سفارش ${orderCode} ثبت شد. سفارش تسویه شد.`,
             link: `/user/my-orders`,
-            type: 'success'
+            type: 'success',
           });
         }
       }
@@ -273,6 +274,7 @@ export function MultiPaymentDialog({
         sendOrderSms(customerPhone, orderCode, 'paid', { orderId, serviceType: serviceType || 'خدمات', address: address || 'ثبت نشده', amount });
       }
       sendCeoNotificationSms(orderCode, 'paid', { orderId, serviceType: serviceType || 'خدمات', address: address || 'ثبت نشده', amount, customerName });
+      notifyCEOPayment({ orderCode, orderId, amount, customerName, customerPhone, method: 'manual' }).catch(() => {});
 
       toast({ title: '✓ پرداخت ثبت شد', description: `مبلغ ${amount.toLocaleString('fa-IR')} تومان با موفقیت ثبت شد` });
 

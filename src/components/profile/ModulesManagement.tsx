@@ -15,6 +15,13 @@ import { ModuleItem as ModuleItemComponent, ModuleItemData } from './ModuleItem'
 import { AssignedModuleItemWithFolder, AssignedHierarchyItem, AssignedModuleData, AssignedUser } from './AssignedModuleItemWithFolder';
 import { ModuleItem } from './DraggableModuleItem';
 import { useModuleHierarchy } from '@/hooks/useModuleHierarchy';
+import { useServiceTypesWithSubcategories, Subcategory } from '@/hooks/useServiceTypesWithSubcategories';
+
+// Existing dedicated pricing modules — skip auto-generating dynamic entries for these
+const DEDICATED_PRICING_SUBCATEGORY_IDS = new Set<string>([
+  '3b44e5ee-8a2c-4e50-8f70-df753df8ef3d', // خدمات اجرای داربست به همراه اجناس
+  '527e9baa-54c6-4131-81cb-32d29ebae91a', // خدمات اجرای داربست بدون اجناس
+]);
 
 interface ModuleAssignment {
   id: string;
@@ -125,6 +132,86 @@ const AVAILABLE_MODULES: Module[] = [
     color: 'text-emerald-600',
     bgColor: 'bg-emerald-50',
   },
+  {
+    key: 'scaffolding_pricing',
+    name: 'ماژول قیمت‌گذاری داربست',
+    description: 'مدیریت آیتم‌های قیمت فرم اجرای داربست به همراه اجناس و حمل و نقل',
+    href: '/scaffolding-pricing',
+    color: 'text-amber-600',
+    bgColor: 'bg-amber-50',
+  },
+  {
+    key: 'scaffolding_no_materials_pricing',
+    name: 'ماژول قیمت‌گذاری خدمات اجرای داربست بدون اجناس',
+    description: 'مدیریت آیتم‌های قیمت فرم سفارش «اجرای داربست بدون اجناس»',
+    href: '/scaffolding-no-materials-pricing',
+    color: 'text-amber-700',
+    bgColor: 'bg-amber-50',
+  },
+  {
+    key: 'service_pricing_hub',
+    name: 'ماژول‌های قیمت‌گذاری خدمات',
+    description: 'برای هر زیرشاخه خدمت، کلید فعال/غیرفعال و قیمت‌گذاری اختصاصی',
+    href: '/service-pricing',
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-50',
+  },
+  {
+    key: 'user_cooperation_rank',
+    name: 'ماژول رتبه همکاری کاربران',
+    description: 'تعیین رتبه ۱ تا ۱۰ برای کاربران و اعمال تخفیف ۱٪ تا ۶٪ روی سفارش‌ها',
+    href: '/user-cooperation-rank',
+    color: 'text-yellow-600',
+    bgColor: 'bg-yellow-50',
+  },
+  {
+    key: 'activity_logs',
+    name: 'ماژول لاگ فعالیت‌ها و ایمیل‌های خودکار',
+    description: 'ثبت هر اقدام در سایت (ورود، قیمت‌گیری، سفارش، تغییرات ماژول‌ها) و تنظیم ارسال خودکار ایمیل',
+    href: '/activity-logs',
+    color: 'text-rose-600',
+    bgColor: 'bg-rose-50',
+  },
+  {
+    key: 'contractors_management',
+    name: 'ماژول مدیریت پیمانکاران',
+    description: 'بررسی درخواست‌های پیمانکاران، فعال/غیرفعال‌سازی، و ارجاع سفارش‌ها به پیمانکاران',
+    href: '/ceo/contractors-management',
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-50',
+  },
+  {
+    key: 'sms_management',
+    name: 'ماژول مدیریت پیامک‌ها',
+    description: 'کنترل متن، شرط‌ها، تأخیر و گزارش ارسال پیامک‌های مشتری و مدیرعامل (پابرگ اجباری ahrom.ir)',
+    href: '/sms-management',
+    color: 'text-sky-600',
+    bgColor: 'bg-sky-50',
+  },
+  {
+    key: 'dynamic_services_management',
+    name: 'ماژول مدیریت خدمات داینامیک',
+    description: 'مدیریت درختی نوع خدمات و زیرشاخه‌های نمایش‌داده‌شده در لیست کشویی صفحه اصلی و مسیر فرم هر برگ',
+    href: '/ceo/dynamic-services',
+    color: 'text-sky-600',
+    bgColor: 'bg-sky-50',
+  },
+  {
+    key: 'service_geo_availability',
+    name: 'ماژول مدیریت خدمات طبق شهرها',
+    description: 'فعال/غیرفعال کردن هر خدمت در استان‌ها و شهرهای مشخص و جلوگیری از سفارش‌گیری خارج از محدوده',
+    href: '/ceo/service-geo-availability',
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50',
+  },
+  {
+    key: 'user_impersonation',
+    name: 'ماژول ورود به حساب کاربران',
+    description: 'ورود به حساب کاربران سایت برای انجام عملیات به نمایندگی از آن‌ها',
+    href: '/admin/users',
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50',
+  },
 ];
 
 // Convert modules to ModuleItem format
@@ -194,13 +281,44 @@ export function ModulesManagement() {
     return () => clearInterval(timer);
   }, [otpSent, otpTimeLeft]);
 
+  // Dynamic per-subcategory pricing modules (one per active service subcategory)
+  const { serviceTypes, loading: serviceTypesLoading } = useServiceTypesWithSubcategories();
+  const dynamicPricingModules = useMemo<Module[]>(() => {
+    const out: Module[] = [];
+    const walk = (subs: Subcategory[], serviceName: string) => {
+      subs.forEach((s) => {
+        if (!DEDICATED_PRICING_SUBCATEGORY_IDS.has(s.id)) {
+          out.push({
+            key: `service_pricing_${s.id}`,
+            name: `ماژول قیمت‌گذاری ${s.name}`,
+            description: `مدیریت قیمت‌ها و کلید فعال/غیرفعال برای «${s.name}» (${serviceName})`,
+            href: `/service-pricing/${s.id}`,
+            color: 'text-amber-700',
+            bgColor: 'bg-amber-50',
+          });
+        }
+        if (s.children?.length) walk(s.children, serviceName);
+      });
+    };
+    (serviceTypes || []).forEach((st) => walk(st.subcategories || [], st.name));
+    return out;
+  }, [serviceTypes]);
+
+  const allModules = useMemo<Module[]>(
+    () => [...AVAILABLE_MODULES, ...dynamicPricingModules],
+    [dynamicPricingModules]
+  );
+
   // Get unique module types for filter
   const moduleTypes = useMemo(() => {
-    return AVAILABLE_MODULES.map(m => ({ key: m.key, name: m.name }));
-  }, []);
+    return allModules.map(m => ({ key: m.key, name: m.name }));
+  }, [allModules]);
 
-  // Memoize initial modules to prevent infinite loop
-  const initialAvailableModules = useMemo(() => convertModulesToItems(AVAILABLE_MODULES), []);
+  // Memoize initial modules — rebuild when dynamic modules load
+  const initialAvailableModules = useMemo(
+    () => convertModulesToItems(allModules),
+    [allModules]
+  );
 
   // Fetch assignments function - defined with useCallback before useModuleHierarchy
   const fetchAssignments = useCallback(async () => {
@@ -244,8 +362,10 @@ export function ModulesManagement() {
   const availableHierarchy = useModuleHierarchy({
     type: 'available',
     initialModules: initialAvailableModules,
+    isInitialModulesReady: !serviceTypesLoading,
     onModuleNameChange: fetchAssignments,
   });
+
 
   const visibleAvailableItems = useMemo(
     () => stripDeletedHierarchyItems(availableHierarchy.items),
@@ -287,7 +407,7 @@ export function ModulesManagement() {
   const getModuleDisplayInfo = (item: ModuleItem) => {
     const customName = availableHierarchy.customNames[item.key]?.name || item.name;
     const customDesc = availableHierarchy.customNames[item.key]?.description || item.description;
-    const baseModule = AVAILABLE_MODULES.find(m => m.key === item.key);
+    const baseModule = allModules.find(m => m.key === item.key);
     return {
       key: item.key,
       name: customName,
@@ -398,7 +518,7 @@ export function ModulesManagement() {
   };
 
   const getModuleInfo = (key: string) => {
-    return AVAILABLE_MODULES.find(m => m.key === key);
+    return allModules.find(m => m.key === key);
   };
 
   const handleCreateFolder = () => {
@@ -468,12 +588,12 @@ export function ModulesManagement() {
   // Get the base module key from a possibly-duplicated module
   const getBaseModuleKey = (item: ModuleItem): string | null => {
     // If it's already a base module
-    const baseModule = AVAILABLE_MODULES.find(m => m.key === item.key);
+    const baseModule = allModules.find(m => m.key === item.key);
     if (baseModule) return baseModule.key;
     
     // Check if the name matches a base module (for duplicated modules)
     const displayName = availableHierarchy.customNames[item.key]?.name || item.name;
-    const matchByName = AVAILABLE_MODULES.find(m => 
+    const matchByName = allModules.find(m => 
       displayName.includes(m.name) || m.name.includes(displayName.replace(' (کپی)', ''))
     );
     if (matchByName) return matchByName.key;
@@ -688,7 +808,7 @@ export function ModulesManagement() {
         let href = baseModuleInfo?.href || customModule?.href;
         if (!href && a.module_key.startsWith('custom-')) {
           const cleanName = a.module_name.replace(' (کپی)', '').trim();
-          const matchedBase = AVAILABLE_MODULES.find(
+          const matchedBase = allModules.find(
             (m) =>
               m.name === cleanName ||
               cleanName.includes(m.name) ||

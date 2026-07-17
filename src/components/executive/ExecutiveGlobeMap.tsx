@@ -1,9 +1,12 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { MapPin, ArrowRight, Package, Building2, ChevronUp, ChevronDown } from 'lucide-react';
+import { createNeshanTileLayer } from '@/lib/neshan';
+import { MapPin, ArrowRight, Package, Building2, ChevronUp, ChevronDown, Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -82,10 +85,11 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick, activeModuleK
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
   const osmLayerRef = useRef<L.TileLayer | null>(null);
-  const mapboxLayerRef = useRef<L.TileLayer | null>(null);
   const [mapReady, setMapReady] = useState(false);
-  const [mapboxToken, setMapboxToken] = useState<string>('');
   const [infoCollapsed, setInfoCollapsed] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [selectedStatuses, setSelectedStatuses] = useState<Set<string>>(new Set());
+  const [selectedServiceTypes, setSelectedServiceTypes] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -300,17 +304,51 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick, activeModuleK
 
   const isLoading = isLoadingOrders || isFetchingOrders;
 
+  // استخراج نوع‌های خدمات موجود در سفارشات (از زیرشاخه‌ها)
+  const availableServiceTypes = useMemo(() => {
+    const map = new Map<string, string>();
+    (orders || []).forEach((o) => {
+      const code = o.subcategories?.code;
+      const name = o.subcategories?.name;
+      if (code && name && !map.has(code)) map.set(code, name);
+    });
+    return Array.from(map.entries()).map(([code, name]) => ({ code, name }));
+  }, [orders]);
+
+  // وضعیت‌های قابل فیلتر
+  const statusOptions = useMemo(() => ([
+    { value: 'pending', label: 'در انتظار تایید' },
+    { value: 'approved', label: 'تایید شده' },
+    { value: 'pending_execution', label: 'در انتظار اجرا' },
+    { value: 'in_progress', label: 'در حال اجرا' },
+    { value: 'completed', label: 'تکمیل شده / در انتظار پرداخت' },
+    { value: 'paid', label: 'پرداخت شده' },
+    { value: 'closed', label: 'بسته شده' },
+  ]), []);
+
+  // اعمال فیلترها روی سفارشات
+  const filteredOrders = useMemo(() => {
+    return (orders || []).filter((o) => {
+      if (selectedStatuses.size > 0 && !selectedStatuses.has(o.status)) return false;
+      if (selectedServiceTypes.size > 0) {
+        const code = o.subcategories?.code;
+        if (!code || !selectedServiceTypes.has(code)) return false;
+      }
+      return true;
+    });
+  }, [orders, selectedStatuses, selectedServiceTypes]);
+
   // گروه‌بندی سفارشات بر اساس موقعیت
   const orderMarkers = useMemo(() => {
-    if (!orders || orders.length === 0) return [] as { lat: number; lng: number; orders: OrderData[] }[];
+    if (!filteredOrders || filteredOrders.length === 0) return [] as { lat: number; lng: number; orders: OrderData[] }[];
 
     const locationGroups: { [key: string]: OrderData[] } = {};
-    
-    orders.forEach(order => {
+
+    filteredOrders.forEach(order => {
       if (!order.location_lat || !order.location_lng) return;
-      
+
       const key = `${order.location_lat.toFixed(5)}_${order.location_lng.toFixed(5)}`;
-      
+
       if (!locationGroups[key]) {
         locationGroups[key] = [];
       }
@@ -322,23 +360,33 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick, activeModuleK
       lng: group[0].location_lng,
       orders: group
     }));
-  }, [orders]);
+  }, [filteredOrders]);
 
-  // دریافت توکن Mapbox
-  useEffect(() => {
-    const fetchToken = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('get-mapbox-token');
-        if (error) throw error;
-        if (data?.token) {
-          setMapboxToken(data.token);
-        }
-      } catch (err) {
-        console.error('Error fetching mapbox token:', err);
-      }
-    };
-    fetchToken();
-  }, []);
+  const toggleStatus = (value: string) => {
+    setSelectedStatuses((prev) => {
+      const next = new Set(prev);
+      if (next.has(value)) next.delete(value); else next.add(value);
+      return next;
+    });
+  };
+
+  const toggleServiceType = (code: string) => {
+    setSelectedServiceTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code); else next.add(code);
+      return next;
+    });
+  };
+
+  const clearFilters = () => {
+    setSelectedStatuses(new Set());
+    setSelectedServiceTypes(new Set());
+  };
+
+  const activeFilterCount = selectedStatuses.size + selectedServiceTypes.size;
+
+
+  // نشان به‌جای Mapbox استفاده می‌شود؛ نیازی به دریافت توکن نیست.
 
   // راه‌اندازی نقشه (همیشه با OpenStreetMap شروع می‌کنیم)
   useEffect(() => {
@@ -350,9 +398,8 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick, activeModuleK
       zoomControl: true,
     });
 
-    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-    }).addTo(map);
+    // استفاده از تایل‌های Mapbox (از طریق adapter در src/lib/neshan.ts)
+    const osmLayer = createNeshanTileLayer('standard-day').addTo(map);
 
     osmLayerRef.current = osmLayer;
     mapRef.current = map;
@@ -365,81 +412,12 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick, activeModuleK
       map.remove();
       mapRef.current = null;
       osmLayerRef.current = null;
-      mapboxLayerRef.current = null;
+      
     };
   }, []);
 
-  // تلاش برای استفاده از Mapbox؛ اگر لود نشود، خودکار روی OSM می‌مانیم
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapboxToken) return;
-
-    // اگر قبلاً لایه Mapbox اضافه شده، پاکش کنیم
-    if (mapboxLayerRef.current) {
-      mapboxLayerRef.current.remove();
-      mapboxLayerRef.current = null;
-    }
-
-    const url = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`;
-
-    const layer = L.tileLayer(url, {
-      attribution: '© Mapbox © OpenStreetMap',
-      tileSize: 512,
-      zoomOffset: -1,
-    });
-
-    mapboxLayerRef.current = layer;
-
-    let tileLoaded = false;
-    let tileErrors = 0;
-
-    const cleanupAndFallback = () => {
-      if (mapboxLayerRef.current) {
-        mapboxLayerRef.current.off('tileload', onTileLoad);
-        mapboxLayerRef.current.off('load', onAnyLoad);
-        mapboxLayerRef.current.off('tileerror', onTileError);
-        mapboxLayerRef.current.remove();
-        mapboxLayerRef.current = null;
-      }
-
-      // پیام هشدار نقشه جایگزین طبق درخواست نمایش داده نمی‌شود
-    };
-
-    const onTileLoad = () => {
-      tileLoaded = true;
-    };
-
-    const onAnyLoad = () => {
-      tileLoaded = true;
-    };
-
-    const onTileError = () => {
-      tileErrors += 1;
-      if (tileErrors >= 3) cleanupAndFallback();
-    };
-
-    layer.on('tileload', onTileLoad);
-    layer.on('load', onAnyLoad);
-    layer.on('tileerror', onTileError);
-
-    layer.addTo(map);
-
-    const timeoutId = window.setTimeout(() => {
-      if (!tileLoaded) cleanupAndFallback();
-    }, 6000);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-      layer.off('tileload', onTileLoad);
-      layer.off('load', onAnyLoad);
-      layer.off('tileerror', onTileError);
-      // اگر هنوز روی نقشه هست، پاکش کنیم
-      if (mapboxLayerRef.current === layer) {
-        layer.remove();
-        mapboxLayerRef.current = null;
-      }
-    };
-  }, [mapboxToken, toast]);
+  // قبلاً اینجا تلاش می‌شد لایه Mapbox روی نقشه نشان قرار گیرد.
+  // این رفتار حذف شده است تا فقط از تایل‌های نشان استفاده شود.
 
   // تابع کلیک روی سفارش - ذخیره وضعیت نقشه قبل از رفتن
   const handleOrderClick = useCallback((orderId: string) => {
@@ -950,6 +928,86 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick, activeModuleK
         </Button>
       </div>
 
+      {/* پنل فیلتر */}
+      <div className="absolute top-4 left-4 z-[1000] max-w-[90vw]">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setFilterOpen((v) => !v)}
+          className="gap-2 bg-background/90 backdrop-blur-sm shadow-lg"
+        >
+          <Filter className="h-4 w-4" />
+          فیلتر
+          {activeFilterCount > 0 && (
+            <span className="bg-amber-500 text-white text-xs font-bold rounded-full px-2 py-0.5">
+              {activeFilterCount}
+            </span>
+          )}
+        </Button>
+
+        {filterOpen && (
+          <Card className="mt-2 p-4 w-[300px] max-h-[70vh] overflow-y-auto bg-background/95 backdrop-blur-md border-2 border-amber-500/30 shadow-2xl">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold">فیلترها</h3>
+              <div className="flex items-center gap-1">
+                {activeFilterCount > 0 && (
+                  <Button variant="ghost" size="sm" onClick={clearFilters} className="h-7 px-2 text-xs">
+                    پاک کردن
+                  </Button>
+                )}
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setFilterOpen(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* وضعیت پروژه */}
+            <div className="mb-4">
+              <p className="text-xs font-semibold text-muted-foreground mb-2">وضعیت سفارش</p>
+              <div className="space-y-2">
+                {statusOptions.map((s) => (
+                  <div key={s.value} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`status-${s.value}`}
+                      checked={selectedStatuses.has(s.value)}
+                      onCheckedChange={() => toggleStatus(s.value)}
+                    />
+                    <Label htmlFor={`status-${s.value}`} className="text-sm cursor-pointer flex-1">
+                      {s.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* نوع خدمات */}
+            {availableServiceTypes.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground mb-2">نوع خدمات</p>
+                <div className="space-y-2">
+                  {availableServiceTypes.map((st) => (
+                    <div key={st.code} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`svc-${st.code}`}
+                        checked={selectedServiceTypes.has(st.code)}
+                        onCheckedChange={() => toggleServiceType(st.code)}
+                      />
+                      <Label htmlFor={`svc-${st.code}`} className="text-sm cursor-pointer flex-1">
+                        {st.name}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
+              نمایش {filteredOrders.length} از {filteredOrders.length} سفارش
+            </p>
+          </Card>
+        )}
+      </div>
+
       {/* کارت اطلاعات - قابل باز/بسته شدن */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] max-w-[95vw]">
         <Card className={`bg-gradient-to-br from-background/95 to-background/90 backdrop-blur-md border-2 border-amber-500/30 shadow-2xl transition-all duration-300 ${infoCollapsed ? 'p-2' : 'p-4 sm:p-6'}`}>
@@ -978,7 +1036,7 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick, activeModuleK
             // حالت بسته - فقط خلاصه
             <div className="flex items-center gap-3 pt-2">
               <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-              <span className="text-sm font-bold">{orders?.length || 0} سفارش</span>
+              <span className="text-sm font-bold">{filteredOrders.length} سفارش</span>
               <span className="text-xs text-muted-foreground">|</span>
               <span className="text-sm">{orderMarkers.length} موقعیت</span>
             </div>
@@ -1003,7 +1061,7 @@ export default function ExecutiveGlobeMap({ onClose, onOrderClick, activeModuleK
                 </div>
                 <div className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-500/10 rounded-full">
                   <Package className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500" />
-                  <span className="text-muted-foreground">{orders?.length || 0} سفارش</span>
+                  <span className="text-muted-foreground">{filteredOrders.length} سفارش</span>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">برای مدیریت روی هر سفارش کلیک کنید</p>

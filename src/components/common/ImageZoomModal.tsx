@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Trash2, Volume2, VolumeX, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+
+const isVideoUrl = (url: string | undefined) => {
+  if (!url) return false;
+  const clean = url.split('?')[0].split('#')[0].toLowerCase();
+  return /\.(mp4|webm|ogg|ogv|mov|m4v|mkv|avi|3gp)$/i.test(clean) || clean.includes('/video/');
+};
 
 interface ImageZoomModalProps {
   imageUrl: string;
@@ -38,9 +44,12 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const imageContainerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isMuted, setIsMuted] = useState(true);
 
   const hasMultipleImages = images.length > 1;
   const currentImageUrl = hasMultipleImages ? images[currentIndex] : imageUrl;
+  const isCurrentVideo = isVideoUrl(currentImageUrl);
 
   const prevIndex = hasMultipleImages ? (currentIndex - 1 + images.length) % images.length : 0;
   const nextIndex = hasMultipleImages ? (currentIndex + 1) % images.length : 0;
@@ -53,7 +62,18 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
     setZoom(1);
     setPosition({ x: 0, y: 0 });
     setIsDragging(false);
+    setIsMuted(true);
   }, [initialIndex, isOpen]);
+
+  // Autoplay video (muted) when switching to a video slide
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (isCurrentVideo) {
+      v.muted = isMuted;
+      v.play().catch(() => {});
+    }
+  }, [currentIndex, isCurrentVideo, isMuted, currentImageUrl]);
 
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.5, 3));
   const handleZoomOut = () => {
@@ -187,7 +207,7 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-screen h-screen max-w-none max-h-none p-0 overflow-hidden border-0 rounded-none">
+      <DialogContent className="w-screen h-screen max-w-none max-h-none p-0 overflow-hidden border-0 rounded-none z-[200001] [&>div[data-radix-dialog-overlay]]:z-[200000]" style={{ zIndex: 200001 }}>
         <div className="relative w-full h-full bg-black flex items-center justify-center">
           <Button
             variant="ghost"
@@ -211,7 +231,14 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
                     className="h-16 w-16 md:h-24 md:w-24 rounded-xl overflow-hidden border-2 border-white/30 shadow-lg opacity-80 hover:opacity-100 transition-all hover:scale-105"
                     aria-label="پیش‌نمایش عکس قبلی"
                   >
-                    <img src={prevThumbUrl} alt="" className="h-full w-full object-cover" />
+                    {isVideoUrl(prevThumbUrl) ? (
+                      <div className="relative h-full w-full bg-black flex items-center justify-center">
+                        <video src={prevThumbUrl} className="h-full w-full object-cover" muted preload="metadata" />
+                        <Play className="absolute h-6 w-6 text-white/90" fill="currentColor" />
+                      </div>
+                    ) : (
+                      <img src={prevThumbUrl} alt="" className="h-full w-full object-cover" />
+                    )}
                   </button>
                 )}
                 <Button
@@ -234,7 +261,14 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
                     className="h-16 w-16 md:h-24 md:w-24 rounded-xl overflow-hidden border-2 border-white/30 shadow-lg opacity-80 hover:opacity-100 transition-all hover:scale-105"
                     aria-label="پیش‌نمایش عکس بعدی"
                   >
-                    <img src={nextThumbUrl} alt="" className="h-full w-full object-cover" />
+                    {isVideoUrl(nextThumbUrl) ? (
+                      <div className="relative h-full w-full bg-black flex items-center justify-center">
+                        <video src={nextThumbUrl} className="h-full w-full object-cover" muted preload="metadata" />
+                        <Play className="absolute h-6 w-6 text-white/90" fill="currentColor" />
+                      </div>
+                    ) : (
+                      <img src={nextThumbUrl} alt="" className="h-full w-full object-cover" />
+                    )}
                   </button>
                 )}
                 <Button
@@ -284,15 +318,32 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
             </div>
           )}
 
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex gap-2 bg-background/90 p-2 rounded-lg shadow-lg border border-border">
-            <Button variant="ghost" size="icon" onClick={handleZoomOut} disabled={zoom <= 1}>
-              <ZoomOut className="h-5 w-5" />
+          {!isCurrentVideo && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex gap-2 bg-background/90 p-2 rounded-lg shadow-lg border border-border">
+              <Button variant="ghost" size="icon" onClick={handleZoomOut} disabled={zoom <= 1}>
+                <ZoomOut className="h-5 w-5" />
+              </Button>
+              <span className="px-4 py-2 text-sm font-medium">{Math.round(zoom * 100)}%</span>
+              <Button variant="ghost" size="icon" onClick={handleZoomIn} disabled={zoom >= 3}>
+                <ZoomIn className="h-5 w-5" />
+              </Button>
+            </div>
+          )}
+
+          {isCurrentVideo && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 bg-black/70 hover:bg-black/90 text-white rounded-full w-14 h-14 shadow-xl border-2 border-white/30"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsMuted((m) => !m);
+              }}
+              aria-label={isMuted ? 'فعال کردن صدا' : 'قطع صدا'}
+            >
+              {isMuted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
             </Button>
-            <span className="px-4 py-2 text-sm font-medium">{Math.round(zoom * 100)}%</span>
-            <Button variant="ghost" size="icon" onClick={handleZoomIn} disabled={zoom >= 3}>
-              <ZoomIn className="h-5 w-5" />
-            </Button>
-          </div>
+          )}
 
           <div 
             ref={imageContainerRef}
@@ -309,17 +360,35 @@ export const ImageZoomModal: React.FC<ImageZoomModalProps> = ({
             onTouchMove={handleDragMove}
             onTouchEnd={handleDragEnd}
           >
-            <img
-              src={currentImageUrl}
-              alt="تصویر"
-              className="select-none transition-none max-w-[95vw] max-h-[90vh] object-contain"
-              style={{ 
-                transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
-                transformOrigin: 'center center'
-              }}
-              draggable={false}
-            />
+            {isCurrentVideo ? (
+              <video
+                ref={videoRef}
+                src={currentImageUrl}
+                className="select-none max-w-[95vw] max-h-[90vh] object-contain bg-black"
+                autoPlay
+                loop
+                playsInline
+                muted={isMuted}
+                controls
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsMuted((m) => !m);
+                }}
+              />
+            ) : (
+              <img
+                src={currentImageUrl}
+                alt="تصویر"
+                className="select-none transition-none max-w-[95vw] max-h-[90vh] object-contain"
+                style={{ 
+                  transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
+                  transformOrigin: 'center center'
+                }}
+                draggable={false}
+              />
+            )}
           </div>
+
         </div>
       </DialogContent>
     </Dialog>

@@ -4,7 +4,7 @@ import { ChevronDown, ChevronUp, Shield, Users, FileText, Settings, BarChart3 } 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { CEOBackupButton } from './CEOBackupButton';
+import BackupPanel from '@/components/backup/BackupPanel';
 
 interface CEOManagementSectionProps {
   userId: string;
@@ -31,22 +31,6 @@ export function CEOManagementSection({ userId, userEmail }: CEOManagementSection
       href: '/ceo/staff-verifications',
       color: 'text-green-600',
       bgColor: 'bg-green-50',
-    },
-    {
-      title: 'تایید پیمانکاران',
-      description: 'بررسی درخواست‌های پیمانکاری',
-      icon: Shield,
-      href: '/ceo/contractor-verifications',
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-    },
-    {
-      title: 'ورود به حساب کاربران',
-      description: 'ورود به حساب کاربران برای انجام کار',
-      icon: Users,
-      href: '/admin/users',
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
     },
     {
       title: 'گزارشات و آمار',
@@ -121,15 +105,16 @@ export function CEOManagementSection({ userId, userEmail }: CEOManagementSection
             </div>
 
             {/* Backup Section */}
-            <div className="mt-6 pt-4 border-t border-border">
-              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+            <div className="mt-6 pt-4 border-t border-border space-y-3">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
                 <Shield className="h-4 w-4 text-primary" />
-                پشتیبان‌گیری از داده‌ها
+                پشتیبان‌گیری و حالت آفلاین
               </h4>
-              <p className="text-xs text-muted-foreground mb-3">
-                تهیه نسخه پشتیبان کامل از تمامی داده‌ها (بدون فایل‌های رسانه‌ای) برای دسترسی آفلاین
-              </p>
-              <CEOBackupButton />
+              <BackupPanel
+                scope="full"
+                title="بکاپ کامل (داده + رسانه)"
+                description="یک فایل ZIP کامل از تمام داده‌ها و فایل‌های رسانه‌ای می‌سازد. برای استفاده آفلاین، پس از دانلود از دکمه «بارگذاری بکاپ» استفاده کنید."
+              />
             </div>
           </CardContent>
         </CollapsibleContent>

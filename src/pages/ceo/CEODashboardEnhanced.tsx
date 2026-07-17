@@ -314,9 +314,28 @@ export default function CEODashboardEnhanced() {
                 </Button>
               </CardContent>
             </Card>
+
+            <Card className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  مدیریت پیامک‌ها
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  onClick={() => navigate('/sms-management')}
+                  variant="outline"
+                  className="w-full"
+                >
+                  مشاهده و ویرایش متن پیامک‌ها
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
       </Tabs>
+
 
       {/* Workflow Guide */}
       <Card>

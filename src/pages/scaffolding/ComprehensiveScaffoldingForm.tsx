@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams, useParams } from 'react-router-dom';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { sendPushNotification, notifyManagers } from '@/lib/notifications';
+import { reportActivity } from '@/lib/activityReporter';
 import { useAuth } from '@/contexts/AuthContext';
 import { Plus, Trash2, AlertCircle, ChevronDown, ClipboardList, HelpCircle, FileText, Box, MapPin, ArrowRight } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -28,9 +29,14 @@ import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { getOrCreateProjectSchema, createProjectV3Schema } from '@/lib/rpcValidation';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { NewLocationForm } from '@/components/locations/NewLocationForm';
+import { useScaffoldingPricing } from '@/hooks/useScaffoldingPricing';
+import { useScaffoldingNoMaterialsPricing } from '@/hooks/useScaffoldingNoMaterialsPricing';
 import { OrderForOthers, RecipientData } from '@/components/orders/OrderForOthers';
 import { buildOrderSmsAddress, sendOrderSms, sendCeoNotificationSms } from '@/lib/orderSms';
 import { ExpertPricingRequestDialog } from '@/components/orders/ExpertPricingRequestDialog';
+import { savePendingOrder, getPendingOrder, clearPendingOrder } from '@/lib/pendingOrder';
+import { useCooperationDiscount } from '@/hooks/useCooperationDiscount';
+import { roundToThousand, applyDiscountAndRound } from '@/lib/cooperationDiscount';
 
 interface Dimension {
   id: string;
@@ -87,23 +93,32 @@ export default function ComprehensiveScaffoldingForm({
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { projectId: routeProjectId } = useParams<{ projectId: string }>();
   const navState = (location?.state || {}) as any;
   const { toast } = useToast();
   const { user } = useAuth();
   const { customerId } = useCustomer();
   const { provinces } = useProvinces();
   const { locations, loading: locationsLoading, refetch: refetchLocations } = useLocations();
+  const [routeProjectMeta, setRouteProjectMeta] = useState<{
+    locationId?: string;
+    serviceTypeId?: string;
+    subcategoryId?: string;
+    provinceId?: string | null;
+    districtId?: string | null;
+    address?: string;
+  } | null>(null);
   
   // دریافت editOrderId از query parameter یا prop
   const editOrderId = searchParams.get('edit') || propEditOrderId;
   
   // دریافت hierarchyProjectId از props یا state برای لینک کردن سفارش
-  const hierarchyProjectId = propHierarchyProjectId || navState?.hierarchyProjectId || null;
-  const initialLocationId = propLocationId || navState?.locationId;
-  const initialProvinceId = propProvinceId || navState?.provinceId || null;
-  const initialDistrictId = propDistrictId || navState?.districtId || null;
-  const serviceTypeId = propServiceTypeId || navState?.serviceTypeId;
-  const subcategoryId = propSubcategoryId || navState?.subcategoryId;
+  const hierarchyProjectId = propHierarchyProjectId || navState?.hierarchyProjectId || propProjectId || navState?.projectId || routeProjectId || null;
+  const initialLocationId = propLocationId || navState?.locationId || routeProjectMeta?.locationId;
+  const initialProvinceId = propProvinceId || navState?.provinceId || routeProjectMeta?.provinceId || null;
+  const initialDistrictId = propDistrictId || navState?.districtId || routeProjectMeta?.districtId || null;
+  const serviceTypeId = propServiceTypeId || navState?.serviceTypeId || routeProjectMeta?.serviceTypeId;
+  const subcategoryId = propSubcategoryId || navState?.subcategoryId || routeProjectMeta?.subcategoryId;
 
   // State برای آدرس انتخابی
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(initialLocationId || null);
@@ -114,7 +129,7 @@ export default function ComprehensiveScaffoldingForm({
   const [scaffoldType, setScaffoldType] = useState<'formwork' | 'ceiling' | 'facade' | 'column' | 'pipe-length' | ''>('');
   const [activeService, setActiveService] = useState<'facade' | 'formwork' | 'ceiling-beam-yonolit' | 'ceiling-beam-ceramic' | 'ceiling-slab' | 'column' | 'pipe-length' | ''>('');
   const [ceilingSubType, setCeilingSubType] = useState<'ceiling-beam-yonolit' | 'ceiling-beam-ceramic' | 'ceiling-slab' | ''>('');
-  const address = prefilledAddress || navState?.locationAddress || '';
+  const address = prefilledAddress || navState?.locationAddress || routeProjectMeta?.address || '';
   const [dimensions, setDimensions] = useState<Dimension[]>([{ id: '1', length: '', width: '', height: '', useTwoMeterTemplate: false }]);
   const [isFacadeWidth2m, setIsFacadeWidth2m] = useState(false);
   const [loadingOrder, setLoadingOrder] = useState(false);
@@ -180,6 +195,14 @@ export default function ComprehensiveScaffoldingForm({
   
   console.log('📍 ComprehensiveScaffoldingForm - distanceFromCenter:', distanceFromCenter, 'initialDistanceRange:', initialDistanceRange, 'navState:', navState);
 
+  // تنظیمات قیمت‌گذاری از ماژول CEO (با fallback به مقادیر پیش‌فرض)
+  // برای «اجرای بدون اجناس» (کد 20) از جدول قیمت‌گذاری مستقل استفاده می‌کنیم
+  const { get: pricingGetWithMaterials } = useScaffoldingPricing();
+  const { get: pricingGetNoMaterials } = useScaffoldingNoMaterialsPricing();
+  const isNoMaterialsSubcategory = propSubcategoryCode === '20';
+  const pricingGet = isNoMaterialsSubcategory ? pricingGetNoMaterials : pricingGetWithMaterials;
+
+
   const [conditions, setConditions] = useState<ServiceConditions>({
     totalMonths: 1,
     currentMonth: 1,
@@ -214,9 +237,74 @@ export default function ComprehensiveScaffoldingForm({
   // State برای override قیمت توسط مدیر
   const [manualPriceOverride, setManualPriceOverride] = useState<string>('');
   const [useManualPrice, setUseManualPrice] = useState(false);
+
+  // State برای حالت چند داربست همزمان در یک مکان
+  const [multiOrderMode, setMultiOrderMode] = useState(false);
+  type SavedScaffold = {
+    id: string;
+    label: string;
+    snapshot: {
+      scaffoldType: string;
+      activeService: string;
+      ceilingSubType: string;
+      dimensions: any[];
+      isFacadeWidth2m: boolean;
+      columnHeight: string;
+      onGround: boolean;
+      vehicleReachesSite: boolean;
+      conditions: any;
+      locationPurpose?: string;
+    };
+    fullPrice: number; // قیمت با درصد فاصله
+    baseNoDistance: number; // قیمت بدون درصد فاصله (برای محاسبه حمل مشترک)
+    breakdown: string[];
+    totalArea: number;
+  };
+  const [savedScaffolds, setSavedScaffolds] = useState<SavedScaffold[]>([]);
   
   // دریافت isManagerEdit از query param نیز
   const isManagerEditMode = isManagerEdit || searchParams.get('managerEdit') === 'true';
+
+  useEffect(() => {
+    if (!hierarchyProjectId || (propLocationId && propServiceTypeId && propSubcategoryId)) return;
+
+    const fetchProjectMeta = async () => {
+      const { data, error } = await supabase
+        .from('projects_hierarchy')
+        .select(`
+          location_id,
+          service_type_id,
+          subcategory_id,
+          locations (
+            address_line,
+            province_id,
+            district_id
+          )
+        `)
+        .eq('id', hierarchyProjectId)
+        .maybeSingle();
+
+      if (error || !data) return;
+      const loc = (data as any).locations;
+      setRouteProjectMeta({
+        locationId: data.location_id || undefined,
+        serviceTypeId: data.service_type_id || undefined,
+        subcategoryId: data.subcategory_id || undefined,
+        provinceId: loc?.province_id || null,
+        districtId: loc?.district_id || null,
+        address: loc?.address_line || undefined,
+      });
+    };
+
+    fetchProjectMeta();
+  }, [hierarchyProjectId, propLocationId, propServiceTypeId, propSubcategoryId]);
+
+  useEffect(() => {
+    if (initialLocationId) setSelectedLocationId(initialLocationId);
+    if (initialProvinceId) setSelectedProvinceId(initialProvinceId);
+    if (initialDistrictId) setSelectedDistrictId(initialDistrictId);
+    if (address) setDetailedAddress(address);
+  }, [initialLocationId, initialProvinceId, initialDistrictId, address]);
 
   // Fetch order data if editing from query parameter
   useEffect(() => {
@@ -224,6 +312,38 @@ export default function ComprehensiveScaffoldingForm({
       fetchOrderData();
     }
   }, [editOrderId]);
+
+  // بازیابی مقادیر فرم پس از بازگشت کاربر مهمان از صفحه ورود/ثبت‌نام
+  useEffect(() => {
+    if (editOrderId || existingOrderData) return;
+    const pending = getPendingOrder();
+    if (pending?.formKey !== 'scaffolding' || !pending.values) return;
+    const v = pending.values;
+    try {
+      if (v.scaffoldType !== undefined) setScaffoldType(v.scaffoldType);
+      if (v.activeService !== undefined) setActiveService(v.activeService);
+      if (v.ceilingSubType !== undefined) setCeilingSubType(v.ceilingSubType);
+      if (Array.isArray(v.dimensions) && v.dimensions.length > 0) setDimensions(v.dimensions);
+      if (v.isFacadeWidth2m !== undefined) setIsFacadeWidth2m(v.isFacadeWidth2m);
+      if (v.columnHeight !== undefined) setColumnHeight(v.columnHeight);
+      if (v.detailedAddress !== undefined) setDetailedAddress(v.detailedAddress);
+      if (v.conditions !== undefined) setConditions(v.conditions);
+      if (v.onGround !== undefined) setOnGround(v.onGround);
+      if (v.vehicleReachesSite !== undefined) setVehicleReachesSite(v.vehicleReachesSite);
+      if (v.locationPurpose !== undefined) setLocationPurpose(v.locationPurpose);
+      if (v.installationDateTime !== undefined) setInstallationDateTime(v.installationDateTime);
+      if (v.recipientData !== undefined) setRecipientData(v.recipientData);
+      clearPendingOrder();
+      toast({
+        title: 'مقادیر فرم بازیابی شد',
+        description: 'اطلاعاتی که قبلاً وارد کرده بودید بازگردانده شد. می‌توانید سفارش را ثبت کنید.',
+      });
+    } catch (err) {
+      console.error('Failed to restore pending form values', err);
+      clearPendingOrder();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchOrderData = async () => {
     if (!editOrderId) return;
@@ -310,6 +430,24 @@ export default function ComprehensiveScaffoldingForm({
             }
             if (notes.installationDateTime) {
               setInstallationDateTime(notes.installationDateTime);
+            }
+
+            // بازیابی حالت چند داربست همزمان در یک مکان
+            if (Array.isArray(notes.multi_scaffolds) && notes.multi_scaffolds.length > 0) {
+              setMultiOrderMode(true);
+              setSavedScaffolds(notes.multi_scaffolds.map((m: any, idx: number) => ({
+                id: `restored-${idx + 1}-${Date.now()}`,
+                label: m.label || `داربست #${idx + 1}`,
+                snapshot: m.snapshot || {
+                  scaffoldType: '', activeService: '', ceilingSubType: '',
+                  dimensions: [], isFacadeWidth2m: false, columnHeight: '',
+                  onGround: true, vehicleReachesSite: true, conditions: {},
+                },
+                fullPrice: Number(m.finalPrice || 0),
+                baseNoDistance: Number(m.baseNoDistance || 0),
+                breakdown: [],
+                totalArea: Number(m.totalArea || 0),
+              })));
             }
           } catch (parseError) {
             console.error('Error parsing order notes:', parseError);
@@ -405,6 +543,24 @@ export default function ComprehensiveScaffoldingForm({
           if (notes.installationDateTime) {
             setInstallationDateTime(notes.installationDateTime);
           }
+
+          // بازیابی حالت چند داربست همزمان در یک مکان
+          if (Array.isArray(notes.multi_scaffolds) && notes.multi_scaffolds.length > 0) {
+            setMultiOrderMode(true);
+            setSavedScaffolds(notes.multi_scaffolds.map((m: any, idx: number) => ({
+              id: `restored-${idx + 1}-${Date.now()}`,
+              label: m.label || `داربست #${idx + 1}`,
+              snapshot: m.snapshot || {
+                scaffoldType: '', activeService: '', ceilingSubType: '',
+                dimensions: [], isFacadeWidth2m: false, columnHeight: '',
+                onGround: true, vehicleReachesSite: true, conditions: {},
+              },
+              fullPrice: Number(m.finalPrice || 0),
+              baseNoDistance: Number(m.baseNoDistance || 0),
+              breakdown: [],
+              totalArea: Number(m.totalArea || 0),
+            })));
+          }
         }
       } catch (error) {
         console.error('Error loading order data:', error);
@@ -438,44 +594,50 @@ export default function ComprehensiveScaffoldingForm({
     }, 0);
   };
 
-  const calculatePrice = (): { total: number; pricePerMeter: number | null; breakdown: string[] } => {
+  // ====== رتبه همکاری و درصد تخفیف کاربر فعلی ======
+  const { discountPercent: cooperationDiscountPct, rank: cooperationRank } = useCooperationDiscount();
+  /** اعمال تخفیف رتبه همکاری + گرد کردن به نزدیک‌ترین ۱۰۰۰ تومان */
+  const finalizePrice = (n: number) => applyDiscountAndRound(n, cooperationDiscountPct);
+
+  const calculatePrice = (skipDistanceSurcharge: boolean = false): { total: number; pricePerMeter: number | null; breakdown: string[] } => {
     const area = calculateTotalArea();
     let basePrice = 0;
     let pricePerMeter: number | null = null;
     const breakdown: string[] = [];
 
+    // ====== مقادیر قابل تنظیم از ماژول CEO (با fallback به اعداد فعلی) ======
+    const P = pricingGet;
+    const pct = (key: string, fb: number) => P(key, fb) / 100; // درصد به ضریب اضافه
+
     // محاسبه قیمت برای داربست به طول لوله مصرفی
     if (isPipeLengthScaffolding) {
       const pipeLength = parseFloat(dimensions[0]?.length || '0');
-      
+
       if (pipeLength <= 100) {
-        basePrice = 3200000;
+        basePrice = P('pipe_fixed_under_100m', 3200000);
         breakdown.push(`طول لوله: ${pipeLength} متر (زیر 100 متر)`);
         breakdown.push(`قیمت ثابت: ${basePrice.toLocaleString('fa-IR')} تومان`);
       } else if (pipeLength <= 200) {
-        basePrice = 4200000;
+        basePrice = P('pipe_fixed_100_to_200m', 4200000);
         breakdown.push(`طول لوله: ${pipeLength} متر (100-200 متر)`);
         breakdown.push(`قیمت ثابت: ${basePrice.toLocaleString('fa-IR')} تومان`);
       } else {
-        pricePerMeter = 30000;
+        pricePerMeter = P('pipe_per_meter_over_200', 30000);
         basePrice = pipeLength * pricePerMeter;
         breakdown.push(`طول لوله: ${pipeLength} متر (بیش از 200 متر)`);
         breakdown.push(`فی هر متر لوله: ${pricePerMeter.toLocaleString('fa-IR')} تومان`);
         breakdown.push(`قیمت کل: ${pipeLength} × ${pricePerMeter.toLocaleString('fa-IR')} = ${basePrice.toLocaleString('fa-IR')} تومان`);
       }
-      
-      return { total: Math.round(basePrice), pricePerMeter, breakdown };
+
+      return { total: finalizePrice(basePrice), pricePerMeter, breakdown };
     }
 
     // محاسبه قیمت برای داربست ستونی
     if (isColumnScaffolding) {
-      // محاسبه واحد طول: هر 3 متر = 1 واحد
       const getLengthUnits = (dimension: number): number => {
         if (dimension <= 0) return 0;
         return Math.ceil(dimension / 3);
       };
-      
-      // محاسبه واحد عرض: منطق قبلی
       const getWidthUnits = (dimension: number): number => {
         if (dimension >= 0.20 && dimension <= 3.5) return 1;
         if (dimension > 3.5 && dimension <= 7) return 2;
@@ -486,16 +648,13 @@ export default function ComprehensiveScaffoldingForm({
       const length = parseFloat(dimensions[0]?.length || '0');
       const width = parseFloat(dimensions[0]?.width || '0');
       const height = parseFloat(columnHeight || '0');
-      
-      // محاسبه تعداد طبقات از ارتفاع (هر 3.5 متر = 1 طبقه)
       const floors = Math.ceil(height / 3.5);
 
       const lengthUnits = getLengthUnits(length);
       const widthUnits = getWidthUnits(width);
       const floorUnits = floors;
-
       const totalUnits = lengthUnits * widthUnits * floorUnits;
-      const pricePerUnit = 1000000;
+      const pricePerUnit = P('column_price_per_unit', 1000000);
 
       basePrice = totalUnits * pricePerUnit;
 
@@ -505,211 +664,237 @@ export default function ComprehensiveScaffoldingForm({
       breakdown.push(`مجموع واحدها: ${lengthUnits} × ${widthUnits} × ${floorUnits} = ${totalUnits} واحد`);
       breakdown.push(`قیمت هر واحد: ${pricePerUnit.toLocaleString('fa-IR')} تومان`);
       breakdown.push(`قیمت کل: ${basePrice.toLocaleString('fa-IR')} تومان`);
-      
-      return { total: Math.round(basePrice), pricePerMeter: null, breakdown };
+
+      return { total: finalizePrice(basePrice), pricePerMeter: null, breakdown };
     }
 
-    // محاسبه ضریب شرایط سرویس برای متراژ بالای 100
-    const getConditionsMultiplier = (): { multiplier: number; conditionBreakdown: string[] } => {
-      let multiplier = 1;
+    // محاسبه ضریب شرایط سرویس
+    const getConditionsMultiplier = (): { multiplier: number; conditionBreakdown: string[]; distancePct: number; distanceMin: number; distanceLabel: string | null } => {
+      let percentSum = 0; // جمع جبری درصدها (افزایش از قیمت پایه، نه تجمیعی)
       const conditionBreakdown: string[] = [];
-      
-      if (conditions.distanceRange === '15-25') {
-        multiplier *= 1.2;
-        conditionBreakdown.push('فاصله 15-25 کیلومتر: +20%');
-      } else if (conditions.distanceRange === '25-50') {
-        multiplier *= 1.4;
-        conditionBreakdown.push('فاصله 25-50 کیلومتر: +40%');
-      } else if (conditions.distanceRange === '50-85') {
-        multiplier *= 1.7;
-        conditionBreakdown.push('فاصله 50-85 کیلومتر: +70%');
+      let distancePct = 0;
+      let distanceMin = 0;
+      let distanceLabel: string | null = null;
+
+      if (!skipDistanceSurcharge) {
+        if (conditions.distanceRange === '15-25') {
+          const p = P('distance_15_to_25_pct', 20);
+          percentSum += p;
+          distancePct = p;
+          distanceMin = P('distance_15_to_25_min', 0);
+          distanceLabel = 'فاصله 15-25 کیلومتر';
+        } else if (conditions.distanceRange === '25-50') {
+          const p = P('distance_25_to_50_pct', 40);
+          percentSum += p;
+          distancePct = p;
+          distanceMin = P('distance_25_to_50_min', 0);
+          distanceLabel = 'فاصله 25-50 کیلومتر';
+        } else if (conditions.distanceRange === '50-85') {
+          const p = P('distance_50_to_85_pct', 70);
+          percentSum += p;
+          distancePct = p;
+          distanceMin = P('distance_50_to_85_min', 0);
+          distanceLabel = 'فاصله 50-85 کیلومتر';
+        }
       }
 
       if (!onGround && conditions.platformHeight) {
         if (conditions.platformHeight <= 3) {
-          multiplier *= 1.2;
-          conditionBreakdown.push('ارتفاع پای کار تا 3 متر: +20%');
+          const p = P('platform_height_under_3_pct', 20);
+          percentSum += p;
+          conditionBreakdown.push(`ارتفاع پای کار تا 3 متر: +${p}%`);
         } else if (conditions.platformHeight <= 6) {
-          multiplier *= 1.4;
-          conditionBreakdown.push('ارتفاع پای کار 3-6 متر: +40%');
+          const p = P('platform_height_3_to_6_pct', 40);
+          percentSum += p;
+          conditionBreakdown.push(`ارتفاع پای کار 3-6 متر: +${p}%`);
         } else {
-          multiplier *= 1.6;
-          conditionBreakdown.push('ارتفاع پای کار بیش از 6 متر: +60%');
+          const p = P('platform_height_over_6_pct', 60);
+          percentSum += p;
+          conditionBreakdown.push(`ارتفاع پای کار بیش از 6 متر: +${p}%`);
         }
       }
 
       if (!onGround && conditions.scaffoldHeightFromPlatform) {
         if (conditions.scaffoldHeightFromPlatform > 15) {
-          multiplier *= 1.2;
-          conditionBreakdown.push('ارتفاع داربست بیش از 15 متر: +20%');
+          const p = P('scaffold_height_over_15_pct', 20);
+          percentSum += p;
+          conditionBreakdown.push(`ارتفاع داربست بیش از 15 متر: +${p}%`);
         }
       }
 
       if (!vehicleReachesSite && conditions.vehicleDistance) {
         if (conditions.vehicleDistance <= 50) {
-          multiplier *= 1.1;
-          conditionBreakdown.push('فاصله خودرو تا 50 متر: +10%');
+          const p = P('vehicle_distance_under_50_pct', 10);
+          percentSum += p;
+          conditionBreakdown.push(`فاصله خودرو تا 50 متر: +${p}%`);
         } else if (conditions.vehicleDistance <= 100) {
-          multiplier *= 1.15;
-          conditionBreakdown.push('فاصله خودرو 50-100 متر: +15%');
+          const p = P('vehicle_distance_50_to_100_pct', 15);
+          percentSum += p;
+          conditionBreakdown.push(`فاصله خودرو 50-100 متر: +${p}%`);
         } else {
-          multiplier *= 1.25;
-          conditionBreakdown.push('فاصله خودرو بیش از 100 متر: +25%');
+          const p = P('vehicle_distance_over_100_pct', 25);
+          percentSum += p;
+          conditionBreakdown.push(`فاصله خودرو بیش از 100 متر: +${p}%`);
         }
       }
-      
-      return { multiplier, conditionBreakdown };
+
+      const multiplier = 1 + percentSum / 100;
+      return { multiplier, conditionBreakdown, distancePct, distanceMin, distanceLabel };
     };
 
-    // متغیر برای تشخیص اینکه آیا شرایط روی فی اعمال شده یا نه
+    // اعمال حداقل افزایش قیمت فاصله: اگر سهم درصدی فاصله از قیمت پایه کمتر از حداقل تنظیم‌شده باشد، مابه‌التفاوت اضافه می‌شود
+    const applyDistanceMinimum = (basePreConditions: number, distancePct: number, distanceMin: number): { topUp: number; minApplied: boolean } => {
+      if (!distanceMin || distancePct <= 0 || basePreConditions <= 0) return { topUp: 0, minApplied: false };
+      const distanceSurcharge = (basePreConditions * distancePct) / 100;
+      if (distanceSurcharge >= distanceMin) return { topUp: 0, minApplied: false };
+      const topUp = roundToThousand(distanceMin - distanceSurcharge);
+      return { topUp, minApplied: true };
+    };
+
+    // ساخت خط نمایش فاصله: اگر حداقل اعمال شده باشد به‌جای درصد، مبلغ حداقل اعمال‌شده نمایش داده می‌شود
+    const buildDistanceLine = (distanceLabel: string | null, distancePct: number, distanceMin: number, minApplied: boolean): string | null => {
+      if (!distanceLabel || distancePct <= 0) return null;
+      if (minApplied) {
+        return `${distanceLabel}: حداقل افزایش قیمت ${distanceMin.toLocaleString('fa-IR')} تومان اعمال شد`;
+      }
+      return `${distanceLabel}: +${distancePct}%`;
+    };
+
+
+
+
     let conditionsAppliedToUnitPrice = false;
 
     if (activeService === 'facade') {
       if (area <= 50) {
-        basePrice = 3200000;
+        basePrice = P('facade_fixed_under_50', 3200000);
       } else if (area <= 100) {
-        basePrice = 4200000;
+        basePrice = P('facade_fixed_50_to_100', 4200000);
       } else {
-        // بالای 100 متر: اعمال شرایط روی فی
-        const basePricePerMeter = 45000;
-        const { multiplier, conditionBreakdown } = getConditionsMultiplier();
+        const basePricePerMeter = P('facade_per_meter_over_100', 45000);
+        const { multiplier, conditionBreakdown, distancePct, distanceMin, distanceLabel } = getConditionsMultiplier();
         pricePerMeter = Math.round(basePricePerMeter * multiplier);
         basePrice = area * pricePerMeter;
         conditionsAppliedToUnitPrice = true;
-        
+
+        const { topUp, minApplied } = applyDistanceMinimum(area * basePricePerMeter, distancePct, distanceMin);
+
         if (multiplier > 1) {
           breakdown.push(`فی پایه: ${basePricePerMeter.toLocaleString('fa-IR')} تومان`);
+          const distLine = buildDistanceLine(distanceLabel, distancePct, distanceMin, minApplied);
+          if (distLine) breakdown.push(distLine);
           conditionBreakdown.forEach(cb => breakdown.push(cb));
           breakdown.push(`فی نهایی: ${pricePerMeter.toLocaleString('fa-IR')} تومان`);
         }
+
+        if (topUp > 0) { basePrice += topUp; }
       }
+
     } else if (activeService === 'formwork') {
       if (area <= 100) {
-        basePrice = 3200000;
+        basePrice = P('formwork_fixed_under_100', 3200000);
       } else if (area <= 200) {
-        basePrice = 4000000;
       } else {
-        // بالای 200 متر: اعمال شرایط روی فی
-        const basePricePerMeter = 20000;
-        const { multiplier, conditionBreakdown } = getConditionsMultiplier();
+        const basePricePerMeter = P('formwork_per_meter_over_200', 20000);
+        const { multiplier, conditionBreakdown, distancePct, distanceMin, distanceLabel } = getConditionsMultiplier();
         pricePerMeter = Math.round(basePricePerMeter * multiplier);
         basePrice = area * pricePerMeter;
         conditionsAppliedToUnitPrice = true;
-        
+
+        const { topUp, minApplied } = applyDistanceMinimum(area * basePricePerMeter, distancePct, distanceMin);
+
         if (multiplier > 1) {
           breakdown.push(`فی پایه: ${basePricePerMeter.toLocaleString('fa-IR')} تومان`);
+          const distLine = buildDistanceLine(distanceLabel, distancePct, distanceMin, minApplied);
+          if (distLine) breakdown.push(distLine);
           conditionBreakdown.forEach(cb => breakdown.push(cb));
           breakdown.push(`فی نهایی: ${pricePerMeter.toLocaleString('fa-IR')} تومان`);
         }
+
+        if (topUp > 0) { basePrice += topUp; }
       }
+
     } else if (activeService === 'ceiling-beam-yonolit' || activeService === 'ceiling-beam-ceramic') {
-      // زیربتن تیرچه یونولیت و سفال - قیمت یکسان
       if (area <= 100) {
-        basePrice = 7500000;
+        basePrice = P('ceiling_beam_fixed_under_100', 7500000);
       } else if (area <= 200) {
-        basePrice = 11000000;
       } else {
-        // بالای 200 متر: اعمال شرایط روی فی
-        const basePricePerMeter = 45000;
-        const { multiplier, conditionBreakdown } = getConditionsMultiplier();
+        const basePricePerMeter = P('ceiling_beam_per_meter_over_200', 45000);
+        const { multiplier, conditionBreakdown, distancePct, distanceMin, distanceLabel } = getConditionsMultiplier();
         pricePerMeter = Math.round(basePricePerMeter * multiplier);
         basePrice = area * pricePerMeter;
         conditionsAppliedToUnitPrice = true;
-        
+
+        const { topUp, minApplied } = applyDistanceMinimum(area * basePricePerMeter, distancePct, distanceMin);
+
         if (multiplier > 1) {
           breakdown.push(`فی پایه: ${basePricePerMeter.toLocaleString('fa-IR')} تومان`);
+          const distLine = buildDistanceLine(distanceLabel, distancePct, distanceMin, minApplied);
+          if (distLine) breakdown.push(distLine);
           conditionBreakdown.forEach(cb => breakdown.push(cb));
           breakdown.push(`فی نهایی: ${pricePerMeter.toLocaleString('fa-IR')} تومان`);
         }
+
+        if (topUp > 0) { basePrice += topUp; }
       }
+
     } else if (activeService === 'ceiling-slab') {
-      // زیربتن دال و وافل
       if (area <= 100) {
-        basePrice = 8000000;
+        basePrice = P('ceiling_slab_fixed_under_100', 8000000);
       } else if (area <= 200) {
-        basePrice = 15000000;
       } else {
-        // بالای 200 متر: اعمال شرایط روی فی
-        const basePricePerMeter = 70000;
-        const { multiplier, conditionBreakdown } = getConditionsMultiplier();
+        const basePricePerMeter = P('ceiling_slab_per_meter_over_200', 70000);
+        const { multiplier, conditionBreakdown, distancePct, distanceMin, distanceLabel } = getConditionsMultiplier();
         pricePerMeter = Math.round(basePricePerMeter * multiplier);
         basePrice = area * pricePerMeter;
         conditionsAppliedToUnitPrice = true;
-        
+
+        const { topUp, minApplied } = applyDistanceMinimum(area * basePricePerMeter, distancePct, distanceMin);
+
         if (multiplier > 1) {
           breakdown.push(`فی پایه: ${basePricePerMeter.toLocaleString('fa-IR')} تومان`);
+          const distLine = buildDistanceLine(distanceLabel, distancePct, distanceMin, minApplied);
+          if (distLine) breakdown.push(distLine);
           conditionBreakdown.forEach(cb => breakdown.push(cb));
           breakdown.push(`فی نهایی: ${pricePerMeter.toLocaleString('fa-IR')} تومان`);
         }
+
+        if (topUp > 0) { basePrice += topUp; }
       }
+
     }
 
     breakdown.push(`قیمت ماه اول: ${basePrice.toLocaleString('fa-IR')} تومان`);
 
-    // اگر شرایط قبلاً روی فی اعمال شده، دوباره اعمال نشود
     if (conditions.currentMonth === 1 && !conditionsAppliedToUnitPrice) {
-      let monthMultiplier = 1;
-
-      if (conditions.distanceRange === '15-25') {
-        monthMultiplier *= 1.2;
-        breakdown.push('فاصله 15-25 کیلومتر: +20%');
-      } else if (conditions.distanceRange === '25-50') {
-        monthMultiplier *= 1.4;
-        breakdown.push('فاصله 25-50 کیلومتر: +40%');
-      } else if (conditions.distanceRange === '50-85') {
-        monthMultiplier *= 1.7;
-        breakdown.push('فاصله 50-85 کیلومتر: +70%');
+      const basePreConditions = basePrice;
+      const { multiplier, conditionBreakdown, distancePct, distanceMin, distanceLabel } = getConditionsMultiplier();
+      const { topUp, minApplied } = applyDistanceMinimum(basePreConditions, distancePct, distanceMin);
+      if (multiplier > 1) {
+        const distLine = buildDistanceLine(distanceLabel, distancePct, distanceMin, minApplied);
+        if (distLine) breakdown.push(distLine);
+        conditionBreakdown.forEach(cb => breakdown.push(cb));
+        basePrice *= multiplier;
       }
-
-      if (!onGround && conditions.platformHeight) {
-        if (conditions.platformHeight <= 3) {
-          monthMultiplier *= 1.2;
-          breakdown.push('ارتفاع پای کار تا 3 متر: +20%');
-        } else if (conditions.platformHeight <= 6) {
-          monthMultiplier *= 1.4;
-          breakdown.push('ارتفاع پای کار 3-6 متر: +40%');
-        } else {
-          monthMultiplier *= 1.6;
-          breakdown.push('ارتفاع پای کار بیش از 6 متر: +60%');
-        }
-      }
-
-      if (!onGround && conditions.scaffoldHeightFromPlatform) {
-        if (conditions.scaffoldHeightFromPlatform > 15) {
-          monthMultiplier *= 1.2;
-          breakdown.push('ارتفاع داربست بیش از 15 متر: +20%');
-        }
-      }
-
-      if (!vehicleReachesSite && conditions.vehicleDistance) {
-        if (conditions.vehicleDistance <= 50) {
-          monthMultiplier *= 1.1;
-          breakdown.push('فاصله خودرو تا 50 متر: +10%');
-        } else if (conditions.vehicleDistance <= 100) {
-          monthMultiplier *= 1.15;
-          breakdown.push('فاصله خودرو 50-100 متر: +15%');
-        } else {
-          monthMultiplier *= 1.25;
-          breakdown.push('فاصله خودرو بیش از 100 متر: +25%');
-        }
-      }
-
-      basePrice *= monthMultiplier;
+      if (topUp > 0) { basePrice += topUp; }
     }
 
-    // محاسبه تخفیف اجاره چند ماهه برای داربست سطحی نما
+
+    // تخفیف اجاره چند ماهه برای داربست سطحی نما
     if (isFacadeScaffolding && conditions.rentalMonthsPlan) {
       const monthsPlan = parseInt(conditions.rentalMonthsPlan.replace('+', ''));
       let discount = 0;
-      
+
       if (conditions.rentalMonthsPlan === '2') {
-        discount = 0.10; // 10% تخفیف برای 2 ماه
-        breakdown.push(`تخفیف اجاره 2 ماهه: -10% در هر ماه`);
+        const p = P('rental_discount_2_months_pct', 10);
+        discount = p / 100;
+        breakdown.push(`تخفیف اجاره 2 ماهه: -${p}% در هر ماه`);
       } else if (conditions.rentalMonthsPlan === '3+') {
-        discount = 0.15; // 15% تخفیف برای 3 ماه و بیشتر
-        breakdown.push(`تخفیف اجاره 3 ماهه: -15% در هر ماه`);
+        const p = P('rental_discount_3plus_months_pct', 15);
+        discount = p / 100;
+        breakdown.push(`تخفیف اجاره 3 ماهه: -${p}% در هر ماه`);
       }
-      
+
       if (discount > 0) {
         const discountedMonthlyPrice = basePrice * (1 - discount);
         const totalWithDiscount = discountedMonthlyPrice * monthsPlan;
@@ -721,12 +906,13 @@ export default function ComprehensiveScaffoldingForm({
       }
     } else if (conditions.totalMonths > 1) {
       const additionalMonths = conditions.totalMonths - 1;
-      const additionalCost = basePrice * 0.7 * additionalMonths;
+      const extraFactor = P('extra_month_factor_pct', 70) / 100;
+      const additionalCost = basePrice * extraFactor * additionalMonths;
       breakdown.push(`ماه‌های اضافی (${additionalMonths} ماه): ${additionalCost.toLocaleString('fa-IR')} تومان`);
       basePrice += additionalCost;
     }
 
-    return { total: Math.round(basePrice), pricePerMeter, breakdown };
+    return { total: finalizePrice(basePrice), pricePerMeter, breakdown };
   };
 
   // Function to upload media files to storage
@@ -902,9 +1088,38 @@ export default function ComprehensiveScaffoldingForm({
 
   const onSubmit = async () => {
     if (!user) {
-      navigate('/auth/login');
+      // ذخیره مقادیر فعلی فرم تا پس از ورود/ثبت‌نام دوباره نمایش داده شوند
+      savePendingOrder({
+        path: '/scaffolding/form',
+        state: navState,
+        formKey: 'scaffolding',
+        values: {
+          scaffoldType,
+          activeService,
+          ceilingSubType,
+          dimensions,
+          isFacadeWidth2m,
+          columnHeight,
+          detailedAddress,
+          conditions,
+          onGround,
+          vehicleReachesSite,
+          locationPurpose,
+          installationDateTime,
+          recipientData,
+        },
+        ts: Date.now(),
+      });
+      toast({
+        title: 'برای ثبت نهایی سفارش وارد شوید',
+        description: 'پس از ورود/ثبت‌نام به همین فرم برمی‌گردید و مقادیر شما حفظ می‌شود.',
+      });
+      navigate('/auth/login', {
+        state: { from: { pathname: '/scaffolding/form' } },
+      });
       return;
     }
+
 
     if (!customerId) {
       toast({ title: 'خطا', description: 'لطفاً ابتدا وارد شوید', variant: 'destructive' });
@@ -919,73 +1134,64 @@ export default function ComprehensiveScaffoldingForm({
       return;
     }
 
-    // فقط چک کردن ابعاد به‌عنوان فیلد ضروری
-    if (isColumnScaffolding || isPipeLengthScaffolding) {
-      if (!dimensions[0]?.length || !dimensions[0]?.width || !columnHeight) {
+    // در حالت چند داربست همزمان، اگر حداقل یک داربست در لیست ذخیره شده باشد،
+    // اعتبارسنجی ابعاد روی فرم جاری انجام نمی‌شود (هر داربست لیست‌شده قبلاً اعتبارسنجی شده).
+    const isMultiSubmit = multiOrderMode && savedScaffolds.length > 0;
+
+    if (!isMultiSubmit) {
+      // فقط چک کردن ابعاد به‌عنوان فیلد ضروری
+      if (isColumnScaffolding || isPipeLengthScaffolding) {
+        if (!dimensions[0]?.length || !dimensions[0]?.width || !columnHeight) {
+          toast({ title: 'خطا', description: 'لطفاً تمام ابعاد را وارد کنید', variant: 'destructive' });
+          return;
+        }
+      } else if (dimensions.some(d => !d.length || !d.width || !d.height)) {
         toast({ title: 'خطا', description: 'لطفاً تمام ابعاد را وارد کنید', variant: 'destructive' });
         return;
       }
-    } else if (dimensions.some(d => !d.length || !d.width || !d.height)) {
-      toast({ title: 'خطا', description: 'لطفاً تمام ابعاد را وارد کنید', variant: 'destructive' });
-      return;
+
+      // Validate using Zod schema - فقط ابعاد
+      try {
+        scaffoldingFormSchema.parse({
+          detailedAddress: finalAddress.trim(),
+          dimensions: dimensions.map(d => ({
+            length: parseFloat(d.length),
+            width: parseFloat(d.width),
+            height: parseFloat(d.height)
+          }))
+        });
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          toast({ title: 'خطای اعتبارسنجی', description: error.errors[0].message, variant: 'destructive' });
+          return;
+        }
+      }
+
+      // Validate dimensions - check minimum 3 meters for length and height
+      if (isColumnScaffolding || isPipeLengthScaffolding) {
+        const length = parseFloat(dimensions[0]?.length || '0');
+        const height = parseFloat(columnHeight || '0');
+        if (length < 3 || isNaN(length)) {
+          toast({ title: 'خطا در ابعاد', description: 'حداقل طول داربست باید 3 متر باشد', variant: 'destructive' });
+          return;
+        }
+        if (height < 3 || isNaN(height)) {
+          toast({ title: 'خطا در ابعاد', description: 'حداقل ارتفاع داربست باید 3 متر باشد', variant: 'destructive' });
+          return;
+        }
+      } else {
+        const invalidDimensions = dimensions.filter(dim => {
+          const length = parseFloat(dim.length);
+          const height = parseFloat(dim.height);
+          return length < 3 || height < 3 || isNaN(length) || isNaN(height);
+        });
+        if (invalidDimensions.length > 0) {
+          toast({ title: 'خطا در ابعاد', description: 'حداقل طول و ارتفاع داربست باید 3 متر باشد', variant: 'destructive' });
+          return;
+        }
+      }
     }
 
-    // Validate using Zod schema - فقط ابعاد
-    try {
-      scaffoldingFormSchema.parse({
-        detailedAddress: finalAddress.trim(),
-        dimensions: dimensions.map(d => ({
-          length: parseFloat(d.length),
-          width: parseFloat(d.width),
-          height: parseFloat(d.height)
-        }))
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        toast({ title: 'خطای اعتبارسنجی', description: error.errors[0].message, variant: 'destructive' });
-        return;
-      }
-    }
-
-    // Validate dimensions - check minimum 3 meters for length and height
-    if (isColumnScaffolding || isPipeLengthScaffolding) {
-      const length = parseFloat(dimensions[0]?.length || '0');
-      const width = parseFloat(dimensions[0]?.width || '0');
-      const height = parseFloat(columnHeight || '0');
-      
-      if (length < 3 || isNaN(length)) {
-        toast({ 
-          title: 'خطا در ابعاد', 
-          description: 'حداقل طول داربست باید 3 متر باشد', 
-          variant: 'destructive' 
-        });
-        return;
-      }
-      
-      if (height < 3 || isNaN(height)) {
-        toast({ 
-          title: 'خطا در ابعاد', 
-          description: 'حداقل ارتفاع داربست باید 3 متر باشد', 
-          variant: 'destructive' 
-        });
-        return;
-      }
-    } else {
-      const invalidDimensions = dimensions.filter(dim => {
-        const length = parseFloat(dim.length);
-        const height = parseFloat(dim.height);
-        return length < 3 || height < 3 || isNaN(length) || isNaN(height);
-      });
-
-      if (invalidDimensions.length > 0) {
-        toast({ 
-          title: 'خطا در ابعاد', 
-          description: 'حداقل طول و ارتفاع داربست باید 3 متر باشد', 
-          variant: 'destructive' 
-        });
-        return;
-      }
-    }
 
     // Sanitize address - استفاده از آدرس بازخوانی شده از بالای فرم
     const sanitizedAddress = sanitizeHtml(finalAddress.trim());
@@ -1141,9 +1347,24 @@ export default function ComprehensiveScaffoldingForm({
       }
 
       // محاسبه قیمت نهایی - اگر مدیر override کرده باشد، از آن استفاده کن
+      // در حالت چند داربست، از مجموع تجمیعی استفاده می‌کنیم
+      const multiSummary = (multiOrderMode && (savedScaffolds.length > 0 || canAddCurrentScaffold()))
+        ? computeMultiSummary()
+        : null;
+      const effectivePriceTotal = multiSummary ? multiSummary.grandTotal : priceData.total;
+      const effectivePriceBreakdown: string[] = multiSummary
+        ? [
+            `🏗️ چند داربست همزمان در یک مکان (${multiSummary.count} داربست)`,
+            ...multiSummary.items.map((it, i) => `${it.label}: اجرا ${it.baseNoDistance.toLocaleString('fa-IR')} + سهم حمل ${it.transportShare.toLocaleString('fa-IR')} = ${it.finalPrice.toLocaleString('fa-IR')} تومان`),
+            `جمع قیمت اجرا (بدون حمل): ${multiSummary.baseSum.toLocaleString('fa-IR')} تومان`,
+            `هزینه حمل و نقل مشترک (${multiSummary.distancePct}%): ${multiSummary.sharedTransport.toLocaleString('fa-IR')} تومان`,
+            `سهم حمل هر داربست: ${multiSummary.transportShare.toLocaleString('fa-IR')} تومان`,
+            `مجموع نهایی: ${multiSummary.grandTotal.toLocaleString('fa-IR')} تومان`,
+          ]
+        : priceData.breakdown;
       const finalPrice = (isManagerEditMode && useManualPrice && manualPriceOverride) 
         ? parseFloat(manualPriceOverride) 
-        : priceData.total;
+        : effectivePriceTotal;
 
       // Check if editing or creating new order
       if (editOrderId) {
@@ -1190,9 +1411,24 @@ export default function ComprehensiveScaffoldingForm({
               vehicleReachesSite,
               locationPurpose,
               totalArea: calculateTotalArea(),
-              estimated_price: priceData.total,
+              estimated_price: effectivePriceTotal,
               manual_price_override: (isManagerEditMode && useManualPrice) ? parseFloat(manualPriceOverride) : undefined,
-              price_breakdown: priceData.breakdown,
+              price_breakdown: effectivePriceBreakdown,
+              multi_scaffolds: multiSummary ? multiSummary.items.map(it => ({
+                label: it.label,
+                totalArea: it.totalArea,
+                baseNoDistance: it.baseNoDistance,
+                transportShare: it.transportShare,
+                finalPrice: it.finalPrice,
+                snapshot: it.snapshot,
+              })) : undefined,
+              multi_summary: multiSummary ? {
+                count: multiSummary.count,
+                distancePct: multiSummary.distancePct,
+                sharedTransport: multiSummary.sharedTransport,
+                baseSum: multiSummary.baseSum,
+                grandTotal: multiSummary.grandTotal,
+              } : undefined,
               installationDateTime,
               customerName: orderData?.customer_name || user?.user_metadata?.full_name || '',
               phoneNumber: orderData?.customer_phone || user?.phone || '',
@@ -1266,8 +1502,23 @@ export default function ComprehensiveScaffoldingForm({
             vehicleReachesSite,
             locationPurpose,
             totalArea: calculateTotalArea(),
-            estimated_price: priceData.total,
-            price_breakdown: priceData.breakdown,
+            estimated_price: effectivePriceTotal,
+            price_breakdown: effectivePriceBreakdown,
+            multi_scaffolds: multiSummary ? multiSummary.items.map(it => ({
+              label: it.label,
+              totalArea: it.totalArea,
+              baseNoDistance: it.baseNoDistance,
+              transportShare: it.transportShare,
+              finalPrice: it.finalPrice,
+              snapshot: it.snapshot,
+            })) : undefined,
+            multi_summary: multiSummary ? {
+              count: multiSummary.count,
+              distancePct: multiSummary.distancePct,
+              sharedTransport: multiSummary.sharedTransport,
+              baseSum: multiSummary.baseSum,
+              grandTotal: multiSummary.grandTotal,
+            } : undefined,
             installationDateTime,
             customerName: user?.user_metadata?.full_name || '',
             phoneNumber: user?.phone || '',
@@ -1375,21 +1626,42 @@ export default function ComprehensiveScaffoldingForm({
           order_id: createdProject.id,
           customer_name: user?.user_metadata?.full_name || '',
           customer_phone: user?.user_metadata?.phone_number || user?.phone || '',
+          customer_user_id: user?.id,
           service_type: serviceTypeName
         }).catch(err => {
           console.error('Notify managers error:', err);
         });
 
+        // ثبت رویداد در لاگ فعالیت‌ها
+        reportActivity({
+          eventType: 'order_created',
+          eventCategory: 'order',
+          action: 'create',
+          moduleName: 'ثبت سفارش',
+          entityTable: 'projects_v3',
+          entityId: createdProject.id,
+          title: `سفارش جدید ${serviceTypeName} ثبت شد (کد ${createdProject.code})`,
+          details: {
+            orderCode: createdProject.code,
+            serviceType: serviceTypeName,
+            address: createdProject.address,
+            customerName: user?.user_metadata?.full_name || '',
+            customerPhone: user?.user_metadata?.phone_number || user?.phone || '',
+          },
+        }).catch(() => {});
+
+
         // ارسال پیامک به مشتری (در پس‌زمینه)
-        const customerPhone = user?.user_metadata?.phone_number || user?.phone;
-        const customerName = user?.user_metadata?.full_name || 'مشتری';
+        const customerPhone = createdProject.customer_phone || user?.user_metadata?.phone_number || user?.phone || '';
+        const customerName = createdProject.customer_name || user?.user_metadata?.full_name || 'مشتری';
         const smsAddress = buildOrderSmsAddress(createdProject.address, createdProject.detailed_address);
         
-        if (customerPhone) {
+        if (createdProject.code) {
           sendOrderSms(customerPhone, createdProject.code, 'submitted', {
             orderId: createdProject.id,
             address: smsAddress,
-            serviceType: serviceTypeName
+            serviceType: serviceTypeName,
+            customerName
           }).catch(err => {
             console.error('SMS notification error:', err);
           });
@@ -1418,6 +1690,123 @@ export default function ComprehensiveScaffoldingForm({
   };
 
   const priceData = calculatePrice();
+  const priceDataNoDistance = calculatePrice(true);
+
+  // درصد فاصله فعلی (برای محاسبه حمل و نقل مشترک)
+  const getCurrentDistancePct = (): number => {
+    if (conditions.distanceRange === '15-25') return pricingGet('distance_15_to_25_pct', 20);
+    if (conditions.distanceRange === '25-50') return pricingGet('distance_25_to_50_pct', 40);
+    if (conditions.distanceRange === '50-85') return pricingGet('distance_50_to_85_pct', 70);
+    return 0;
+  };
+
+  // حداقل افزایش قیمت (تومان) برای بازه فاصله فعلی
+  const getCurrentDistanceMin = (): number => {
+    if (conditions.distanceRange === '15-25') return pricingGet('distance_15_to_25_min', 0);
+    if (conditions.distanceRange === '25-50') return pricingGet('distance_25_to_50_min', 0);
+    if (conditions.distanceRange === '50-85') return pricingGet('distance_50_to_85_min', 0);
+    return 0;
+  };
+
+
+  // اعتبارسنجی برای افزودن داربست به لیست (مشابه شرط دکمه ثبت)
+  const canAddCurrentScaffold = (): boolean => {
+    if (!scaffoldType) return false;
+    if (getFacadeWarning() || getFormworkWarning()) return false;
+    if (isPipeLengthScaffolding) {
+      return parseFloat(dimensions[0]?.length || '0') > 0;
+    }
+    if (isColumnScaffolding) {
+      return !!(dimensions[0]?.length && dimensions[0]?.width && columnHeight);
+    }
+    return !dimensions.some(d => !d.length || !d.width || !d.height);
+  };
+
+  const addCurrentScaffoldToList = () => {
+    if (!canAddCurrentScaffold()) {
+      toast({ variant: 'destructive', title: 'فرم ناقص است', description: 'لطفاً ابعاد و نوع داربست را کامل کنید.' });
+      return;
+    }
+    const idx = savedScaffolds.length + 1;
+    const item: SavedScaffold = {
+      id: `${Date.now()}-${idx}`,
+      label: `داربست #${idx}`,
+      snapshot: {
+        scaffoldType,
+        activeService,
+        ceilingSubType,
+        dimensions: JSON.parse(JSON.stringify(dimensions)),
+        isFacadeWidth2m,
+        columnHeight,
+        onGround,
+        vehicleReachesSite,
+        conditions: { ...conditions },
+        locationPurpose,
+      },
+      fullPrice: priceData.total,
+      baseNoDistance: priceDataNoDistance.total,
+      breakdown: [...priceData.breakdown],
+      totalArea: calculateTotalArea(),
+    };
+    setSavedScaffolds(prev => [...prev, item]);
+    // ریست فقط فیلدهای مربوط به مشخصات داربست (آدرس/فاصله حفظ می‌شود)
+    setScaffoldType('');
+    setActiveService('');
+    setCeilingSubType('');
+    setDimensions([{ id: '1', length: '', width: '', height: '' }]);
+    setIsFacadeWidth2m(false);
+    setColumnHeight('');
+    setLocationPurpose('');
+    toast({ title: `✓ ${item.label} اضافه شد`, description: 'می‌توانید داربست بعدی را وارد کنید.' });
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const removeSavedScaffold = (id: string) => {
+    setSavedScaffolds(prev => prev.filter(s => s.id !== id));
+  };
+
+  // محاسبه‌ی خلاصه چند داربست (حمل و نقل مشترک، یکبار محاسبه و تقسیم بین داربست‌ها)
+  const computeMultiSummary = () => {
+    const items: Array<SavedScaffold & { transportShare: number; finalPrice: number }> = [];
+    const allItems = [...savedScaffolds];
+    // اگر کاربر در حال پر کردن داربست فعلی است، آن را هم در پیش‌نمایش قرار بده
+    if (canAddCurrentScaffold()) {
+      allItems.push({
+        id: 'current',
+        label: `داربست #${savedScaffolds.length + 1} (در حال ویرایش)`,
+        snapshot: null as any,
+        fullPrice: priceData.total,
+        baseNoDistance: priceDataNoDistance.total,
+        breakdown: priceData.breakdown,
+        totalArea: calculateTotalArea(),
+      });
+    }
+    const distancePct = getCurrentDistancePct();
+    const distanceMin = getCurrentDistanceMin();
+    // حمل و نقل مشترک = (حداکثر قیمت پایه) × درصد فاصله — یکبار برای کل سفر
+    // با اعمال حداقل افزایش قیمت برای بازه انتخاب‌شده
+    const maxBase = allItems.reduce((mx, s) => Math.max(mx, s.baseNoDistance), 0);
+    const pctBased = roundToThousand((maxBase * distancePct) / 100);
+    const sharedTransport = Math.max(pctBased, roundToThousand(distanceMin));
+    const transportShare = allItems.length > 0 ? roundToThousand(sharedTransport / allItems.length) : 0;
+
+    allItems.forEach(s => {
+      items.push({ ...s, transportShare, finalPrice: s.baseNoDistance + transportShare });
+    });
+    const baseSum = items.reduce((s, i) => s + i.baseNoDistance, 0);
+    return {
+      items,
+      distancePct,
+      sharedTransport,
+      transportShare,
+      baseSum,
+      grandTotal: baseSum + sharedTransport,
+      count: items.length,
+    };
+  };
+
 
   // Show loading spinner while fetching order data
   if (loadingOrder) {
@@ -1464,16 +1853,15 @@ export default function ComprehensiveScaffoldingForm({
         </Card>
       )}
 
-      {/* دکمه‌های ثبت سفارش برای دیگری و درخواست قیمت‌گذاری - فقط برای سفارش جدید */}
+      {/* کارت یکپارچه: گزینه‌های جانبی سفارش (ثبت برای دیگری، قیمت‌گذاری کارشناس، چند داربست همزمان) */}
       {!editOrderId && (selectedLocationId || initialLocationId) && subcategoryId && selectedProvinceId && (
-        <div className="flex flex-col gap-3">
-          {/* نمایش کارت گیرنده انتخاب شده یا دکمه‌ها */}
-          <div className={`${recipientData ? 'w-full' : 'flex flex-wrap justify-center gap-3'}`}>
-            <OrderForOthers 
-              onRecipientSelected={setRecipientData}
-              disabled={loading}
-            />
-            {!recipientData && (
+        <Card className="shadow-xl bg-card/95 backdrop-blur-md border-2 border-primary/30">
+          <CardContent className="pt-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <OrderForOthers
+                onRecipientSelected={setRecipientData}
+                disabled={loading}
+              />
               <ExpertPricingRequestDialog
                 subcategoryId={subcategoryId}
                 provinceId={selectedProvinceId}
@@ -1482,29 +1870,100 @@ export default function ComprehensiveScaffoldingForm({
                 detailedAddress={detailedAddress}
                 serviceTypeName="داربست فلزی"
                 hierarchyProjectId={hierarchyProjectId || undefined}
+                recipientData={recipientData || undefined}
+                multiOrderMode={multiOrderMode}
               />
-            )}
-          </div>
-          {/* نمایش دکمه درخواست قیمت‌گذاری جداگانه اگر گیرنده انتخاب شده */}
-          {recipientData && (
-            <div className="flex justify-center">
-              <ExpertPricingRequestDialog
-                subcategoryId={subcategoryId}
-                provinceId={selectedProvinceId}
-                districtId={selectedDistrictId || undefined}
-                address={address || detailedAddress}
-                detailedAddress={detailedAddress}
-                serviceTypeName="داربست فلزی"
-                hierarchyProjectId={hierarchyProjectId || undefined}
-                recipientData={recipientData}
-              />
+
             </div>
-          )}
-        </div>
+
+            <div className="border-t pt-4">
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <Checkbox
+                  id="multi-order-mode"
+                  checked={multiOrderMode}
+                  onCheckedChange={(c) => {
+                    const next = !!c;
+                    setMultiOrderMode(next);
+                    if (!next) setSavedScaffolds([]);
+                  }}
+                  disabled={loading}
+                  className="mt-1"
+                />
+                <div className="flex-1 text-right">
+                  <div className="font-semibold text-sm">درخواست چند داربست همزمان در یک مکان</div>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    اگر در یک آدرس بیش از یک داربست نیاز دارید این گزینه را فعال کنید. هزینه حمل و نقل فقط یک‌بار محاسبه و به‌صورت مساوی بین داربست‌ها تقسیم می‌شود.
+                  </p>
+                </div>
+              </label>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
+      {/* لیست داربست‌های افزوده‌شده و خلاصه قیمت چندتایی */}
+      {multiOrderMode && savedScaffolds.length > 0 && (() => {
+        const summary = computeMultiSummary();
+        return (
+          <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2 border-emerald-500">
+            <CardHeader>
+              <CardTitle className="text-emerald-700 dark:text-emerald-300">
+                داربست‌های افزوده شده ({summary.count})
+              </CardTitle>
+              <CardDescription>
+                هزینه حمل و نقل مشترک به‌صورت یکجا برای کل سفر محاسبه و بین داربست‌ها تقسیم می‌شود.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {summary.items.map((it) => (
+                <div key={it.id} className="border rounded-lg p-3 bg-muted/40">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-semibold text-sm">{it.label}</div>
+                    {it.id !== 'current' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeSavedScaffold(it.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    قیمت اجرا (بدون حمل): <span className="font-medium text-foreground">{it.baseNoDistance.toLocaleString('fa-IR')}</span> تومان
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    سهم حمل و نقل: <span className="font-medium text-foreground">{it.transportShare.toLocaleString('fa-IR')}</span> تومان
+                  </div>
+                  <div className="text-sm font-semibold mt-1">
+                    جمع این داربست: <span className="text-primary">{it.finalPrice.toLocaleString('fa-IR')}</span> تومان
+                  </div>
+                </div>
+              ))}
+
+              <div className="border-t pt-3 space-y-1 text-sm">
+                <div className="flex justify-between"><span>جمع قیمت اجرا (بدون حمل):</span><span className="font-medium">{summary.baseSum.toLocaleString('fa-IR')} تومان</span></div>
+                <div className="flex justify-between"><span>هزینه حمل و نقل مشترک ({summary.distancePct}%):</span><span className="font-medium">{summary.sharedTransport.toLocaleString('fa-IR')} تومان</span></div>
+                {cooperationDiscountPct > 0 && (
+                  <div className="flex justify-between text-xs text-emerald-700 dark:text-emerald-300">
+                    <span>✓ رتبه همکاری شما</span>
+                    <span className="font-medium">{cooperationRank} اعمال شد</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-base font-bold pt-2 border-t">
+                  <span>مجموع نهایی:</span>
+                  <span className="text-emerald-700 dark:text-emerald-300">{summary.grandTotal.toLocaleString('fa-IR')} تومان</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
+
       {/* نمایش فرم - آدرس قبلاً در صفحه SelectLocation انتخاب شده است */}
-      {(selectedLocationId || editOrderId || initialLocationId) && (
+      {(selectedLocationId || editOrderId || initialLocationId || prefilledAddress || address || navState?.locationAddress) && (
       <>
       {/* نوع داربست */}
       <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2">
@@ -2094,6 +2553,21 @@ export default function ComprehensiveScaffoldingForm({
               <div key={idx} className="text-sm text-slate-700 dark:text-slate-300">{item}</div>
             ))}
             <div className="pt-3 border-t">
+              {cooperationDiscountPct > 0 && (() => {
+                const original = Math.round(priceData.total / (1 - cooperationDiscountPct / 100));
+                const saved = original - priceData.total;
+                return (
+                  <div className="mb-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800 p-3 space-y-1">
+                    <div className="text-sm text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                      🎉 <span>رتبه همکاری شما: <b>{cooperationRank}</b></span>
+                    </div>
+                    <div className="text-xs text-emerald-700 dark:text-emerald-400">
+                      قیمت پیش از تخفیف: <span className="line-through">{original.toLocaleString('fa-IR')}</span> تومان
+                      &nbsp;•&nbsp; صرفه‌جویی شما: <b>{saved.toLocaleString('fa-IR')}</b> تومان
+                    </div>
+                  </div>
+                );
+              })()}
               <div className="text-xl font-bold">
                 قیمت محاسبه شده: <span className="text-primary">{priceData.total.toLocaleString('fa-IR')}</span> تومان
               </div>
@@ -2103,6 +2577,7 @@ export default function ComprehensiveScaffoldingForm({
                 </div>
               )}
             </div>
+
             
             {/* بخش تعیین قیمت دستی برای مدیر */}
             {isManagerEditMode && (
@@ -2152,31 +2627,51 @@ export default function ComprehensiveScaffoldingForm({
       </>
       )}
 
+        {multiOrderMode && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={addCurrentScaffoldToList}
+            disabled={loading || !canAddCurrentScaffold()}
+            className="w-full border-2 border-emerald-500 text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950"
+            size="lg"
+          >
+            <Plus className="h-5 w-5 ml-2" />
+            افزودن این داربست به لیست و وارد کردن داربست بعدی
+          </Button>
+        )}
+
         <Button 
           onClick={onSubmit}
           disabled={
             loading || 
-            (!editOrderId && !selectedLocationId) ||
-            !scaffoldType ||
-            !!getFacadeWarning() ||
-            !!getFormworkWarning() ||
-            (isPipeLengthScaffolding 
-              ? parseFloat(dimensions[0]?.length || '0') <= 0
-              : isColumnScaffolding 
-                ? !dimensions[0]?.length || !dimensions[0]?.width || !columnHeight
-                : dimensions.some(d => !d.length || !d.width || !d.height)
-            )
+            (!editOrderId && !selectedLocationId && !initialLocationId && !prefilledAddress && !address && !navState?.locationAddress) ||
+            (multiOrderMode && savedScaffolds.length === 0 && !canAddCurrentScaffold()) ||
+            (!multiOrderMode && (
+              !scaffoldType ||
+              !!getFacadeWarning() ||
+              !!getFormworkWarning() ||
+              (isPipeLengthScaffolding 
+                ? parseFloat(dimensions[0]?.length || '0') <= 0
+                : isColumnScaffolding 
+                  ? !dimensions[0]?.length || !dimensions[0]?.width || !columnHeight
+                  : dimensions.some(d => !d.length || !d.width || !d.height)
+              )
+            ))
           }
           className={`w-full ${recipientData ? 'bg-green-600 hover:bg-green-700' : ''}`}
           size="lg"
         >
           {loading 
             ? 'در حال ثبت...' 
-            : recipientData 
-              ? `ثبت سفارش برای ${recipientData.fullName || recipientData.phoneNumber}`
-              : 'ثبت درخواست'
+            : multiOrderMode
+              ? `ثبت همه سفارشات (${savedScaffolds.length + (canAddCurrentScaffold() ? 1 : 0)} داربست)`
+              : recipientData 
+                ? `ثبت سفارش برای ${recipientData.fullName || recipientData.phoneNumber}`
+                : 'ثبت درخواست'
           }
         </Button>
+
       </>
       )}
       </>

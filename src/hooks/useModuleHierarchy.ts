@@ -438,6 +438,27 @@ export function useModuleHierarchy({ type, initialModules, isInitialModulesReady
     });
   }, [initialModules, isLoaded, isInitialModulesReady, saveHierarchy, type]);
 
+  // For 'available' hierarchy: when initialModules change (e.g., dynamic per-subcategory
+  // pricing modules finish loading after initial mount), merge any NEW module keys into
+  // current items so they appear alongside the saved/static ones instead of being dropped.
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (type !== 'available') return;
+    if (!isInitialModulesReady || initialModules.length === 0) return;
+
+    setItems((prev) => {
+      const merged = mergeAvailableHierarchy(prev, initialModules);
+      try {
+        const prevStr = JSON.stringify(prev);
+        const mergedStr = JSON.stringify(merged);
+        if (prevStr !== mergedStr) saveHierarchy(merged);
+      } catch {
+        // ignore
+      }
+      return merged;
+    });
+  }, [initialModules, isLoaded, isInitialModulesReady, saveHierarchy, type]);
+
   // Save custom names to localStorage AND database
   const saveCustomNames = useCallback(async (names: Record<string, { name: string; description: string }>) => {
     try {

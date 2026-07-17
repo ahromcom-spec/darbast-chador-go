@@ -184,41 +184,44 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       // First check if microphone permission is already denied
       const permissionState = await checkMicrophonePermission();
       console.log('Permission state:', permissionState);
-      
+
       if (permissionState === 'denied') {
         toast({
           title: 'دسترسی میکروفون رد شده است',
           description: 'لطفاً ابتدا در تنظیمات مرورگر خود، دسترسی میکروفون را برای این سایت فعال کنید. سپس صفحه را رفرش کنید.',
           variant: 'destructive',
-          duration: 8000
+          duration: 8000,
         });
         return;
       }
 
-      // Request microphone access
+      // Request microphone access (must be inside user gesture, before any other async work after permission check)
       console.log('Requesting microphone access...');
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true
-        }
+          autoGainControl: true,
+        },
       });
-      
+
       console.log('Microphone access granted');
       streamRef.current = stream;
-      
-      // Choose the best supported format for maximum compatibility
+
+      // Choose the best supported format. Order matters: prefer formats that finalize cleanly.
       let mimeType = '';
-      const mimeTypes = [
-        'audio/mp4',       // Best for iOS/Safari
-        'audio/webm;codecs=opus',  // Best for Chrome/Firefox
-        'audio/webm',
-        'audio/ogg;codecs=opus',
-        'audio/ogg',
-        ''  // Let browser decide
-      ];
-      
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      const mimeTypes = isIOS
+        ? ['audio/mp4', 'audio/aac', '']
+        : [
+            'audio/webm;codecs=opus',
+            'audio/webm',
+            'audio/ogg;codecs=opus',
+            'audio/ogg',
+            'audio/mp4',
+            '',
+          ];
+
       for (const type of mimeTypes) {
         if (!type || MediaRecorder.isTypeSupported(type)) {
           mimeType = type;
@@ -226,13 +229,14 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
           break;
         }
       }
-      
+
       console.log('Creating MediaRecorder with mimeType:', mimeType || 'browser default');
-      const mediaRecorder = mimeType 
+      const mediaRecorder = mimeType
         ? new MediaRecorder(stream, { mimeType })
         : new MediaRecorder(stream);
-      
+
       console.log('MediaRecorder created, actual mimeType:', mediaRecorder.mimeType);
+
       
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
@@ -312,7 +316,7 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     const recordingComplete = new Promise<void>((resolve) => {
       mediaRecorder.onstop = () => {
         console.log('MediaRecorder stopped');
-        // Stop all tracks
+        // Stop all tracks AFTER onstop so the final chunk is captured
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
           streamRef.current = null;
@@ -321,11 +325,27 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       };
     });
 
-    mediaRecorder.stop();
+    // Flush any pending buffered data BEFORE stopping — otherwise the last
+    // segment is often lost on some browsers, producing an empty/silent file.
+    try {
+      if (mediaRecorder.state === 'recording') {
+        mediaRecorder.requestData();
+      }
+    } catch (e) {
+      console.warn('requestData failed:', e);
+    }
+
+    // Give the browser a tick to deliver the flushed dataavailable event
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    if (mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+    }
     await recordingComplete;
 
-    // Small delay to ensure all data is collected
+    // Extra delay to ensure trailing data events fire
     await new Promise(resolve => setTimeout(resolve, 300));
+
 
     try {
       console.log('Audio chunks collected:', audioChunksRef.current.length);
@@ -526,11 +546,12 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
                         : 'bg-background border'
                     }`}
                   >
-                    {msg.is_staff && (
-                      <div className="text-xs opacity-80 mb-1">
-                        {msg.profiles?.full_name || 'مدیریت'}
-                      </div>
-                    )}
+                    <div className="text-xs opacity-80 mb-1">
+                      {msg.is_staff
+                        ? (msg.profiles?.full_name || 'مدیریت')
+                        : (msg.profiles?.full_name || 'مشتری')
+                      }
+                    </div>
                     
                     {/* Voice message */}
                     {msg.audio_path ? (

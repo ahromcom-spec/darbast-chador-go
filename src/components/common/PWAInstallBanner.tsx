@@ -104,16 +104,12 @@ export function PWAInstallBanner() {
   }
 
   return (
-    <div 
+    <div
       ref={bannerRef}
-      className="fixed z-40 select-none"
-      style={{
-        right: `${RIGHT_OFFSET}px`,
-        bottom: `${BOTTOM_OFFSET}px`,
-      }}
+      className="mt-6 mb-24 w-full flex justify-center select-none"
       data-pwa-install-banner
     >
-      <Card className="border-primary/30 bg-card/95 backdrop-blur-sm shadow-lg">
+      <Card className="border-primary/30 bg-card/95 backdrop-blur-sm shadow-lg w-[80%] sm:w-full max-w-md ml-auto mr-0 sm:mx-auto">
         <div className="p-2 sm:p-3 flex items-center gap-2 sm:gap-3">
           <div className="flex-shrink-0 p-1.5 sm:p-2 rounded-lg bg-primary/10">
             <Download className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />

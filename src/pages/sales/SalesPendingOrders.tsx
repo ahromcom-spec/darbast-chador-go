@@ -24,6 +24,7 @@ import { useOrderApprovals } from '@/hooks/useOrderApprovals';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
+import { sendPushNotification } from '@/lib/notifications';
 
 interface Order {
   id: string;
@@ -184,6 +185,19 @@ export default function SalesPendingOrders() {
         title: '✓ تایید شما ثبت شد',
         description: `تایید شما برای سفارش ${selectedOrder.code} ثبت شد.`
       });
+
+      // Push notification to the customer that their order is approved.
+      // Suppressed automatically inside sendPushNotification when the current
+      // session is an admin impersonation.
+      if (selectedOrder.customer_id) {
+        sendPushNotification({
+          user_id: selectedOrder.customer_id,
+          title: '✓ سفارش شما تایید شد',
+          body: `سفارش ${selectedOrder.code} تایید شد و به مرحله بعد ارسال گردید.`,
+          link: `/user/orders/${selectedOrder.id}`,
+          type: 'order_approved',
+        }).catch((e) => console.warn('[SalesApprove] push failed', e));
+      }
 
       setActionType(null);
       setSelectedOrder(null);

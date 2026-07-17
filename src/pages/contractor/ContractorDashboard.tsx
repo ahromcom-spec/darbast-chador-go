@@ -16,6 +16,7 @@ import {
   Phone,
   User
 } from "lucide-react";
+import { ContractorOrdersV3 } from "@/components/contractor/ContractorOrdersV3";
 
 interface Contractor {
   id: string;
@@ -139,24 +140,41 @@ export default function ContractorDashboard() {
 
   const handleAcceptProject = async (assignmentId: string) => {
     try {
-      const { error } = await supabase
-        .from("project_assignments")
-        .update({
-          status: "accepted",
-          accepted_at: new Date().toISOString()
-        })
-        .eq("id", assignmentId);
-
+      const { data, error } = await supabase.rpc('accept_contractor_assignment', { _assignment_id: assignmentId });
       if (error) throw error;
-
-      toast({
-        title: "✓ پروژه پذیرفته شد",
-        description: "پروژه با موفقیت پذیرفته شد"
-      });
-
+      const res = data as { success: boolean; error?: string };
+      if (!res?.success) {
+        const map: Record<string, string> = {
+          taken_by_other: 'این سفارش توسط پیمانکار دیگری پذیرفته شد',
+          already_processed: 'این سفارش قبلاً پردازش شده است',
+          not_authorized: 'دسترسی غیرمجاز',
+          assignment_not_found: 'سفارش یافت نشد',
+        };
+        toast({ title: 'پذیرش انجام نشد', description: map[res?.error || ''] || res?.error || 'خطای ناشناخته', variant: 'destructive' });
+        fetchContractorData();
+        return;
+      }
+      toast({ title: '✓ پروژه پذیرفته شد', description: 'پروژه با موفقیت پذیرفته شد' });
       fetchContractorData();
     } catch (error: any) {
       toast(toastError(error, 'خطا در پذیرش پروژه'));
+    }
+  };
+
+  const handleRejectProject = async (assignmentId: string) => {
+    if (!confirm('این سفارش رد شود؟')) return;
+    try {
+      const { data, error } = await supabase.rpc('reject_contractor_assignment', { _assignment_id: assignmentId });
+      if (error) throw error;
+      const res = data as { success: boolean; error?: string };
+      if (!res?.success) {
+        toast({ title: 'رد انجام نشد', description: res?.error || 'خطا', variant: 'destructive' });
+      } else {
+        toast({ title: 'سفارش رد شد' });
+      }
+      fetchContractorData();
+    } catch (error: any) {
+      toast(toastError(error, 'خطا در رد سفارش'));
     }
   };
 
@@ -266,6 +284,10 @@ export default function ContractorDashboard() {
           </CardContent>
         </Card>
       ) : (
+        <>
+        <div className="mb-6">
+          <ContractorOrdersV3 contractorId={contractor.id} />
+        </div>
         <Tabs defaultValue="pending" className="space-y-4">
           <TabsList className="grid w-full grid-cols-3 gap-2 bg-muted/50 p-1 h-auto">
             <TabsTrigger 
@@ -302,6 +324,7 @@ export default function ContractorDashboard() {
                   key={assignment.id}
                   assignment={assignment}
                   onAccept={() => handleAcceptProject(assignment.id)}
+                  onReject={() => handleRejectProject(assignment.id)}
                 />
               ))
             )}
@@ -341,6 +364,7 @@ export default function ContractorDashboard() {
             )}
           </TabsContent>
         </Tabs>
+        </>
       )}
     </div>
   );
@@ -349,10 +373,12 @@ export default function ContractorDashboard() {
 function ProjectCard({
   assignment,
   onAccept,
+  onReject,
   onComplete
 }: {
   assignment: ProjectAssignment;
   onAccept?: () => void;
+  onReject?: () => void;
   onComplete?: () => void;
 }) {
   const statusInfo = statusLabels[assignment.status];
@@ -425,9 +451,12 @@ function ProjectCard({
 
         {/* Actions */}
         {assignment.status === 'pending' && onAccept && (
-          <Button onClick={onAccept} className="w-full">
-            قبول پروژه
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={onAccept} className="flex-1">قبول پروژه</Button>
+            {onReject && (
+              <Button onClick={onReject} variant="destructive" className="flex-1">رد سفارش</Button>
+            )}
+          </div>
         )}
         {assignment.status === 'accepted' && onComplete && (
           <Button onClick={onComplete} className="w-full" variant="outline">

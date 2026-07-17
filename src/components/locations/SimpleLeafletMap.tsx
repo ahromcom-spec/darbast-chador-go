@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { MapSearchBox } from './MapSearchBox';
 import { Button } from '@/components/ui/button';
 import { Satellite, Map as MapIcon } from 'lucide-react';
+import { createNeshanTileLayer, neshanDirection } from '@/lib/neshan';
 
 export interface SimpleLeafletMapRef {
   flyTo: (lat: number, lng: number, zoom?: number) => void;
@@ -75,9 +76,9 @@ function SimpleLeafletMapInner({
         minZoom: 5,
         maxZoom: 22,
         scrollWheelZoom: true,
-        zoomControl: true,
+        zoomControl: false,
         preferCanvas: true,
-        attributionControl: true,
+        attributionControl: false,
         fadeAnimation: true,
         zoomAnimation: true,
       });
@@ -91,88 +92,23 @@ function SimpleLeafletMapInner({
 
     if (!map) return;
 
-    // دریافت توکن Mapbox برای fallback مسیریابی
-    (async () => {
-      try {
-        const cached = sessionStorage.getItem('mapbox_token');
-        if (cached) {
-          mapboxTokenRef.current = cached;
-        } else {
-          const { data, error } = await supabase.functions.invoke('get-mapbox-token');
-          if (!error && data?.token) {
-            mapboxTokenRef.current = data.token as string;
-            sessionStorage.setItem('mapbox_token', data.token);
-          } else {
-            const envToken = (import.meta as any).env?.VITE_MAPBOX_TOKEN as string | undefined;
-            if (envToken) {
-              mapboxTokenRef.current = envToken;
-              sessionStorage.setItem('mapbox_token', envToken);
-            }
-          }
-        }
-      } catch { /* ignore */ }
-    })();
+    // اضافه کردن لایه تایل نشان (نقشه ایرانی با کیفیت بالا)
+    try {
+      const layer = createNeshanTileLayer('standard-day', {
+        updateWhenIdle: false,
+        updateWhenZooming: false,
+        keepBuffer: 4,
+      });
+      layer.addTo(map);
+      tileLayerRef.current = layer;
 
-    // اضافه کردن لایه تایل فقط با استفاده از OpenStreetMap / Carto برای سازگاری حداکثری
-    const tileConfigs: { url: string; options?: L.TileLayerOptions }[] = [
-      {
-        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        options: {
-          attribution: '&copy; OpenStreetMap contributors',
-          maxZoom: 22,
-          maxNativeZoom: 19,
-          updateWhenIdle: false,
-          updateWhenZooming: false,
-          keepBuffer: 4,
-          errorTileUrl: '',
-        },
-      },
-      {
-        url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-        options: {
-          attribution: '&copy; OpenStreetMap contributors',
-          maxZoom: 22,
-          maxNativeZoom: 19,
-          updateWhenIdle: false,
-          updateWhenZooming: false,
-          keepBuffer: 4,
-          errorTileUrl: '',
-        },
-      },
-      {
-        url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
-        options: {
-          attribution: '&copy; OpenStreetMap contributors',
-          maxZoom: 22,
-          maxNativeZoom: 19,
-          updateWhenIdle: false,
-          updateWhenZooming: false,
-          keepBuffer: 4,
-          errorTileUrl: '',
-        },
-      },
-    ];
-    
-    let tileLayerAdded = false;
-    for (const { url, options } of tileConfigs) {
-      try {
-        const layer = L.tileLayer(url, options).addTo(map);
-        tileLayerRef.current = layer; // ذخیره لایه برای تعویض
-        tileLayerAdded = true;
+      layer.on('tileerror', (e) => {
+        console.error('[SimpleLeafletMap] Neshan tile load error:', e);
+      });
 
-        layer.on('tileerror', (e) => {
-          console.error('[SimpleLeafletMap] Tile load error:', e);
-        });
-
-        console.log('[SimpleLeafletMap] Tile layer added:', url);
-        break;
-      } catch (err) {
-        console.warn('[SimpleLeafletMap] Tile layer failed:', url, err);
-      }
-    }
-    
-    if (!tileLayerAdded) {
-      console.error('[SimpleLeafletMap] All tile layers failed');
+      console.log('[SimpleLeafletMap] Neshan tile layer added');
+    } catch (err) {
+      console.error('[SimpleLeafletMap] Neshan tile layer failed:', err);
     }
 
     // تنظیم marker icon
@@ -186,20 +122,7 @@ function SimpleLeafletMapInner({
       shadowSize: [41, 41],
     });
 
-    // اضافه کردن مارکر دائمی برای مرکز شهر قم
-    const qomCenterIcon = L.icon({
-      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-      iconSize: [30, 49],
-      iconAnchor: [15, 49],
-      popupAnchor: [1, -34],
-      shadowSize: [49, 49],
-    });
-
-    const qomCenterMarker = L.marker([QOM_CENTER.lat, QOM_CENTER.lng], { icon: qomCenterIcon }).addTo(map);
-    qomCenterMarker.bindPopup('<div style="text-align: center; font-family: Vazir, sans-serif;"><strong>مرکز شهر قم</strong></div>');
-    qomCenterMarkerRef.current = qomCenterMarker;
+    // مارکر مرکز شهر قم حذف شد (طبق درخواست کاربر)
 
     // کمک‌تابع: محاسبه و رسم مسیر جاده‌ای
     const computeRoute = async (lat: number, lng: number) => {
@@ -302,7 +225,7 @@ function SimpleLeafletMapInner({
       });
     });
 
-    // Resize handler برای modal - فقط یک بار اجرا می‌شود
+    // Resize handler برای modal
     const resizeObserver = new ResizeObserver(() => {
       if (mapRef.current) {
         mapRef.current.invalidateSize({ animate: false });
@@ -313,17 +236,21 @@ function SimpleLeafletMapInner({
       resizeObserver.observe(mapContainer.current);
     }
 
-    // فقط یک بار resize می‌کنیم بعد از 200ms
-    const resizeTimeout = setTimeout(() => {
-      if (mapRef.current) {
-        mapRef.current.invalidateSize({ animate: false });
-      }
-    }, 200);
+    // چند بار resize را در بازه‌های مختلف انجام می‌دهیم تا در بارگذاری اول (اینترنت کند/کش خالی)
+    // که ممکن است container دیرتر از حد معمول اندازه بگیرد، نقشه مطمئناً نمایش داده شود
+    const resizeTimeouts = [100, 300, 600, 1200, 2000].map((delay) =>
+      setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize({ animate: false });
+        }
+      }, delay)
+    );
 
     // Cleanup
     return () => {
-      clearTimeout(resizeTimeout);
+      resizeTimeouts.forEach(clearTimeout);
       resizeObserver.disconnect();
+
       if (markerRef.current) {
         markerRef.current.remove();
       }
@@ -340,35 +267,21 @@ function SimpleLeafletMapInner({
     };
   }, []);
 
-  // تغییر نمای نقشه بین استاندارد و ماهواره‌ای
+  // تغییر نمای نقشه بین استاندارد و ماهواره‌ای (با تایل‌های نشان)
   useEffect(() => {
     if (!mapRef.current) return;
-    
+
     const map = mapRef.current;
-    
+
     // حذف لایه قبلی
     if (tileLayerRef.current) {
       map.removeLayer(tileLayerRef.current);
     }
-    
-    let newLayer: L.TileLayer;
-    
-    if (mapStyle === 'satellite') {
-      // لایه ماهواره‌ای از ESRI World Imagery (رایگان)
-      newLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '&copy; Esri, Maxar, Earthstar Geographics',
-        maxZoom: 22,
-        maxNativeZoom: 19,
-      });
-    } else {
-      // لایه استاندارد OpenStreetMap
-      newLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 22,
-        maxNativeZoom: 19,
-      });
-    }
-    
+
+    const newLayer = createNeshanTileLayer(
+      mapStyle === 'satellite' ? 'satellite' : 'standard-day',
+    );
+
     newLayer.addTo(map);
     tileLayerRef.current = newLayer;
   }, [mapStyle]);
@@ -436,30 +349,30 @@ function SimpleLeafletMapInner({
         }}
       />
 
-      {/* دکمه تغییر نمای نقشه */}
+      {/* دکمه تغییر نمای نقشه - کوچک و شیشه‌ای */}
       <Button
-        variant="default"
+        variant="ghost"
         size="sm"
         onClick={() => setMapStyle(prev => prev === 'standard' ? 'satellite' : 'standard')}
-        className="absolute top-4 right-4 z-[1002] shadow-lg border-2 border-primary/20 text-xs px-3 py-1.5 h-8"
+        className="absolute top-3 right-3 z-[1002] h-7 px-2 text-[10px] rounded-md bg-background/40 backdrop-blur-md border border-white/20 text-foreground hover:bg-background/60 shadow-sm"
         title={mapStyle === 'standard' ? 'نمای ماهواره‌ای' : 'نمای استاندارد'}
       >
         {mapStyle === 'standard' ? (
           <>
-            <Satellite className="h-3.5 w-3.5 ml-1.5" />
-            <span className="font-semibold text-xs">ماهواره‌ای</span>
+            <Satellite className="h-3 w-3 ml-1" />
+            <span className="font-medium">ماهواره‌ای</span>
           </>
         ) : (
           <>
-            <MapIcon className="h-3.5 w-3.5 ml-1.5" />
-            <span className="font-semibold text-xs">نقشه</span>
+            <MapIcon className="h-3 w-3 ml-1" />
+            <span className="font-medium">نقشه</span>
           </>
         )}
       </Button>
 
-      {/* کادر جستجوی آدرس */}
+      {/* کادر جستجوی آدرس - با فاصله از دکمه ماهواره */}
       {showSearch && (
-        <div className="absolute top-4 left-4 right-4 z-[1001]">
+        <div className="absolute top-3 left-3 z-[1001]" style={{ right: '6.5rem' }}>
           <MapSearchBox
             onLocationSelect={handleSearchLocationSelect}
             placeholder="جستجوی آدرس..."
@@ -469,18 +382,16 @@ function SimpleLeafletMapInner({
       )}
 
       {selectedPos && (
-        <div className="absolute bottom-4 left-4 right-4 bg-background/95 backdrop-blur border rounded-lg p-3 shadow-lg z-[1000]">
-          <div className="flex items-center justify-center gap-2">
-            {loadingRoute ? (
-              <span className="text-sm text-muted-foreground">در حال محاسبه مسیر جاده‌ای...</span>
-            ) : selectedPos.roadDistance ? (
-              <span className="text-sm font-medium text-foreground">
-                فاصله جاده‌ای تا مرکز شهر قم: <span className="font-bold text-primary">{selectedPos.roadDistance.toFixed(1)}</span> کیلومتر
-              </span>
-            ) : (
-              <span className="text-sm text-muted-foreground">مسیر جاده‌ای در دسترس نبود</span>
-            )}
-          </div>
+        <div className="absolute bottom-2 right-2 bg-background/70 backdrop-blur-md border border-white/20 rounded-md px-1.5 py-0.5 shadow-sm z-[1000]">
+          {loadingRoute ? (
+            <span className="text-[8px] text-muted-foreground">محاسبه مسیر...</span>
+          ) : selectedPos.roadDistance ? (
+            <span className="text-[9px] font-medium text-foreground">
+              تا مرکز قم: <span className="font-bold text-primary">{selectedPos.roadDistance.toFixed(1)}</span> km
+            </span>
+          ) : (
+            <span className="text-[8px] text-muted-foreground">مسیر در دسترس نبود</span>
+          )}
         </div>
       )}
     </div>

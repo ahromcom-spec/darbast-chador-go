@@ -1,0 +1,59 @@
+[
+  {
+    "id": "5b74114d-35ec-4390-9389-dc991537d9f1",
+    "user_id": "1733c786-1dd0-4708-a67e-73e7ed6fff13",
+    "address": "خیابان توحید، کوچه چهار پلاک 20",
+    "details": {
+      "dimensions": [
+        {
+          "width": "1",
+          "height": "6",
+          "length": "6"
+        }
+      ],
+      "service_type": "facade"
+    },
+    "status": "submitted",
+    "created_at": "2025-10-19T15:05:35.013313+00:00",
+    "updated_at": "2025-10-19T15:05:35.013313+00:00"
+  },
+  {
+    "id": "612ba822-3ac2-45c8-9248-1431bf543cfd",
+    "user_id": "1733c786-1dd0-4708-a67e-73e7ed6fff13",
+    "address": "قم، نیروگاه، شیخ اباد ، معصومیه شمالی پلاک 116",
+    "details": {
+      "onGround": true,
+      "totalArea": 72,
+      "conditions": {
+        "totalMonths": 1,
+        "currentMonth": 1,
+        "distanceRange": "0-15",
+        "platformHeight": null,
+        "vehicleDistance": null,
+        "scaffoldHeightFromPlatform": null
+      },
+      "dimensions": [
+        {
+          "width": 1,
+          "height": 6,
+          "length": 6
+        },
+        {
+          "width": 1,
+          "height": 6,
+          "length": 6
+        }
+      ],
+      "service_type": "facade",
+      "estimated_price": 4200000,
+      "isFacadeWidth2m": false,
+      "price_breakdown": [
+        "قیمت پایه: ۴٬۲۰۰٬۰۰۰ تومان"
+      ],
+      "vehicleReachesSite": true
+    },
+    "status": "submitted",
+    "created_at": "2025-10-19T18:17:56.836754+00:00",
+    "updated_at": "2025-10-19T18:17:56.836754+00:00"
+  }
+]

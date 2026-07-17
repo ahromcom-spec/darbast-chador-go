@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useLocations, Location } from '@/hooks/useLocations';
 import { useProvinces } from '@/hooks/useProvinces';
 import { useDistricts } from '@/hooks/useDistricts';
@@ -28,9 +29,11 @@ const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: numbe
 interface NewLocationFormProps {
   onSuccess: (locationId: string, distanceFromCenter?: number) => void;
   initialData?: Location;
+  serviceTypeName?: string;
 }
 
-export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps) => {
+export const NewLocationForm = ({ onSuccess, initialData, serviceTypeName }: NewLocationFormProps) => {
+  const { user } = useAuth();
   const { createLocation, updateLocation, locations } = useLocations();
   const { provinces } = useProvinces();
   const { districts, fetchDistrictsByProvince } = useDistricts();
@@ -141,7 +144,7 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
       console.log('✅ Validated data:', validatedData);
       
       // بررسی آدرس تکراری فقط اگر متن آدرس دقیقاً یکسان باشد
-      if (!isEditMode) {
+      if (!isEditMode && user) {
         const duplicateLocation = locations.find(loc => 
           loc.address_line.trim() === validatedData.address_line.trim()
         );
@@ -154,6 +157,34 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
           setIsSubmitting(false);
           return;
         }
+      }
+
+      // حالت مهمان: بدون ذخیره در دیتابیس، اطلاعات را به‌صورت محلی نگه می‌داریم
+      if (!user && !isEditMode) {
+        const tempId = `guest-${Date.now()}`;
+        const provinceName = provinces.find(p => p.id === validatedData.province_id)?.name || '';
+        const districtName = validatedData.district_id
+          ? districts.find(d => d.id === validatedData.district_id)?.name || ''
+          : '';
+        const guestLoc = {
+          id: tempId,
+          title: validatedData.title || '',
+          province_id: validatedData.province_id,
+          district_id: validatedData.district_id && validatedData.district_id.length > 0 ? validatedData.district_id : null,
+          province_name: provinceName,
+          district_name: districtName,
+          address_line: validatedData.address_line,
+          lat: validatedData.lat,
+          lng: validatedData.lng,
+          distanceFromCenter: distanceFromCenter ?? null,
+        };
+        localStorage.setItem('guestLocation', JSON.stringify(guestLoc));
+        toast({
+          title: 'آدرس ثبت شد',
+          description: 'لطفاً ادامه فرم سفارش را تکمیل کنید'
+        });
+        onSuccess(tempId, distanceFromCenter || undefined);
+        return;
       }
       
       if (isEditMode && initialData) {
@@ -213,40 +244,43 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-3 text-sm">
       {isOtherProvinceSelected && (
-        <Alert className="bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-900">
+        <Alert className="bg-orange-50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-900 py-2">
           <Info className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-          <AlertDescription className="text-orange-800 dark:text-orange-300">
-            خدمات اهرم به زودی به استان شما خواهد رسید
+          <AlertDescription className="text-orange-800 dark:text-orange-300 text-xs sm:text-sm">
+            {serviceTypeName
+              ? `متأسفانه خدمات ${serviceTypeName} در حال حاضر در استان شما فعال نیست. به زودی راه‌اندازی خواهد شد.`
+              : 'خدمات اهرم به زودی به استان شما خواهد رسید'}
           </AlertDescription>
         </Alert>
       )}
-      
+
       {!hasMapPin && (
-        <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900">
+        <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900 py-2">
           <MapPin className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-          <AlertDescription className="text-amber-800 dark:text-amber-300">
+          <AlertDescription className="text-amber-800 dark:text-amber-300 text-xs sm:text-sm">
             لطفاً موقعیت آدرس را روی نقشه مشخص کنید
           </AlertDescription>
         </Alert>
       )}
-      
-      <div>
-        <Label htmlFor="title">عنوان آدرس (اختیاری)</Label>
+
+      <div className="space-y-1">
+        <Label htmlFor="title" className="text-xs sm:text-sm">عنوان آدرس (اختیاری)</Label>
         <Input
           id="title"
           value={formData.title}
           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
           placeholder="مثلاً: دفتر مرکزی، کارگاه شمال"
+          className="h-9 text-sm"
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="province">استان *</Label>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label htmlFor="province" className="text-xs sm:text-sm">استان *</Label>
           <Select value={formData.province_id} onValueChange={handleProvinceChange}>
-            <SelectTrigger>
+            <SelectTrigger className="h-9 text-sm">
               <SelectValue placeholder="انتخاب استان" />
             </SelectTrigger>
             <SelectContent>
@@ -259,14 +293,14 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
           </Select>
         </div>
 
-        <div>
-          <Label htmlFor="district">شهرستان</Label>
-          <Select 
-            value={formData.district_id} 
+        <div className="space-y-1">
+          <Label htmlFor="district" className="text-xs sm:text-sm">شهرستان</Label>
+          <Select
+            value={formData.district_id}
             onValueChange={(value) => setFormData({ ...formData, district_id: value })}
             disabled={!formData.province_id}
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-9 text-sm">
               <SelectValue placeholder="انتخاب شهرستان" />
             </SelectTrigger>
             <SelectContent>
@@ -280,20 +314,21 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
         </div>
       </div>
 
-      <div>
-        <Label htmlFor="address">آدرس دقیق *</Label>
+      <div className="space-y-1">
+        <Label htmlFor="address" className="text-xs sm:text-sm">آدرس دقیق *</Label>
         <Input
           id="address"
           value={formData.address_line}
           onChange={(e) => setFormData({ ...formData, address_line: e.target.value })}
           placeholder="خیابان، کوچه، پلاک..."
           required
+          className="h-9 text-sm"
         />
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1">
         <div className="flex items-center justify-between">
-          <Label>انتخاب موقعیت روی نقشه</Label>
+          <Label className="text-xs sm:text-sm">انتخاب موقعیت روی نقشه</Label>
           {hasMapPin && (
             <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
               <MapPin className="w-3 h-3" />
@@ -301,19 +336,21 @@ export const NewLocationForm = ({ onSuccess, initialData }: NewLocationFormProps
             </span>
           )}
         </div>
-        <p className="text-sm text-muted-foreground">
-          روی نقشه کلیک کنید یا با نشانگر را بکشید تا موقعیت دقیق را انتخاب کنید
+        <p className="text-xs text-muted-foreground">
+          روی نقشه کلیک کنید یا نشانگر را بکشید تا موقعیت دقیق را انتخاب کنید
         </p>
-        <InteractiveLocationMap
-          onLocationSelect={handleLocationSelect}
-          initialLat={hasValidInitialCoords ? formData.lat : undefined}
-          initialLng={hasValidInitialCoords ? formData.lng : undefined}
-          provinceCode={provinces.find(p => p.id === formData.province_id)?.code}
-          districtId={formData.district_id}
-        />
+        <div className="[&_.h-\[500px\]]:h-[280px] sm:[&_.h-\[500px\]]:h-[320px]">
+          <InteractiveLocationMap
+            onLocationSelect={handleLocationSelect}
+            initialLat={hasValidInitialCoords ? formData.lat : undefined}
+            initialLng={hasValidInitialCoords ? formData.lng : undefined}
+            provinceCode={provinces.find(p => p.id === formData.province_id)?.code}
+            districtId={formData.district_id}
+          />
+        </div>
       </div>
 
-      <Button type="submit" className="w-full" disabled={!isQomSelected || !hasMapPin || isSubmitting}>
+      <Button type="submit" className="w-full h-10 text-sm" disabled={!isQomSelected || !hasMapPin || isSubmitting}>
         {isSubmitting ? (
           <>
             <Loader2 className="w-4 h-4 ml-2 animate-spin" />

@@ -527,11 +527,11 @@ export function ManagerRenewalDialog({
                           </div>
                         </div>
                         <div>
-                          <Label>یادداشت مدیر</Label>
+                          <Label>شرح / توضیحات این تمدید (به مشتری نمایش داده می‌شود)</Label>
                           <Textarea
                             value={managerNotes}
                             onChange={(e) => setManagerNotes(e.target.value)}
-                            placeholder="یادداشت اختیاری..."
+                            placeholder="مثال: تمدید ماه دوم با تخفیف ویژه..."
                             className="mt-1"
                           />
                         </div>
@@ -639,11 +639,11 @@ export function ManagerRenewalDialog({
                     />
                   </div>
                   <div>
-                    <Label>یادداشت (اختیاری)</Label>
+                    <Label>شرح / توضیحات این تمدید (به مشتری نمایش داده می‌شود)</Label>
                     <Textarea
                       value={managerNotes}
                       onChange={(e) => setManagerNotes(e.target.value)}
-                      placeholder="یادداشت..."
+                      placeholder="مثال: تمدید ماه دوم با تخفیف ویژه..."
                       className="mt-1"
                     />
                   </div>
@@ -723,11 +723,11 @@ export function ManagerRenewalDialog({
                               </div>
                             </div>
                             <div>
-                              <Label>یادداشت مدیر</Label>
+                              <Label>شرح / توضیحات این تمدید (به مشتری نمایش داده می‌شود)</Label>
                               <Textarea
                                 value={managerNotes}
                                 onChange={(e) => setManagerNotes(e.target.value)}
-                                placeholder="یادداشت اختیاری..."
+                                placeholder="مثال: تمدید ماه دوم با تخفیف ویژه..."
                                 className="mt-1"
                               />
                             </div>

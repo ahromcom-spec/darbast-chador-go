@@ -9,10 +9,12 @@ import {
   ShoppingCart,
   Archive,
   ArchiveX,
+  HardDrive,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useCEOPendingCount } from '@/hooks/useCEOPendingCount';
+import { useIsCEOPhone } from '@/hooks/useIsCEOPhone';
 
 const menuItems = [
   {
@@ -55,9 +57,19 @@ const menuItems = [
     icon: Users,
     href: '/ceo/staff-verifications',
   },
+  {
+    title: 'بکاپ و حالت آفلاین',
+    icon: HardDrive,
+    href: '/ceo/backup',
+  },
 ];
 export const CEOSidebar = () => {
   const { data: pendingCount = 0 } = useCEOPendingCount();
+  const { isCEO } = useIsCEOPhone();
+
+  const visibleItems = menuItems.filter(
+    (i) => i.href !== '/ceo/backup' || isCEO
+  );
 
   return (
     <aside className="w-64 bg-card border-l border-border min-h-screen">
@@ -66,7 +78,7 @@ export const CEOSidebar = () => {
       </div>
 
       <nav className="p-4 space-y-2">
-        {menuItems.map((item) => (
+        {visibleItems.map((item) => (
           <NavLink
             key={item.href}
             to={item.href}

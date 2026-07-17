@@ -86,19 +86,40 @@ function formatPersianDateTime(): string {
   return `${jalaliDate} ساعت ${hours}:${minutes}`;
 }
 
+// برچسب وضعیت سفارش که داخل serviceType جای داده می‌شود (الگوی پیامک توسط پارس‌گرین تایید شده و نباید تغییر کند)
+const STAGE_LABELS: Record<string, string> = {
+  submitted: "ثبت شد",
+  approved: "تایید شد",
+  in_progress: "در حال اجرا",
+  executed: "اجرا شد",
+  awaiting_payment: "در انتظار پرداخت",
+  paid: "پرداخت شد",
+  awaiting_collection: "در انتظار جمع‌آوری",
+  in_collection: "در حال جمع‌آوری",
+  collected: "جمع‌آوری شد",
+  completed: "به اتمام رسید",
+  contractor_pending_request: "در انتظار پذیرش شما",
+};
+
+// قالب تایید شده توسط پارس‌گرین برای شماره 90000319
+const APPROVED_TEMPLATE = "📋 سفارش جدید: کد {code} - {serviceType} - آدرس: {address} - مشتری: {customerName} - تاریخ: {dateTime}";
+
 // SMS templates for each order status with placeholders
 const SMS_TEMPLATES: Record<string, string> = {
-  submitted: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در آدرس {address} در اهرم ثبت شد و در انتظار تایید است. مشاهده سفارش: {orderLink}",
-  approved: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} توسط مدیر تایید شد. آدرس: {address} مشاهده سفارش: {orderLink}",
-  in_progress: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در آدرس {address} در حال اجرا است. مشاهده سفارش: {orderLink}",
-  executed: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در آدرس {address} اجرا شد. مشاهده سفارش: {orderLink}",
-  awaiting_payment: "سفارش {serviceType} با کد {code} در آدرس {address} در انتظار پرداخت است. مبلغ: {amount} تومان. تاریخ: {dateTime} مشاهده سفارش: {orderLink}",
-  paid: "پرداخت سفارش {serviceType} با کد {code} به مبلغ {amount} تومان در تاریخ {dateTime} ثبت شد. آدرس: {address} مشاهده سفارش: {orderLink}",
-  in_collection: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در آدرس {address} در حال جمع‌آوری است. مشاهده سفارش: {orderLink}",
-  completed: "سفارش {serviceType} با کد {code} در تاریخ {dateTime} در آدرس {address} به پایان رسید. از اعتماد شما سپاسگزاریم. مشاهده سفارش: {orderLink}",
+  submitted: APPROVED_TEMPLATE,
+  approved: APPROVED_TEMPLATE,
+  in_progress: APPROVED_TEMPLATE,
+  executed: APPROVED_TEMPLATE,
+  awaiting_payment: APPROVED_TEMPLATE,
+  paid: APPROVED_TEMPLATE,
+  awaiting_collection: APPROVED_TEMPLATE,
+  in_collection: APPROVED_TEMPLATE,
+  contractor_pending_request: APPROVED_TEMPLATE,
+  collected: APPROVED_TEMPLATE,
+  completed: APPROVED_TEMPLATE,
   // پیامک‌های مخصوص مدیرعامل
-  ceo_new_order: "📋 سفارش جدید: کد {code} - {serviceType} - آدرس: {address} - مشتری: {customerName} - تاریخ: {dateTime}",
-  ceo_payment: "💰 پرداخت ثبت شد: کد {code} - مبلغ: {amount} تومان - مشتری: {customerName} - تاریخ: {dateTime}",
+  ceo_new_order: APPROVED_TEMPLATE,
+  ceo_payment: APPROVED_TEMPLATE,
 };
 
 interface SmsRequest {
@@ -157,38 +178,76 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Check phone_whitelist table
-    const { data: whitelistData } = await supabase
-      .from("phone_whitelist")
-      .select("id")
-      .eq("phone_number", normalizedPhone)
-      .maybeSingle();
+    // پیامک‌های مدیرعامل باید بدون توجه به whitelist ارسال شوند
+    const isCeoNotification = status === "ceo_new_order" || status === "ceo_payment";
+    const isContractorNotification = status === "contractor_pending_request";
 
-    if (whitelistData) {
-      console.log(`[send-order-sms] Phone ${normalizedPhone} is in phone_whitelist (staff), skipping SMS`);
-      return new Response(
-        JSON.stringify({ success: true, message: "شماره متعلق به پرسنل است، پیامی ارسال نشد" }),
-        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+    if (!isCeoNotification && !isContractorNotification) {
+      // Check phone_whitelist table
+      const { data: whitelistData } = await supabase
+        .from("phone_whitelist")
+        .select("id")
+        .eq("phone_number", normalizedPhone)
+        .maybeSingle();
+
+      if (whitelistData) {
+        console.log(`[send-order-sms] Phone ${normalizedPhone} is in phone_whitelist (staff), skipping SMS`);
+        return new Response(
+          JSON.stringify({ success: true, message: "شماره متعلق به پرسنل است، پیامی ارسال نشد" }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Check staff_whitelist table
+      const { data: staffWhitelistData } = await supabase
+        .from("staff_whitelist")
+        .select("id")
+        .eq("phone", normalizedPhone)
+        .maybeSingle();
+
+      if (staffWhitelistData) {
+        console.log(`[send-order-sms] Phone ${normalizedPhone} is in staff_whitelist, skipping SMS`);
+        return new Response(
+          JSON.stringify({ success: true, message: "شماره متعلق به پرسنل است، پیامی ارسال نشد" }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+    } else {
+      console.log(`[send-order-sms] CEO notification (${status}) — bypassing whitelist filter`);
     }
 
-    // Check staff_whitelist table
-    const { data: staffWhitelistData } = await supabase
-      .from("staff_whitelist")
-      .select("id")
-      .eq("phone", normalizedPhone)
-      .maybeSingle();
 
-    if (staffWhitelistData) {
-      console.log(`[send-order-sms] Phone ${normalizedPhone} is in staff_whitelist, skipping SMS`);
-      return new Response(
-        JSON.stringify({ success: true, message: "شماره متعلق به پرسنل است، پیامی ارسال نشد" }),
-        { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+    // Get SMS template — prefer DB-managed template, fallback to in-code default
+    let template = SMS_TEMPLATES[status];
+    let dbTpl: any = null;
+    try {
+      const { data: tplRow } = await supabase
+        .from("sms_templates")
+        .select("template, enabled, delay_minutes, conditions, footer, append_footer, scope")
+        .eq("key", status)
+        .maybeSingle();
+      if (tplRow) {
+        dbTpl = tplRow;
+        if (tplRow.enabled === false) {
+          console.log(`[send-order-sms] Template ${status} disabled by admin, skipping SMS`);
+          await supabase.from("sms_logs").insert({
+            template_key: status, scope: tplRow.scope, recipient: normalizedPhone,
+            message: "", status: "skipped", provider_response: "disabled by admin",
+            order_code: orderCode, order_id: orderId ?? null,
+          });
+          return new Response(
+            JSON.stringify({ success: true, message: "ارسال این پیامک توسط مدیریت غیرفعال است" }),
+            { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+        if (tplRow.template && tplRow.template.trim().length > 0) {
+          template = tplRow.template;
+        }
+      }
+    } catch (e) {
+      console.warn("[send-order-sms] Failed to load template from DB, using default:", e);
     }
 
-    // Get SMS template
-    const template = SMS_TEMPLATES[status];
     if (!template) {
       console.error(`[send-order-sms] Unknown status: ${status}`);
       return new Response(
@@ -196,6 +255,27 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+
+    // Conditional amount gating
+    try {
+      const cond = (dbTpl?.conditions ?? {}) as Record<string, any>;
+      const skipFor = (reason: string) => supabase.from("sms_logs").insert({
+        template_key: status, scope: dbTpl?.scope, recipient: normalizedPhone,
+        message: "", status: "skipped", provider_response: reason,
+        order_code: orderCode, order_id: orderId ?? null,
+      });
+      if (typeof cond.minAmount === "number" && (amount ?? 0) < cond.minAmount) {
+        await skipFor(`below minAmount ${cond.minAmount}`);
+        return new Response(JSON.stringify({ success: true, message: "شرط حداقل مبلغ برقرار نیست" }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } });
+      }
+      if (typeof cond.maxAmount === "number" && (amount ?? 0) > cond.maxAmount) {
+        await skipFor(`above maxAmount ${cond.maxAmount}`);
+        return new Response(JSON.stringify({ success: true, message: "شرط حداکثر مبلغ برقرار نیست" }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } });
+      }
+    } catch (_) { /* ignore */ }
+
 
     // تاریخ و زمان شمسی
     const persianDateTime = dateTime || formatPersianDateTime();
@@ -206,17 +286,48 @@ const handler = async (req: Request): Promise<Response> => {
     // فرمت مبلغ
     const formattedAmount = amount ? amount.toLocaleString('fa-IR') : "تعیین نشده";
     
+    // برچسب مرحله سفارش را داخل نام خدمت می‌گنجانیم تا قالب تایید شده پارس‌گرین حفظ شود
+    const stageLabel = STAGE_LABELS[status];
+    const baseService = serviceType || "خدمات";
+    const decoratedService = stageLabel ? `${baseService} (${stageLabel})` : baseService;
+
     // Replace placeholders in template
     let message = template
       .replace("{code}", orderCode)
-      .replace("{serviceType}", serviceType || "خدمات")
+      .replace("{serviceType}", decoratedService)
       .replace("{address}", address || "ثبت نشده")
       .replace("{dateTime}", persianDateTime)
       .replace("{amount}", formattedAmount)
       .replace("{orderLink}", orderLink)
       .replace("{customerName}", customerName || "مشتری");
-    
+
+    // === سربرگ اجباری برند: همیشه در خط اول پیامک ===
+    const BRAND_HEADER = "خدمات ساختمانی و منزل اهرم";
+    if (!message.startsWith(BRAND_HEADER)) {
+      message = `${BRAND_HEADER}\n${message}`;
+    }
+
+    // === پابرگ اجباری برند: همیشه باید "ahrom.ir" در انتهای پیامک باشد ===
+    const footerText = (dbTpl?.footer ?? "ahrom.ir").toString().trim() || "ahrom.ir";
+    const shouldAppend = dbTpl?.append_footer !== false;
+    if (shouldAppend && !message.includes(footerText)) {
+      message = `${message}\n${footerText}`;
+    }
+    // تضمین وجود برند ahrom.ir در همه پیامک‌ها
+    if (!message.includes("ahrom.ir")) {
+      message = `${message}\nahrom.ir`;
+    }
+
+    // === تأخیر زمانی ===
+    const delayMinutes = Number(dbTpl?.delay_minutes ?? 0);
+    if (delayMinutes > 0 && delayMinutes <= 5) {
+      await new Promise((r) => setTimeout(r, delayMinutes * 60_000));
+    } else if (delayMinutes > 5) {
+      console.log(`[send-order-sms] Delay ${delayMinutes}m exceeds inline limit; sending immediately`);
+    }
+
     console.log(`[send-order-sms] Sending message: ${message}`);
+
 
     // Get ParsGreen credentials
     const apiKey = Deno.env.get("PARSGREEN_API_KEY");
@@ -249,7 +360,6 @@ const handler = async (req: Request): Promise<Response> => {
     const smsResponse = await fetch(`${apiUrl}?${params.toString()}`, { method: "GET" });
     const responseText = (await smsResponse.text()).trim();
 
-    // ParsGreen success formats: numeric id OR semicolon numeric triplet (e.g. "123;0;0")
     const parts = responseText.split(";");
     const pureNumeric = /^[0-9]+$/.test(responseText);
     const hasSemicolonNumeric = parts.length === 3 && parts.every((p) => /^[0-9]+$/.test(p));
@@ -268,6 +378,22 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(
       `[send-order-sms] ParsGreen response (status ${smsResponse.status}): ${responseText.slice(0, 300)}`
     );
+
+    // Audit log
+    try {
+      await supabase.from("sms_logs").insert({
+        template_key: status,
+        scope: dbTpl?.scope,
+        recipient: normalizedPhone,
+        message,
+        status: isSuccess ? "sent" : "failed",
+        provider_response: responseText.slice(0, 500),
+        order_code: orderCode,
+        order_id: orderId ?? null,
+      });
+    } catch (e) {
+      console.warn("[send-order-sms] Failed to write sms_logs:", e);
+    }
 
     if (isSuccess) {
       console.log(`[send-order-sms] SMS sent successfully to ${normalizedPhone}`);

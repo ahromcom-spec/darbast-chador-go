@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { createPortal } from 'react-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { getCurrentZoom } from '@/lib/zoom';
+
 
 interface Order {
   id: string;
@@ -223,19 +225,24 @@ export function OrderSearchSelect({
 
       {open && position.width > 0 &&
         createPortal(
+          (() => {
+            const zoom = getCurrentZoom() || 1;
+            return (
           <div
             ref={dropdownRef}
             className="fixed bg-popover text-popover-foreground border rounded-lg shadow-xl overflow-hidden"
             style={{
-              top: position.top,
-              bottom: position.bottom,
-              left: position.left,
-              width: position.width,
+              top: position.top !== undefined ? position.top / zoom : undefined,
+              bottom: position.bottom !== undefined ? position.bottom / zoom : undefined,
+              left: position.left / zoom,
+              width: position.width / zoom,
               zIndex: 300000,
-              maxHeight: position.maxHeight,
-            }}
+              maxHeight: position.maxHeight / zoom,
+              zoom: 'var(--app-zoom)',
+            } as React.CSSProperties}
             dir="rtl"
           >
+
             <div className="p-3 border-b bg-background">
               <div className="relative">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -324,9 +331,12 @@ export function OrderSearchSelect({
                 </div>
               )}
             </ScrollArea>
-          </div>,
+          </div>
+            );
+          })(),
           document.body,
         )}
+
     </div>
   );
 }

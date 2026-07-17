@@ -11,7 +11,9 @@ type SmsStatus =
   | 'executed'       // اجرا شد
   | 'awaiting_payment' // در انتظار پرداخت
   | 'paid'           // پرداخت شد
+  | 'awaiting_collection' // در انتظار جمع‌آوری
   | 'in_collection'  // در حال جمع‌آوری
+  | 'collected'      // جمع‌آوری شد
   | 'completed';     // تکمیل شد
 
 interface OrderSmsDetails {
@@ -23,29 +25,190 @@ interface OrderSmsDetails {
   customerName?: string;  // نام مشتری (برای پیامک به مدیرعامل)
 }
 
+const normalizeIranPhone = (input?: string | null) => {
+  if (!input) return '';
+  const persian = '۰۱۲۳۴۵۶۷۸۹';
+  const arabic = '٠١٢٣٤٥٦٧٨٩';
+  let raw = String(input)
+    .slice(0, 32)
+    .replace(/[۰-۹]/g, (d) => String(persian.indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String(arabic.indexOf(d)))
+    .replace(/[^0-9+]/g, '');
+  if (raw.startsWith('0098')) raw = '0' + raw.slice(4);
+  else if (raw.startsWith('098')) raw = '0' + raw.slice(3);
+  else if (raw.startsWith('+98')) raw = '0' + raw.slice(3);
+  else if (raw.startsWith('98')) raw = '0' + raw.slice(2);
+  if (raw.length === 10 && raw.startsWith('9')) raw = '0' + raw;
+  return raw;
+};
+
+const isValidIranMobile = (phone?: string | null) => /^09\d{9}$/.test(normalizeIranPhone(phone));
+
+const scaffoldingTypeLabels: Record<string, string> = {
+  facade: 'داربست نما',
+  facade_with_materials: 'داربست نما',
+  column: 'داربست ستون',
+  formwork: 'داربست حجمی کفراژ',
+  pipe_length: 'داربست متراژ',
+  'pipe-length': 'داربست متراژ',
+  rental: 'کرایه اجناس داربست',
+};
+
+const parseNotes = (notes: unknown): any => {
+  if (!notes) return null;
+  if (typeof notes === 'object') return notes;
+  try {
+    let parsed: any = notes;
+    if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+    if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+export const resolveOrderSmsDetails = async (orderId?: string | null): Promise<{
+  phone?: string;
+  orderCode?: string;
+  customerName?: string;
+  address?: string;
+  serviceType?: string;
+}> => {
+  if (!orderId) return {};
+
+  const { data: order } = await supabase
+    .from('projects_v3')
+    .select('code, customer_id, customer_name, customer_phone, address, detailed_address, notes, subcategory_id')
+    .eq('id', orderId)
+    .maybeSingle();
+
+  if (!order) return {};
+
+  let phone = normalizeIranPhone((order as any).customer_phone);
+  let customerName = (order as any).customer_name || undefined;
+
+  if ((!isValidIranMobile(phone) || !customerName) && (order as any).customer_id) {
+    const { data: customer } = await supabase
+      .from('customers')
+      .select('user_id')
+      .eq('id', (order as any).customer_id)
+      .maybeSingle();
+
+    if (customer?.user_id) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, phone_number')
+        .eq('user_id', customer.user_id)
+        .maybeSingle();
+
+      if (!isValidIranMobile(phone)) phone = normalizeIranPhone(profile?.phone_number);
+      if (!customerName) customerName = profile?.full_name || undefined;
+    }
+  }
+
+  const notes = parseNotes((order as any).notes);
+  let serviceType =
+    notes?.service_type ||
+    notes?.serviceType ||
+    notes?.scaffoldingType ||
+    notes?.scaffold_type ||
+    undefined;
+  if (serviceType && scaffoldingTypeLabels[serviceType]) serviceType = scaffoldingTypeLabels[serviceType];
+
+  if (!serviceType && (order as any).subcategory_id) {
+    const { data: subcategory } = await supabase
+      .from('subcategories')
+      .select('name')
+      .eq('id', (order as any).subcategory_id)
+      .maybeSingle();
+    serviceType = subcategory?.name || undefined;
+  }
+
+  return {
+    phone: isValidIranMobile(phone) ? phone : undefined,
+    orderCode: (order as any).code || undefined,
+    customerName,
+    address: buildOrderSmsAddress((order as any).address, (order as any).detailed_address),
+    serviceType: serviceType || 'خدمات',
+  };
+};
+
 export const sendOrderSms = async (
   phone: string,
   orderCode: string,
   status: SmsStatus,
   details?: OrderSmsDetails
 ): Promise<{ success: boolean; error?: string }> => {
-  // غیرفعال‌سازی موقت ارسال پیامک به مشتریان
-  console.log('[sendOrderSms] Skipped - Customer notifications temporarily disabled');
-  return { success: true };
+  // اگر مدیر در حال مشاهده حساب کاربر است، پیامک ارسال نشود
+  if (isAdminImpersonating()) {
+    console.log('[sendOrderSms] Skipped - Admin is impersonating user');
+    return { success: true };
+  }
+
+  let targetPhone = normalizeIranPhone(phone);
+  let targetOrderCode = orderCode;
+  let smsDetails: OrderSmsDetails = { ...(details || {}) };
+
+  if (details?.orderId && (!isValidIranMobile(targetPhone) || !targetOrderCode || !smsDetails.address || !smsDetails.serviceType || !smsDetails.customerName)) {
+    try {
+      const resolved = await resolveOrderSmsDetails(details.orderId);
+      if (!isValidIranMobile(targetPhone) && resolved.phone) targetPhone = resolved.phone;
+      if (!targetOrderCode && resolved.orderCode) targetOrderCode = resolved.orderCode;
+      smsDetails = {
+        ...smsDetails,
+        address: smsDetails.address || resolved.address,
+        serviceType: smsDetails.serviceType || resolved.serviceType,
+        customerName: smsDetails.customerName || resolved.customerName,
+      };
+    } catch (e) {
+      console.warn('[sendOrderSms] Could not resolve order SMS details:', e);
+    }
+  }
+
+  if (!isValidIranMobile(targetPhone)) {
+    console.warn('[sendOrderSms] Skipped - no valid customer phone', { orderCode: targetOrderCode, orderId: details?.orderId });
+    return { success: false, error: 'شماره مشتری برای ارسال پیامک معتبر نیست' };
+  }
+
+  if (!targetOrderCode) {
+    console.warn('[sendOrderSms] Skipped - no order code', { orderId: details?.orderId });
+    return { success: false, error: 'کد سفارش برای ارسال پیامک موجود نیست' };
+  }
+
+  // بررسی فعال بودن پیامک برای این مشتری
+  try {
+    const normalized = targetPhone.trim();
+    if (normalized) {
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('sms_notifications_enabled')
+        .eq('phone_number', normalized)
+        .maybeSingle();
+      if (prof && prof.sms_notifications_enabled === false) {
+        console.log('[sendOrderSms] Skipped - SMS disabled for this customer:', normalized);
+        return { success: true };
+      }
+    }
+  } catch (e) {
+    // در صورت خطا در بررسی، ارسال را ادامه می‌دهیم تا از قطع پیامک جلوگیری شود
+  }
+
+
 
   try {
-    console.log(`[sendOrderSms] Sending SMS - Phone: ${phone}, Order: ${orderCode}, Status: ${status}, Details:`, details);
+    console.log(`[sendOrderSms] Sending SMS - Phone: ${targetPhone}, Order: ${targetOrderCode}, Status: ${status}, Details:`, smsDetails);
     
     const { data, error } = await supabase.functions.invoke('send-order-sms', {
       body: { 
-        phone, 
-        orderCode, 
-        orderId: details?.orderId,
+        phone: targetPhone, 
+        orderCode: targetOrderCode, 
+        orderId: smsDetails.orderId,
         status,
-        serviceType: details?.serviceType,
-        address: details?.address,
-        dateTime: details?.dateTime,
-        amount: details?.amount
+        serviceType: smsDetails.serviceType,
+        address: smsDetails.address,
+        dateTime: smsDetails.dateTime,
+        amount: smsDetails.amount,
+        customerName: smsDetails.customerName
       }
     });
 
@@ -60,6 +223,21 @@ export const sendOrderSms = async (
     console.error('[sendOrderSms] Exception:', err);
     return { success: false, error: err.message };
   }
+};
+
+export const sendOrderStageSms = async (
+  orderId: string,
+  status: SmsStatus,
+  details?: OrderSmsDetails
+): Promise<{ success: boolean; error?: string }> => {
+  const resolved = await resolveOrderSmsDetails(orderId);
+  return sendOrderSms(resolved.phone || '', resolved.orderCode || '', status, {
+    orderId,
+    address: resolved.address,
+    serviceType: resolved.serviceType,
+    customerName: resolved.customerName,
+    ...(details || {}),
+  });
 };
 
 // ارسال پیامک به مدیرعامل

@@ -6,8 +6,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const gatewayUnavailableMessage = 'درگاه پرداخت زرین‌پال در حال حاضر در دسترس نیست. لطفاً چند دقیقه دیگر دوباره تلاش کنید.';
+const ZARINPAL_DIRECT_PAYMENT_LINK = 'https://shop.ahrom.ir/link';
+
+const isZarinpalNetworkError = (message: string) =>
+  /api\.zarinpal\.com|ETIMEDOUT|AbortError|Connection timed out|tcp connect error|NETWORK_ERROR/i.test(message);
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -23,7 +28,6 @@ serve(async (req) => {
       }
     );
 
-    // Get the user from the auth header
     const {
       data: { user },
       error: userError,
@@ -33,62 +37,94 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { order_id, amount, description } = await req.json();
+    const body = await req.json();
+    const { amount, description } = body;
+    let { order_id } = body;
+    const statement_id: string | undefined = body.statement_id;
 
-    if (!order_id || !amount) {
-      throw new Error('Missing required fields: order_id, amount');
+    if (!amount || amount <= 0) {
+      throw new Error('Missing required field: amount');
+    }
+    if (!order_id && !statement_id) {
+      throw new Error('Missing required field: order_id or statement_id');
     }
 
-    // Verify order belongs to user and is approved
-    const { data: order, error: orderError } = await supabaseClient
-      .from('projects_v3')
-      .select('id, customer_id, status, payment_confirmed_at, code, payment_amount, total_paid, notes')
-      .eq('id', order_id)
-      .single();
-
-    if (orderError || !order) {
-      throw new Error('Order not found');
-    }
-
-    // بررسی وضعیت سفارش - اجازه پرداخت برای سفارش‌های معتبر
-    // pending: سفارش‌هایی که قیمت کارشناسی دارند و منتظر پرداخت هستند
-    // pending_execution: سفارش‌های تایید شده در انتظار اجرا
-    // approved, completed, in_progress, paid: سایر وضعیت‌های معتبر
-    const allowedStatuses = ['pending', 'pending_execution', 'approved', 'completed', 'in_progress', 'paid'];
-    if (!allowedStatuses.includes(order.status)) {
-      console.log(`Order ${order_id} has status ${order.status} which is not allowed for payment`);
-      throw new Error('Order status does not allow payment');
-    }
-
-    // بررسی باقی‌مانده حساب - اگر هنوز مانده دارد، اجازه پرداخت بده
-    let estimatedPrice = 0;
-    try {
-      const notesObj = typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
-      estimatedPrice = notesObj?.estimated_price || notesObj?.estimatedPrice || notesObj?.total_price || notesObj?.manager_set_price || 0;
-    } catch (e) {
-      console.log('Could not parse notes for estimated_price');
-    }
-    
-    const totalPrice = order.payment_amount || estimatedPrice || 0;
-    const totalPaid = order.total_paid || 0;
-    const remainingAmount = totalPrice - totalPaid;
-
-    // فقط اگر واقعاً تسویه شده باشد (مانده صفر یا کمتر) خطا بده
-    if (remainingAmount <= 0) {
-      throw new Error('Order has already been paid');
-    }
-
-    console.log(`Order ${order_id}: totalPrice=${totalPrice}, totalPaid=${totalPaid}, remainingAmount=${remainingAmount}, requestedAmount=${amount}`);
-
-    // Verify order belongs to user
+    // Verify customer
     const { data: customer } = await supabaseClient
       .from('customers')
       .select('id')
       .eq('user_id', user.id)
       .single();
 
-    if (!customer || customer.id !== order.customer_id) {
-      throw new Error('Order does not belong to user');
+    if (!customer) throw new Error('Customer not found');
+
+    // --- Statement-level payment: pick oldest unsettled order in the statement ---
+    if (statement_id) {
+      // Verify statement belongs to customer
+      const { data: stmt, error: stmtErr } = await supabaseClient
+        .from('customer_statements')
+        .select('id, customer_id, status')
+        .eq('id', statement_id)
+        .single();
+      if (stmtErr || !stmt) throw new Error('Statement not found');
+      if (stmt.customer_id !== customer.id) throw new Error('Statement does not belong to user');
+
+      // Pick oldest order in the statement that still has remaining
+      const { data: stmtOrders, error: oErr } = await supabaseClient
+        .from('projects_v3')
+        .select('id, code, status, total_price, payment_amount, total_paid')
+        .eq('statement_id', statement_id)
+        .neq('status', 'rejected')
+        .order('created_at', { ascending: true });
+      if (oErr) throw oErr;
+
+      const allowedStatuses = ['pending', 'pending_execution', 'approved', 'completed', 'in_progress', 'paid'];
+      const candidate = (stmtOrders || []).find((o: any) => {
+        const total = Number(o.total_price ?? o.payment_amount ?? 0);
+        const paid = Number(o.total_paid ?? 0);
+        return total - paid > 0 && allowedStatuses.includes(o.status);
+      }) || (stmtOrders || []).find((o: any) => allowedStatuses.includes(o.status));
+
+      if (!candidate) throw new Error('No payable order in this statement');
+      order_id = candidate.id;
+    }
+
+    // Verify order
+    const { data: order, error: orderError } = await supabaseClient
+      .from('projects_v3')
+      .select('id, customer_id, status, payment_confirmed_at, code, payment_amount, total_paid, notes')
+      .eq('id', order_id)
+      .single();
+
+    if (orderError || !order) throw new Error('Order not found');
+    if (order.customer_id !== customer.id) {
+      // Allow accepted collaborators to pay for the order
+      const { data: collab } = await supabaseClient
+        .from('order_collaborators')
+        .select('id')
+        .eq('order_id', order.id)
+        .eq('invitee_user_id', user.id)
+        .in('status', ['accepted', 'approved'])
+        .maybeSingle();
+      if (!collab) throw new Error('Order does not belong to user');
+    }
+
+    const allowedStatuses = ['pending', 'pending_execution', 'approved', 'completed', 'in_progress', 'paid'];
+    if (!allowedStatuses.includes(order.status)) {
+      throw new Error('Order status does not allow payment');
+    }
+
+    // For statement payments we explicitly allow over-payment of the single order
+    // (overflow waterfalls to the next orders in the statement during verify).
+    if (!statement_id) {
+      let estimatedPrice = 0;
+      try {
+        const notesObj = typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
+        estimatedPrice = notesObj?.estimated_price || notesObj?.estimatedPrice || notesObj?.total_price || notesObj?.manager_set_price || 0;
+      } catch (_) {}
+      const totalPrice = order.payment_amount || estimatedPrice || 0;
+      const remainingAmount = totalPrice - (order.total_paid || 0);
+      if (remainingAmount <= 0) throw new Error('Order has already been paid');
     }
 
     // Get user profile for better description
@@ -100,66 +136,98 @@ serve(async (req) => {
 
     const customerName = profile?.full_name || 'نامشخص';
     const customerPhone = profile?.phone_number || '';
-    const orderCode = order.code || order_id.substring(0, 8);
+    const orderCode = order.code || order_id!.substring(0, 8);
 
-    // Build description with customer info for ZarinPal panel
-    const paymentDescription = `سفارش ${orderCode} - ${customerName}${customerPhone ? ` - ${customerPhone}` : ''}`;
+    const paymentDescription = description
+      || (statement_id
+        ? `پرداخت صورتحساب - ${customerName}${customerPhone ? ` - ${customerPhone}` : ''}`
+        : `سفارش ${orderCode} - ${customerName}${customerPhone ? ` - ${customerPhone}` : ''}`);
 
-    // ZarinPal configuration
     const ZARINPAL_MERCHANT_ID = '93f06023-423a-44d6-ac08-8ee0aa9ed257';
-    const ZARINPAL_API_URL = 'https://api.zarinpal.com/pg/v4/payment/request.json';
-    
-    // توجه: دامنه آدرس بازگشت باید با دامنه ثبت‌شده در زرین‌پال یکی باشد (ahrom.ir)
+    const ZARINPAL_API_URLS = [
+      'https://api.zarinpal.com/pg/v4/payment/request.json',
+      'https://payment.zarinpal.com/pg/v4/payment/request.json',
+    ];
     const CALLBACK_URL = 'https://ahrom.ir/payment/zarinpal-callback';
- 
-    // Request payment from ZarinPal
-    const zarinpalResponse = await fetch(ZARINPAL_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        merchant_id: ZARINPAL_MERCHANT_ID,
-        amount: amount * 10, // Convert Toman to Rial (multiply by 10)
-        description: paymentDescription,
-        callback_url: `${CALLBACK_URL}?order_id=${order_id}`,
-        metadata: {
-          order_id: order_id,
-          user_id: user.id,
-          customer_name: customerName,
-          customer_phone: customerPhone,
-          order_code: orderCode,
-        }
-      }),
-    });
+
+    const callbackQuery = new URLSearchParams({ order_id: order_id! });
+    if (statement_id) callbackQuery.set('statement_id', statement_id);
+
+    // Add timeout + retry to avoid hanging when ZarinPal API is slow/unreachable
+    const callZarinpal = async (apiUrl: string, timeoutMs: number) => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            merchant_id: ZARINPAL_MERCHANT_ID,
+            amount: amount * 10,
+            description: paymentDescription,
+            callback_url: `${CALLBACK_URL}?${callbackQuery.toString()}`,
+            metadata: {
+              order_id,
+              statement_id: statement_id || null,
+              user_id: user.id,
+              customer_name: customerName,
+              customer_phone: customerPhone,
+              order_code: orderCode,
+            }
+          }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+    };
+
+    let zarinpalResponse: Response | null = null;
+    let lastErr: any = null;
+    // Race both ZarinPal endpoints in parallel with a short timeout for the
+    // fastest possible connection to the payment gateway.
+    try {
+      zarinpalResponse = await Promise.any(
+        ZARINPAL_API_URLS.map((apiUrl) => callZarinpal(apiUrl, 5000))
+      );
+    } catch (err: any) {
+      lastErr = err?.errors?.[0] ?? err;
+      console.warn('ZarinPal parallel attempts failed:', lastErr);
+    }
+    if (!zarinpalResponse) {
+      const code = (lastErr as any)?.code || (lastErr as any)?.name || 'NETWORK_ERROR';
+      console.error('ZarinPal unreachable after retries:', lastErr);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          fallback: true,
+          payment_url: ZARINPAL_DIRECT_PAYMENT_LINK,
+          message: 'اتصال مستقیم API زرین‌پال برقرار نشد؛ کاربر به لینک پرداخت سریع زرین‌پال هدایت شد.',
+          code,
+          order_id,
+          statement_id: statement_id || null,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const zarinpalData = await zarinpalResponse.json();
-
     console.log('ZarinPal response:', zarinpalData);
 
     if (zarinpalData.data && zarinpalData.data.code === 100) {
-      // Success - return payment URL
       const authority = zarinpalData.data.authority;
       const paymentUrl = `https://www.zarinpal.com/pg/StartPay/${authority}`;
 
-      // Log payment request
       await supabaseClient.from('audit_log').insert({
         entity: 'payment',
         entity_id: order_id,
         action: 'payment_requested',
         actor_user_id: user.id,
-        meta: {
-          authority: authority,
-          amount: amount,
-        },
+        meta: { authority, amount, statement_id: statement_id || null },
       });
 
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          payment_url: paymentUrl,
-          authority: authority 
-        }),
+        JSON.stringify({ success: true, payment_url: paymentUrl, authority, order_id, statement_id: statement_id || null }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } else {
@@ -169,15 +237,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Payment error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const safeMessage = isZarinpalNetworkError(errorMessage) ? gatewayUnavailableMessage : errorMessage;
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: errorMessage 
-      }),
-      { 
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      JSON.stringify({ success: false, error: safeMessage }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

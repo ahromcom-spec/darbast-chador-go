@@ -8,7 +8,13 @@ import { supabase } from '@/integrations/supabase/client';
 export default function NewLocation() {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
+  // Service type name from service selection flow (if any)
+  const serviceTypeName =
+    location.state?.serviceSelection?.serviceName ||
+    location.state?.serviceName ||
+    undefined;
+
   // Check if we're in edit mode
   const isEditMode = location.state?.editMode === true;
   const editInitialData = location.state?.initialData || location.state?.locationData;
@@ -38,6 +44,36 @@ export default function NewLocation() {
           expandLocationId: locationId
         }
       });
+      return;
+    }
+
+    // حالت مهمان: اطلاعات از localStorage (guestLocation) خوانده می‌شود
+    // و بدون نیاز به دیتابیس به صفحه انتخاب خدمات می‌رویم تا کاربر بتواند
+    // ادامه فرآیند ثبت سفارش را به‌صورت مهمان طی کند.
+    if (locationId.startsWith('guest-')) {
+      try {
+        const guest = JSON.parse(localStorage.getItem('guestLocation') || 'null');
+        navigate('/user/select-service', {
+          state: {
+            locationId,
+            locationData: guest ? {
+              id: guest.id,
+              lat: guest.lat,
+              lng: guest.lng,
+              address_line: guest.address_line,
+              title: guest.title,
+              province_id: guest.province_id,
+              district_id: guest.district_id,
+              province_name: guest.province_name,
+              district_name: guest.district_name,
+            } : null,
+            distanceFromCenter: distanceFromCenter ?? guest?.distanceFromCenter,
+            isGuest: true,
+          },
+        });
+      } catch {
+        navigate('/user/select-service', { state: { locationId, distanceFromCenter, isGuest: true } });
+      }
       return;
     }
 
@@ -102,8 +138,9 @@ export default function NewLocation() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <NewLocationForm 
+            <NewLocationForm
               onSuccess={handleSuccess}
+              serviceTypeName={serviceTypeName}
               initialData={editInitialData || (initialLat && initialLng ? {
                 lat: initialLat,
                 lng: initialLng,

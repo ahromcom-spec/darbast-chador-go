@@ -95,15 +95,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check if user is CEO
+    // Restrict strictly to the CEO phone number
+    const CEO_PHONE = '09125511494';
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
-    const { data: roles } = await serviceClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id);
+    const { data: profile } = await serviceClient
+      .from("profiles")
+      .select("phone_number")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-    const isCEO = roles?.some(r => r.role === 'ceo' || r.role === 'admin' || r.role === 'general_manager');
-    if (!isCEO) {
+    if (!profile || (profile.phone_number || '').toString().trim() !== CEO_PHONE) {
       return new Response(JSON.stringify({ error: "دسترسی فقط برای مدیرعامل" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

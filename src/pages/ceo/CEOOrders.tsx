@@ -24,6 +24,7 @@ import { AlertCircle, Check, X, Eye, Edit2, Image, Film } from 'lucide-react';
 import { z } from 'zod';
 import { useOrderApprovals } from '@/hooks/useOrderApprovals';
 import { ApprovalProgress } from '@/components/orders/ApprovalProgress';
+import { sendPushNotification } from '@/lib/notifications';
 
 // Define zod schema for order notes validation (security improvement)
 const orderNotesSchema = z.object({
@@ -282,6 +283,17 @@ export const CEOOrders = () => {
           title: '✓ سفارش تایید نهایی شد',
           description: `سفارش ${order.code} توسط شما تایید و به مرحله اجرا ارسال شد.`,
         });
+
+        // Fire push to the customer on final approval.
+        if (order.customer_id) {
+          sendPushNotification({
+            user_id: order.customer_id,
+            title: '✓ سفارش شما تایید نهایی شد',
+            body: `سفارش ${order.code} تایید شد و به مرحله اجرا ارسال گردید.`,
+            link: `/user/orders/${order.id}`,
+            type: 'order_approved',
+          }).catch((e) => console.warn('[CEOApprove] push failed', e));
+        }
       } else {
         toast({
           title: '✓ تایید شما ثبت شد',

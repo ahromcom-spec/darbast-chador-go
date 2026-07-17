@@ -727,48 +727,10 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
 
           switch (signal.signal_type) {
             case 'call-request':
-              if (callStateRef.current === 'idle') {
-                incomingSignalRef.current = signal;
-                
-                const { data: profile } = await supabase
-                  .from('profiles')
-                  .select('full_name')
-                  .eq('user_id', signal.caller_id)
-                  .single();
-                
-                const name = profile?.full_name || 'کاربر';
-                setCallerName(name);
-                setCallState('incoming');
-                startIncomingRingtone();
-                
-                // Show native browser notification
-                showNativeNotification(
-                  '📞 تماس ورودی از اهرم',
-                  `${name} در حال تماس با شماست`,
-                  `call-${signal.caller_id}`
-                );
-                
-                toast.info(`تماس ورودی از ${name}`);
-                
-                // Set timeout for incoming call (90 seconds)
-                unansweredTimeoutRef.current = setTimeout(async () => {
-                  if (callStateRef.current === 'incoming') {
-                    // Create missed call log for receiver
-                    await supabase.from('call_logs').insert({
-                      order_id: orderId,
-                      caller_id: signal.caller_id,
-                      receiver_id: user.id,
-                      status: 'missed',
-                      started_at: signal.created_at,
-                      ended_at: new Date().toISOString()
-                    });
-                    
-                    toast.warning('تماس از دست رفت');
-                    endCall();
-                  }
-                }, UNANSWERED_TIMEOUT_MS);
-              }
+              // مدیریت تماس ورودی فقط توسط IncomingCallContext سراسری انجام می‌شود
+              // تا از تداخل دو شنونده و قطع شدن تماس فعال جلوگیری شود.
               break;
+
 
             case 'call-accept':
               if (callStateRef.current === 'calling' && peerConnectionRef.current && signal.signal_data?.answer) {

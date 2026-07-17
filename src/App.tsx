@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +11,8 @@ import { AdminRoute } from "@/components/AdminRoute";
 import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 import { OfflineIndicator } from "@/components/common/OfflineIndicator";
 import { AdminImpersonationBanner } from "@/components/common/AdminImpersonationBanner";
+import { NotificationAutoPrompt } from "@/components/common/NotificationAutoPrompt";
+import { NajvaSubscriber } from "@/components/common/NajvaSubscriber";
 // import { PageLoadProgress } from "@/components/common/PageLoadProgress";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { GlobalKeyboardShortcuts } from "@/components/common/GlobalKeyboardShortcuts";
@@ -18,8 +21,9 @@ import GlobalIncomingCallPopup from "@/components/calls/GlobalIncomingCallPopup"
 import { ZoomProvider } from "@/contexts/ZoomContext";
 
 
-import { AssistantAvatar } from '@/components/assistant/AssistantAvatar';
+import { AssistantAvatarGate } from '@/components/assistant/AssistantAvatarGate';
 import { useSiteAnalytics } from '@/hooks/useSiteAnalytics';
+import { useGlobalTableArrowNavigation } from '@/hooks/useTableArrowNavigation';
 
 import Header from "./components/Header";
 import Home from "./pages/Home";
@@ -28,6 +32,7 @@ import GlobeMap from "@/pages/GlobeMap";
 const AdminLayout = lazy(() => import("@/pages/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 const AdminOrders = lazy(() => import("@/pages/admin/AdminOrders"));
+const AdminExport = lazy(() => import("@/pages/admin/AdminExport"));
 const UsersList = lazy(() => import("@/pages/admin/UsersList"));
 const UserProfileView = lazy(() => import("@/pages/admin/UserProfileView"));
 const StaffRequests = lazy(() => import("@/pages/admin/StaffRequests").then(m => ({ default: m.StaffRequests })));
@@ -40,6 +45,10 @@ const CEODashboard = lazy(() => import("@/pages/ceo/CEODashboard").then(m => ({ 
 const CEODashboardEnhanced = lazy(() => import("@/pages/ceo/CEODashboardEnhanced"));
 const PhoneWhitelistManagement = lazy(() => import("@/pages/ceo/PhoneWhitelistManagement").then(m => ({ default: m.PhoneWhitelistManagement })));
 const ContractorVerifications = lazy(() => import("@/pages/ceo/ContractorVerifications").then(m => ({ default: m.ContractorVerifications })));
+const ContractorsModule = lazy(() => import("@/pages/ceo/ContractorsModule"));
+const ContractorOrderDispatch = lazy(() => import("@/pages/ceo/ContractorOrderDispatch"));
+const SmsManagementModule = lazy(() => import("@/pages/ceo/SmsManagementModule"));
+
 const StaffVerifications = lazy(() => import("@/pages/ceo/StaffVerifications").then(m => ({ default: m.StaffVerifications })));
 const CEOOrders = lazy(() => import("@/pages/ceo/CEOOrders").then(m => ({ default: m.CEOOrders })));
 const CEOCustomers = lazy(() => import("@/pages/ceo/CEOCustomers").then(m => ({ default: m.CEOCustomers })));
@@ -56,6 +65,14 @@ const MyInvoiceModule = lazy(() => import("@/pages/user/MyInvoiceModule"));
 const SiteAnalyticsModule = lazy(() => import("@/pages/ceo/SiteAnalyticsModule"));
 const MediaApprovalModule = lazy(() => import("@/pages/ceo/MediaApprovalModule"));
 const BankCardsModule = lazy(() => import("@/pages/ceo/BankCardsModule"));
+const ScaffoldingPricingModule = lazy(() => import("@/pages/ceo/ScaffoldingPricingModule"));
+const ScaffoldingNoMaterialsPricingModule = lazy(() => import("@/pages/ceo/ScaffoldingNoMaterialsPricingModule"));
+const ServicePricingHub = lazy(() => import("@/pages/ceo/ServicePricingHub"));
+const ServicePricingEditor = lazy(() => import("@/pages/ceo/ServicePricingEditor"));
+const UserCooperationRankModule = lazy(() => import("@/pages/ceo/UserCooperationRankModule"));
+const ActivityLogsModule = lazy(() => import("@/pages/ceo/ActivityLogsModule"));
+const DynamicServicesModule = lazy(() => import("@/pages/ceo/DynamicServicesModule"));
+const ServiceGeoAvailabilityModule = lazy(() => import("@/pages/ceo/ServiceGeoAvailabilityModule"));
 const UserProfile = lazy(() => import("@/pages/user/UserProfile"));
 const ProjectDetail = lazy(() => import("@/pages/user/ProjectDetail"));
 const OrderDetail = lazy(() => import("@/pages/user/OrderDetail"));
@@ -70,6 +87,7 @@ const ScaffoldingRentalForm = lazy(() => import("./pages/scaffolding/Scaffolding
 const NewServiceRequestForm = lazy(() => import("./pages/scaffolding/NewServiceRequestForm"));
 const ComprehensiveScaffoldingForm = lazy(() => import("./pages/scaffolding/ComprehensiveScaffoldingForm"));
 const ScaffoldingFacadeForm = lazy(() => import("./pages/scaffolding/ScaffoldingFacadeForm"));
+const CarpetCleaningForm = lazy(() => import("./pages/carpet-cleaning/CarpetCleaningForm"));
 const TicketList = lazy(() => import("./pages/tickets/TicketList"));
 const FormNotAvailable = lazy(() => import("./pages/user/FormNotAvailable"));
 const NewTicket = lazy(() => import("./pages/tickets/NewTicket"));
@@ -94,6 +112,7 @@ const ExecutiveStageCollected = lazy(() => import("./pages/executive/ExecutiveSt
 const ArchivedOrders = lazy(() => import("./pages/executive/ArchivedOrders"));
 const ExecutiveCollectionRequests = lazy(() => import("./pages/executive/ExecutiveCollectionRequests"));
 const ExpertPricingQueue = lazy(() => import("./pages/executive/ExpertPricingQueue"));
+const ExecutiveStatements = lazy(() => import("./pages/executive/ExecutiveStatements"));
 const SalesLayout = lazy(() => import("./pages/sales/SalesLayout"));
 const SalesOrders = lazy(() => import("./pages/sales/SalesOrders"));
 const SalesPendingOrders = lazy(() => import("./pages/sales/SalesPendingOrders"));
@@ -112,6 +131,8 @@ const RatingTestPage = lazy(() => import("./pages/ratings/RatingTestPage"));
 const TopRatedUsers = lazy(() => import("./pages/ratings/TopRatedUsers"));
 const NotificationSettings = lazy(() => import("./pages/settings/NotificationSettings"));
 const InstallApp = lazy(() => import("./pages/settings/InstallApp"));
+const BackupSettings = lazy(() => import("./pages/settings/BackupSettings"));
+const CEOBackupModule = lazy(() => import("./pages/ceo/CEOBackupModule"));
 const SelectLocation = lazy(() => import("./pages/user/SelectLocation"));
 const NewLocation = lazy(() => import("./pages/user/NewLocation"));
 const ServiceSelection = lazy(() => import("./pages/user/ServiceSelection"));
@@ -145,26 +166,32 @@ const queryClient = new QueryClient({
   },
 });
 
-// Loading component with hero background
-const PageLoader = () => (
-  <div className="relative min-h-screen w-full overflow-hidden">
-    {/* Hero Background Image */}
-    <div 
-      className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-      style={{ 
-        backgroundImage: 'url(/hero-background.webp)',
-      }}
+// Loading component with hero background - portaled to <body> to escape
+// any CSS `zoom` applied to #app-root by ZoomProvider (which would otherwise
+// shrink the fixed-positioned overlay).
+const PageLoader = () => {
+  if (typeof document === 'undefined') return null;
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] w-screen h-screen overflow-hidden"
+      style={{ height: '100dvh', zoom: 1 } as React.CSSProperties}
     >
-      {/* Overlay gradient for better text readability */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
-    </div>
+      {/* Hero Background Image - covers entire screen on all devices */}
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: 'url(/hero-background.webp)' }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
+      </div>
 
-    {/* Loading Content */}
-    <div className="relative z-10 flex min-h-screen items-center justify-center">
-      <LoadingSpinner size="lg" text="در حال بارگذاری..." />
-    </div>
-  </div>
-);
+      {/* Loading Content */}
+      <div className="relative z-10 flex w-full h-full items-center justify-center">
+        <LoadingSpinner size="lg" text="در حال بارگذاری..." />
+      </div>
+    </div>,
+    document.body
+  );
+};
 
 // Analytics tracker wrapper component
 const AnalyticsTracker = ({ children }: { children: ReactNode }) => {
@@ -174,6 +201,7 @@ const AnalyticsTracker = ({ children }: { children: ReactNode }) => {
 
 
 const App = () => {
+  useGlobalTableArrowNavigation();
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -186,6 +214,8 @@ const App = () => {
               <IncomingCallProvider>
                 {/* <PageLoadProgress /> */}
                 <AdminImpersonationBanner />
+                <NotificationAutoPrompt />
+                <NajvaSubscriber />
                 <GlobalKeyboardShortcuts />
               <GlobalIncomingCallPopup />
               
@@ -198,21 +228,16 @@ const App = () => {
               <Route path="/auth/register" element={<Register />} />
               <Route path="/auth/forgot-password" element={<ForgotPassword />} />
               <Route path="/" element={<Home />} />
-              <Route path="/globe" element={
+              <Route path="/admin-export" element={
                 <ProtectedRoute>
-                  <GlobeMap />
+                  <AdminExport />
                 </ProtectedRoute>
               } />
-              <Route path="/scaffolding/form" element={
-                <ProtectedRoute>
-                  <ScaffoldingForm />
-                </ProtectedRoute>
-              } />
-              <Route path="/scaffolding/rental-form" element={
-                <ProtectedRoute>
-                  <ScaffoldingRentalForm />
-                </ProtectedRoute>
-              } />
+              <Route path="/globe" element={<GlobeMap />} />
+
+              <Route path="/scaffolding/form" element={<ScaffoldingForm />} />
+              <Route path="/scaffolding/rental-form" element={<ScaffoldingRentalForm />} />
+
               {/* سازگاری با مسیرهای قدیمی/کوتاه */}
               <Route path="/rental-form" element={
                 <ProtectedRoute>
@@ -237,6 +262,11 @@ const App = () => {
               <Route path="/service/scaffolding-order/:projectId" element={
                 <ProtectedRoute>
                   <ComprehensiveScaffoldingForm />
+                </ProtectedRoute>
+              } />
+              <Route path="/carpet-cleaning/form" element={
+                <ProtectedRoute>
+                  <CarpetCleaningForm />
                 </ProtectedRoute>
               } />
               <Route path="/profile" element={
@@ -286,21 +316,10 @@ const App = () => {
                   <OrderDetail />
                 </ProtectedRoute>
               } />
-              <Route path="/user/new-location" element={
-                <ProtectedRoute>
-                  <NewLocation />
-                </ProtectedRoute>
-              } />
-              <Route path="/user/select-service" element={
-                <ProtectedRoute>
-                  <ServiceSelection />
-                </ProtectedRoute>
-              } />
-              <Route path="/select-location" element={
-                <ProtectedRoute>
-                  <SelectLocation />
-                </ProtectedRoute>
-              } />
+              <Route path="/user/new-location" element={<NewLocation />} />
+              <Route path="/user/select-service" element={<ServiceSelection />} />
+              <Route path="/select-location" element={<SelectLocation />} />
+
               <Route path="/tickets" element={<TicketList />} />
               <Route path="/tickets/new" element={<NewTicket />} />
               <Route path="/tickets/:id" element={<TicketDetail />} />
@@ -343,7 +362,9 @@ const App = () => {
                 <Route index element={<CEODashboardEnhanced />} />
                 <Route path="dashboard-old" element={<CEODashboard />} />
                 <Route path="whitelist" element={<PhoneWhitelistManagement />} />
-                <Route path="contractor-verifications" element={<ContractorVerifications />} />
+                <Route path="contractor-verifications" element={<ContractorsModule />} />
+                <Route path="contractors-management" element={<ContractorsModule />} />
+                <Route path="contractor-dispatch" element={<ContractorOrderDispatch />} />
                 <Route path="staff-verifications" element={<StaffVerifications />} />
                 <Route path="orders" element={<ExecutiveOrders />} />
                 <Route path="customers" element={<CEOCustomers />} />
@@ -358,7 +379,16 @@ const App = () => {
                 <Route path="archived" element={<ArchivedOrders />} />
                 <Route path="deep-archived" element={<DeepArchivedOrders />} />
                 <Route path="payments" element={<PaymentHistory />} />
+                <Route path="backup" element={<CEOBackupModule />} />
               </Route>
+
+              {/* مسیر مستقل برای ماژول مدیریت پیامک‌ها */}
+              <Route path="/sms-management" element={
+                <ProtectedRoute>
+                  <SmsManagementModule />
+                </ProtectedRoute>
+              } />
+
               {/* مسیر جداگانه برای ماژول گزارش روزانه - بدون ناوبری CEO */}
               <Route path="/daily-report" element={
                 <ProtectedRoute>
@@ -425,6 +455,53 @@ const App = () => {
                   <BankCardsModule />
                 </ProtectedRoute>
               } />
+              {/* مسیر ماژول قیمت‌گذاری داربست */}
+              <Route path="/scaffolding-pricing" element={
+                <ProtectedRoute>
+                  <ScaffoldingPricingModule />
+                </ProtectedRoute>
+              } />
+              {/* مسیر ماژول قیمت‌گذاری خدمات اجرای داربست بدون اجناس */}
+              <Route path="/scaffolding-no-materials-pricing" element={
+                <ProtectedRoute>
+                  <ScaffoldingNoMaterialsPricingModule />
+                </ProtectedRoute>
+              } />
+              {/* مسیر ماژول‌های قیمت‌گذاری خدمات (به‌ازای هر زیرشاخه) */}
+              <Route path="/service-pricing" element={
+                <ProtectedRoute>
+                  <ServicePricingHub />
+                </ProtectedRoute>
+              } />
+              <Route path="/service-pricing/:subcategoryId" element={
+                <ProtectedRoute>
+                  <ServicePricingEditor />
+                </ProtectedRoute>
+              } />
+              {/* مسیر ماژول رتبه همکاری کاربران */}
+              <Route path="/user-cooperation-rank" element={
+                <ProtectedRoute>
+                  <UserCooperationRankModule />
+                </ProtectedRoute>
+              } />
+              {/* مسیر ماژول لاگ فعالیت‌ها و ایمیل‌های خودکار */}
+              <Route path="/activity-logs" element={
+                <ProtectedRoute>
+                  <ActivityLogsModule />
+                </ProtectedRoute>
+              } />
+              {/* مسیر ماژول مدیریت خدمات داینامیک */}
+              <Route path="/ceo/dynamic-services" element={
+                <ProtectedRoute>
+                  <DynamicServicesModule />
+                </ProtectedRoute>
+              } />
+              {/* مسیر ماژول مدیریت خدمات طبق شهرها */}
+              <Route path="/ceo/service-geo-availability" element={
+                <ProtectedRoute>
+                  <ServiceGeoAvailabilityModule />
+                </ProtectedRoute>
+              } />
               <Route path="/executive" element={
                 <ProtectedRoute>
                   <ExecutiveLayout />
@@ -448,6 +525,7 @@ const App = () => {
                 <Route path="collection-requests" element={<ExecutiveCollectionRequests />} />
                 <Route path="order-transfers" element={<OrderTransferManagement />} />
                 <Route path="expert-pricing" element={<ExpertPricingQueue />} />
+                <Route path="statements" element={<ExecutiveStatements />} />
               </Route>
               <Route path="/sales" element={
                 <ProtectedRoute>
@@ -487,6 +565,7 @@ const App = () => {
               } />
               <Route path="/settings/install" element={<InstallApp />} />
               <Route path="/settings/install-app" element={<InstallApp />} />
+              <Route path="/settings/backup" element={<BackupSettings />} />
               
               {/* Reputation & Ratings */}
               <Route path="/reputation" element={
@@ -520,7 +599,7 @@ const App = () => {
               <Route path="*" element={<NotFound />} />
                 </Routes>
               </div>
-              <AssistantAvatar />
+              <AssistantAvatarGate />
               </AnalyticsTracker>
             </Suspense>
               </IncomingCallProvider>

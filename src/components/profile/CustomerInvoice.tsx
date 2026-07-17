@@ -4,108 +4,130 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useToast } from '@/hooks/use-toast';
-import { Receipt, CreditCard, Wallet, TrendingUp, TrendingDown, ChevronDown, ChevronUp } from 'lucide-react';
+import { Receipt, Wallet, TrendingUp, TrendingDown, ChevronDown, ChevronUp, FileText, CheckCircle2, Lock, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { StatementInvoiceDialog } from '@/components/executive/StatementInvoiceDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { parseLocalizedNumber, toEnglishDigits } from '@/lib/numberParsing';
 
-interface OrderInvoice {
+const PAYMENT_GATEWAY_UNAVAILABLE_MESSAGE = 'درگاه پرداخت زرین‌پال در حال حاضر در دسترس نیست. لطفاً چند دقیقه دیگر دوباره تلاش کنید.';
+
+const getPaymentErrorMessage = (message?: string) => {
+  if (!message) return 'لطفاً مجدداً تلاش کنید';
+  if (/api\.zarinpal\.com|ETIMEDOUT|AbortError|Connection timed out|tcp connect error|NETWORK_ERROR|error sending request/i.test(message)) {
+    return PAYMENT_GATEWAY_UNAVAILABLE_MESSAGE;
+  }
+  return message;
+};
+
+interface OrderRow {
   id: string;
   code: string;
-  address: string;
   status: string;
-  payment_amount: number | null;
-  payment_confirmed_at: string | null;
+  total: number;
+  paid: number;
+  remaining: number;
   created_at: string;
-  subcategory: { name: string } | null;
-  province: { name: string } | null;
-
-  // مجموع مبلغ پرداخت‌شده (نقدی/درگاه/سایر)
-  paid_amount: number;
-  // مبلغ علی‌الحساب (فقط وقتی سفارش کامل تسویه نشده باشد)
-  advance_payment: number;
-  remaining_amount: number;
-  is_fully_paid: boolean;
+  subcategory_name: string | null;
+  description: string | null;
 }
 
-interface InvoiceSummary {
-  totalOrders: number;
-  totalAmount: number;
-  totalPaid: number;
-  totalAdvance: number;
-  totalRemaining: number;
+import { extractOrderDescription } from '@/lib/orderDescription';
+
+interface StatementGroup {
+  id: string;
+  statement_number: number;
+  status: 'open' | 'closed';
+  closed_at: string | null;
+  created_at: string;
+  total_amount: number;
+  total_paid: number;
+  total_remaining: number;
+  subcategory_name: string | null;
+  address: string | null;
+  detailed_address: string | null;
+  service_types: string[];
+  addresses: string[];
+  orders: OrderRow[];
+  is_manual: boolean;
 }
 
-const getStatusLabel = (status: string) => {
-  const labels: Record<string, string> = {
-    pending: 'در انتظار تایید',
-    approved: 'تایید شده',
-    in_progress: 'در حال اجرا',
-    completed: 'تکمیل شده',
-    paid: 'پرداخت شده',
-    closed: 'بسته شده',
-    rejected: 'رد شده',
-  };
-  return labels[status] || status;
+const statusLabels: Record<string, string> = {
+  pending: 'در انتظار تایید',
+  pending_execution: 'در انتظار اجرا',
+  approved: 'تایید شده',
+  scheduled: 'زمان‌بندی شده',
+  in_progress: 'در حال اجرا',
+  pending_collection: 'در انتظار جمع‌آوری',
+  in_collection: 'در حال جمع‌آوری',
+  collected: 'جمع‌آوری شد',
+  completed: 'تکمیل شده',
+  paid: 'پرداخت شده',
+  closed: 'بسته شده',
+  rejected: 'رد شده',
 };
 
-const getPaymentStatusBadge = (order: OrderInvoice) => {
-  const totalAmount = order.payment_amount || 0;
-  const paidAmount = order.paid_amount || 0;
-
-  if (order.is_fully_paid && totalAmount > 0) {
-    return (
-      <Badge className="bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-400 border border-green-500/50">
-        ✅ پرداخت کامل
-      </Badge>
-    );
-  }
-  if (paidAmount > 0) {
-    const percentage = totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : 0;
-    return (
-      <Badge className="bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400 border border-yellow-500/50">
-        ⏳ علی‌الحساب ({percentage}٪)
-      </Badge>
-    );
-  }
-  return (
-    <Badge className="bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-400 border border-red-500/50">
-      ❌ پرداخت نشده
-    </Badge>
-  );
-};
+const formatPrice = (n: number) => new Intl.NumberFormat('fa-IR').format(Math.round(n || 0)) + ' تومان';
 
 export const CustomerInvoice = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [orders, setOrders] = useState<OrderInvoice[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [paymentFilter, setPaymentFilter] = useState<string>('all');
-  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
-  const [summary, setSummary] = useState<InvoiceSummary>({
-    totalOrders: 0,
-    totalAmount: 0,
-    totalPaid: 0,
-    totalAdvance: 0,
-    totalRemaining: 0,
-  });
+  const [statements, setStatements] = useState<StatementGroup[]>([]);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [profile, setProfile] = useState<{ full_name: string | null; phone_number: string | null; customer_code: string | null }>({ full_name: null, phone_number: null, customer_code: null });
+  const [payDialog, setPayDialog] = useState<{ open: boolean; statement: StatementGroup | null }>({ open: false, statement: null });
+  const [payAmountInput, setPayAmountInput] = useState('');
+  const [paying, setPaying] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      fetchOrders();
-    }
+    if (user) load();
   }, [user]);
 
-  const fetchOrders = async () => {
+  const openPayDialog = (s: StatementGroup) => {
+    setPayAmountInput(String(Math.round(s.total_remaining || 0)));
+    setPayDialog({ open: true, statement: s });
+  };
+
+  const handleStatementPay = async () => {
+    if (!payDialog.statement) return;
+    const amount = Math.round(parseLocalizedNumber(payAmountInput));
+    if (!amount || amount <= 0) {
+      toast({ title: 'مبلغ نامعتبر', description: 'لطفاً مبلغ معتبری وارد کنید', variant: 'destructive' });
+      return;
+    }
+    try {
+      setPaying(true);
+      toast({ title: 'در حال اتصال به درگاه پرداخت', description: 'لطفاً صبر کنید...' });
+      const { data, error } = await supabase.functions.invoke('zarinpal-payment', {
+        body: { statement_id: payDialog.statement.id, amount },
+      });
+      if (error) throw error;
+      if (data?.payment_url) {
+        window.location.href = data.payment_url;
+      } else if (data?.error) {
+        throw new Error(data.error);
+      } else {
+        throw new Error(data?.error || 'URL پرداخت دریافت نشد');
+      }
+    } catch (err: any) {
+      console.error('Statement payment error:', err);
+      toast({ title: 'خطا در اتصال به درگاه', description: getPaymentErrorMessage(err?.message), variant: 'destructive' });
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  const load = async () => {
     try {
       setLoading(true);
-      
-      // Get customer id
       const { data: customer } = await supabase
         .from('customers')
         .select('id')
@@ -113,358 +135,411 @@ export const CustomerInvoice = () => {
         .maybeSingle();
 
       if (!customer) {
-        setOrders([]);
+        setStatements([]);
         return;
       }
 
-      const { data, error } = await supabase
-        .from('projects_v3')
-        .select(`
-          id,
-          code,
-          address,
-          status,
-          payment_amount,
-          total_price,
-          payment_confirmed_at,
-          created_at,
-          notes,
-          is_archived,
-          total_paid,
-          subcategories (name),
-          provinces (name)
-        `)
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('full_name, phone_number, customer_code')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+      if (prof) setProfile({ full_name: prof.full_name, phone_number: prof.phone_number, customer_code: (prof as any).customer_code ?? null });
+
+      const { data: stmts, error: e1 } = await supabase
+        .from('customer_statements' as any)
+        .select('*')
         .eq('customer_id', customer.id)
-        // فقط سفارشات غیر بایگانی را نمایش بده
-        .or('is_archived.is.null,is_archived.eq.false')
-        // سفارشات رد شده هم از صورتحساب حذف شوند
+        .order('statement_number', { ascending: false });
+      if (e1) throw e1;
+
+      const { data: orders, error: e2 } = await supabase
+        .from('projects_v3')
+        .select('id, code, status, payment_amount, total_price, total_paid, created_at, statement_id, address, detailed_address, notes, subcategories(name)')
+        .eq('customer_id', customer.id)
+        // سفارشات بایگانی شده هم در صورتحساب نمایش داده می‌شوند تا تراکنش‌ها و هزینه‌هایشان قابل بررسی باشد
         .neq('status', 'rejected')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: true });
+      if (e2) throw e2;
 
-      if (error) throw error;
-
-      // دریافت پرداخت‌های نقدی از جدول order_payments
-      const orderIds = (data || []).map(o => o.id);
-      let paymentsMap: Record<string, number> = {};
-      
-      if (orderIds.length > 0) {
-        const { data: payments } = await supabase
-          .from('order_payments')
-          .select('order_id, amount')
-          .in('order_id', orderIds);
-        
-        if (payments) {
-          payments.forEach(p => {
-            paymentsMap[p.order_id] = (paymentsMap[p.order_id] || 0) + p.amount;
-          });
-        }
-      }
-
-      const processedOrders: OrderInvoice[] = (data || []).map(order => {
-        // اولویت با total_price (شامل تمدیدها و تعمیرات) سپس payment_amount
-        const totalAmount = Number((order as any).total_price || order.payment_amount || 0);
-
-        // مبالغ پرداختی از منابع مختلف
-        const cashPaid = Number(paymentsMap[order.id] || 0);
-        const totalPaidField = Number(order.total_paid || 0);
-
-        let notesAdvance = 0;
-        try {
-          if (order.notes) {
-            const notesData = typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
-            notesAdvance = Number(notesData?.advance_payment || 0);
-          }
-        } catch {
-          notesAdvance = 0;
-        }
-
-        // پایه: بیشترین مقدار ثبت شده - بدون اتکا به payment_confirmed_at
-        // چون payment_confirmed_at ممکن است به اشتباه ست شده باشد
-        const paidAmount = Math.max(totalPaidField, cashPaid, notesAdvance);
-
-        // جلوگیری از منفی/بیشتر از مبلغ کل
-        const paidCapped = totalAmount > 0 ? Math.min(paidAmount, totalAmount) : Math.max(paidAmount, 0);
-        const isFullyPaid = totalAmount > 0 && paidCapped >= totalAmount;
-        const remaining = Math.max(totalAmount - paidCapped, 0);
-
+      const groups: StatementGroup[] = (stmts || []).map((s: any) => {
+        const matchingOrders = (orders || []).filter((o: any) => o.statement_id === s.id);
+        const myOrders: OrderRow[] = matchingOrders.map((o: any) => {
+          const total = Number(o.total_price) || Number(o.payment_amount) || 0;
+          const paid = Math.min(Number(o.total_paid ?? 0), total > 0 ? total : Number.MAX_SAFE_INTEGER);
+          return {
+            id: o.id,
+            code: o.code,
+            status: o.status || 'pending',
+            total,
+            paid,
+            remaining: Math.max(total - paid, 0),
+            created_at: o.created_at,
+            subcategory_name: o.subcategories?.name || null,
+            description: extractOrderDescription(o.notes),
+          };
+        });
+        const total_amount = myOrders.reduce((a, o) => a + o.total, 0);
+        const total_paid = myOrders.reduce((a, o) => a + o.paid, 0);
+        const service_types = Array.from(new Set(
+          matchingOrders.map((o: any) => o.subcategories?.name).filter(Boolean)
+        )) as string[];
+        const addresses = Array.from(new Set(
+          matchingOrders.map((o: any) => {
+            const a = (o.address || '').trim();
+            const d = (o.detailed_address || '').trim();
+            return [a, d].filter(Boolean).join(' - ');
+          }).filter(Boolean)
+        )) as string[];
         return {
-          id: order.id,
-          code: order.code,
-          address: order.address,
-          status: order.status || 'pending',
-          payment_amount: totalAmount,
-          payment_confirmed_at: order.payment_confirmed_at,
-          created_at: order.created_at,
-          subcategory: order.subcategories,
-          province: order.provinces,
-          paid_amount: paidCapped,
-          advance_payment: isFullyPaid ? 0 : paidCapped,
-          remaining_amount: remaining,
-          is_fully_paid: isFullyPaid,
+          id: s.id,
+          statement_number: s.statement_number,
+          status: s.status,
+          closed_at: s.closed_at,
+          created_at: s.created_at,
+          total_amount,
+          total_paid,
+          total_remaining: Math.max(total_amount - total_paid, 0),
+          subcategory_name: matchingOrders[0]?.subcategories?.name || null,
+          address: s.address || matchingOrders[0]?.address || null,
+          detailed_address: s.detailed_address || matchingOrders[0]?.detailed_address || null,
+          service_types,
+          addresses,
+          orders: myOrders,
+          is_manual: !!s.is_manual,
         };
       });
 
-      setOrders(processedOrders);
-      calculateSummary(processedOrders);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      toast({
-        title: 'خطا',
-        description: 'خطا در بارگذاری صورتحساب',
-        variant: 'destructive',
-      });
+      // سفارش‌های همکاری (پذیرفته‌شده) را به‌عنوان یک گروه مجازی اضافه کن
+      const { data: collabs } = await supabase
+        .from('order_collaborators')
+        .select('order_id')
+        .eq('invitee_user_id', user?.id)
+        .eq('status', 'accepted');
+
+      const collabOrderIds = (collabs || []).map((c: any) => c.order_id).filter(Boolean);
+      let collabGroup: StatementGroup | null = null;
+      if (collabOrderIds.length > 0) {
+        const { data: collabOrders } = await supabase
+          .from('projects_v3')
+          .select('id, code, status, payment_amount, total_price, total_paid, created_at, address, detailed_address, notes, subcategories(name)')
+          .in('id', collabOrderIds)
+          // سفارشات بایگانی هم در صورتحساب همکاری نمایش داده می‌شوند
+          .neq('status', 'rejected');
+
+        const myCollabOrders: OrderRow[] = (collabOrders || []).map((o: any) => {
+          const total = Number(o.total_price) || Number(o.payment_amount) || 0;
+          const paid = Math.min(Number(o.total_paid ?? 0), total > 0 ? total : Number.MAX_SAFE_INTEGER);
+          return {
+            id: o.id,
+            code: o.code,
+            status: o.status || 'pending',
+            total,
+            paid,
+            remaining: Math.max(total - paid, 0),
+            created_at: o.created_at,
+            subcategory_name: (o as any).subcategories?.name || null,
+            description: extractOrderDescription(o.notes),
+          };
+        });
+        if (myCollabOrders.length > 0) {
+          const total_amount = myCollabOrders.reduce((a, o) => a + o.total, 0);
+          const total_paid_c = myCollabOrders.reduce((a, o) => a + o.paid, 0);
+          collabGroup = {
+            id: 'collab-virtual',
+            statement_number: 0,
+            status: 'open',
+            closed_at: null,
+            created_at: myCollabOrders[0]?.created_at || new Date().toISOString(),
+            total_amount,
+            total_paid: total_paid_c,
+            total_remaining: Math.max(total_amount - total_paid_c, 0),
+            subcategory_name: 'سفارش‌های همکاری',
+            address: null,
+            detailed_address: null,
+            service_types: Array.from(new Set((collabOrders || []).map((o: any) => o.subcategories?.name).filter(Boolean))) as string[],
+            addresses: Array.from(new Set((collabOrders || []).map((o: any) => {
+              const a = (o.address || '').trim();
+              const d = (o.detailed_address || '').trim();
+              return [a, d].filter(Boolean).join(' - ');
+            }).filter(Boolean))) as string[],
+            orders: myCollabOrders,
+            is_manual: false,
+          } as StatementGroup;
+        }
+      }
+
+      // صورتحساب خالی خودکار نمایش داده نشود؛ فقط صورتحساب دارای سفارش یا دستی نمایش داده شود.
+      const filtered = groups.filter(g => g.orders.length > 0 || g.is_manual === true);
+      if (collabGroup) filtered.unshift(collabGroup);
+      setStatements(filtered);
+      // باز کردن آخرین صورتحساب (بالاترین شماره) به‌صورت پیش‌فرض
+      if (filtered.length > 0) {
+        setExpanded(new Set([filtered[0].id]));
+      }
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'خطا', description: 'بارگذاری صورتحساب‌ها با خطا مواجه شد', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
-  const calculateSummary = (orderList: OrderInvoice[]) => {
-    const summary = orderList.reduce(
-      (acc, order) => ({
-        totalOrders: acc.totalOrders + 1,
-        totalAmount: acc.totalAmount + (order.payment_amount || 0),
-        // مجموع واقعی پرداخت‌شده (کامل + علی‌الحساب)
-        totalPaid: acc.totalPaid + (order.paid_amount || 0),
-        // فقط علی‌الحساب
-        totalAdvance: acc.totalAdvance + (order.advance_payment || 0),
-        totalRemaining: acc.totalRemaining + (order.remaining_amount || 0),
-      }),
-      { totalOrders: 0, totalAmount: 0, totalPaid: 0, totalAdvance: 0, totalRemaining: 0 }
-    );
-    setSummary(summary);
-  };
-
-  const filteredOrders = orders.filter(order => {
-    if (statusFilter !== 'all' && order.status !== statusFilter) return false;
-    if (paymentFilter === 'paid' && !order.is_fully_paid) return false;
-    if (paymentFilter === 'advance' && !(order.advance_payment > 0 && !order.is_fully_paid)) return false;
-    if (paymentFilter === 'unpaid' && (order.paid_amount > 0 || order.is_fully_paid)) return false;
-    return true;
-  });
-
-  const toggleOrderExpand = (orderId: string) => {
-    setExpandedOrders(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(orderId)) {
-        newSet.delete(orderId);
-      } else {
-        newSet.add(orderId);
-      }
-      return newSet;
+  const toggle = (id: string) => {
+    setExpanded(prev => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
     });
   };
 
-  const handlePayment = (orderId: string) => {
-    navigate(`/user/orders/${orderId}`);
-  };
+  const summary = statements.reduce(
+    (a, s) => ({
+      count: a.count + s.orders.length,
+      total: a.total + s.total_amount,
+      paid: a.paid + s.total_paid,
+      remaining: a.remaining + s.total_remaining,
+    }),
+    { count: 0, total: 0, paid: 0, remaining: 0 }
+  );
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('fa-IR').format(price) + ' تومان';
-  };
-
-  if (loading) {
-    return <LoadingSpinner />;
-  }
+  if (loading) return <LoadingSpinner />;
 
   return (
     <div className="space-y-6">
-      {/* خلاصه صورتحساب */}
+      {/* خلاصه */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-200">
           <CardContent className="p-4 text-center">
             <Receipt className="h-6 w-6 mx-auto mb-2 text-blue-600" />
             <p className="text-xs text-muted-foreground">تعداد سفارشات</p>
-            <p className="text-lg font-bold text-blue-600">{summary.totalOrders}</p>
+            <p className="text-lg font-bold text-blue-600">{summary.count}</p>
           </CardContent>
         </Card>
-
         <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-200">
           <CardContent className="p-4 text-center">
             <Wallet className="h-6 w-6 mx-auto mb-2 text-purple-600" />
             <p className="text-xs text-muted-foreground">مجموع کل</p>
-            <p className="text-sm font-bold text-purple-600">{formatPrice(summary.totalAmount)}</p>
+            <p className="text-sm font-bold text-purple-600">{formatPrice(summary.total)}</p>
           </CardContent>
         </Card>
-
         <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-200">
           <CardContent className="p-4 text-center">
             <TrendingUp className="h-6 w-6 mx-auto mb-2 text-green-600" />
             <p className="text-xs text-muted-foreground">پرداخت شده</p>
-            <p className="text-sm font-bold text-green-600">{formatPrice(summary.totalPaid)}</p>
+            <p className="text-sm font-bold text-green-600">{formatPrice(summary.paid)}</p>
           </CardContent>
         </Card>
-
         <Card className="bg-gradient-to-br from-red-500/10 to-red-600/5 border-red-200">
           <CardContent className="p-4 text-center">
             <TrendingDown className="h-6 w-6 mx-auto mb-2 text-red-600" />
             <p className="text-xs text-muted-foreground">مانده بدهی</p>
-            <p className="text-sm font-bold text-red-600">{formatPrice(summary.totalRemaining)}</p>
+            <p className="text-sm font-bold text-red-600">{formatPrice(summary.remaining)}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* فیلترها */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-3">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="وضعیت سفارش" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">همه وضعیت‌ها</SelectItem>
-                <SelectItem value="pending">در انتظار تایید</SelectItem>
-                <SelectItem value="approved">تایید شده</SelectItem>
-                <SelectItem value="in_progress">در حال اجرا</SelectItem>
-                <SelectItem value="completed">تکمیل شده</SelectItem>
-                <SelectItem value="paid">پرداخت شده</SelectItem>
-                <SelectItem value="closed">بسته شده</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="وضعیت پرداخت" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">همه پرداخت‌ها</SelectItem>
-                <SelectItem value="paid">پرداخت کامل</SelectItem>
-                <SelectItem value="advance">علی‌الحساب</SelectItem>
-                <SelectItem value="unpaid">پرداخت نشده</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* لیست سفارشات */}
-      <div className="space-y-3">
-        {filteredOrders.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              سفارشی یافت نشد
-            </CardContent>
-          </Card>
-        ) : (
-          filteredOrders.map(order => (
-            <Collapsible
-              key={order.id}
-              open={expandedOrders.has(order.id)}
-              onOpenChange={() => toggleOrderExpand(order.id)}
-            >
-              <Card>
-                <CollapsibleTrigger className="w-full">
-                  <CardHeader className="p-4 cursor-pointer hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <p className="font-semibold text-sm">کد: {order.code}</p>
-                          <p className="text-xs text-muted-foreground">{order.subcategory?.name}</p>
+      {/* لیست صورتحساب‌ها */}
+      {statements.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center text-muted-foreground">
+            هنوز صورتحسابی ندارید
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {statements.map(s => {
+            const isOpen = expanded.has(s.id);
+            return (
+              <Collapsible key={s.id} open={isOpen} onOpenChange={() => toggle(s.id)}>
+                <Card className={s.status === 'open' ? 'border-primary/40' : ''}>
+                  <CollapsibleTrigger className="w-full text-right">
+                    <CardHeader className="p-4 cursor-pointer hover:bg-muted/40 transition-colors">
+                      <div className="flex items-center justify-between flex-wrap gap-3">
+                        <div className="flex items-center gap-3">
+                          <FileText className="h-5 w-5 text-primary" />
+                          <div>
+                            <CardTitle className="text-base flex items-center gap-2 flex-wrap">
+                              صورتحساب شماره {new Intl.NumberFormat('fa-IR').format(s.statement_number)}
+                              {(s.service_types.length > 0 ? s.service_types : (s.subcategory_name ? [s.subcategory_name] : [])).map((st, i) => (
+                                <Badge key={i} variant="secondary" className="text-xs">{st}</Badge>
+                              ))}
+                            </CardTitle>
+                            <p className="text-xs text-muted-foreground">
+                              {s.orders.length} سفارش
+                              {s.status === 'closed' && s.closed_at
+                                ? ` • بسته‌شده در ${new Date(s.closed_at).toLocaleDateString('fa-IR')}`
+                                : ''}
+                            </p>
+                            {(s.addresses.length > 0 ? s.addresses : ((s.address || s.detailed_address) ? [[s.address, s.detailed_address].filter(Boolean).join(' - ')] : [])).map((addr, i) => (
+                              <p key={i} className="text-xs text-muted-foreground mt-0.5">
+                                📍 {addr}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {s.status === 'open' ? (
+                            <Badge className="bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/40">
+                              صورتحساب باز
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="gap-1">
+                              <Lock className="h-3 w-3" /> بسته شده
+                            </Badge>
+                          )}
+                          <span className="text-sm font-bold">{formatPrice(s.total_amount)}</span>
+                          <span className="text-xs text-green-600">پرداختی: {formatPrice(s.total_paid)}</span>
+                          <span className="text-xs text-red-600">مانده: {formatPrice(s.total_remaining)}</span>
+                          <div onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-2">
+                            {s.status === 'open' && s.orders.length > 0 && (
+                              <Button
+                                size="sm"
+                                className="h-7 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                onClick={() => openPayDialog(s)}
+                              >
+                                <CreditCard className="h-3.5 w-3.5" />
+                                پرداخت آنلاین
+                              </Button>
+                            )}
+                            <StatementInvoiceDialog
+                              statementNumber={s.statement_number}
+                              statementStatus={s.status}
+                              closedAt={s.closed_at}
+                              customerName={profile.full_name}
+                              customerPhone={profile.phone_number}
+                              customerCode={profile.customer_code}
+                              serviceType={(s.service_types.length > 0 ? s.service_types : (s.subcategory_name ? [s.subcategory_name] : [])).join(' | ') || null}
+                              address={(s.addresses.length > 0 ? s.addresses : ((s.address || s.detailed_address) ? [[s.address, s.detailed_address].filter(Boolean).join(' - ')] : [])).join(' | ') || null}
+                              detailedAddress={null}
+                              orders={s.orders}
+                            />
+                          </div>
+                          {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        {getPaymentStatusBadge(order)}
-                        <Badge variant="outline">{getStatusLabel(order.status)}</Badge>
-                        {expandedOrders.has(order.id) ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
-                </CollapsibleTrigger>
+                    </CardHeader>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="p-0">
+                      {s.orders.length === 0 ? (
+                        <div className="p-6 text-center text-sm text-muted-foreground">
+                          هنوز سفارشی در این صورتحساب ثبت نشده است
+                        </div>
+                      ) : (
+                        <Table className="min-w-[920px]">
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="text-right whitespace-nowrap">ردیف</TableHead>
+                              <TableHead className="text-right whitespace-nowrap">کد فاکتور</TableHead>
+                              <TableHead className="text-right min-w-[320px]">شرح خدمات</TableHead>
+                              <TableHead className="text-right whitespace-nowrap">تاریخ</TableHead>
+                              <TableHead className="text-right whitespace-nowrap">مبلغ فاکتور</TableHead>
+                              <TableHead className="text-right whitespace-nowrap">پرداختی</TableHead>
+                              <TableHead className="text-right whitespace-nowrap">مانده</TableHead>
+                              <TableHead className="text-right whitespace-nowrap">وضعیت</TableHead>
+                              <TableHead className="text-right whitespace-nowrap">عملیات</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {s.orders.map((o, idx) => (
+                              <TableRow key={o.id}>
+                                <TableCell className="whitespace-nowrap">{new Intl.NumberFormat('fa-IR').format(idx + 1)}</TableCell>
+                                <TableCell className="font-mono text-xs whitespace-nowrap">{o.code}</TableCell>
+                                <TableCell className="text-xs min-w-[320px] whitespace-normal break-words leading-6">{o.description || o.subcategory_name || '—'}</TableCell>
+                                <TableCell className="text-xs whitespace-nowrap">{new Date(o.created_at).toLocaleDateString('fa-IR')}</TableCell>
+                                <TableCell className="font-medium whitespace-nowrap">{formatPrice(o.total)}</TableCell>
+                                <TableCell className="text-green-600 whitespace-nowrap">{formatPrice(o.paid)}</TableCell>
+                                <TableCell className="text-red-600 whitespace-nowrap">{formatPrice(o.remaining)}</TableCell>
+                                <TableCell className="whitespace-nowrap">
+                                  <Badge variant="outline" className="text-xs">
+                                    {statusLabels[o.status] || o.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="whitespace-nowrap">
+                                  <Button size="sm" variant="ghost" onClick={() => navigate(`/user/orders/${o.id}`)}>
+                                    مشاهده
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                          <TableFooter>
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-right font-bold whitespace-nowrap">جمع صورتحساب</TableCell>
+                              <TableCell className="font-bold whitespace-nowrap">{formatPrice(s.total_amount)}</TableCell>
+                              <TableCell className="font-bold text-green-600 whitespace-nowrap">{formatPrice(s.total_paid)}</TableCell>
+                              <TableCell className="font-bold text-red-600 whitespace-nowrap">{formatPrice(s.total_remaining)}</TableCell>
+                              <TableCell colSpan={2} className="whitespace-nowrap">
+                                {s.status === 'closed' && (
+                                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                    <CheckCircle2 className="h-3 w-3" /> صورتحساب بسته‌شده
+                                  </span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          </TableFooter>
+                        </Table>
+                      )}
+                    </CardContent>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
+            );
+          })}
+        </div>
+      )}
 
-                <CollapsibleContent>
-                  <CardContent className="p-4 pt-0 space-y-4">
-                    <Separator />
-                    
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">آدرس:</p>
-                        <p className="font-medium">{order.address}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">استان:</p>
-                        <p className="font-medium">{order.province?.name}</p>
-                      </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* جزئیات مالی */}
-                    <div className="bg-muted/30 rounded-lg p-4 space-y-3">
-                      {/* نوار وضعیت پرداخت */}
-                      <div className={`text-center py-2 rounded-lg font-bold text-sm ${
-                        order.is_fully_paid
-                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                          : order.paid_amount > 0
-                            ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
-                            : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                      }`}>
-                        {order.is_fully_paid
-                          ? '✅ پرداخت کامل انجام شده'
-                          : order.paid_amount > 0
-                            ? `⏳ علی‌الحساب پرداخت شده (${Math.round((order.paid_amount / (order.payment_amount || 1)) * 100)}٪)`
-                            : '❌ هنوز پرداختی انجام نشده'}
-                      </div>
-                      
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">مبلغ کل سفارش:</span>
-                        <span className="font-bold">{formatPrice(order.payment_amount || 0)}</span>
-                      </div>
-                      
-                      <div className="flex justify-between items-center text-green-600 dark:text-green-400">
-                        <span>پرداخت شده:</span>
-                        <span className="font-medium">{formatPrice(order.paid_amount)}</span>
-                      </div>
-
-
-
-                      <Separator />
-
-                      <div className="flex justify-between items-center text-red-600 dark:text-red-400 text-lg">
-                        <span className="font-bold">مانده بدهی:</span>
-                        <span className="font-bold">{formatPrice(order.remaining_amount)}</span>
-                      </div>
-                    </div>
-
-                    {/* دکمه‌های عملیات */}
-                    {order.remaining_amount > 0 && !order.is_fully_paid && (
-                      <div className="flex gap-2">
-                        <Button 
-                          onClick={() => handlePayment(order.id)}
-                          className="flex-1"
-                        >
-                          <CreditCard className="h-4 w-4 ml-2" />
-                          پرداخت کامل
-                        </Button>
-                        <Button 
-                          variant="outline"
-                          onClick={() => handlePayment(order.id)}
-                          className="flex-1"
-                        >
-                          <Wallet className="h-4 w-4 ml-2" />
-                          پرداخت علی‌الحساب
-                        </Button>
-                      </div>
-                    )}
-
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => navigate(`/user/orders/${order.id}`)}
-                      className="w-full"
-                    >
-                      مشاهده جزئیات سفارش
-                    </Button>
-                  </CardContent>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
-          ))
-        )}
-      </div>
+      {/* دیالوگ پرداخت آنلاین صورتحساب */}
+      <Dialog open={payDialog.open} onOpenChange={(o) => !o && setPayDialog({ open: false, statement: null })}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-emerald-600" />
+              پرداخت آنلاین صورتحساب
+            </DialogTitle>
+            <DialogDescription>
+              {payDialog.statement && (
+                <>
+                  صورتحساب شماره {new Intl.NumberFormat('fa-IR').format(payDialog.statement.statement_number)} — مانده فعلی:
+                  {' '}
+                  <span className="font-bold text-red-600">{formatPrice(payDialog.statement.total_remaining)}</span>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label htmlFor="pay-amount">مبلغ پرداخت (تومان)</Label>
+            <Input
+              id="pay-amount"
+              dir="ltr"
+              inputMode="numeric"
+              className="text-right text-lg"
+              value={(() => {
+                const digits = toEnglishDigits(payAmountInput).replace(/[^\d]/g, '');
+                return digits ? new Intl.NumberFormat('fa-IR').format(Number(digits)) : '';
+              })()}
+              onChange={(e) => {
+                const digits = toEnglishDigits(e.target.value).replace(/[^\d]/g, '');
+                setPayAmountInput(digits);
+              }}
+              placeholder="مبلغ مورد نظر را وارد کنید"
+            />
+            <p className="text-xs text-muted-foreground leading-6">
+              می‌توانید مبلغی بیشتر از مانده صورتحساب نیز پرداخت کنید. مبلغ پرداختی به‌ترتیب از اولین سفارش تا آخرین سفارش این صورتحساب تخصیص می‌یابد و باقیمانده روی آخرین سفارش ثبت می‌شود.
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setPayDialog({ open: false, statement: null })} disabled={paying}>
+              انصراف
+            </Button>
+            <Button onClick={handleStatementPay} disabled={paying} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
+              <CreditCard className="h-4 w-4" />
+              {paying ? 'در حال اتصال...' : 'پرداخت در درگاه'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

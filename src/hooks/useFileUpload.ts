@@ -143,16 +143,24 @@ export function useFileUpload({ bucket, onComplete }: UseFileUploadOptions) {
               if (xhr.status >= 200 && xhr.status < 300) {
                 resolve({ success: true, filePath });
               } else {
-                resolve({ success: false, error: `Upload failed: ${xhr.status}` });
+                let detail = '';
+                try {
+                  const body = JSON.parse(xhr.responseText || '{}');
+                  detail = body?.message || body?.error || xhr.responseText || '';
+                } catch {
+                  detail = xhr.responseText || '';
+                }
+                console.error('Storage upload failed:', xhr.status, detail);
+                resolve({ success: false, error: `${xhr.status}: ${detail || 'Upload failed'}` });
               }
             });
 
             xhr.addEventListener('error', () => {
-              resolve({ success: false, error: 'Network error' });
+              resolve({ success: false, error: 'خطای شبکه' });
             });
 
             xhr.addEventListener('abort', () => {
-              resolve({ success: false, error: 'Upload cancelled' });
+              resolve({ success: false, error: 'آپلود لغو شد' });
             });
 
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -181,9 +189,18 @@ export function useFileUpload({ bucket, onComplete }: UseFileUploadOptions) {
         } else {
           throw new Error(result.error);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error uploading file:', file.name, err);
         errorCount++;
+        // نمایش پیام خطای واقعی برای فایل اول
+        if (errorCount === 1) {
+          const msg = err?.message || String(err) || 'خطای نامشخص';
+          toast({
+            title: "خطا در آپلود",
+            description: msg.slice(0, 200),
+            variant: "destructive",
+          });
+        }
       }
 
       uploadedSize += file.size;
@@ -199,12 +216,6 @@ export function useFileUpload({ bucket, onComplete }: UseFileUploadOptions) {
           description: `${successCount} ${fileType === 'image' ? 'عکس' : 'ویدیو'} با موفقیت آپلود شد${errorCount > 0 ? ` (${errorCount} فایل با خطا مواجه شد)` : ''}`,
         });
         onComplete?.();
-      } else if (errorCount > 0) {
-        toast({
-          title: "خطا",
-          description: `هیچ ${fileType === 'image' ? 'عکسی' : 'ویدیویی'} آپلود نشد`,
-          variant: "destructive",
-        });
       }
     }
 

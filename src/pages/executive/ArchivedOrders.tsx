@@ -9,9 +9,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useToast } from '@/hooks/use-toast';
-import { Archive, Search, RotateCcw, Trash2, MapPin, Phone, User, Calendar, AlertTriangle, ArchiveX, CheckSquare } from 'lucide-react';
+import { Archive, Search, RotateCcw, Trash2, MapPin, Phone, User, Calendar, AlertTriangle, ArchiveX, CheckSquare, ExternalLink } from 'lucide-react';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useAuth } from '@/contexts/AuthContext';
+import { Link, useNavigate } from 'react-router-dom';
 
 interface ArchivedOrder {
   id: string;
@@ -39,9 +40,11 @@ export default function ArchivedOrders() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { isCEO, isAdmin, isGeneralManager } = useUserRoles();
 
   const canDelete = isCEO || isAdmin || isGeneralManager;
+  const canViewDeepArchive = isCEO || isAdmin;
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['archived-orders'],
@@ -174,7 +177,15 @@ export default function ArchivedOrders() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: 'سفارش به بایگانی عمیق منتقل شد' });
+      toast({
+        title: 'سفارش به بایگانی عمیق منتقل شد',
+        description: 'مسیر مشاهده: مدیرعامل ← بایگانی عمیق سفارشات',
+        action: canViewDeepArchive ? (
+          <Button size="sm" variant="outline" onClick={() => navigate('/ceo/deep-archived')}>
+            مشاهده
+          </Button>
+        ) : undefined,
+      });
       queryClient.invalidateQueries({ queryKey: ['archived-orders'] });
       setShowDeepArchiveDialog(false);
       setSelectedOrder(null);
@@ -198,7 +209,15 @@ export default function ArchivedOrders() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: `${selectedOrderIds.size} سفارش به بایگانی عمیق منتقل شدند` });
+      toast({
+        title: `${selectedOrderIds.size} سفارش به بایگانی عمیق منتقل شدند`,
+        description: 'مسیر مشاهده: مدیرعامل ← بایگانی عمیق سفارشات',
+        action: canViewDeepArchive ? (
+          <Button size="sm" variant="outline" onClick={() => navigate('/ceo/deep-archived')}>
+            مشاهده
+          </Button>
+        ) : undefined,
+      });
       queryClient.invalidateQueries({ queryKey: ['archived-orders'] });
       setShowBulkDeepArchiveDialog(false);
       setSelectedOrderIds(new Set());
@@ -249,12 +268,23 @@ export default function ArchivedOrders() {
 
   return (
     <div className="container mx-auto py-6 px-4" dir="rtl">
-      <div className="flex items-center gap-3 mb-6">
-        <Archive className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-2xl font-bold">بایگانی سفارشات</h1>
-          <p className="text-sm text-muted-foreground">سفارشات بایگانی شده - قابل بازگردانی یا حذف دائمی</p>
+      <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+        <div className="flex items-center gap-3">
+          <Archive className="h-8 w-8 text-primary" />
+          <div>
+            <h1 className="text-2xl font-bold">بایگانی سفارشات</h1>
+            <p className="text-sm text-muted-foreground">سفارشات بایگانی شده - قابل بازگردانی یا حذف دائمی</p>
+          </div>
         </div>
+        {canViewDeepArchive && (
+          <Button asChild variant="secondary" size="sm">
+            <Link to="/ceo/deep-archived">
+              <ArchiveX className="h-4 w-4 ml-2" />
+              مشاهده بایگانی عمیق
+              <ExternalLink className="h-3 w-3 mr-2 opacity-60" />
+            </Link>
+          </Button>
+        )}
       </div>
 
       <Card className="mb-6">
@@ -360,6 +390,15 @@ export default function ArchivedOrders() {
                   </div>
 
                   <div className="flex flex-wrap gap-2 mr-8 md:mr-0">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => navigate(`/orders/${order.id}`)}
+                    >
+                      <ExternalLink className="h-4 w-4 ml-2" />
+                      مشاهده جزئیات
+                    </Button>
+
                     <Button
                       variant="outline"
                       size="sm"

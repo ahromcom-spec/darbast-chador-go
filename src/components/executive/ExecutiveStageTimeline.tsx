@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { sendNotificationSchema } from '@/lib/rpcValidation';
+import { sendOrderSms } from '@/lib/orderSms';
 
 interface ExecutiveStage {
   key: string;
@@ -53,7 +54,7 @@ export const ExecutiveStageTimeline = ({
       // دریافت اطلاعات سفارش برای ارسال اعلان
       const { data: orderData } = await supabase
         .from('projects_v3')
-        .select('customer_id, code')
+        .select('customer_id, code, customer_phone')
         .eq('id', projectId)
         .single();
 
@@ -126,6 +127,20 @@ export const ExecutiveStageTimeline = ({
                   type: 'order-stage'
                 }
               });
+
+              const smsStatusMap: Record<string, any> = {
+                approved: 'approved',
+                in_progress: 'in_progress',
+                awaiting_collection: 'awaiting_collection',
+                in_collection: 'in_collection',
+                closed: 'completed'
+              };
+              const smsStatus = smsStatusMap[stage.key];
+              if (smsStatus) {
+                sendOrderSms((orderData as any).customer_phone || '', orderData.code || '', smsStatus, {
+                  orderId: projectId,
+                }).catch(err => console.error('SMS notification error:', err));
+              }
             } catch (notifError) {
               console.error('Error sending notification:', notifError);
             }

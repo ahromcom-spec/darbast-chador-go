@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { MapPin, Loader2 } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { createNeshanTileLayer } from '@/lib/neshan';
 
 interface LocationMapModalProps {
   isOpen: boolean;
@@ -104,11 +105,8 @@ export const LocationMapModal = ({
 
         mapRef.current = map;
 
-        // Add tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors',
-          maxZoom: 19,
-        }).addTo(map);
+        // Add Neshan tile layer
+        createNeshanTileLayer('standard-day').addTo(map);
 
         // Add draggable marker
         const marker = L.marker([initialLat, initialLng], {

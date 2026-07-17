@@ -68,7 +68,12 @@ export function OrderLocationEditor({
 
     const { error: locationError } = await supabase
       .from('locations')
-      .update({ lat, lng, updated_at: new Date().toISOString() })
+      .update({
+        lat,
+        lng,
+        address_line: combinedAddress || address,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', locationId);
 
     if (locationError) throw locationError;

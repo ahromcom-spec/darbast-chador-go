@@ -87,6 +87,7 @@ const getRoleIcon = (role: string) => {
 
 export function ProfileHeader({ user, fullName, roles = [], phoneNumber }: ProfileHeaderProps) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [customerCode, setCustomerCode] = useState<string | null>(null);
   const username = generateUsername(fullName);
   
   // Sort roles to show مدیر عامل first
@@ -97,18 +98,17 @@ export function ProfileHeader({ user, fullName, roles = [], phoneNumber }: Profi
   });
 
   useEffect(() => {
-    const fetchAvatarUrl = async () => {
+    const fetchProfileExtras = async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('avatar_url')
+        .select('avatar_url, customer_code')
         .eq('user_id', user.id)
         .maybeSingle();
       
-      if (data?.avatar_url) {
-        setAvatarUrl(data.avatar_url);
-      }
+      if (data?.avatar_url) setAvatarUrl(data.avatar_url);
+      if (data?.customer_code) setCustomerCode(data.customer_code);
     };
-    fetchAvatarUrl();
+    fetchProfileExtras();
   }, [user.id]);
 
   const handleAvatarUpdate = (url: string | null) => {
@@ -151,6 +151,15 @@ export function ProfileHeader({ user, fullName, roles = [], phoneNumber }: Profi
             {phoneNumber && (
               <p className="text-sm text-muted-foreground" dir="ltr">
                 📱 {phoneNumber}
+              </p>
+            )}
+
+            {/* Customer Code */}
+            {customerCode && (
+              <p className="text-sm" dir="ltr">
+                <span className="font-mono font-bold bg-primary/10 text-primary px-2 py-1 rounded border border-primary/20">
+                  🆔 کد مشتری: {customerCode}
+                </span>
               </p>
             )}
           </div>

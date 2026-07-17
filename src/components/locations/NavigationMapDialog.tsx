@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { createNeshanTileLayer } from '@/lib/neshan';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Navigation, Locate, AlertCircle, Loader2, X, MapPin, CheckCircle, Volume2 } from 'lucide-react';
@@ -118,11 +119,7 @@ export function NavigationMapDialog({
 
         mapRef.current = map;
 
-        const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors',
-          maxZoom: 19,
-          subdomains: ['a', 'b', 'c'],
-          crossOrigin: 'anonymous',
+        const tileLayer = createNeshanTileLayer('standard-day', {
           updateWhenIdle: false,
           updateWhenZooming: false,
           keepBuffer: 4,

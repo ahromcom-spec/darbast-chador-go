@@ -1,0 +1,649 @@
+import { useEffect, useState, useMemo } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { ChevronDown, ChevronUp, FileText, Lock, Search, User, Phone, Banknote, History, ArrowRightLeft, FileCheck, Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import ManagerOrderInvoice from '@/components/orders/ManagerOrderInvoice';
+import { StatementInvoiceDialog } from '@/components/executive/StatementInvoiceDialog';
+import { StatementManualPaymentDialog } from '@/components/executive/StatementManualPaymentDialog';
+import { StatementPaymentsHistoryDialog } from '@/components/executive/StatementPaymentsHistoryDialog';
+import { StatementChequesDialog } from '@/components/executive/StatementChequesDialog';
+import { TransferOrderStatementDialog } from '@/components/executive/TransferOrderStatementDialog';
+import { extractOrderDescription } from '@/lib/orderDescription';
+
+interface OrderRow {
+  id: string;
+  code: string;
+  status: string;
+  total: number;
+  paid: number;
+  remaining: number;
+  created_at: string;
+  subcategory_name: string | null;
+  description: string | null;
+  raw: any;
+}
+
+
+interface Statement {
+  id: string;
+  statement_number: number;
+  status: 'open' | 'closed';
+  closed_at: string | null;
+  total_amount: number;
+  total_paid: number;
+  total_remaining: number;
+  subcategory_name: string | null;
+  address: string | null;
+  detailed_address: string | null;
+  addresses: string[];
+  serviceTypes: string[];
+  orders: OrderRow[];
+}
+
+interface CustomerGroup {
+  customer_id: string;
+  full_name: string | null;
+  phone_number: string | null;
+  customer_code: string | null;
+  statements: Statement[];
+  total_remaining: number;
+  total_amount: number;
+}
+
+const formatPrice = (n: number) => new Intl.NumberFormat('fa-IR').format(Math.round(n || 0)) + ' تومان';
+
+const statusLabels: Record<string, string> = {
+  pending: 'در انتظار',
+  pending_execution: 'در انتظار اجرا',
+  approved: 'تایید شده',
+  scheduled: 'زمان‌بندی',
+  in_progress: 'در حال اجرا',
+  pending_collection: 'در انتظار جمع‌آوری',
+  in_collection: 'در حال جمع‌آوری',
+  collected: 'جمع‌آوری شد',
+  completed: 'تکمیل شده',
+  paid: 'پرداخت شده',
+  closed: 'بسته شده',
+};
+
+interface CustomerStatementsTabProps {
+  filter?: 'open' | 'closed' | 'all';
+}
+
+export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabProps = {}) {
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [groups, setGroups] = useState<CustomerGroup[]>([]);
+  const [search, setSearch] = useState('');
+  const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
+  const [expandedStatements, setExpandedStatements] = useState<Set<string>>(new Set());
+  const [closing, setClosing] = useState<Statement | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [payingStmt, setPayingStmt] = useState<{ statement: Statement; customer: CustomerGroup } | null>(null);
+  const [historyStmt, setHistoryStmt] = useState<{ statement: Statement; customer: CustomerGroup } | null>(null);
+  const [transferOrder, setTransferOrder] = useState<{ order: OrderRow; customer: CustomerGroup; currentStatementId: string } | null>(null);
+  const [chequesStmt, setChequesStmt] = useState<{ statement: Statement; customer: CustomerGroup } | null>(null);
+
+  const load = async () => {
+    try {
+      setLoading(true);
+
+      const { data: stmts, error: e1 } = await supabase
+        .from('customer_statements' as any)
+        .select('*')
+        .order('customer_id', { ascending: true })
+        .order('statement_number', { ascending: true });
+      if (e1) throw e1;
+
+      const customerIds = Array.from(new Set((stmts || []).map((s: any) => s.customer_id)));
+      if (customerIds.length === 0) {
+        setGroups([]);
+        return;
+      }
+
+      const { data: customers } = await supabase
+        .from('customers')
+        .select('id, user_id')
+        .in('id', customerIds);
+
+      const userIds = (customers || []).map(c => c.user_id).filter(Boolean) as string[];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, phone_number, customer_code')
+        .in('user_id', userIds);
+
+      const profileByUser = new Map((profiles || []).map(p => [p.user_id, p]));
+      const customerMeta = new Map(
+        (customers || []).map(c => [
+          c.id,
+          {
+            full_name: profileByUser.get(c.user_id)?.full_name || null,
+            phone_number: profileByUser.get(c.user_id)?.phone_number || null,
+            customer_code: (profileByUser.get(c.user_id) as any)?.customer_code || null,
+          },
+        ])
+      );
+
+      const { data: orders, error: e2 } = await supabase
+        .from('projects_v3')
+        .select('*, subcategories(name)')
+        .in('customer_id', customerIds)
+        // سفارشات بایگانی شده/بایگانی عمیق هم در صورتحساب مشتری نمایش داده می‌شوند
+        .neq('status', 'rejected');
+      if (e2) throw e2;
+
+      // group statements by customer
+      const byCustomer = new Map<string, CustomerGroup>();
+      for (const s of (stmts || []) as any[]) {
+        const meta = customerMeta.get(s.customer_id) || { full_name: null, phone_number: null, customer_code: null };
+        if (!byCustomer.has(s.customer_id)) {
+          byCustomer.set(s.customer_id, {
+            customer_id: s.customer_id,
+            full_name: meta.full_name,
+            phone_number: meta.phone_number,
+            customer_code: meta.customer_code,
+            statements: [],
+            total_remaining: 0,
+            total_amount: 0,
+          });
+        }
+        const myOrders: OrderRow[] = (orders || [])
+          .filter((o: any) => o.statement_id === s.id)
+          .map((o: any) => {
+            const total = Number(o.total_price) || Number(o.payment_amount) || 0;
+            const paid = Math.min(Number(o.total_paid ?? 0), total > 0 ? total : Number.MAX_SAFE_INTEGER);
+            return {
+              id: o.id,
+              code: o.code,
+              status: o.status || 'pending',
+              total,
+              paid,
+              remaining: Math.max(total - paid, 0),
+              created_at: o.created_at,
+              subcategory_name: o.subcategories?.name || null,
+              description: extractOrderDescription(o.notes),
+              raw: { ...o, customer_name: meta.full_name, customer_phone: meta.phone_number },
+            };
+          })
+          .sort((a, b) => a.created_at.localeCompare(b.created_at));
+
+        const total_amount = myOrders.reduce((a, o) => a + o.total, 0);
+        const total_paid = myOrders.reduce((a, o) => a + o.paid, 0);
+
+        // Helper: join address + detailed_address without duplicating when one contains the other
+        const joinAddr = (a?: string | null, d?: string | null) => {
+          const A = (a || '').trim();
+          const D = (d || '').trim();
+          if (!A && !D) return '';
+          if (!A) return D;
+          if (!D) return A;
+          if (A === D) return A;
+          if (D.includes(A)) return D;
+          if (A.includes(D)) return A;
+          return `${A} - ${D}`;
+        };
+        // Aggregate unique addresses and service types across all orders in this statement
+        const addrSet = new Set<string>();
+        const svcSet = new Set<string>();
+        for (const o of myOrders) {
+          const addr = joinAddr(o.raw?.address, o.raw?.detailed_address);
+          if (addr) addrSet.add(addr);
+          if (o.subcategory_name) svcSet.add(o.subcategory_name);
+        }
+        // Fallback to statement's stored address if no orders provide one
+        if (addrSet.size === 0) {
+          const stmtAddr = joinAddr(s.address, s.detailed_address);
+          if (stmtAddr) addrSet.add(stmtAddr);
+        }
+        const addresses = Array.from(addrSet);
+
+        const serviceTypes = Array.from(svcSet);
+
+        byCustomer.get(s.customer_id)!.statements.push({
+          id: s.id,
+          statement_number: s.statement_number,
+          status: s.status,
+          closed_at: s.closed_at,
+          total_amount,
+          total_paid,
+          total_remaining: Math.max(total_amount - total_paid, 0),
+          subcategory_name: serviceTypes[0] || null,
+          address: s.address || myOrders[0]?.raw?.address || null,
+          detailed_address: s.detailed_address || myOrders[0]?.raw?.detailed_address || null,
+          addresses,
+          serviceTypes,
+          orders: myOrders,
+          is_manual: !!s.is_manual,
+        } as Statement & { is_manual: boolean });
+      }
+
+      const result: CustomerGroup[] = Array.from(byCustomer.values()).map(g => {
+        // Hide empty auto-created statements; keep only statements with orders or those manually created by a manager.
+        const visible = g.statements.filter(s => s.orders.length > 0 || (s as any).is_manual === true);
+        const total_amount = visible.reduce((a, s) => a + s.total_amount, 0);
+        const total_remaining = visible.reduce((a, s) => a + s.total_remaining, 0);
+        return { ...g, statements: visible, total_amount, total_remaining };
+      }).filter(g => g.statements.length > 0);
+
+      result.sort((a, b) => b.total_remaining - a.total_remaining);
+      setGroups(result);
+    } catch (err) {
+      console.error(err);
+      toast({ title: 'خطا', description: 'بارگذاری صورتحساب‌ها با خطا مواجه شد', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const filtered = useMemo(() => {
+    let list = groups;
+    if (filter !== 'all') {
+      list = list
+        .map(g => ({
+          ...g,
+          statements: g.statements.filter(s => s.status === filter),
+        }))
+        .filter(g => g.statements.length > 0)
+        .map(g => {
+          const total_amount = g.statements.reduce((a, s) => a + s.total_amount, 0);
+          const total_remaining = g.statements.reduce((a, s) => a + s.total_remaining, 0);
+          return { ...g, total_amount, total_remaining };
+        });
+    }
+    const q = search.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter(g =>
+      (g.full_name || '').toLowerCase().includes(q) ||
+      (g.phone_number || '').includes(q)
+    );
+  }, [groups, search, filter]);
+
+  const toggleCustomer = (id: string) => {
+    setExpandedCustomers(prev => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  };
+  const toggleStatement = (id: string) => {
+    setExpandedStatements(prev => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  };
+
+  const handleClose = async () => {
+    if (!closing) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.rpc('close_customer_statement' as any, { _statement_id: closing.id });
+      if (error) throw error;
+      toast({ title: 'انجام شد', description: `صورتحساب شماره ${closing.statement_number} بسته شد` });
+      setClosing(null);
+      await load();
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: 'خطا', description: err.message || 'بستن صورتحساب با خطا مواجه شد', variant: 'destructive' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (loading) return <LoadingSpinner />;
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardContent className="p-4">
+          <div className="relative">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="جستجوی نام یا شماره موبایل مشتری..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pr-10"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            {filtered.length} مشتری دارای صورتحساب
+          </p>
+        </CardContent>
+      </Card>
+
+      {filtered.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center text-muted-foreground">
+            صورتحسابی یافت نشد
+          </CardContent>
+        </Card>
+      ) : (
+        filtered.map(g => {
+          const isOpen = expandedCustomers.has(g.customer_id);
+          const openStmt = g.statements.find(s => s.status === 'open');
+          return (
+            <Collapsible key={g.customer_id} open={isOpen} onOpenChange={() => toggleCustomer(g.customer_id)}>
+              <Card>
+                <CollapsibleTrigger className="w-full text-right">
+                  <CardHeader className="p-4 cursor-pointer hover:bg-muted/40">
+                    <div className="flex items-center justify-between flex-wrap gap-3">
+                      <div className="flex items-center gap-3">
+                        <User className="h-5 w-5 text-primary" />
+                        <div>
+                          <CardTitle className="text-base flex items-center gap-2">
+                            {g.full_name || 'بدون نام'}
+                            {g.customer_code && (
+                              <span className="text-[11px] font-mono bg-primary/10 text-primary px-2 py-0.5 rounded">کد: {g.customer_code}</span>
+                            )}
+                          </CardTitle>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Phone className="h-3 w-3" /> {g.phone_number || '—'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <Badge variant="outline">{g.statements.length} صورتحساب</Badge>
+                        {openStmt && (
+                          <Badge className="bg-blue-500/20 text-blue-700 border border-blue-500/40">
+                            باز: شماره {new Intl.NumberFormat('fa-IR').format(openStmt.statement_number)}
+                          </Badge>
+                        )}
+                        <span className="text-sm">کل: <b>{formatPrice(g.total_amount)}</b></span>
+                        <span className="text-sm text-red-600">مانده: <b>{formatPrice(g.total_remaining)}</b></span>
+                        {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      </div>
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+
+                <CollapsibleContent>
+                  <CardContent className="space-y-3">
+                    {g.statements.map(s => {
+                      const sOpen = expandedStatements.has(s.id);
+                      return (
+                        <Collapsible key={s.id} open={sOpen} onOpenChange={() => toggleStatement(s.id)}>
+                          <Card className={s.status === 'open' ? 'border-primary/40' : ''}>
+                            <CollapsibleTrigger className="w-full text-right">
+                              <CardHeader className="p-3 cursor-pointer hover:bg-muted/30">
+                                <div className="flex items-center justify-between flex-wrap gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <FileText className="h-4 w-4 text-primary" />
+                                    <span className="font-semibold text-sm">
+                                      صورتحساب شماره {new Intl.NumberFormat('fa-IR').format(s.statement_number)}
+                                    </span>
+                                    {s.status === 'open' ? (
+                                      <Badge className="bg-blue-500/20 text-blue-700 border border-blue-500/40">باز</Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="gap-1"><Lock className="h-3 w-3" />بسته</Badge>
+                                    )}
+                                    <span className="text-xs text-muted-foreground">{s.orders.length} سفارش</span>
+                                    {(s.serviceTypes.length > 0 ? s.serviceTypes : (s.subcategory_name ? [s.subcategory_name] : [])).map((svc, idx) => (
+                                      <Badge key={idx} variant="secondary" className="text-xs">{svc}</Badge>
+                                    ))}
+                                  </div>
+                                  <div className="flex items-center gap-3 flex-wrap text-xs">
+                                    <span>کل: <b>{formatPrice(s.total_amount)}</b></span>
+                                    <span className="text-green-600">پرداختی: {formatPrice(s.total_paid)}</span>
+                                    <span className="text-red-600">مانده: {formatPrice(s.total_remaining)}</span>
+                                    <div onClick={(e) => e.stopPropagation()} className="inline-block">
+                                      <StatementInvoiceDialog
+                                        statementNumber={s.statement_number}
+                                        statementStatus={s.status}
+                                        closedAt={s.closed_at}
+                                        customerName={g.full_name}
+                                        customerPhone={g.phone_number}
+                                        customerCode={g.customer_code}
+                                        serviceType={s.subcategory_name}
+                                        serviceTypes={s.serviceTypes}
+                                        address={s.address}
+                                        detailedAddress={s.detailed_address}
+                                        addresses={s.addresses}
+                                        orders={s.orders}
+                                      />
+                                    </div>
+                                    {s.orders.length > 0 && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1"
+                                        onClick={(e) => { e.stopPropagation(); setHistoryStmt({ statement: s, customer: g }); }}
+                                      >
+                                        <History className="h-3.5 w-3.5" />
+                                        تاریخچه پرداخت‌ها
+                                      </Button>
+                                    )}
+                                    {s.status === 'open' && s.orders.length > 0 && (
+                                      <Button
+                                        size="sm"
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                                        onClick={(e) => { e.stopPropagation(); setPayingStmt({ statement: s, customer: g }); }}
+                                      >
+                                        <Banknote className="h-3.5 w-3.5" />
+                                        ثبت پرداخت
+                                      </Button>
+                                    )}
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="gap-1 border-amber-400 text-amber-700 hover:bg-amber-50"
+                                      onClick={(e) => { e.stopPropagation(); setChequesStmt({ statement: s, customer: g }); }}
+                                    >
+                                      <FileCheck className="h-3.5 w-3.5" />
+                                      مدیریت چک‌ها
+                                    </Button>
+                                    {s.status === 'open' && (
+                                      <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={(e) => { e.stopPropagation(); setClosing(s); }}
+                                      >
+                                        بستن صورتحساب
+                                      </Button>
+                                    )}
+                                    {sOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                  </div>
+                                </div>
+                                {s.addresses.length > 0 && (
+                                  <div className="mt-1 text-right space-y-0.5">
+                                    {s.addresses.map((addr, idx) => (
+                                      <p key={idx} className="text-xs text-muted-foreground">
+                                        📍 {addr}
+                                      </p>
+                                    ))}
+                                  </div>
+                                )}
+                              </CardHeader>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <CardContent className="p-0">
+                                {s.orders.length === 0 ? (
+                                  <div className="p-4 text-center text-sm text-muted-foreground">
+                                    هنوز سفارشی ثبت نشده است
+                                  </div>
+                                ) : (
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead className="text-right">ردیف</TableHead>
+                                        <TableHead className="text-right">کد</TableHead>
+                                        <TableHead className="text-right">شرح خدمات</TableHead>
+                                        <TableHead className="text-right">تاریخ</TableHead>
+                                        <TableHead className="text-right">مبلغ</TableHead>
+                                        <TableHead className="text-right">پرداختی</TableHead>
+                                        <TableHead className="text-right">مانده</TableHead>
+                                        <TableHead className="text-right">وضعیت</TableHead>
+                                        <TableHead className="text-right"></TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {s.orders.map((o, i) => (
+                                        <TableRow key={o.id}>
+                                          <TableCell>{new Intl.NumberFormat('fa-IR').format(i + 1)}</TableCell>
+                                          <TableCell className="font-mono text-xs">
+                                            <button
+                                              type="button"
+                                              onClick={() => navigate(`/executive/orders?orderId=${o.id}`)}
+                                              className="text-primary hover:underline cursor-pointer"
+                                              title="مشاهده سفارش"
+                                            >
+                                              {o.code}
+                                            </button>
+                                          </TableCell>
+                                          <TableCell className="text-xs max-w-[320px] whitespace-pre-wrap leading-6 break-words">{o.description || o.subcategory_name || '—'}</TableCell>
+                                          <TableCell className="text-xs">{new Date(o.created_at).toLocaleDateString('fa-IR')}</TableCell>
+                                          <TableCell>{formatPrice(o.total)}</TableCell>
+                                          <TableCell className="text-green-600">{formatPrice(o.paid)}</TableCell>
+                                          <TableCell className="text-red-600">{formatPrice(o.remaining)}</TableCell>
+                                          <TableCell><Badge variant="outline" className="text-xs">{statusLabels[o.status] || o.status}</Badge></TableCell>
+                                          <TableCell>
+                                            <div className="flex items-center gap-1 flex-wrap">
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="gap-1 h-7 px-2 text-xs"
+                                                title="مشاهده سفارش"
+                                                onClick={() => navigate(`/executive/orders?orderId=${o.id}`)}
+                                              >
+                                                <Eye className="h-3.5 w-3.5" />
+                                                مشاهده
+                                              </Button>
+                                              <ManagerOrderInvoice order={o.raw} />
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="gap-1 h-7 px-2 text-xs"
+                                                title="انتقال به صورتحساب دیگر"
+                                                onClick={() => setTransferOrder({ order: o, customer: g, currentStatementId: s.id })}
+                                              >
+                                                <ArrowRightLeft className="h-3.5 w-3.5" />
+                                                انتقال
+                                              </Button>
+                                            </div>
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                    <TableFooter>
+                                      <TableRow>
+                                        <TableCell colSpan={4} className="text-right font-bold">جمع صورتحساب</TableCell>
+                                        <TableCell className="font-bold">{formatPrice(s.total_amount)}</TableCell>
+                                        <TableCell className="font-bold text-green-600">{formatPrice(s.total_paid)}</TableCell>
+                                        <TableCell className="font-bold text-red-600">{formatPrice(s.total_remaining)}</TableCell>
+                                        <TableCell colSpan={2} />
+                                      </TableRow>
+                                    </TableFooter>
+                                  </Table>
+                                )}
+                              </CardContent>
+                            </CollapsibleContent>
+                          </Card>
+                        </Collapsible>
+                      );
+                    })}
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          );
+        })
+      )}
+
+      <AlertDialog open={!!closing} onOpenChange={(o) => !o && setClosing(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>بستن صورتحساب</AlertDialogTitle>
+            <AlertDialogDescription>
+              صورتحساب شماره {closing && new Intl.NumberFormat('fa-IR').format(closing.statement_number)} بسته خواهد شد و
+              سفارشات بعدی این مشتری به‌طور خودکار وارد صورتحساب جدید (شماره بعدی) می‌شوند. این عملیات غیرقابل بازگشت است.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>انصراف</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClose} disabled={busy}>
+              {busy ? 'در حال بستن...' : 'تایید و بستن'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {payingStmt && (
+        <StatementManualPaymentDialog
+          open={!!payingStmt}
+          onOpenChange={(o) => !o && setPayingStmt(null)}
+          statementId={payingStmt.statement.id}
+          statementNumber={payingStmt.statement.statement_number}
+          customerId={payingStmt.customer.customer_id}
+          customerName={payingStmt.customer.full_name}
+          orders={payingStmt.statement.orders.map(o => ({
+            id: o.id,
+            code: o.code,
+            total: o.total,
+            paid: o.paid,
+            remaining: o.remaining,
+            created_at: o.created_at,
+          }))}
+          onSuccess={load}
+        />
+      )}
+      {historyStmt && (
+        <StatementPaymentsHistoryDialog
+          open={!!historyStmt}
+          onOpenChange={(o) => !o && setHistoryStmt(null)}
+          statementId={historyStmt.statement.id}
+          statementNumber={historyStmt.statement.statement_number}
+          customerName={historyStmt.customer.full_name}
+          orders={historyStmt.statement.orders.map(o => ({
+            id: o.id,
+            code: o.code,
+            total: o.total,
+            paid: o.paid,
+            remaining: o.remaining,
+            created_at: o.created_at,
+          }))}
+          onChanged={load}
+        />
+      )}
+      {transferOrder && (
+        <TransferOrderStatementDialog
+          open={!!transferOrder}
+          onOpenChange={(o) => !o && setTransferOrder(null)}
+          orderId={transferOrder.order.id}
+          orderCode={transferOrder.order.code}
+          currentStatementId={transferOrder.currentStatementId}
+          customerId={transferOrder.customer.customer_id}
+          customerName={transferOrder.customer.full_name}
+          statements={transferOrder.customer.statements.map(s => ({
+            id: s.id,
+            statement_number: s.statement_number,
+            status: s.status,
+          }))}
+          onSuccess={load}
+        />
+      )}
+      {chequesStmt && (
+        <StatementChequesDialog
+          open={!!chequesStmt}
+          onOpenChange={(o) => !o && setChequesStmt(null)}
+          statementId={chequesStmt.statement.id}
+          statementNumber={chequesStmt.statement.statement_number}
+          customerName={chequesStmt.customer.full_name}
+          onSuccess={load}
+        />
+      )}
+    </div>
+  );
+}

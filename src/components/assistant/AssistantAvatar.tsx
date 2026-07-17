@@ -1,14 +1,20 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, User, Image, Trash2, Maximize2, Minimize2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { X, Send, User, Image, Trash2, Maximize2, Minimize2, ZoomIn, ZoomOut, Mic, MicOff, Volume2, VolumeX, Loader2, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useLocation } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 import assistantImage from '@/assets/assistant-avatar.png';
+import { OrderDraftCard, parseOrderDraft } from './OrderDraftCard';
+import { PaymentCard, parsePaymentCards } from './PaymentCard';
+import { ModuleOpenCard, parseModuleOpens } from './ModuleOpenCard';
+import { ChatComposer, type ChatComposerHandle } from './ChatComposer';
 
 type MessageContent = {
   type: 'text' | 'image';
@@ -23,6 +29,8 @@ type Message = {
   timestamp?: string; // ISO string
   id?: string; // Database ID for deletion
 };
+
+type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/assistant-chat`;
 const STORAGE_KEY = 'ahrom_assistant_chat_history';
@@ -229,7 +237,8 @@ export function AssistantAvatar() {
   
   // موقعیت آواتار - قابل جابجایی در یک‌چهارم چپ-پایین صفحه
   // Avatar draggable in bottom-left quarter only
-  const AVATAR_SIZE = 74; // اندازه آواتار
+  const isMobile = useIsMobile();
+  const AVATAR_SIZE = isMobile ? 67 : 74; // اندازه آواتار (10% کوچک‌تر در موبایل)
   const AVATAR_PADDING = 16; // حداقل فاصله از لبه‌ها
   const FOOTER_HEIGHT = 60; // ارتفاع فوتر برای جلوگیری از overlap
   
@@ -246,21 +255,124 @@ export function AssistantAvatar() {
   // Resize state
   const [chatSize, setChatSize] = useState({ width: 384, height: 512 }); // sm:w-96 = 384px, h-[32rem] = 512px
   const [isResizing, setIsResizing] = useState(false);
+
+  // Assistant-only zoom (independent of app zoom). Default 0.25 so users see ~4x more content.
+  const ASSISTANT_ZOOM_KEY = 'assistant-chat-zoom';
+  const [assistantZoom, setAssistantZoom] = useState<number>(() => {
+    if (typeof window === 'undefined') return 0.25;
+    const saved = parseFloat(localStorage.getItem(ASSISTANT_ZOOM_KEY) || '');
+    return Number.isFinite(saved) && saved > 0 ? saved : 0.25;
+  });
+  useEffect(() => {
+    try { localStorage.setItem(ASSISTANT_ZOOM_KEY, String(assistantZoom)); } catch {}
+  }, [assistantZoom]);
+  const zoomIn = () => setAssistantZoom(z => Math.min(2, +(z + 0.1).toFixed(2)));
+  const zoomOut = () => setAssistantZoom(z => Math.max(0.1, +(z - 0.05).toFixed(2)));
+  const adjustZoom = (delta: number) => setAssistantZoom(z => Math.max(0.1, Math.min(2, +(z + delta).toFixed(3))));
+  const pinchStateRef = useRef<{ startDist: number; startZoom: number } | null>(null);
+  const [resizeDir, setResizeDir] = useState<ResizeDirection | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(true); // پیش‌فرض تمام صفحه
   const [previousChatState, setPreviousChatState] = useState<{
     position: { x: number; y: number };
     size: { width: number; height: number };
   } | null>(null);
-  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0, posX: 0, posY: 0 });
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const composerRef = useRef<ChatComposerHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const avatarRef = useRef<HTMLDivElement>(null);
   const chatPanelRef = useRef<HTMLDivElement>(null);
+  const resizeStartRef = useRef<{
+    dir: ResizeDirection;
+    pointerId: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    posX: number;
+    posY: number;
+  } | null>(null);
   
+  // Voice input (STT) state
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingStreamRef = useRef<MediaStream | null>(null);
+  const vadRef = useRef<{ ctx: AudioContext; analyser: AnalyserNode; raf: number; silenceStart: number | null; spoke: boolean } | null>(null);
+  const voiceReplyPendingRef = useRef<boolean>(false);
+
+
+  // Voice output (TTS) state
+  const TTS_ENABLED_KEY = 'assistant-tts-enabled';
+  const [ttsEnabled, setTtsEnabled] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem(TTS_ENABLED_KEY) === '1';
+  });
+  useEffect(() => {
+    try { localStorage.setItem(TTS_ENABLED_KEY, ttsEnabled ? '1' : '0'); } catch {}
+  }, [ttsEnabled]);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
+  const [loadingTtsIndex, setLoadingTtsIndex] = useState<number | null>(null);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  const handleCopyMessage = async (content: string, idx: number) => {
+    try {
+      // Strip internal markers from copied text
+      const clean = content
+        .replace(/<<AHROM_ORDER_DRAFT>>[\s\S]*?<<END_ORDER>>/g, '')
+        .replace(/<<AHROM_PAYMENT_CARD>>[\s\S]*?<<END_PAYMENT>>/g, '')
+        .replace(/<<AHROM_OPEN_MODULE>>[\s\S]*?<<END_MODULE>>/g, '')
+        .replace(/<<[A-Z_]+>>/g, '')
+        .trim();
+      await navigator.clipboard.writeText(clean || content);
+      setCopiedIndex(idx);
+      setTimeout(() => setCopiedIndex((c) => (c === idx ? null : c)), 1500);
+    } catch (e) {
+      console.error('copy failed', e);
+    }
+  };
+  const autoSpokenRef = useRef<Set<string>>(new Set());
+  const primedSpeechUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
   const auth = useAuth();
   const user = auth?.user;
+
+  const cleanTextForSpeech = (text: string) =>
+    text
+      // strip our custom markers + JSON payloads
+      .replace(/<<AHROM_ORDER_DRAFT>>[\s\S]*?<<END_ORDER>>/g, '')
+      .replace(/<<AHROM_PAYMENT_CARD>>[\s\S]*?<<END_PAYMENT>>/g, '')
+      .replace(/<<AHROM_OPEN_MODULE>>[\s\S]*?<<END_MODULE>>/g, '')
+      .replace(/<<[A-Z_]+>>[\s\S]*?<<END[_A-Z]*>>/g, '')
+      .replace(/\*\*/g, '')
+      .replace(/[*_`#>]/g, '')
+      .replace(/https?:\/\/\S+/g, '')
+      // strip emojis / pictographs so TTS reads only real words
+      .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F2FF}]/gu, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const createBrowserUtterance = (text = ''): SpeechSynthesisUtterance | null => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) return null;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'fa-IR';
+    utterance.rate = 0.95;
+    utterance.pitch = 1;
+    const voices = window.speechSynthesis.getVoices?.() || [];
+    const persianVoice = voices.find(v => v.lang?.toLowerCase().startsWith('fa')) || voices.find(v => /persian|farsi|فارسی/i.test(v.name));
+    if (persianVoice) utterance.voice = persianVoice;
+    return utterance;
+  };
+
+  const primeBrowserSpeech = (text = '') => {
+    const utterance = createBrowserUtterance(cleanTextForSpeech(text));
+    primedSpeechUtteranceRef.current = utterance;
+    return utterance;
+  };
 
   // Create a welcome message object
   const createWelcomeMessage = (): Message => ({
@@ -317,45 +429,41 @@ export function AssistantAvatar() {
 
   // Note: Avatar position persists between page navigations
 
-  // NOTE: ScrollArea ref points to Root; we must scroll the Viewport element.
+  // Native scroll container: scrollRef points directly to the scrollable div.
+  // Async message load + streamed content means scrollHeight settles late,
+  // so we retry several times to keep the latest message pinned.
+  const scrollChatToBottom = () => {
+    const viewport = scrollRef.current;
+    if (!viewport) return;
+    viewport.scrollTop = viewport.scrollHeight;
+  };
+
   useEffect(() => {
     if (!isOpen) return;
+    const raf = requestAnimationFrame(scrollChatToBottom);
+    const t1 = setTimeout(scrollChatToBottom, 60);
+    const t2 = setTimeout(scrollChatToBottom, 200);
+    const t3 = setTimeout(scrollChatToBottom, 500);
+    const t4 = setTimeout(scrollChatToBottom, 1000);
+    const t5 = setTimeout(scrollChatToBottom, 1800);
+    return () => { cancelAnimationFrame(raf); clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); clearTimeout(t5); };
+  }, [messages, isOpen, isLoadingMessages]);
 
-    const root = scrollRef.current;
-    const viewport = root?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
-    if (!viewport) return;
-
-    const raf = requestAnimationFrame(() => {
-      viewport.scrollTop = viewport.scrollHeight;
-    });
-
-    return () => cancelAnimationFrame(raf);
-  }, [messages, isOpen]);
-
-  // Scroll to bottom when chat opens (with delay to ensure render)
-  // Reset chat size and scroll to bottom when chat opens
-  // تشخیص موبایل
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-
+  // Watch the viewport for late-loading content (images, cards) and keep the
+  // view pinned to the newest message while the chat is open.
   useEffect(() => {
-    if (isOpen) {
-      // فقط در موبایل فول‌اسکرین باز شود، در دسکتاپ پنل معمولی
-      const checkMobile = window.innerWidth < 640;
-      setIsFullscreen(checkMobile);
-
-      const scrollToBottom = () => {
-        const root = scrollRef.current;
-        const viewport = root?.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement | null;
-        if (!viewport) return;
-        viewport.scrollTop = viewport.scrollHeight;
-      };
-
-      // Multiple attempts to ensure scroll works after render + messages load
-      requestAnimationFrame(scrollToBottom);
-      setTimeout(scrollToBottom, 0);
-      setTimeout(scrollToBottom, 100);
-      setTimeout(scrollToBottom, 250);
-    }
+    if (!isOpen) return;
+    const viewport = scrollRef.current;
+    if (!viewport) return;
+    const observer = new MutationObserver(() => {
+      // Only auto-pin if user is already near the bottom (avoid hijacking scroll-up).
+      const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      if (distanceFromBottom < 220) scrollChatToBottom();
+    });
+    observer.observe(viewport, { childList: true, subtree: true, characterData: true });
+    // Initial pin
+    const t = setTimeout(scrollChatToBottom, 350);
+    return () => { observer.disconnect(); clearTimeout(t); };
   }, [isOpen]);
 
   // Save messages to localStorage for guests only
@@ -366,12 +474,12 @@ export function AssistantAvatar() {
   }, [messages, user?.id]);
 
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
+    if (isOpen) {
+      composerRef.current?.focus();
     }
   }, [isOpen]);
 
-  // Handle viewport resize to clamp positions
+  // Handle viewport resize to clamp positions (and follow keyboard in fullscreen)
   useEffect(() => {
     const clampPositions = () => {
       const vp = getViewportSize();
@@ -383,19 +491,26 @@ export function AssistantAvatar() {
         y: Math.max(FOOTER_HEIGHT, Math.min(vp.height / 2 - AVATAR_SIZE, prev.y))
       }));
       
-      // Only clamp chat position if open
       if (isOpen) {
-        setChatPosition(prev => ({
-          x: Math.max(8, Math.min(vp.width - chatSize.width - 8, prev.x)),
-          y: Math.max(8, Math.min(vp.height - chatSize.height - 8, prev.y))
-        }));
+        if (isFullscreen) {
+          // Chat is portaled to <body>, so fullscreen must use real viewport
+          // coordinates and ignore the app's internal CSS zoom.
+          setChatPosition({ x: vp.offsetLeft, y: vp.offsetTop });
+          setChatSize({ width: vp.width, height: vp.height });
+        } else {
+          setChatPosition(prev => ({
+            x: Math.max(8, Math.min(vp.width - chatSize.width - 8, prev.x)),
+            y: Math.max(8, Math.min(vp.height - chatSize.height - 8, prev.y))
+          }));
+        }
       }
     };
 
-    // Listen to visualViewport changes (handles zoom)
+    // Listen to visualViewport changes (handles zoom + keyboard)
     const viewport = window.visualViewport;
     if (viewport) {
       viewport.addEventListener('resize', clampPositions);
+      viewport.addEventListener('scroll', clampPositions);
     }
     
     // Also listen to window resize
@@ -407,22 +522,79 @@ export function AssistantAvatar() {
     return () => {
       if (viewport) {
         viewport.removeEventListener('resize', clampPositions);
+        viewport.removeEventListener('scroll', clampPositions);
       }
       window.removeEventListener('resize', clampPositions);
     };
-  }, [isOpen, chatSize]);
+  }, [isOpen, isFullscreen, chatSize]);
+
+  // Ctrl + Wheel zoom and pinch-to-zoom on chat panel
+  useEffect(() => {
+    if (!isOpen) return;
+    const el = chatPanelRef.current;
+    if (!el) return;
+
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.05 : 0.05;
+      adjustZoom(delta);
+    };
+
+    const dist = (t1: Touch, t2: Touch) => {
+      const dx = t1.clientX - t2.clientX;
+      const dy = t1.clientY - t2.clientY;
+      return Math.hypot(dx, dy);
+    };
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        pinchStateRef.current = {
+          startDist: dist(e.touches[0], e.touches[1]),
+          startZoom: assistantZoom,
+        };
+      }
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && pinchStateRef.current) {
+        e.preventDefault();
+        const d = dist(e.touches[0], e.touches[1]);
+        const ratio = d / pinchStateRef.current.startDist;
+        const next = Math.max(0.1, Math.min(2, +(pinchStateRef.current.startZoom * ratio).toFixed(3)));
+        setAssistantZoom(next);
+      }
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) pinchStateRef.current = null;
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    el.addEventListener('touchcancel', onTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [isOpen, assistantZoom]);
 
   // Chat panel drag handlers
   const handleChatDragStart = useCallback((clientX: number, clientY: number) => {
+    if (isFullscreen) return;
     setIsDraggingChat(true);
     setDragOffset({
       x: clientX - chatPosition.x,
       y: clientY - chatPosition.y
     });
-  }, [chatPosition]);
+  }, [isFullscreen, chatPosition]);
 
   const handleChatDragMove = useCallback((clientX: number, clientY: number) => {
-    if (!isDraggingChat) return;
+    if (!isDraggingChat || isFullscreen) return;
     
     const vp = getViewportSize();
     const newX = clientX - dragOffset.x;
@@ -434,47 +606,86 @@ export function AssistantAvatar() {
       x: Math.max(8, Math.min(maxX, newX)),
       y: Math.max(8, Math.min(maxY, newY))
     });
-  }, [isDraggingChat, dragOffset, chatSize]);
+  }, [isDraggingChat, isFullscreen, dragOffset, chatSize]);
 
   const handleDragEnd = useCallback(() => {
     setIsDraggingChat(false);
   }, []);
 
   // Resize handlers
-  const handleResizeStart = useCallback((clientX: number, clientY: number) => {
+  const handleResizeStart = useCallback((clientX: number, clientY: number, dir: ResizeDirection, pointerId = -1) => {
+    setIsFullscreen(false);
     setIsResizing(true);
-    setResizeStart({
+    setResizeDir(dir);
+    const nextStart = {
       x: clientX,
       y: clientY,
       width: chatSize.width,
-      height: chatSize.height
-    });
-  }, [chatSize]);
+      height: chatSize.height,
+      posX: chatPosition.x,
+      posY: chatPosition.y,
+      dir,
+      pointerId,
+    };
+    resizeStartRef.current = nextStart;
+    setResizeStart(nextStart);
+  }, [chatSize, chatPosition]);
 
   const handleResizeMove = useCallback((clientX: number, clientY: number) => {
-    if (!isResizing) return;
-    
+    if (!isResizing || !resizeDir) return;
+
     const vp = getViewportSize();
-    const deltaX = clientX - resizeStart.x;
-    const deltaY = clientY - resizeStart.y;
-    
-    const newWidth = Math.max(280, Math.min(vp.width - chatPosition.x - 20, resizeStart.width + deltaX));
-    const newHeight = Math.max(300, Math.min(vp.height - chatPosition.y - 20, resizeStart.height + deltaY));
-    
+    const start = resizeStartRef.current || { ...resizeStart, dir: resizeDir, pointerId: -1 };
+    const deltaX = clientX - start.x;
+    const deltaY = clientY - start.y;
+    const MIN_W = 280, MIN_H = 300;
+    const PAD = 8;
+
+    let newWidth = start.width;
+    let newHeight = start.height;
+    let newX = start.posX;
+    let newY = start.posY;
+
+    if (resizeDir.includes('e')) {
+      newWidth = Math.max(MIN_W, Math.min(vp.width - start.posX - PAD, start.width + deltaX));
+    }
+    if (resizeDir.includes('s')) {
+      newHeight = Math.max(MIN_H, Math.min(vp.height - start.posY - PAD, start.height + deltaY));
+    }
+    if (resizeDir.includes('w')) {
+      const proposedW = start.width - deltaX;
+      newWidth = Math.max(MIN_W, Math.min(start.posX + start.width - PAD, proposedW));
+      newX = start.posX + (start.width - newWidth);
+    }
+    if (resizeDir.includes('n')) {
+      const proposedH = start.height - deltaY;
+      newHeight = Math.max(MIN_H, Math.min(start.posY + start.height - PAD, proposedH));
+      newY = start.posY + (start.height - newHeight);
+    }
+
     setChatSize({ width: newWidth, height: newHeight });
-  }, [isResizing, resizeStart, chatPosition]);
+    setChatPosition({ x: newX, y: newY });
+  }, [isResizing, resizeDir, resizeStart]);
 
   const handleResizeEnd = useCallback(() => {
     setIsResizing(false);
+    setResizeDir(null);
+    resizeStartRef.current = null;
   }, []);
 
   // Toggle fullscreen mode
   const toggleFullscreen = useCallback(() => {
+    const vp = getViewportSize();
     if (isFullscreen) {
-      // Restore previous state
-      if (previousChatState) {
+      // Restore previous state or use a reasonable default centered
+      if (previousChatState && previousChatState.size.width < vp.width - 16) {
         setChatPosition(previousChatState.position);
         setChatSize(previousChatState.size);
+      } else {
+        const w = Math.min(480, vp.width - 32);
+        const h = Math.min(640, vp.height - 32);
+        setChatSize({ width: w, height: h });
+        setChatPosition({ x: Math.max(8, (vp.width - w) / 2), y: Math.max(8, (vp.height - h) / 2) });
       }
       setIsFullscreen(false);
     } else {
@@ -483,23 +694,17 @@ export function AssistantAvatar() {
         position: { ...chatPosition },
         size: { ...chatSize }
       });
-      const vp = getViewportSize();
-      setChatPosition({ x: 8, y: 8 });
-      setChatSize({ width: vp.width - 16, height: vp.height - 16 });
+      setChatPosition({ x: vp.offsetLeft, y: vp.offsetTop });
+      setChatSize({ width: vp.width, height: vp.height });
       setIsFullscreen(true);
     }
   }, [isFullscreen, previousChatState, chatPosition, chatSize]);
 
-  const handleResizeMouseDown = (e: React.MouseEvent) => {
+  const makeResizePointerDown = (dir: ResizeDirection) => (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    handleResizeStart(e.clientX, e.clientY);
-  };
-
-  const handleResizeTouchStart = (e: React.TouchEvent) => {
-    e.stopPropagation();
-    const touch = e.touches[0];
-    handleResizeStart(touch.clientX, touch.clientY);
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    handleResizeStart(e.clientX, e.clientY, dir, e.pointerId);
   };
 
   // Avatar drag handlers - constrained to bottom-left quarter
@@ -573,31 +778,52 @@ export function AssistantAvatar() {
   const handleAvatarClick = () => {
     if (didAvatarDrag.current) return; // Don't open if was dragging
     const vp = getViewportSize();
-    // Open in fullscreen by default
-    setChatPosition({ x: 0, y: 0 });
-    setChatSize({ width: vp.width, height: vp.height });
-    setIsFullscreen(true);
+    const shouldOpenFullscreen = isMobile || vp.width < 640;
+    if (shouldOpenFullscreen) {
+      setChatPosition({ x: vp.offsetLeft, y: vp.offsetTop });
+      setChatSize({ width: vp.width, height: vp.height });
+      setIsFullscreen(true);
+    } else {
+      const width = Math.min(520, vp.width - 32);
+      const height = Math.min(640, vp.height - 32);
+      setChatSize({ width, height });
+      setChatPosition({
+        x: Math.max(16, (vp.width - width) / 2),
+        y: Math.max(16, (vp.height - height) / 2),
+      });
+      setIsFullscreen(false);
+    }
     setIsOpen(true);
   };
 
   // Chat header mouse events
   const handleChatMouseDown = (e: React.MouseEvent) => {
+    if (isFullscreen) return;
     e.preventDefault();
     handleChatDragStart(e.clientX, e.clientY);
   };
 
   const handleChatTouchStart = (e: React.TouchEvent) => {
+    if (isFullscreen) return;
     const touch = e.touches[0];
     handleChatDragStart(touch.clientX, touch.clientY);
   };
 
   const handleChatTouchMove = (e: React.TouchEvent) => {
+    if (isFullscreen) return;
     const touch = e.touches[0];
     handleChatDragMove(touch.clientX, touch.clientY);
   };
 
   // Global mouse/touch move and up for chat panel and avatar
   useEffect(() => {
+    const handleGlobalPointerMove = (e: PointerEvent) => {
+      const start = resizeStartRef.current;
+      if (!isResizing || !start || start.pointerId !== e.pointerId) return;
+      e.preventDefault();
+      handleResizeMove(e.clientX, e.clientY);
+    };
+
     const handleGlobalMouseMove = (e: MouseEvent) => {
       if (isDraggingAvatar) handleAvatarDragMove(e.clientX, e.clientY);
       if (isDraggingChat) handleChatDragMove(e.clientX, e.clientY);
@@ -626,13 +852,23 @@ export function AssistantAvatar() {
     };
 
     if (isDraggingAvatar || isDraggingChat || isResizing) {
+      document.body.style.userSelect = 'none';
+      if (isResizing) document.body.style.cursor = `${resizeDir || 'se'}-resize`;
+      document.addEventListener('pointermove', handleGlobalPointerMove);
+      document.addEventListener('pointerup', handleGlobalTouchEnd);
+      document.addEventListener('pointercancel', handleGlobalTouchEnd);
       document.addEventListener('mousemove', handleGlobalMouseMove);
-      document.addEventListener('touchmove', handleGlobalTouchMove);
+      document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
       document.addEventListener('mouseup', handleGlobalMouseUp);
       document.addEventListener('touchend', handleGlobalTouchEnd);
     }
 
     return () => {
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+      document.removeEventListener('pointermove', handleGlobalPointerMove);
+      document.removeEventListener('pointerup', handleGlobalTouchEnd);
+      document.removeEventListener('pointercancel', handleGlobalTouchEnd);
       document.removeEventListener('mousemove', handleGlobalMouseMove);
       document.removeEventListener('touchmove', handleGlobalTouchMove);
       document.removeEventListener('mouseup', handleGlobalMouseUp);
@@ -646,11 +882,20 @@ export function AssistantAvatar() {
   }, [user]);
 
   const streamChat = async (userMessages: Message[], imageBase64?: string) => {
+    // Forward the signed-in user's access token so the edge function can
+    // resolve userId via JWT and attach the actor name/phone to activity logs.
+    let accessToken: string | null = null;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      accessToken = session?.access_token || null;
+    } catch {}
+    const bearer = accessToken || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     const resp = await fetch(CHAT_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        Authorization: `Bearer ${bearer}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       },
       body: JSON.stringify({ 
         messages: userMessages.map(m => ({ role: m.role, content: m.content })),
@@ -731,8 +976,9 @@ export function AssistantAvatar() {
     reader.readAsDataURL(file);
   };
 
-  const handleSend = async () => {
-    if ((!input.trim() && !selectedImage) || isLoading) return;
+  const handleSend = async (overrideText?: string) => {
+    const textToSend = (typeof overrideText === 'string' ? overrideText : input).trim();
+    if ((!textToSend && !selectedImage) || isLoading) return;
 
     let imageBase64: string | undefined;
     const attachments: MessageContent[] = [];
@@ -744,7 +990,7 @@ export function AssistantAvatar() {
 
     const userMsg: Message = { 
       role: 'user', 
-      content: input.trim() || 'این تصویر را ببین',
+      content: textToSend || 'این تصویر را ببین',
       attachments: attachments.length > 0 ? attachments : undefined,
       timestamp: new Date().toISOString()
     };
@@ -828,6 +1074,243 @@ export function AssistantAvatar() {
     toast.success('پیام حذف شد');
   };
 
+  // ============ Voice Input (STT) ============
+  const stopRecordingStream = () => {
+    if (recordingStreamRef.current) {
+      recordingStreamRef.current.getTracks().forEach(t => t.stop());
+      recordingStreamRef.current = null;
+    }
+  };
+
+  const stopVad = () => {
+    if (vadRef.current) {
+      cancelAnimationFrame(vadRef.current.raf);
+      try { vadRef.current.ctx.close(); } catch {}
+      vadRef.current = null;
+    }
+  };
+
+  const startVad = (stream: MediaStream, onSilence: () => void) => {
+    try {
+      const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
+      const ctx: AudioContext = new AudioCtx();
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 1024;
+      source.connect(analyser);
+      const data = new Uint8Array(analyser.fftSize);
+      const SILENCE_THRESHOLD = 0.018; // RMS
+      const SILENCE_MS = 1500;
+      const MIN_SPEAK_MS = 400;
+      const startedAt = performance.now();
+      const state = { ctx, analyser, raf: 0, silenceStart: null as number | null, spoke: false };
+      vadRef.current = state;
+      const tick = () => {
+        if (!vadRef.current) return;
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) {
+          const v = (data[i] - 128) / 128;
+          sum += v * v;
+        }
+        const rms = Math.sqrt(sum / data.length);
+        const now = performance.now();
+        if (rms > SILENCE_THRESHOLD) {
+          state.spoke = true;
+          state.silenceStart = null;
+        } else if (state.spoke && now - startedAt > MIN_SPEAK_MS) {
+          if (state.silenceStart === null) state.silenceStart = now;
+          else if (now - state.silenceStart > SILENCE_MS) {
+            onSilence();
+            return;
+          }
+        }
+        state.raf = requestAnimationFrame(tick);
+      };
+      state.raf = requestAnimationFrame(tick);
+    } catch (e) {
+      console.warn('VAD unavailable', e);
+    }
+  };
+
+  const startRecording = async () => {
+    if (isRecording || isLoading) return;
+    // Require a secure context (mic + TTS playback). On http://, getUserMedia is undefined.
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+      toast.error('برای استفاده از میکروفن سایت باید با HTTPS باز شود');
+      return;
+    }
+    // Prime browser speech inside the user's click/tap gesture so fallback playback can work after async STT/chat.
+    primeBrowserSpeech();
+    // Proactively check the permission state so we can guide the user
+    try {
+      if ((navigator as any).permissions?.query) {
+        const status = await (navigator as any).permissions.query({ name: 'microphone' as PermissionName });
+        if (status.state === 'denied') {
+          toast.error('دسترسی به میکروفن مسدود است. لطفاً از تنظیمات مرورگر اجازه دسترسی به میکروفن این سایت را فعال کنید.', { duration: 7000 });
+          return;
+        }
+      }
+    } catch { /* Safari may not support this; continue and rely on getUserMedia prompt */ }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+      recordingStreamRef.current = stream;
+
+      const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find(t => (window as any).MediaRecorder?.isTypeSupported?.(t)) || '';
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      recorder.onstop = async () => {
+        stopVad();
+        stopRecordingStream();
+        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        if (blob.size < 800) {
+          toast.error('صدا ضبط نشد، لطفاً دوباره تلاش کنید');
+          setIsRecording(false);
+          voiceReplyPendingRef.current = false;
+          return;
+        }
+        setIsTranscribing(true);
+        try {
+          const buf = await blob.arrayBuffer();
+          const bytes = new Uint8Array(buf);
+          let bin = '';
+          const chunk = 0x8000;
+          for (let i = 0; i < bytes.length; i += chunk) {
+            bin += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)) as unknown as number[]);
+          }
+          const b64 = btoa(bin);
+          const { data, error } = await supabase.functions.invoke('assistant-stt', {
+            body: { audio: b64, mimeType: blob.type },
+          });
+          if (error) throw error;
+          const text = (data?.text || '').trim();
+          if (text) {
+            setInput('');
+            voiceReplyPendingRef.current = true;
+            await handleSend(text);
+          } else {
+            toast.error('متنی شناسایی نشد');
+            voiceReplyPendingRef.current = false;
+          }
+        } catch (e) {
+          console.error('STT error', e);
+          toast.error('خطا در تبدیل گفتار به متن');
+          voiceReplyPendingRef.current = false;
+        } finally {
+          setIsTranscribing(false);
+          setIsRecording(false);
+        }
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start(250);
+      setIsRecording(true);
+      // Auto-stop on silence (end-of-speech detection)
+      startVad(stream, () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.stop();
+        }
+      });
+    } catch (e: any) {
+      console.error('mic error', e);
+      const name = e?.name || '';
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        toast.error('شما اجازه دسترسی به میکروفن را ندادید. برای پرسیدن سؤال با صدا، لطفاً در پنجره مرورگر گزینه «اجازه» (Allow) را انتخاب کنید.', { duration: 7000 });
+      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+        toast.error('میکروفنی روی این دستگاه پیدا نشد');
+      } else if (name === 'NotReadableError') {
+        toast.error('میکروفن توسط برنامه دیگری در حال استفاده است');
+      } else {
+        toast.error('دسترسی به میکروفن امکان‌پذیر نشد');
+      }
+      stopRecordingStream();
+      setIsRecording(false);
+    }
+  };
+
+
+  const stopRecording = () => {
+    stopVad();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    } else {
+      stopRecordingStream();
+      setIsRecording(false);
+    }
+  };
+
+  const toggleRecording = () => {
+    if (isRecording) stopRecording(); else startRecording();
+  };
+
+
+  // ============ Voice Output (TTS) ============
+  const stopSpeaking = () => {
+    if (currentAudioRef.current) {
+      try { currentAudioRef.current.pause(); } catch {}
+      currentAudioRef.current = null;
+    }
+    try { window.speechSynthesis?.cancel(); } catch {}
+    setSpeakingIndex(null);
+  };
+
+  const speakMessage = async (text: string, index: number) => {
+    if (!text?.trim()) return;
+    stopSpeaking();
+    setLoadingTtsIndex(index);
+    const clean = cleanTextForSpeech(text);
+    try {
+      const { data, error } = await supabase.functions.invoke('assistant-tts', {
+        body: { text: clean.slice(0, 4000), voice: 'alloy' },
+      });
+      if (error) throw error;
+      const audio = new Audio(`data:${data.mimeType || 'audio/mpeg'};base64,${data.audio}`);
+      currentAudioRef.current = audio;
+      setSpeakingIndex(index);
+      audio.onended = () => { if (currentAudioRef.current === audio) { currentAudioRef.current = null; setSpeakingIndex(null); } };
+      audio.onerror = () => { if (currentAudioRef.current === audio) { currentAudioRef.current = null; setSpeakingIndex(null); } };
+      await audio.play();
+    } catch (e) {
+      console.error('TTS error', e);
+      const utterance = primedSpeechUtteranceRef.current || createBrowserUtterance();
+      primedSpeechUtteranceRef.current = null;
+      if (utterance && clean) {
+        try {
+          utterance.text = clean.slice(0, 1500);
+          utterance.onend = () => setSpeakingIndex(null);
+          utterance.onerror = () => setSpeakingIndex(null);
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.speak(utterance);
+          setSpeakingIndex(index);
+          toast.info('پخش صوتی با صدای مرورگر انجام شد');
+          return;
+        } catch (fallbackError) {
+          console.error('Browser speech fallback error', fallbackError);
+        }
+      }
+      toast.error('خطا در پخش صدا');
+      setSpeakingIndex(null);
+    } finally {
+      setLoadingTtsIndex(null);
+    }
+  };
+
+  // Auto-play disabled by user preference — TTS only plays when the user
+  // clicks the play button on a specific message. Keep the effect only to
+  // clear the pending flag so old voice-reply markers don't leak.
+  useEffect(() => {
+    if (!isOpen || isLoading) return;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== 'assistant') return;
+    voiceReplyPendingRef.current = false;
+  }, [messages, isOpen, isLoading]);
+
+  useEffect(() => () => { stopSpeaking(); stopRecordingStream(); }, []);
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -843,8 +1326,9 @@ export function AssistantAvatar() {
   // همچنین مخفی شود اگر در صفحه اصلی نقشه کره زمین نمایش داده شود
   const isHomeWithGlobe = location.pathname === '/' && localStorage.getItem('showGlobe') === 'true';
 
-  // Don't render avatar if user is not logged in or should be hidden
-  if (!user || shouldHideAssistant || isHomeWithGlobe) {
+  // Don't render avatar if hidden by route, or in globe view
+  // (Allow guests to see the avatar — chat features that require auth will prompt login)
+  if (shouldHideAssistant || isHomeWithGlobe) {
     return null;
   }
 
@@ -870,7 +1354,7 @@ export function AssistantAvatar() {
           <div
             ref={avatarRef}
             className={cn(
-              "w-[74px] h-[74px] rounded-full",
+              isMobile ? "w-[67px] h-[67px] rounded-full" : "w-[74px] h-[74px] rounded-full",
               "shadow-lg hover:shadow-2xl transition-shadow duration-300",
               "overflow-hidden select-none bg-white"
             )}
@@ -891,14 +1375,18 @@ export function AssistantAvatar() {
       </div>
 
       {/* پنل چت */}
-      {isOpen && (
+      {isOpen && typeof document !== 'undefined' && createPortal(
         <div 
           ref={chatPanelRef}
           style={{
             left: `${chatPosition.x}px`,
             top: `${chatPosition.y}px`,
-            width: `${chatSize.width}px`,
-            height: `${chatSize.height}px`,
+            width: `${chatSize.width / assistantZoom}px`,
+            height: `${chatSize.height / assistantZoom}px`,
+            maxWidth: `${100 / assistantZoom}vw`,
+            maxHeight: `${100 / assistantZoom}dvh`,
+            zoom: assistantZoom,
+            touchAction: (isDraggingChat || isResizing) ? 'none' : 'auto',
           }}
           className={cn(
             "fixed z-[100] bg-background border border-border shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-300",
@@ -934,6 +1422,31 @@ export function AssistantAvatar() {
               <Button
                 variant="ghost"
                 size="icon"
+                onClick={(e) => { e.stopPropagation(); zoomOut(); }}
+                className="h-8 w-8 text-white hover:bg-white/20"
+                title="کوچک‌تر کردن متن"
+              >
+                <ZoomOut className="h-5 w-5" />
+              </Button>
+              <span
+                onClick={(e) => { e.stopPropagation(); setAssistantZoom(0.25); }}
+                title="بازنشانی زوم (پیش‌فرض ۲۵٪)"
+                className="text-[11px] text-white/90 min-w-[34px] text-center select-none cursor-pointer hover:bg-white/20 rounded px-1"
+              >
+                {Math.round(assistantZoom * 100)}%
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => { e.stopPropagation(); zoomIn(); }}
+                className="h-8 w-8 text-white hover:bg-white/20"
+                title="بزرگ‌تر کردن متن"
+              >
+                <ZoomIn className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
                 className="h-8 w-8 text-white hover:bg-white/20"
                 title={isFullscreen ? "خروج از تمام صفحه" : "تمام صفحه"}
@@ -956,7 +1469,7 @@ export function AssistantAvatar() {
           </div>
 
           {/* پیام‌ها */}
-          <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+          <div className="flex-1 p-4 overflow-y-auto ahrom-chat-scroll" ref={scrollRef} style={{ overscrollBehavior: 'contain' }}>
             {messages.length === 0 ? (
               <div className="py-4">
                 {/* پیام خوش‌آمدگویی با آواتار */}
@@ -973,19 +1486,19 @@ export function AssistantAvatar() {
                 {/* دکمه‌های پیشنهادی */}
                 <div className="mt-4 flex flex-wrap gap-2 justify-center">
                   <button 
-                    onClick={() => setInput('چطور سفارش ثبت کنم؟')}
+                    onClick={() => composerRef.current?.setValue('چطور سفارش ثبت کنم؟')}
                     className="text-xs px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full hover:bg-amber-200 transition-colors"
                   >
                     ثبت سفارش
                   </button>
                   <button 
-                    onClick={() => setInput('خدمات شما چیست؟')}
+                    onClick={() => composerRef.current?.setValue('خدمات شما چیست؟')}
                     className="text-xs px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full hover:bg-amber-200 transition-colors"
                   >
                     خدمات
                   </button>
                   <button 
-                    onClick={() => setInput('راهنمای سایت')}
+                    onClick={() => composerRef.current?.setValue('راهنمای سایت')}
                     className="text-xs px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full hover:bg-amber-200 transition-colors"
                   >
                     راهنما
@@ -1026,7 +1539,34 @@ export function AssistantAvatar() {
                             )}
                           </div>
                         ))}
-                        <p className="px-3 py-2 whitespace-pre-line">{msg.content}</p>
+                        {(() => {
+                          if (msg.role !== 'assistant') {
+                            return <p className="px-3 py-2 whitespace-pre-line">{msg.content}</p>;
+                          }
+                          const { cleanText: t1, draft } = parseOrderDraft(msg.content);
+                          const { cleanText: t2, cards } = parsePaymentCards(t1);
+                          const { cleanText, opens } = parseModuleOpens(t2);
+                          return (
+                            <>
+                              {cleanText && <p className="px-3 py-2 whitespace-pre-line">{cleanText}</p>}
+                              {draft && (
+                                <div className="px-3 pb-3">
+                                  <OrderDraftCard draft={draft} />
+                                </div>
+                              )}
+                              {cards.map((c, idx) => (
+                                <div key={`pay-${idx}`} className="px-3 pb-3">
+                                  <PaymentCard data={c} />
+                                </div>
+                              ))}
+                              {opens.map((o, idx) => (
+                                <div key={`mod-${idx}`} className="px-3 pb-3">
+                                  <ModuleOpenCard data={o} />
+                                </div>
+                              ))}
+                            </>
+                          );
+                        })()}
                       </div>
                       {/* زمان و دکمه حذف - مخفی برای پیام خوش‌آمدگویی */}
                       <div className={cn(
@@ -1036,11 +1576,45 @@ export function AssistantAvatar() {
                         {msg.timestamp && msg.id !== 'welcome-message' && (
                           <span>{formatMessageTime(msg.timestamp)}</span>
                         )}
+                        {msg.role === 'assistant' && msg.id !== 'welcome-message' && (
+                          <button
+                            onClick={() => {
+                              if (speakingIndex === idx) stopSpeaking();
+                              else { primeBrowserSpeech(msg.content); speakMessage(msg.content, idx); }
+                            }}
+                            className="p-1 hover:bg-amber-100 rounded transition-colors"
+                            title={speakingIndex === idx ? "توقف خواندن" : "خواندن پاسخ"}
+                            disabled={loadingTtsIndex === idx}
+                          >
+                            {loadingTtsIndex === idx ? (
+                              <Loader2 className="w-3 h-3 animate-spin text-amber-600" />
+                            ) : speakingIndex === idx ? (
+                              <VolumeX className="w-3 h-3 text-amber-600" />
+                            ) : (
+                              <Volume2 className="w-3 h-3 text-amber-600" />
+                            )}
+                          </button>
+                        )}
+                        {msg.id !== 'welcome-message' && (
+                          <button
+                            onClick={() => handleCopyMessage(msg.content, idx)}
+                            className="p-1 hover:bg-primary/10 rounded transition-colors"
+                            title="کپی متن پیام"
+                            aria-label="کپی متن پیام"
+                          >
+                            {copiedIndex === idx ? (
+                              <Check className="w-3 h-3 text-green-600" />
+                            ) : (
+                              <Copy className="w-3 h-3 text-muted-foreground" />
+                            )}
+                          </button>
+                        )}
                         {msg.id !== 'welcome-message' && (
                           <button
                             onClick={() => handleDeleteMessage(idx)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded"
+                            className="p-1 hover:bg-destructive/10 rounded transition-colors"
                             title="حذف پیام"
+                            aria-label="حذف پیام"
                           >
                             <Trash2 className="w-3 h-3 text-destructive" />
                           </button>
@@ -1065,7 +1639,7 @@ export function AssistantAvatar() {
                 )}
               </div>
             )}
-          </ScrollArea>
+          </div>
 
           {/* پیش‌نمایش تصویر انتخاب شده */}
           {selectedImage && (
@@ -1098,22 +1672,50 @@ export function AssistantAvatar() {
                 size="icon"
                 variant="ghost"
                 className="h-9 w-9 text-muted-foreground hover:text-amber-600"
-                disabled={isLoading}
+                disabled={isLoading || isRecording}
+                title="افزودن تصویر"
               >
                 <Image className="h-5 w-5" />
               </Button>
-              <Input
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="پیام خود را بنویسید..."
+              <Button
+                onClick={toggleRecording}
+                size="icon"
+                variant="ghost"
+                className={cn(
+                  "h-9 w-9",
+                  isRecording ? "text-red-600 bg-red-100 hover:bg-red-200 animate-pulse" : "text-muted-foreground hover:text-amber-600"
+                )}
+                disabled={isLoading || isTranscribing}
+                title={isRecording ? "توقف ضبط" : "ضبط صدا"}
+              >
+                {isTranscribing ? <Loader2 className="h-5 w-5 animate-spin" /> : isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              </Button>
+              <Button
+                onClick={() => { if (ttsEnabled) stopSpeaking(); else primeBrowserSpeech(); setTtsEnabled(v => !v); }}
+                size="icon"
+                variant="ghost"
+                className={cn(
+                  "h-9 w-9",
+                  ttsEnabled ? "text-amber-600 bg-amber-100 hover:bg-amber-200" : "text-muted-foreground hover:text-amber-600"
+                )}
+                title={ttsEnabled ? "خاموش کردن خواندن پاسخ‌ها" : "روشن کردن خواندن پاسخ‌ها"}
+              >
+                {ttsEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+              </Button>
+              <ChatComposer
+                ref={composerRef}
+                placeholder={isRecording ? "در حال ضبط صدا..." : isTranscribing ? "در حال تبدیل گفتار..." : "پیام خود را بنویسید..."}
                 className="flex-1"
-                disabled={isLoading}
+                disabled={isLoading || isRecording || isTranscribing}
+                onEnterSubmit={(text) => { handleSend(text); }}
               />
               <Button 
-                onClick={handleSend} 
-                disabled={(!input.trim() && !selectedImage) || isLoading}
+                onClick={() => {
+                  const text = composerRef.current?.getValue() ?? '';
+                  composerRef.current?.clear();
+                  handleSend(text);
+                }} 
+                disabled={isLoading || isRecording}
                 size="icon"
                 className="bg-amber-500 hover:bg-amber-600"
               >
@@ -1122,32 +1724,37 @@ export function AssistantAvatar() {
             </div>
           </div>
 
-          {/* دستگیره تغییر اندازه - گوشه پایین راست */}
-          <div
-            onMouseDown={handleResizeMouseDown}
-            onTouchStart={handleResizeTouchStart}
-            className={cn(
-              "absolute bottom-0 right-0 w-6 h-6 cursor-se-resize z-10",
-              "flex items-center justify-center",
-              "hover:bg-amber-100/50 rounded-br-2xl transition-colors"
-            )}
-          >
-            <svg 
-              width="12" 
-              height="12" 
-              viewBox="0 0 12 12" 
-              className="text-muted-foreground"
-            >
-              <path 
-                d="M11 11L1 11M11 11L11 1M11 11L3 3" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round"
-                fill="none"
-              />
-            </svg>
-          </div>
-        </div>
+          {/* دستگیره‌های تغییر اندازه - لبه‌ها و گوشه‌ها */}
+          {!isFullscreen && (
+            <>
+              {/* لبه‌ها */}
+              <div onPointerDown={makeResizePointerDown('n')}
+                className="absolute top-0 left-5 right-5 h-5 cursor-n-resize z-20 touch-none" />
+              <div onPointerDown={makeResizePointerDown('s')}
+                className="absolute bottom-0 left-5 right-5 h-5 cursor-s-resize z-20 touch-none" />
+              <div onPointerDown={makeResizePointerDown('e')}
+                className="absolute top-5 bottom-5 right-0 w-5 cursor-e-resize z-20 touch-none" />
+              <div onPointerDown={makeResizePointerDown('w')}
+                className="absolute top-5 bottom-5 left-0 w-5 cursor-w-resize z-20 touch-none" />
+              {/* گوشه‌ها */}
+              <div onPointerDown={makeResizePointerDown('nw')}
+                className="absolute top-0 left-0 w-8 h-8 cursor-nw-resize z-30 touch-none" />
+              <div onPointerDown={makeResizePointerDown('ne')}
+                className="absolute top-0 right-0 w-8 h-8 cursor-ne-resize z-30 touch-none" />
+              <div onPointerDown={makeResizePointerDown('sw')}
+                className="absolute bottom-0 left-0 w-8 h-8 cursor-sw-resize z-30 touch-none" />
+              <div
+                onPointerDown={makeResizePointerDown('se')}
+                className="absolute bottom-0 right-0 w-9 h-9 cursor-se-resize z-30 flex items-end justify-end p-1.5 hover:bg-amber-100/50 rounded-br-2xl transition-colors touch-none"
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" className="text-muted-foreground">
+                  <path d="M11 11L1 11M11 11L11 1M11 11L3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
+                </svg>
+              </div>
+            </>
+          )}
+        </div>,
+        document.body
       )}
     </>
   );

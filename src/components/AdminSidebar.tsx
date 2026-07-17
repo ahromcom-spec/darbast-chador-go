@@ -20,7 +20,7 @@ const menuItems = [
   { title: 'سفارشات', url: '/admin/orders', icon: Package },
   { title: 'مدیریت کاربران', url: '/admin/users', icon: Users },
   { title: 'درخواست‌های پرسنل', url: '/admin/staff-requests', icon: UserPlus },
-  { title: 'درخواست‌های انتقال سفارش', url: '/admin/order-transfers', icon: ArrowLeftRight },
+  { title: 'درخواست‌های انتقال و همکاری', url: '/admin/order-transfers', icon: ArrowLeftRight },
   { title: 'مدیریت لیست مجاز', url: '/admin/whitelist', icon: Users },
 ];
 

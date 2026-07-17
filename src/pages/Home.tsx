@@ -9,7 +9,7 @@ import usePWAInstall from '@/hooks/usePWAInstall';
 import { useServiceTypesWithSubcategories } from '@/hooks/useServiceTypesWithSubcategories';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
-import Snowfall from '@/components/effects/Snowfall';
+
 import { RecentActivities } from '@/components/home/RecentActivities';
 import { ModuleShortcuts } from '@/components/home/ModuleShortcuts';
 
@@ -73,17 +73,13 @@ const Home = () => {
       };
       
       if (!user) {
-        toast({
-          title: 'نیاز به ورود',
-          description: 'لطفا ابتدا وارد حساب خود شوید و بعد ثبت سفارش کنید',
-          variant: 'default'
-        });
+        // اجازه می‌دهیم کاربر مهمان وارد فرآیند ثبت سفارش شود
+        // در مرحله نهایی (ثبت سفارش) از او خواسته می‌شود وارد شود
         localStorage.setItem('pendingServiceSelection', JSON.stringify(serviceSelection));
-        safeNavigate('/auth/login', { state: { from: '/select-location', serviceSelection } });
-        return;
       }
       
       safeNavigate('/select-location', { state: { serviceSelection } });
+
     }
   }, [selectedServiceType, selectedSubcategory, serviceTypes, user, toast, safeNavigate]);
 
@@ -143,9 +139,6 @@ const Home = () => {
 
   return (
     <>
-      {/* افکت برف‌ریزی زمستانی */}
-      <Snowfall />
-      
       {/* Subcategory Selection Dialog - فقط در صورتی که داده‌های معتبر وجود داشته باشد نمایش داده شود */}
       {pendingServiceTypeObj && pendingServiceTypeObj.subcategories && pendingServiceTypeObj.subcategories.length > 0 && (
         <SubcategoryDialog
@@ -292,12 +285,45 @@ const Home = () => {
               </CardContent>
             </Card>
 
+            {/* Quick Action: Scaffolding with materials & transport */}
+            {!servicesLoading && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedServiceType('37726fa7-7679-42f0-b893-4893b654e694');
+                  setSelectedSubcategory('10');
+                }}
+                className="group relative w-full mt-3 overflow-hidden rounded-xl border-2 border-amber-400/40 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 backdrop-blur-xl px-4 py-3 sm:py-3.5 shadow-lg hover:shadow-2xl hover:border-amber-300/70 transition-all duration-300 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-amber-400/60"
+                aria-label="ثبت سریع سفارش خدمات اجرای داربست به همراه اجناس و حمل و نقل"
+                data-tour="quick-scaffolding-order"
+              >
+                <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                <div className="relative flex items-center justify-between gap-3">
+                  <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-amber-500/30 border border-amber-300/40 text-amber-100 text-xl shrink-0">
+                    🏗️
+                  </span>
+                  <div className="flex-1 text-center">
+                    <div className="text-sm sm:text-base font-bold text-amber-50 leading-tight">
+                      خدمات اجرای داربست به همراه اجناس و حمل و نقل
+                    </div>
+                    <div className="text-[11px] sm:text-xs text-amber-200/90 mt-0.5">
+                      ثبت سریع سفارش — مستقیم به انتخاب آدرس
+                    </div>
+                  </div>
+                  <span className="text-amber-100 text-lg shrink-0 group-hover:-translate-x-1 transition-transform">
+                    ←
+                  </span>
+                </div>
+              </button>
+            )}
+
+
             {/* Globe Button - Outside Card, Below Dropdown */}
-            {user && !servicesLoading && (
+            {!servicesLoading && (
               <div className="flex flex-col items-center mt-3">
                 <button
                   onClick={() => navigate('/globe')}
-                  className="group relative w-[168px] h-[168px] transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-0"
+                  className="group relative w-[168px] h-[168px] md:w-[336px] md:h-[336px] transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-0"
                   aria-label="نمایش پروژه‌ها روی کره زمین"
                 >
                   {/* Globe image with gentle swing animation */}
@@ -325,6 +351,11 @@ const Home = () => {
             <div className={user ? "mt-6" : "mt-48"}>
               <RecentActivities />
             </div>
+
+            {/* PWA Install Banner - inline below recent activities */}
+            <Suspense fallback={null}>
+              <PWAInstallBanner />
+            </Suspense>
           </article>
         </main>
         
@@ -339,11 +370,6 @@ const Home = () => {
         </footer>
       </div>
       </div>
-
-      {/* PWA Install Banner - Bottom Right - بدون Wrapper */}
-      <Suspense fallback={null}>
-        <PWAInstallBanner />
-      </Suspense>
 
     </>
   );

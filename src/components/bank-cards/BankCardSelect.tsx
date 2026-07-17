@@ -38,12 +38,12 @@ interface BankCardSelectProps {
 }
 
 /**
- * Calculate historical balance for a card as of a specific date.
- * Uses bank_card_transactions (single source of truth) with report_date <= asOfDate.
+ * Calculate the CLOSING balance for a card as of a specific date — i.e. the balance
+ * including all transactions on asOfDate (end-of-day balance). Uses
+ * bank_card_transactions with report_date <= asOfDate (and null-date transactions
+ * whose created_at date <= asOfDate).
  */
 async function getHistoricalBalance(cardId: string, asOfDate: string, initialBalance: number): Promise<number> {
-  // Fetch transactions with report_date <= asOfDate (server-side filter for efficiency)
-  // Also fetch transactions where report_date is NULL (card transfers etc.) separately
   const [{ data: datedTx }, { data: nullDateTx }] = await Promise.all([
     supabase
       .from('bank_card_transactions')
@@ -61,13 +61,12 @@ async function getHistoricalBalance(cardId: string, asOfDate: string, initialBal
 
   let txNet = 0;
 
-  // Process transactions with explicit report_date (already filtered server-side)
   for (const tx of datedTx || []) {
     const amt = Number(tx.amount ?? 0) || 0;
     txNet += tx.transaction_type === 'deposit' ? amt : -amt;
   }
 
-  // Process transactions without report_date: use created_at date as fallback
+  // Null-date transactions: include those whose created_at date is on or before asOfDate
   for (const tx of nullDateTx || []) {
     const txDate = tx.created_at ? tx.created_at.substring(0, 10) : null;
     if (!txDate || txDate > asOfDate) continue;

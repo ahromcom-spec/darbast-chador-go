@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useToast } from '@/hooks/use-toast';
-import { ArchiveX, Search, RotateCcw, Trash2, MapPin, Phone, User, Calendar, AlertTriangle, CheckSquare } from 'lucide-react';
+import { ArchiveX, Search, RotateCcw, Trash2, MapPin, Phone, User, Calendar, AlertTriangle, CheckSquare, ExternalLink } from 'lucide-react';
 
 interface DeepArchivedOrder {
   id: string;
@@ -35,6 +36,7 @@ export default function DeepArchivedOrders() {
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['deep-archived-orders'],
@@ -427,6 +429,14 @@ export default function DeepArchivedOrders() {
                   </div>
 
                   <div className="flex flex-wrap gap-2 mr-8 md:mr-0">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => navigate(`/orders/${order.id}`)}
+                    >
+                      <ExternalLink className="h-4 w-4 ml-2" />
+                      مشاهده جزئیات
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"

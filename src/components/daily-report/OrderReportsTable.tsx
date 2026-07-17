@@ -75,8 +75,8 @@ export function OrderReportsTable({
         </div>
       </CardHeader>
       <CardContent>
-        <div ref={setRefs} className="overflow-x-auto" dir="rtl">
-          <Table className="table-auto border-collapse border border-blue-300">
+        <div ref={setRefs} className="overflow-x-auto daily-report-touch-scroll" dir="rtl">
+          <Table className="table-auto min-w-[960px] border-collapse border border-blue-300">
             <TableHeader>
               <TableRow className="bg-blue-100 dark:bg-blue-900/30">
                 <TableHead className="w-[50px] border border-blue-300"></TableHead>

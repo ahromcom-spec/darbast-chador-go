@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, User, X, Loader2, PenLine } from 'lucide-react';
+import type { CSSProperties } from 'react';
+import { Search, User, X, Loader2, PenLine, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -7,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { createPortal } from 'react-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getCurrentZoom } from '@/lib/zoom';
+import { useToast } from '@/hooks/use-toast';
 
 // Staff list now only comes from HR employees and salary settings
 
@@ -159,6 +161,8 @@ export function StaffSearchSelect({
   const [hrStaff, setHrStaff] = useState<StaffMember[]>([]);
   const [salaryStaff, setSalaryStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deletingCode, setDeletingCode] = useState<string | null>(null);
+  const { toast } = useToast();
   const isMobile = useIsMobile();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -284,6 +288,38 @@ export function StaffSearchSelect({
     onValueChange('', '');
   };
 
+  const handleDeleteSalaryEntry = async (e: React.MouseEvent, staff: StaffMember) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const ok = window.confirm(`آیا از حذف "${staff.name}" از لیست نیروها اطمینان دارید؟\n(تنها از فهرست بازشو حذف می‌شود و گزارش‌های ثبت‌شده دست نخورده باقی می‌مانند)`);
+    if (!ok) return;
+
+    setDeletingCode(staff.code);
+    try {
+      const { error } = await supabase
+        .from('staff_salary_settings')
+        .delete()
+        .eq('staff_code', staff.code);
+      if (error) throw error;
+
+      // Invalidate cache so the next open re-fetches
+      staffCache = null;
+      setSalaryStaff((prev) => prev.filter((s) => s.code !== staff.code));
+
+      toast({ title: '✓ حذف شد', description: 'نام نیرو از فهرست حذف شد.' });
+    } catch (err: any) {
+      console.error('Error deleting staff entry:', err);
+      toast({
+        variant: 'destructive',
+        title: 'خطا',
+        description: err?.message?.toLowerCase?.().includes('row-level') ? 'شما دسترسی حذف ندارید' : 'خطا در حذف نام نیرو',
+      });
+    } finally {
+      setDeletingCode(null);
+    }
+  };
+
+
   const updatePosition = () => {
     const triggerEl = triggerRef.current;
     if (!triggerEl) return;
@@ -296,7 +332,10 @@ export function StaffSearchSelect({
     const VIEWPORT_MARGIN = 8;
     const OFFSET = 4;
 
-    const boundaryEl = triggerEl.closest('[data-dropdown-boundary]') as HTMLElement | null;
+    // On mobile: skip the card boundary so the dropdown can overlay the whole
+    // table (and viewport) — user sees more staff at once without being clipped
+    // to a tiny card region.
+    const boundaryEl = isMobile ? null : (triggerEl.closest('[data-dropdown-boundary]') as HTMLElement | null);
     portalRootRef.current = boundaryEl;
 
     const isRTL = document.documentElement.dir === 'rtl' || !!triggerEl.closest('[dir="rtl"]');
@@ -353,38 +392,46 @@ export function StaffSearchSelect({
       return;
     }
 
-    // Fallback: fixed to viewport (divide by zoom for CSS coords)
-    const viewportWidth = window.innerWidth / zoomLevel;
-    const viewportHeight = window.innerHeight / zoomLevel;
-
-    const adjustedRect = {
-      left: rect.left / zoomLevel,
-      right: rect.right / zoomLevel,
-      top: rect.top / zoomLevel,
-      bottom: rect.bottom / zoomLevel,
-      width: rect.width / zoomLevel,
-    };
+    // Fallback: position:fixed on document.body. Body is OUTSIDE the CSS-zoomed
+    // #root container, so getBoundingClientRect() values (which are in visual
+    // viewport pixels) and `fixed` top/left (also viewport pixels) are already
+    // in the same coordinate system. Do NOT divide by zoom here — doing so
+    // pushes the dropdown far away from the trigger at non-100% zoom levels.
+    const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
 
     const boundLeft = VIEWPORT_MARGIN;
     const boundRight = viewportWidth - VIEWPORT_MARGIN;
     const boundTop = VIEWPORT_MARGIN;
     const boundBottom = viewportHeight - VIEWPORT_MARGIN;
 
-    const availableWidth = Math.max(200, boundRight - boundLeft);
-    const width = Math.min(Math.max(adjustedRect.width, 320), availableWidth);
+    if (isMobile) {
+      const mobileTop = Math.max(8, Math.min(72, viewportHeight * 0.12));
+      setPosition({
+        top: mobileTop,
+        bottom: VIEWPORT_MARGIN,
+        left: VIEWPORT_MARGIN,
+        width: Math.max(280, viewportWidth - VIEWPORT_MARGIN * 2),
+        maxHeight: Math.max(260, viewportHeight - mobileTop - VIEWPORT_MARGIN),
+      });
+      return;
+    }
 
-    let left = isRTL ? adjustedRect.right - width : adjustedRect.left;
+    const availableWidth = Math.max(200, boundRight - boundLeft);
+    const width = Math.min(Math.max(rect.width, 320), availableWidth);
+
+    let left = isRTL ? rect.right - width : rect.left;
     left = Math.max(boundLeft, Math.min(left, boundRight - width));
 
-    const spaceAbove = adjustedRect.top - boundTop - OFFSET;
-    const spaceBelow = boundBottom - adjustedRect.bottom - OFFSET;
+    const spaceAbove = rect.top - boundTop - OFFSET;
+    const spaceBelow = boundBottom - rect.bottom - OFFSET;
 
     const openBelow = spaceBelow >= 220 || spaceBelow >= spaceAbove;
 
     if (openBelow) {
       const maxHeight = Math.min(520, Math.max(180, spaceBelow));
       setPosition({
-        top: adjustedRect.bottom + OFFSET,
+        top: rect.bottom + OFFSET,
         bottom: undefined,
         left,
         width,
@@ -394,7 +441,7 @@ export function StaffSearchSelect({
       const maxHeight = Math.min(520, Math.max(180, spaceAbove));
       setPosition({
         top: undefined,
-        bottom: viewportHeight - adjustedRect.top + OFFSET,
+        bottom: viewportHeight - rect.top + OFFSET,
         left,
         width,
         maxHeight,
@@ -435,11 +482,15 @@ export function StaffSearchSelect({
 
     window.addEventListener('resize', onResize);
     window.addEventListener('scroll', onScroll, true);
+    window.visualViewport?.addEventListener('resize', onResize);
+    window.visualViewport?.addEventListener('scroll', onResize);
     return () => {
       window.removeEventListener('resize', onResize);
       window.removeEventListener('scroll', onScroll, true);
+      window.visualViewport?.removeEventListener('resize', onResize);
+      window.visualViewport?.removeEventListener('scroll', onResize);
     };
-  }, [open]);
+  }, [open, isMobile]);
 
   // Handle click outside
   useEffect(() => {
@@ -459,6 +510,158 @@ export function StaffSearchSelect({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open]);
+
+  const dropdownTarget = portalRootRef.current ?? (typeof document !== 'undefined' ? document.body : null);
+  const dropdownStyle: CSSProperties = {
+    position: portalRootRef.current ? 'absolute' : 'fixed',
+    zIndex: 200000,
+    left: position.left,
+    width: position.width,
+    maxHeight: position.maxHeight,
+    ...(position.top !== undefined ? { top: position.top } : { bottom: position.bottom }),
+  };
+
+  const dropdownContent = open ? (
+    <div
+      ref={dropdownRef}
+      className="bg-background border rounded-lg shadow-xl overflow-hidden"
+      style={dropdownStyle}
+      dir="rtl"
+    >
+      <div className="p-3 border-b bg-background">
+        <div className="relative">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            ref={searchInputRef}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                const firstBtn = listRef.current?.querySelector('button') as HTMLElement | null;
+                firstBtn?.focus();
+              }
+            }}
+            placeholder="جستجو با نام یا کد پرسنل..."
+            compactFocus
+            className="pr-10 text-sm h-10"
+          />
+        </div>
+      </div>
+      <ScrollArea style={{ height: Math.max(110, position.maxHeight - 68) }}>
+        {loading ? (
+          <div className="py-6 flex items-center justify-center text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin ml-2" />
+            <span>در حال بارگذاری...</span>
+          </div>
+        ) : sortedStaff.length === 0 ? (
+          <div className="py-6 text-center text-sm text-muted-foreground">پرسنلی یافت نشد</div>
+        ) : (
+          <div ref={listRef} className="p-1 bg-background">
+            {sortedStaff.map((staff, idx) => (
+              <div
+                key={staff.code}
+                className={`group flex items-stretch rounded-md hover:bg-accent transition-colors ${
+                  value === staff.code ? 'bg-amber-100 dark:bg-amber-900/30' : ''
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => handleSelect(staff)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      const nextRow = e.currentTarget.parentElement?.nextElementSibling as HTMLElement | null;
+                      (nextRow?.querySelector('button') as HTMLElement | null)?.focus();
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      const prevRow = e.currentTarget.parentElement?.previousElementSibling as HTMLElement | null;
+                      const prevBtn = prevRow?.querySelector('button') as HTMLElement | null;
+                      if (prevBtn) prevBtn.focus();
+                      else searchInputRef.current?.focus();
+                    } else if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSelect(staff);
+                    }
+                  }}
+                  className="flex-1 text-right px-3 py-2 text-sm cursor-pointer focus:bg-accent focus:outline-none rounded-md"
+                >
+                  <div className="font-medium flex items-center gap-2">
+                    <span
+                      className={`font-bold text-xs px-1.5 py-0.5 rounded ${
+                        staff.source === 'salary'
+                          ? 'text-green-600 bg-green-100 dark:bg-green-900/30'
+                          : 'text-blue-600 bg-blue-100 dark:bg-blue-900/30'
+                      }`}
+                    >
+                      {staff.code}
+                    </span>
+                    <span>{staff.name}</span>
+                    {staff.fullCode && staff.fullCode !== staff.code && (
+                      <span className="text-xs text-muted-foreground">({staff.fullCode})</span>
+                    )}
+                  </div>
+                </button>
+                {staff.source === 'salary' && (
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteSalaryEntry(e, staff)}
+                    disabled={deletingCode === staff.code}
+                    title="حذف از فهرست"
+                    aria-label="حذف از فهرست"
+                    className="shrink-0 px-2 flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors disabled:opacity-50"
+                  >
+                    {deletingCode === staff.code ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </button>
+                )}
+              </div>
+            ))}
+
+            <div className="border-t mt-1 pt-1">
+              {manualMode ? (
+                <div className="px-2 py-2 flex items-center gap-2">
+                  <Input
+                    ref={manualInputRef}
+                    value={manualName}
+                    onChange={(e) => setManualName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); handleManualSubmit(); }
+                      if (e.key === 'Escape') { setManualMode(false); setManualName(''); }
+                    }}
+                    placeholder="نام نیرو را وارد کنید..."
+                    className="text-sm h-9 flex-1"
+                    autoFocus
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleManualSubmit}
+                    disabled={!manualName.trim()}
+                    className="shrink-0 h-9"
+                  >
+                    تایید
+                  </Button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => { setManualMode(true); setTimeout(() => manualInputRef.current?.focus(), 50); }}
+                  className="w-full text-right px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors cursor-pointer focus:bg-accent focus:outline-none text-muted-foreground flex items-center gap-2"
+                >
+                  <PenLine className="h-4 w-4" />
+                  <span>ورود دستی نام نیرو...</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </ScrollArea>
+    </div>
+  ) : null;
 
   return (
     <div className="relative">
@@ -484,136 +687,7 @@ export function StaffSearchSelect({
         )}
       </Button>
 
-      {open && position.width > 0 &&
-        createPortal(
-          <div
-            ref={dropdownRef}
-            className={(portalRootRef.current ? 'absolute' : 'fixed') + ' bg-background border rounded-lg shadow-xl overflow-hidden'}
-            style={{
-              top: position.top,
-              bottom: position.bottom,
-              left: position.left,
-              width: position.width,
-              zIndex: 99999,
-              maxHeight: position.maxHeight,
-            }}
-            dir="rtl"
-          >
-            <div className="p-3 border-b bg-background">
-              <div className="relative">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  ref={searchInputRef}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'ArrowDown') {
-                      e.preventDefault();
-                      const firstBtn = listRef.current?.querySelector('button') as HTMLElement | null;
-                      firstBtn?.focus();
-                    }
-                  }}
-                  placeholder="جستجو با نام یا کد پرسنل..."
-                  compactFocus
-                  className="pr-10 text-sm h-10"
-                />
-              </div>
-            </div>
-            <ScrollArea style={{ height: Math.max(140, position.maxHeight - 64) }}>
-              {loading ? (
-                <div className="py-6 flex items-center justify-center text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin ml-2" />
-                  <span>در حال بارگذاری...</span>
-                </div>
-              ) : sortedStaff.length === 0 ? (
-                <div className="py-6 text-center text-sm text-muted-foreground">پرسنلی یافت نشد</div>
-              ) : (
-                <div ref={listRef} className="p-1 bg-background">
-                  {sortedStaff.map((staff, idx) => (
-                    <button
-                      key={staff.code}
-                      type="button"
-                      onClick={() => handleSelect(staff)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'ArrowDown') {
-                          e.preventDefault();
-                          const next = (e.currentTarget.nextElementSibling as HTMLElement | null);
-                          next?.focus();
-                        } else if (e.key === 'ArrowUp') {
-                          e.preventDefault();
-                          const prev = (e.currentTarget.previousElementSibling as HTMLElement | null);
-                          if (prev) prev.focus();
-                          else searchInputRef.current?.focus();
-                        } else if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleSelect(staff);
-                        }
-                      }}
-                      className={`w-full text-right px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors cursor-pointer focus:bg-accent focus:outline-none ${
-                        value === staff.code ? 'bg-amber-100 dark:bg-amber-900/30' : ''
-                      }`}
-                    >
-                      <div className="font-medium flex items-center gap-2">
-                        <span
-                          className={`font-bold text-xs px-1.5 py-0.5 rounded ${
-                            staff.source === 'salary'
-                              ? 'text-green-600 bg-green-100 dark:bg-green-900/30'
-                              : 'text-blue-600 bg-blue-100 dark:bg-blue-900/30'
-                          }`}
-                        >
-                          {staff.code}
-                        </span>
-                        <span>{staff.name}</span>
-                        {staff.fullCode && staff.fullCode !== staff.code && (
-                          <span className="text-xs text-muted-foreground">({staff.fullCode})</span>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                  
-                  {/* Manual entry section */}
-                  <div className="border-t mt-1 pt-1">
-                    {manualMode ? (
-                      <div className="px-2 py-2 flex items-center gap-2">
-                        <Input
-                          ref={manualInputRef}
-                          value={manualName}
-                          onChange={(e) => setManualName(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') { e.preventDefault(); handleManualSubmit(); }
-                            if (e.key === 'Escape') { setManualMode(false); setManualName(''); }
-                          }}
-                          placeholder="نام نیرو را وارد کنید..."
-                          className="text-sm h-9 flex-1"
-                          autoFocus
-                        />
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={handleManualSubmit}
-                          disabled={!manualName.trim()}
-                          className="shrink-0 h-9"
-                        >
-                          تایید
-                        </Button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => { setManualMode(true); setTimeout(() => manualInputRef.current?.focus(), 50); }}
-                        className="w-full text-right px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors cursor-pointer focus:bg-accent focus:outline-none text-muted-foreground flex items-center gap-2"
-                      >
-                        <PenLine className="h-4 w-4" />
-                        <span>ورود دستی نام نیرو...</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </ScrollArea>
-          </div>,
-          portalRootRef.current ?? document.body,
-        )}
+      {dropdownContent && dropdownTarget ? createPortal(dropdownContent, dropdownTarget) : null}
     </div>
   );
 }

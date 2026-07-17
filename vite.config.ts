@@ -101,7 +101,7 @@ export default defineConfig(({ mode }) => ({
           'ui-form': ['react-hook-form', 'zod', '@hookform/resolvers'],
           'supabase': ['@supabase/supabase-js'],
           'query': ['@tanstack/react-query'],
-          'maps': ['mapbox-gl', 'leaflet', 'react-leaflet'],
+          'maps': ['leaflet', 'react-leaflet'],
         },
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',

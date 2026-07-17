@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Boxes, Loader2, ArrowLeft } from 'lucide-react';
+import { Boxes, Loader2, ArrowLeft, Home, Check } from 'lucide-react';
 import { getModuleIconByKey } from '@/components/module-shortcut/ModuleIcon';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -131,6 +131,87 @@ const MODULE_DETAILS: Record<string, ModuleInfo> = {
     bgColor: 'bg-pink-50',
     icon: 'image',
   },
+  scaffolding_pricing: {
+    key: 'scaffolding_pricing',
+    name: 'ماژول قیمت‌گذاری داربست',
+    description: 'مدیریت آیتم‌های قیمت فرم اجرای داربست به همراه اجناس و حمل و نقل',
+    href: '/scaffolding-pricing',
+    color: 'text-amber-600',
+    bgColor: 'bg-amber-50',
+    icon: 'dollar',
+  },
+  scaffolding_no_materials_pricing: {
+    key: 'scaffolding_no_materials_pricing',
+    name: 'ماژول قیمت‌گذاری خدمات اجرای داربست بدون اجناس',
+    description: 'مدیریت آیتم‌های قیمت فرم سفارش «اجرای داربست بدون اجناس»',
+    href: '/scaffolding-no-materials-pricing',
+    color: 'text-amber-700',
+    bgColor: 'bg-amber-50',
+    icon: 'dollar',
+  },
+  service_pricing_hub: {
+    key: 'service_pricing_hub',
+    name: 'ماژول‌های قیمت‌گذاری خدمات',
+    description: 'برای هر زیرشاخه خدمت، کلید فعال/غیرفعال و قیمت‌گذاری اختصاصی',
+    href: '/service-pricing',
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-50',
+    icon: 'dollar',
+  },
+  user_cooperation_rank: {
+    key: 'user_cooperation_rank',
+    name: 'ماژول رتبه همکاری کاربران',
+    description: 'تعیین رتبه ۱ تا ۱۰ کاربران و اعمال تخفیف ۱٪ تا ۶٪ روی سفارش‌ها',
+    href: '/user-cooperation-rank',
+    color: 'text-yellow-600',
+    bgColor: 'bg-yellow-50',
+    icon: 'dollar',
+  },
+  activity_logs: {
+    key: 'activity_logs',
+    name: 'ماژول لاگ فعالیت‌ها و ایمیل‌های خودکار',
+    description: 'ثبت هر اقدام در سایت و تنظیم ارسال خودکار ایمیل',
+    href: '/activity-logs',
+    color: 'text-rose-600',
+    bgColor: 'bg-rose-50',
+    icon: 'dollar',
+  },
+  contractors_management: {
+    key: 'contractors_management',
+    name: 'ماژول مدیریت پیمانکاران',
+    description: 'بررسی درخواست‌های پیمانکاران، فعال/غیرفعال‌سازی، و ارجاع سفارش‌ها به پیمانکاران',
+    href: '/ceo/contractors-management',
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-50',
+    icon: 'image',
+  },
+  dynamic_services_management: {
+    key: 'dynamic_services_management',
+    name: 'ماژول مدیریت خدمات داینامیک',
+    description: 'مدیریت درختی خدمات و زیرشاخه‌های نمایش‌داده‌شده در صفحه اصلی',
+    href: '/ceo/dynamic-services',
+    color: 'text-sky-600',
+    bgColor: 'bg-sky-50',
+    icon: 'settings',
+  },
+  service_geo_availability: {
+    key: 'service_geo_availability',
+    name: 'ماژول مدیریت خدمات طبق شهرها',
+    description: 'فعال/غیرفعال کردن هر خدمت در استان‌ها و شهرهای مشخص',
+    href: '/ceo/service-geo-availability',
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50',
+    icon: 'settings',
+  },
+  user_impersonation: {
+    key: 'user_impersonation',
+    name: 'ماژول ورود به حساب کاربران',
+    description: 'ورود به حساب کاربران سایت برای انجام عملیات به نمایندگی از آن‌ها',
+    href: '/admin/users',
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50',
+    icon: 'users',
+  },
 };
 
 function buildModuleUrl(href: string, moduleKey: string) {
@@ -204,6 +285,19 @@ export function UserModulesTab() {
     }
     setShortcutDialog((prev) => ({ ...prev, open: false }));
   }, [shortcutDialog, addShortcut]);
+
+  const handleAddShortcutClick = useCallback(
+    (e: React.MouseEvent, moduleKey: string, moduleName: string, moduleDescription: string, moduleHref: string) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (hasShortcut(moduleKey)) {
+        toast.info('این ماژول قبلاً به صفحه نخست اضافه شده است');
+        return;
+      }
+      setShortcutDialog({ open: true, moduleKey, moduleName, moduleDescription, moduleHref });
+    },
+    [hasShortcut]
+  );
 
   useEffect(() => {
     fetchUserPhone();
@@ -406,14 +500,37 @@ export function UserModulesTab() {
                           </p>
                         </div>
                       </div>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        className="gap-2 group-hover:translate-x-[-4px] transition-transform w-full sm:w-auto flex-shrink-0"
-                      >
-                        <span>ورود به ماژول</span>
-                        <ArrowLeft className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-2 w-full sm:w-auto flex-shrink-0">
+                        <Button
+                          variant={hasShortcut(assignment.module_key) ? 'secondary' : 'outline'}
+                          size="sm"
+                          className="gap-1.5 flex-shrink-0"
+                          onClick={(e) =>
+                            handleAddShortcutClick(e, assignment.module_key, displayName, moduleInfo.description, moduleInfo.href)
+                          }
+                          title={hasShortcut(assignment.module_key) ? 'به صفحه نخست اضافه شده' : 'افزودن به صفحه نخست'}
+                        >
+                          {hasShortcut(assignment.module_key) ? (
+                            <>
+                              <Check className="h-4 w-4" />
+                              <span className="hidden sm:inline">در صفحه نخست</span>
+                            </>
+                          ) : (
+                            <>
+                              <Home className="h-4 w-4" />
+                              <span className="hidden sm:inline">افزودن به صفحه نخست</span>
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="gap-2 group-hover:translate-x-[-4px] transition-transform flex-1 sm:flex-initial"
+                        >
+                          <span>ورود به ماژول</span>
+                          <ArrowLeft className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -429,7 +546,7 @@ export function UserModulesTab() {
       />
 
       <p className="text-xs text-muted-foreground text-center mt-4">
-        💡 برای افزودن میانبر ماژول به صفحه نخست، ۳ ثانیه روی ماژول فشار دهید و نگه دارید
+        💡 برای افزودن میانبر ماژول به صفحه نخست، روی دکمه «افزودن به صفحه نخست» کلیک کنید (یا ۳ ثانیه روی کارت ماژول نگه دارید)
       </p>
     </div>
   );

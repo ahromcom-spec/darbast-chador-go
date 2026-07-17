@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EmptyState } from '@/components/common/EmptyState';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { Package, MapPin, Calendar, Eye, Filter, X, Users, Search, XCircle } from 'lucide-react';
+import { Package, MapPin, Calendar, Eye, Filter, X, Users, Search, XCircle, Wallet } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +34,9 @@ interface Order {
   province_name?: string;
   notes?: any;
   isCollaborated?: boolean;
+  total_price?: number | null;
+  total_paid?: number | null;
+  payment_amount?: number | null;
 }
 
 interface MyOrdersListProps {
@@ -154,6 +157,9 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
         province_name: provinceMap.get(order.province_id) || '',
         notes: order.notes,
         isCollaborated: collaboratedOrderIds.has(order.id),
+        total_price: order.total_price,
+        total_paid: order.total_paid,
+        payment_amount: order.payment_amount,
       }));
 
       // Sort by created_at descending
@@ -468,6 +474,27 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
                           <span className="line-clamp-1">{order.address}</span>
                         </div>
                       )}
+
+                      {/* Price */}
+                      {(() => {
+                        const total = Number(order.total_price) || Number(order.payment_amount) || 0;
+                        const paid = Number(order.total_paid) || 0;
+                        const remaining = Math.max(total - paid, 0);
+                        if (total <= 0) return null;
+                        const fmt = (n: number) => new Intl.NumberFormat('fa-IR').format(Math.round(n));
+                        return (
+                          <div className="flex items-center gap-2 text-sm flex-wrap">
+                            <Wallet className="h-4 w-4 text-emerald-600" />
+                            <span className="font-semibold text-foreground">مبلغ فاکتور: {fmt(total)} تومان</span>
+                            {paid > 0 && (
+                              <span className="text-xs text-green-600">• پرداختی: {fmt(paid)}</span>
+                            )}
+                            {remaining > 0 && (
+                              <span className="text-xs text-red-600">• مانده: {fmt(remaining)}</span>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* Date */}
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">

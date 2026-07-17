@@ -20,6 +20,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { TicketForm } from '@/components/profile/TicketForm';
 import { ContractorForm } from '@/components/profile/ContractorForm';
 import { NewContractorForm } from '@/components/profile/NewContractorForm';
+import { ContractorQuickActions } from '@/components/contractor/ContractorQuickActions';
 import { PasswordManagement } from '@/components/auth/PasswordManagement';
 import { Suspense } from 'react';
 import { useContractorRole } from '@/hooks/useContractorRole';
@@ -40,6 +41,7 @@ import { RecentActivityFeed } from '@/components/profile/RecentActivityFeed';
 import { IncomingTransferRequests } from '@/components/orders/IncomingTransferRequest';
 import { PendingCollaborationInvites } from '@/components/orders/PendingCollaborationInvites';
 import { PendingProjectInvites } from '@/components/projects/PendingProjectInvites';
+import { MyProjectsTab } from '@/components/profile/MyProjectsTab';
 import { UserModulesTab } from '@/components/profile/UserModulesTab';
 import { lazy } from 'react';
 
@@ -97,6 +99,8 @@ export default function UserProfile() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [bio, setBio] = useState<string | null>(null);
   const [staffDialogOpen, setStaffDialogOpen] = useState(false);
+  const [hasContractorProfile, setHasContractorProfile] = useState<boolean | null>(null);
+  const [contractorStatusRefreshKey, setContractorStatusRefreshKey] = useState(0);
 
   const isManager = isCEO || isAdmin || isGeneralManager || isSalesManager || isFinanceManager || isExecutiveManager;
 
@@ -276,7 +280,7 @@ const fetchOrders = async () => {
           }}
           className="w-full"
         >
-          <TabsList className="grid w-full h-auto gap-2 bg-muted/50 p-1 grid-cols-2 sm:grid-cols-6">
+          <TabsList className={`grid w-full h-auto gap-2 bg-muted/50 p-1 grid-cols-2 ${isContractor ? 'sm:grid-cols-7' : 'sm:grid-cols-6'}`}>
             <TabsTrigger 
               value="modules" 
               className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
@@ -301,7 +305,7 @@ const fetchOrders = async () => {
               className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
             >
               <Receipt className="h-4 w-4 ml-1 hidden sm:inline" />
-              صورتحساب
+              صورتحساب من
             </TabsTrigger>
             <TabsTrigger 
               value="security" 
@@ -310,6 +314,15 @@ const fetchOrders = async () => {
               <Lock className="h-4 w-4 ml-1 hidden sm:inline" />
               امنیت
             </TabsTrigger>
+            {isContractor && (
+              <TabsTrigger
+                value="contractor"
+                className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
+              >
+                <Briefcase className="h-4 w-4 ml-1 hidden sm:inline" />
+                پیمانکاری من
+              </TabsTrigger>
+            )}
             <TabsTrigger 
               value="actions" 
               className="text-sm sm:text-base py-3 font-semibold text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all"
@@ -337,45 +350,7 @@ const fetchOrders = async () => {
 
 {/* Projects Tab */}
 <TabsContent value="projects" className="mt-4">
-  <div className="space-y-6">
-    {/* Project Management Section */}
-    <div className="space-y-4 p-4 rounded-lg border-2 border-primary/20 bg-card" data-tour="my-projects">
-      <h3 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
-        <FolderKanban className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
-        <span>مدیریت پروژه‌ها</span>
-      </h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <button
-          onClick={() => navigate('/user/projects')}
-          className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-background hover:bg-accent/5 transition-all text-right group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-              <FolderKanban className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <div className="font-bold text-sm text-foreground">پروژه‌های من</div>
-              <div className="text-xs text-muted-foreground">مشاهده و مدیریت پروژه‌ها</div>
-            </div>
-          </div>
-        </button>
-        <button
-          onClick={() => navigate('/')}
-          className="p-4 rounded-lg border-2 border-primary/20 hover:border-primary/40 bg-background hover:bg-accent/5 transition-all text-right group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-              <Package className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <div className="font-bold text-sm text-foreground">پروژه جدید</div>
-              <div className="text-xs text-muted-foreground">ایجاد پروژه با آدرس و خدمات</div>
-            </div>
-          </div>
-        </button>
-      </div>
-    </div>
-  </div>
+  <MyProjectsTab />
 </TabsContent>
 
 {/* Orders Tab */}
@@ -387,6 +362,13 @@ const fetchOrders = async () => {
 <TabsContent value="invoice" className="mt-4">
   <CustomerInvoice />
 </TabsContent>
+
+{/* Contractor Tab - profile form + accepted/executed orders */}
+{isContractor && (
+  <TabsContent value="contractor" className="mt-4">
+    <ContractorQuickActions userId={user.id} />
+  </TabsContent>
+)}
 
 {/* Security Tab - Password & Email Recovery */}
 <TabsContent value="security" className="mt-4">
@@ -620,15 +602,24 @@ const fetchOrders = async () => {
                 <TicketForm userId={user.id} />
               </div>
 
-              {/* Contractor Registration Section */}
-              {!isContractor && (
-                <div className="space-y-4 pt-6 border-t">
-                  <NewContractorForm 
-                    userId={user.id} 
-                    userEmail={user.email || ''} 
-                  />
-                </div>
-              )}
+              {/* Contractor status/self-management */}
+              <ContractorQuickActions
+                userId={user.id}
+                onContractorFound={setHasContractorProfile}
+                refreshKey={contractorStatusRefreshKey}
+              />
+
+              {/* Contractor Registration / Add Services Section */}
+              <div className="space-y-4 pt-6 border-t">
+                <NewContractorForm 
+                  userId={user.id} 
+                  userEmail={user.email || ''} 
+                  onSuccess={() => {
+                    setHasContractorProfile(true);
+                    setContractorStatusRefreshKey((key) => key + 1);
+                  }}
+                />
+              </div>
             </Suspense>
           </TabsContent>
         </Tabs>

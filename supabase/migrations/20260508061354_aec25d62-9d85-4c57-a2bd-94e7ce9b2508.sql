@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ALTER COLUMN customer_code SET DEFAULT public.generate_unique_customer_code();

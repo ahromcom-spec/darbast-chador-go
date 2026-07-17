@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
-import { UserPlus, Search, CheckCircle, XCircle, ArrowLeftRight, Loader2 } from 'lucide-react';
+import { UserPlus, Search, CheckCircle, XCircle, ArrowLeftRight, Loader2, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDebounce } from '@/hooks/useDebounce';
 import { ContactPickerButton } from '@/components/common/ContactPickerButton';
@@ -45,6 +45,7 @@ const statusLabels: Record<string, { label: string; color: string }> = {
   pending_manager: { label: 'در انتظار تایید مدیر', color: 'bg-yellow-500' },
   manager_approved: { label: 'تایید شده توسط مدیر - در انتظار تایید مقصد', color: 'bg-blue-500' },
   manager_rejected: { label: 'رد شده توسط مدیر', color: 'bg-red-500' },
+  pending_registration: { label: 'در انتظار ثبت‌نام شخص مقصد', color: 'bg-orange-500' },
   pending_recipient: { label: 'در انتظار تایید شخص مقصد', color: 'bg-blue-500' },
   recipient_accepted: { label: 'تایید شده توسط مقصد', color: 'bg-green-500' },
   recipient_rejected: { label: 'رد شده توسط مقصد', color: 'bg-red-500' },
@@ -127,14 +128,12 @@ export function OrderTransfer({ orderId, orderCode, open, onOpenChange, onTransf
     setUserNotFound(false);
 
     try {
-      // Search for user by phone number in profiles
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, phone_number')
-        .eq('phone_number', formattedPhone)
+      const { data: profileResult, error } = await supabase
+        .rpc('lookup_profile_by_phone' as any, { _phone: formattedPhone })
         .maybeSingle();
 
       if (error) throw error;
+      const profile = profileResult as { user_id: string; full_name: string | null; phone_number: string | null } | null;
 
       if (profile) {
         // Check if target user is the same as current user
@@ -169,7 +168,8 @@ export function OrderTransfer({ orderId, orderCode, open, onOpenChange, onTransf
   }, [user?.id, toast]);
 
   const submitTransferRequest = async () => {
-    if (!targetUser || !user) return;
+    const formattedPhone = formatPhoneNumber(phoneNumber);
+    if (!user || formattedPhone.length !== 11 || !formattedPhone.startsWith('09')) return;
 
     setSubmitting(true);
     try {
@@ -178,8 +178,8 @@ export function OrderTransfer({ orderId, orderCode, open, onOpenChange, onTransf
         .insert({
           order_id: orderId,
           from_user_id: user.id,
-          to_user_id: targetUser.id,
-          to_phone_number: targetUser.phone,
+          to_user_id: targetUser?.id || null,
+          to_phone_number: targetUser?.phone || formattedPhone,
           status: 'pending_manager',
         });
 
@@ -187,7 +187,9 @@ export function OrderTransfer({ orderId, orderCode, open, onOpenChange, onTransf
 
       toast({
         title: '✓ موفق',
-        description: 'درخواست انتقال سفارش ثبت شد. منتظر تایید مدیر باشید.',
+        description: targetUser
+          ? 'درخواست انتقال سفارش ثبت شد. منتظر تایید مدیر باشید.'
+          : 'درخواست انتقال ثبت شد و تا زمان ثبت‌نام شخص مقصد با همین شماره در انتظار می‌ماند.',
       });
 
       setPhoneNumber('');
@@ -334,9 +336,9 @@ export function OrderTransfer({ orderId, orderCode, open, onOpenChange, onTransf
             </div>
 
             {userNotFound && (
-              <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
-                <XCircle className="h-4 w-4 flex-shrink-0" />
-                <span>کاربری با این شماره در سایت ثبت‌نام نکرده است.</span>
+              <div className="flex items-center gap-2 p-3 bg-orange-500/10 text-orange-700 rounded-lg text-sm">
+                <Clock className="h-4 w-4 flex-shrink-0" />
+                <span>این شماره هنوز ثبت‌نام نکرده است؛ درخواست ثبت می‌شود و بعد از ثبت‌نام مقصد، انتقال در انتظار تایید او قرار می‌گیرد.</span>
               </div>
             )}
 
@@ -368,7 +370,7 @@ export function OrderTransfer({ orderId, orderCode, open, onOpenChange, onTransf
 
             <Button
               onClick={submitTransferRequest}
-              disabled={!targetUser || submitting}
+              disabled={formatPhoneNumber(phoneNumber).length !== 11 || !formatPhoneNumber(phoneNumber).startsWith('09') || submitting}
               className="w-full gap-2"
             >
               {submitting ? (

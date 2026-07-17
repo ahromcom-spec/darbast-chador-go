@@ -1,9 +1,21 @@
-import React, { useState } from 'react';
-import { X, ChevronLeft, ChevronRight, Eye, Trash2, Plus, Camera } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { X, ChevronLeft, ChevronRight, Eye, Trash2, Plus, Camera, ZoomIn, ZoomOut } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { ServiceTypeSelectionDialog } from './ServiceTypeSelectionDialog';
+
+// ✅ مپ مسیرهای فرم بر اساس کد زیرشاخه — برای رفتن مستقیم به فرم همان خدماتی که قبلا ثبت شده
+// برای داربست (10/15) به فرم جامع می‌رویم که شامل ثبت برای دیگری، درخواست قیمت‌گذاری و چند سفارش همزمان است
+const SUBCATEGORY_FORM_ROUTES: Record<string, string> = {
+  '20': '/scaffolding/form',
+  '30': '/scaffolding/rental-form',
+};
+const COMPREHENSIVE_SCAFFOLDING_CODES = new Set(['10', '15', '20']);
+
 
 interface HierarchyMedia {
   id: string;
@@ -21,6 +33,7 @@ interface ProjectOrder {
   created_at: string;
   approved_at?: string | null;
   subcategory?: { name: string; code: string };
+  service_type?: { name: string; code: string };
   media?: HierarchyMedia[];
 }
 
@@ -33,11 +46,35 @@ interface ProjectData {
     address_line?: string;
     lat?: number;
     lng?: number;
+    province_id?: string | null;
+    district_id?: string | null;
+    provinces?: { id?: string; name?: string } | null;
+    districts?: { id?: string; name?: string } | null;
   } | null;
   orders?: ProjectOrder[];
   subcategory_id?: string;
   service_type_id?: string;
+  service_types_v3?: { name?: string; code?: string } | null;
+  subcategories?: { name?: string; code?: string } | null;
 }
+
+type ServiceTypeGroup = {
+  name: string;
+  code: string;
+  orders: ProjectOrder[];
+  projectId: string;
+  locationId?: string;
+  serviceTypeId?: string;
+  subcategoryId?: string;
+  locationAddress?: string;
+  locationTitle?: string | null;
+  provinceId?: string | null;
+  districtId?: string | null;
+  provinceName?: string;
+  districtName?: string;
+  serviceName?: string;
+  subcategoryName?: string;
+};
 
 interface MobileProjectPanelProps {
   project: ProjectData;
@@ -49,6 +86,85 @@ interface MobileProjectPanelProps {
   onViewImage: (images: string[], index: number) => void;
   onViewVideo: (url: string) => void;
 }
+
+type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+
+interface PanelRect {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
+const PANEL_PADDING = 8;
+const PANEL_TOP_SAFE = 24; // کمی بالاتر بیاید
+
+// چون پنل داخل #root مونت می‌شود و روی دسکتاپ #root معمولاً با CSS zoom (مثلاً 0.5)
+// کوچک شده است، مختصات داخلی پنل باید بر اساس فضای «قبل از زوم» محاسبه شوند
+// تا کادر دقیقاً وسط ویوپورت واقعی مرورگر بنشیند و درگ هم درست کار کند.
+const getRootZoom = (): number => {
+  if (typeof document === 'undefined') return 1;
+  const appRoot = document.getElementById('root');
+  if (!appRoot) return 1;
+  const z = parseFloat((appRoot.style as any).zoom || '1');
+  return Number.isFinite(z) && z > 0 ? z : 1;
+};
+
+const getPanelViewportMetrics = () => {
+  const zoom = getRootZoom();
+  return {
+    // ابعاد ویوپورت در فضای «بدون زوم» = ابعاد واقعی تقسیم بر zoom
+    width: typeof window === 'undefined' ? 900 : window.innerWidth / zoom,
+    height: typeof window === 'undefined' ? 800 : window.innerHeight / zoom,
+    padding: PANEL_PADDING,
+    zoom,
+  };
+};
+
+const getInitialPanelRect = (): PanelRect => {
+  if (typeof window === 'undefined') {
+    return { top: 56, left: 180, width: 1080, height: 760 };
+  }
+
+  const viewport = getPanelViewportMetrics();
+  const availableWidth = viewport.width - viewport.padding * 2;
+  const availableHeight = viewport.height - PANEL_TOP_SAFE - viewport.padding;
+  const isMobileView = window.innerWidth < 768;
+  const preferredWidth = isMobileView ? availableWidth : Math.round(viewport.width * 0.60);
+  const preferredHeight = isMobileView ? availableHeight : Math.round(availableHeight * 0.88 * 1.7);
+  const width = Math.min(preferredWidth, availableWidth);
+  const height = Math.min(preferredHeight, availableHeight);
+
+  return {
+    width,
+    height,
+    left: Math.max(viewport.padding, (viewport.width - width) / 2),
+    top: Math.max(PANEL_TOP_SAFE, PANEL_TOP_SAFE + (availableHeight - height) / 2),
+  };
+};
+
+const clampPanelRect = (rect: PanelRect): PanelRect => {
+  if (typeof window === 'undefined') return rect;
+
+  const viewport = getPanelViewportMetrics();
+  const maxWidth = Math.max(320, viewport.width - viewport.padding * 2);
+  const maxHeight = Math.max(320, viewport.height - PANEL_TOP_SAFE - viewport.padding);
+  const minWidth = Math.min(420, maxWidth);
+  const minHeight = Math.min(520, maxHeight);
+  const width = Math.min(Math.max(rect.width, minWidth), maxWidth);
+  const height = Math.min(Math.max(rect.height, minHeight), maxHeight);
+
+  const maxLeft = Math.max(viewport.padding, viewport.width - width - viewport.padding);
+  const maxTop = Math.max(PANEL_TOP_SAFE, viewport.height - height - viewport.padding);
+  const top = Math.max(PANEL_TOP_SAFE, Math.min(rect.top, maxTop));
+
+  return {
+    width,
+    height,
+    left: Math.min(Math.max(rect.left, viewport.padding), maxLeft),
+    top,
+  };
+};
 
 const getStatusLabel = (status: string): string => {
   const statusMap: Record<string, string> = {
@@ -93,8 +209,31 @@ export function MobileProjectPanel({
   onViewVideo,
 }: MobileProjectPanelProps) {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [mediaIndexes, setMediaIndexes] = useState<Record<string, number>>({});
   const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
+  // در موبایل پیش‌فرض تمام صفحه، در دسکتاپ پیش‌فرض پنجره‌ای
+  const [isFullscreen, setIsFullscreen] = useState(isMobile);
+  const [contentScale, setContentScale] = useState(1);
+  const [panelRect, setPanelRect] = useState<PanelRect>(() => getInitialPanelRect());
+  const resizeStartRef = useRef<{
+    direction: ResizeDirection;
+    startX: number;
+    startY: number;
+    rect: PanelRect;
+  } | null>(null);
+
+  useEffect(() => {
+    const handleWindowResize = () => setPanelRect(prev => clampPanelRect(prev));
+    window.addEventListener('resize', handleWindowResize);
+    return () => window.removeEventListener('resize', handleWindowResize);
+  }, []);
+
+  useEffect(() => {
+    // هر بار که پنل برای پروژه‌ای باز می‌شود، به وسط صفحه ریست شود تا در کنج گیر نکند
+    setPanelRect(getInitialPanelRect());
+  }, [project.id]);
+
 
   const getMediaIndex = (orderId: string) => mediaIndexes[orderId] || 0;
 
@@ -125,48 +264,209 @@ export function MobileProjectPanel({
   
   const hasOrders = allOrders.length > 0;
 
-  // گروه‌بندی سفارشات بر اساس نوع زیردسته (subcategory)
-  const ordersByServiceType = allOrders.reduce((acc, order) => {
-    const key = order.subcategory?.code || 'unknown';
-    if (!acc[key]) {
-      acc[key] = {
-        name: order.subcategory?.name || 'نامشخص',
-        code: key,
-        orders: []
+  // گروه‌بندی سفارشات بر اساس هر پروژه/نوع خدمات تا دکمه «سفارش جدید» همان پروژه و همان فرم کامل را باز کند
+  const serviceTypeGroups = projectsToUse
+    .map((p): ServiceTypeGroup | null => {
+      const orders = p.orders || [];
+      if (orders.length === 0) return null;
+      const firstOrder = orders[0];
+      const subCode = p.subcategories?.code || firstOrder.subcategory?.code || '';
+      const stName = p.service_types_v3?.name?.trim() || firstOrder.service_type?.name?.trim() || '';
+      const subName = p.subcategories?.name?.trim() || firstOrder.subcategory?.name?.trim() || '';
+      const displayName = stName && subName && stName !== subName ? `${stName} - ${subName}` : stName || subName || 'نامشخص';
+
+      return {
+        name: displayName,
+        code: subCode || firstOrder.service_type?.code || 'unknown',
+        orders,
+        projectId: p.id,
+        locationId: p.location_id,
+        serviceTypeId: p.service_type_id,
+        subcategoryId: p.subcategory_id,
+        locationAddress: p.locations?.address_line,
+        locationTitle: p.locations?.title,
+        provinceId: p.locations?.province_id || p.locations?.provinces?.id || null,
+        districtId: p.locations?.district_id || p.locations?.districts?.id || null,
+        provinceName: p.locations?.provinces?.name,
+        districtName: p.locations?.districts?.name,
+        serviceName: stName,
+        subcategoryName: subName,
       };
-    }
-    acc[key].orders.push(order);
-    return acc;
-  }, {} as Record<string, { name: string; code: string; orders: ProjectOrder[] }>);
+    })
+    .filter(Boolean) as ServiceTypeGroup[];
+  const fullAddress = [
+    project.locations?.address_line?.trim(),
+    project.locations?.districts?.name?.trim(),
+    project.locations?.provinces?.name?.trim(),
+  ].filter(Boolean).join('، ');
 
-  const serviceTypeGroups = Object.values(ordersByServiceType);
+  const locationDisplayTitle =
+    fullAddress ||
+    project.locations?.title?.trim() ||
+    project.title?.trim() ||
+    'موقعیت';
 
-  return (
-    <div className="fixed inset-0 z-[100000] bg-background flex flex-col">
+
+  const startPanelResize = (direction: ResizeDirection) => (event: React.PointerEvent<HTMLDivElement>) => {
+    if (isFullscreen) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    resizeStartRef.current = {
+      direction,
+      startX: event.clientX,
+      startY: event.clientY,
+      rect: panelRect,
+    };
+
+    const handleMove = (moveEvent: PointerEvent) => {
+      const start = resizeStartRef.current;
+      if (!start) return;
+
+      const zoom = getRootZoom();
+      const dx = (moveEvent.clientX - start.startX) / zoom;
+      const dy = (moveEvent.clientY - start.startY) / zoom;
+      let { top, left, width, height } = start.rect;
+
+      if (start.direction.includes('e')) width = start.rect.width + dx;
+      if (start.direction.includes('s')) height = start.rect.height + dy;
+      if (start.direction.includes('w')) {
+        width = start.rect.width - dx;
+        left = start.rect.left + (start.rect.width - width);
+      }
+      if (start.direction.includes('n')) {
+        height = start.rect.height - dy;
+        top = start.rect.top + (start.rect.height - height);
+      }
+
+      setPanelRect(clampPanelRect({ top, left, width, height }));
+    };
+
+    const handleEnd = () => {
+      resizeStartRef.current = null;
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleEnd);
+      window.removeEventListener('pointercancel', handleEnd);
+    };
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleEnd);
+    window.addEventListener('pointercancel', handleEnd);
+  };
+
+  // جابجایی کادر با گرفتن و کشیدن سربرگ (موس یا انگشت)
+  const startPanelDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (isFullscreen) return;
+    // اگر روی دکمه‌ای داخل سربرگ کلیک شد، درگ را شروع نکن
+    const target = event.target as HTMLElement;
+    if (target.closest('button')) return;
+
+    event.preventDefault();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startRect = panelRect;
+
+    const handleMove = (moveEvent: PointerEvent) => {
+      const zoom = getRootZoom();
+      const dx = (moveEvent.clientX - startX) / zoom;
+      const dy = (moveEvent.clientY - startY) / zoom;
+      setPanelRect(clampPanelRect({
+        ...startRect,
+        left: startRect.left + dx,
+        top: startRect.top + dy,
+      }));
+    };
+
+    const handleEnd = () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleEnd);
+      window.removeEventListener('pointercancel', handleEnd);
+    };
+
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleEnd);
+    window.addEventListener('pointercancel', handleEnd);
+  };
+
+  // کلاس کانتینر بسته به حالت تمام صفحه یا پنجره‌ای — در حالت تمام صفحه هم سربرگ کادر نباید زیر سربرگ مرورگر برود
+  const containerClass = isFullscreen
+    ? "fixed left-0 right-0 bottom-0 z-[100000] bg-background flex flex-col"
+    : "fixed z-[100000] bg-background flex flex-col shadow-2xl border border-border rounded-2xl overflow-hidden";
+  const fullscreenStyle: React.CSSProperties | undefined = isFullscreen ? { top: PANEL_TOP_SAFE } : undefined;
+
+
+  // ⚠️ پنل را داخل #root مونت می‌کنیم تا CSS zoom سراسری اپ را به ارث ببرد
+  // و در کروم/اج تولید (که zoom سایت ۵۰٪ است) با بقیه‌ی رابط هم‌مقیاس شود،
+  // نه این که نسبت به محتوای زوم‌شده غول‌آسا به نظر برسد.
+  const portalTarget = (typeof document !== 'undefined' && document.getElementById('root')) || document.body;
+  return createPortal((
+    <>
+      {/* Overlay فقط در حالت پنجره‌ای دسکتاپ برای امکان خروج با کلیک بیرون */}
+      {!isFullscreen && (
+        <div
+          className="fixed inset-0 z-[99999] bg-black/40 backdrop-blur-sm"
+          onClick={onClose}
+        />
+      )}
+    <div
+      className={containerClass}
+      style={isFullscreen ? fullscreenStyle : panelRect}
+    >
+      {!isFullscreen && (
+        <>
+          <div onPointerDown={startPanelResize('n')} className="absolute top-0 left-8 right-8 h-4 cursor-ns-resize z-30 touch-none" />
+          <div onPointerDown={startPanelResize('s')} className="absolute bottom-0 left-8 right-8 h-4 cursor-ns-resize z-30 touch-none" />
+          <div onPointerDown={startPanelResize('e')} className="absolute top-8 bottom-8 right-0 w-4 cursor-ew-resize z-30 touch-none" />
+          <div onPointerDown={startPanelResize('w')} className="absolute top-8 bottom-8 left-0 w-4 cursor-ew-resize z-30 touch-none" />
+        </>
+      )}
+      <div className="flex flex-col flex-1" style={{ zoom: contentScale, width: '100%', height: '100%' }}>
       {/* Header */}
-      <div className="flex-shrink-0 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-4 shadow-lg">
-        <div className="flex items-center justify-between">
+      <div
+        className={`flex-shrink-0 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground px-3 py-2 shadow-lg ${!isFullscreen ? 'cursor-move select-none touch-none' : ''}`}
+        onPointerDown={!isFullscreen ? startPanelDrag : undefined}
+      >
+        <div className="flex items-center justify-between gap-2">
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="bg-white/20 hover:bg-white/40 text-white h-14 w-14 rounded-full shadow-lg border-2 border-white/50"
+            className="bg-white/25 hover:bg-white/45 text-white h-11 w-11 rounded-full shadow-lg border-2 border-white/60 flex-shrink-0 touch-manipulation"
+            title="بستن"
           >
-            <X className="h-8 w-8" strokeWidth={3} />
+            <X className="h-6 w-6" strokeWidth={3} />
           </Button>
           <div className="flex-1 text-center px-2 min-w-0">
-            <h2 className="text-base font-bold leading-tight break-words">
-              {project.locations?.title || project.title || 'موقعیت'}
+            <h2 className="text-sm font-bold leading-tight truncate">
+              {locationDisplayTitle}
             </h2>
           </div>
-          <div className="w-12" />
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setContentScale(s => Math.max(0.15, +(s - 0.1).toFixed(2)))}
+              className="bg-white/25 hover:bg-white/45 text-white h-11 w-11 rounded-full border-2 border-white/40 touch-manipulation"
+              title="کوچک‌نمایی محتوا"
+            >
+              <ZoomOut className="h-5 w-5" strokeWidth={2.5} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setContentScale(s => Math.min(2, +(s + 0.1).toFixed(2)))}
+              className="bg-white/25 hover:bg-white/45 text-white h-11 w-11 rounded-full border-2 border-white/40 touch-manipulation"
+              title="بزرگ‌نمایی محتوا"
+            >
+              <ZoomIn className="h-5 w-5" strokeWidth={2.5} />
+            </Button>
+            <span className="text-xs font-bold text-white px-1.5 min-w-[42px] text-center bg-white/15 rounded-md py-1">
+              {Math.round(contentScale * 100)}%
+            </span>
+          </div>
         </div>
-        {project.locations?.address_line && (
-          <p className="text-xs opacity-80 mt-2 text-center">
-            {project.locations.address_line}
-          </p>
-        )}
       </div>
+
 
       {/* دکمه افزودن خدمات جدید - بیرون از کادر سفارشات با ناحیه لمسی بزرگ */}
       {project.location_id && (
@@ -196,44 +496,68 @@ export function MobileProjectPanel({
       {/* Content - هر نوع خدمات در کادر جداگانه */}
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-6 pb-8">
+
           {hasOrders ? (
             serviceTypeGroups.map((group, groupIndex) => (
-              <div key={group.code} className="space-y-3">
+              <div key={`${group.projectId}-${group.code}`} className="space-y-3">
                 {/* هدر نوع خدمات با دکمه سفارش جدید */}
                 <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl p-3 border-2 border-primary/20">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-primary" />
-                      <h3 className="text-sm font-bold text-primary">
-                        {group.name}
-                      </h3>
-                      <span className="text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-full">
-                        {group.orders.length} سفارش
-                      </span>
-                    </div>
-                    {/* دکمه سفارش جدید */}
+                  <div className="flex items-center flex-wrap gap-2">
+                    <div className="w-3 h-3 rounded-full bg-primary flex-shrink-0" />
+                    <h3 className="text-sm font-bold text-primary">
+                      {group.name}
+                    </h3>
+                    {/* دکمه سفارش جدید کنار نام نوع خدمات */}
                     <Button
                       size="sm"
                       className="bg-emerald-500 hover:bg-emerald-600 text-white h-8 px-3 text-xs font-bold"
                       onClick={() => {
-                        // هدایت به صفحه ثبت سفارش با پیش‌فرض location و نوع خدمات
-                        const locationId = project.location_id;
+                        const locationId = group.locationId || project.location_id;
                         const subcategoryCode = group.code;
-                        if (locationId) {
-                          // مسیر صحیح: /user/select-service با state
-                          navigate('/user/select-service', {
+                        if (!locationId) return;
+                        // ✅ برای داربست فلزی (کد 10/15) به فرم جامع می‌رویم که شامل همه‌ی کنترل‌ها است
+                        if (COMPREHENSIVE_SCAFFOLDING_CODES.has(subcategoryCode) && group.projectId) {
+                          navigate(`/scaffolding/form/${group.projectId}`, {
                             state: {
-                              locationId: locationId,
-                              subcategoryCode: subcategoryCode,
-                              fromMap: true
-                            }
+                              fromMap: true,
+                              hierarchyProjectId: group.projectId,
+                              projectId: group.projectId,
+                              locationId,
+                              serviceTypeId: group.serviceTypeId,
+                              subcategoryId: group.subcategoryId,
+                              subcategoryCode,
+                              serviceName: group.serviceName,
+                              subcategoryName: group.subcategoryName,
+                              locationAddress: group.locationAddress,
+                              locationTitle: group.locationTitle,
+                              provinceId: group.provinceId,
+                              districtId: group.districtId,
+                              provinceName: group.provinceName,
+                              districtName: group.districtName,
+                              returnToMap: true,
+                            },
                           });
+                          return;
                         }
+                        // ✅ رفتن مستقیم به فرم همان نوع خدماتی که قبلا ثبت شده
+                        const formRoute = SUBCATEGORY_FORM_ROUTES[subcategoryCode] || '/user/select-service';
+                        navigate(formRoute, {
+                          state: {
+                            fromMap: true,
+                            locationId,
+                            subcategoryCode,
+                            returnToMap: true,
+                          },
+                        });
                       }}
+
                     >
                       <Plus className="w-4 h-4 ml-1" />
                       سفارش جدید
                     </Button>
+                    <span className="text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-full mr-auto">
+                      {group.orders.length} سفارش
+                    </span>
                   </div>
                 </div>
 
@@ -267,7 +591,7 @@ export function MobileProjectPanel({
                       </div>
 
                       {/* Media Gallery */}
-                      <div className="relative aspect-video bg-muted">
+                      <div className="relative h-[20vh] min-h-[120px] bg-muted">
                         {totalMedia > 0 ? (
                           <>
                             {allMedia.map((media, idx) => {
@@ -277,18 +601,26 @@ export function MobileProjectPanel({
 
                               if (!isVisible) return null;
 
+                              const openUnifiedViewer = () => {
+                                const mediaUrls = allMedia.map(m => getPublicUrl(m.file_path));
+                                const mediaIdx = allMedia.findIndex(m => m.id === media.id);
+                                onViewImage(mediaUrls, mediaIdx >= 0 ? mediaIdx : 0);
+                              };
+
                               return isVideo ? (
                                 <div
                                   key={media.id}
                                   className="absolute inset-0 flex items-center justify-center bg-black cursor-pointer"
-                                  onClick={() => onViewVideo(url)}
+                                  onClick={openUnifiedViewer}
                                 >
                                   <video
                                     src={url}
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-contain"
                                     preload="metadata"
+                                    muted
+                                    playsInline
                                   />
-                                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
                                     <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center">
                                       <svg className="w-8 h-8 text-primary ml-1" fill="currentColor" viewBox="0 0 24 24">
                                         <path d="M8 5v14l11-7z"/>
@@ -304,16 +636,8 @@ export function MobileProjectPanel({
                                   key={media.id}
                                   src={url}
                                   alt="تصویر سفارش"
-                                  className="absolute inset-0 w-full h-full object-cover cursor-pointer"
-                                  onClick={() => {
-                                    const imageUrls = allMedia
-                                      .filter(m => m.file_type === 'image')
-                                      .map(m => getPublicUrl(m.file_path));
-                                    const imageIndex = allMedia
-                                      .filter(m => m.file_type === 'image')
-                                      .findIndex(m => m.id === media.id);
-                                    onViewImage(imageUrls, imageIndex >= 0 ? imageIndex : 0);
-                                  }}
+                                  className="absolute inset-0 w-full h-full object-contain cursor-pointer"
+                                  onClick={openUnifiedViewer}
                                 />
                               );
                             })}
@@ -415,6 +739,7 @@ export function MobileProjectPanel({
           )}
         </div>
       </ScrollArea>
+      </div>
 
       {/* دیالوگ انتخاب نوع خدمات */}
       <ServiceTypeSelectionDialog
@@ -423,5 +748,6 @@ export function MobileProjectPanel({
         locationId={project.location_id || ''}
       />
     </div>
-  );
+    </>
+  ), portalTarget);
 }

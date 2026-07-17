@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useLocations, Location } from '@/hooks/useLocations';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Plus, MapPin, Loader2 } from 'lucide-react';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -11,9 +12,11 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface LocationSelectorProps {
   onLocationSelected: (locationId: string) => void;
+  serviceTypeName?: string;
 }
 
-export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) => {
+export const LocationSelector = ({ onLocationSelected, serviceTypeName }: LocationSelectorProps) => {
+  const { user } = useAuth();
   const { locations, loading, refetch } = useLocations();
   const { projects: allProjects } = useProjectsHierarchy();
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
@@ -133,6 +136,13 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
 
   const [showNewLocationDialog, setShowNewLocationDialog] = useState(false);
 
+  // Auto-open the address dialog for guest users (they have no saved addresses)
+  useEffect(() => {
+    if (!user && !loading) {
+      setShowNewLocationDialog(true);
+    }
+  }, [user, loading]);
+
   const selectedLocation = locations.find(l => l.id === selectedLocationId);
 
   const handleConfirm = () => {
@@ -144,6 +154,13 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
 
   const handleLocationCreated = async (locationId: string) => {
     setShowNewLocationDialog(false);
+    // For guests: skip refetch/list selection and forward immediately
+    if (!user) {
+      toast.success('آدرس با موفقیت ثبت شد');
+      setIsConfirming(true);
+      onLocationSelected(locationId);
+      return;
+    }
     await refetch();
     setSelectedLocationId(locationId);
     toast.success('آدرس با موفقیت ثبت شد');
@@ -168,11 +185,11 @@ export const LocationSelector = ({ onLocationSelected }: LocationSelectorProps) 
             افزودن آدرس جدید
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>ثبت آدرس جدید</DialogTitle>
+        <DialogContent className="max-w-[min(42rem,95vw)] w-[95vw] sm:w-auto max-h-[92vh] overflow-y-auto p-4 sm:p-5 text-sm">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-base sm:text-lg">ثبت آدرس جدید</DialogTitle>
           </DialogHeader>
-          <NewLocationForm onSuccess={handleLocationCreated} />
+          <NewLocationForm onSuccess={handleLocationCreated} serviceTypeName={serviceTypeName} />
         </DialogContent>
       </Dialog>
 

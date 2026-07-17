@@ -1,0 +1,1 @@
+ALTER TABLE public.daily_report_staff ADD COLUMN IF NOT EXISTS transaction_time text;

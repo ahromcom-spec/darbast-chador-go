@@ -158,15 +158,16 @@ export function StaffAuditTab() {
   };
 
   const fetchSalarySettings = async (staffCode: string): Promise<SalarySettings> => {
+    // Always read fresh from DB so newly-added salary periods take effect immediately.
     const { data, error } = await supabase
       .from('staff_salary_settings')
-      .select('base_daily_salary, overtime_rate_fraction, previous_month_balance, previous_month_extra_received, bonuses, deductions, notes, effective_from, effective_to')
+      .select('base_daily_salary, overtime_rate_fraction, previous_month_balance, previous_month_extra_received, bonuses, deductions, notes, effective_from, effective_to, updated_at')
       .eq('staff_code', staffCode)
-      .order('effective_from', { ascending: true, nullsFirst: true });
+      .order('effective_from', { ascending: false, nullsFirst: false });
 
     const rows = (!error && data) ? data : [];
-    
-    // Build periods for date-based salary lookup
+
+    // Build periods for date-based salary lookup.
     const periods: SalaryPeriod[] = rows.map(r => ({
       base_daily_salary: r.base_daily_salary || 0,
       overtime_rate_fraction: r.overtime_rate_fraction || 0.167,
@@ -174,34 +175,56 @@ export function StaffAuditTab() {
       effective_to: r.effective_to,
     }));
 
-    // Use first row's global fields, or defaults
-    const first = rows[0];
+    // Use the most-recent dated row (or first available) for display-level defaults.
+    // Prefer rows that have an explicit effective_from so newly-added periods take precedence.
+    const datedFirst = rows.find(r => r.effective_from) || rows[0];
     const settings: SalarySettings = {
-      base_daily_salary: first?.base_daily_salary || 0,
-      overtime_rate_fraction: first?.overtime_rate_fraction || 0.167,
-      previous_month_balance: first?.previous_month_balance || 0,
-      previous_month_extra_received: first?.previous_month_extra_received || 0,
-      bonuses: first?.bonuses || 0,
-      deductions: first?.deductions || 0,
-      notes: first?.notes || '',
+      base_daily_salary: datedFirst?.base_daily_salary || 0,
+      overtime_rate_fraction: datedFirst?.overtime_rate_fraction || 0.167,
+      previous_month_balance: datedFirst?.previous_month_balance || 0,
+      previous_month_extra_received: datedFirst?.previous_month_extra_received || 0,
+      bonuses: datedFirst?.bonuses || 0,
+      deductions: datedFirst?.deductions || 0,
+      notes: datedFirst?.notes || '',
       periods,
     };
-    
+
     setSalarySettings(settings);
     return settings;
   };
 
-  // Find the salary for a specific date from periods
+  // Find the salary for a specific date from periods.
+  // Strategy: among periods that contain the date, prefer the one with the latest
+  // effective_from (most-recent setting wins on overlap). Periods without any
+  // date bounds are only used as a fallback when nothing else matches.
   const getSalaryForDate = (dateStr: string, periods: SalaryPeriod[], fallback: SalarySettings) => {
-    // Try to find a matching period
-    for (const p of periods) {
+    // 1) Dated periods that contain dateStr — pick the most recent effective_from.
+    const datedMatches = periods.filter(p => {
+      if (!p.effective_from && !p.effective_to) return false;
       const afterStart = !p.effective_from || dateStr >= p.effective_from;
       const beforeEnd = !p.effective_to || dateStr <= p.effective_to;
-      if (afterStart && beforeEnd) {
-        return { base: p.base_daily_salary, fraction: p.overtime_rate_fraction };
-      }
+      return afterStart && beforeEnd;
+    });
+    if (datedMatches.length > 0) {
+      datedMatches.sort((a, b) => {
+        const af = a.effective_from || '';
+        const bf = b.effective_from || '';
+        if (af !== bf) return bf.localeCompare(af); // latest start first
+        const at = a.effective_to || '9999-99-99';
+        const bt = b.effective_to || '9999-99-99';
+        return at.localeCompare(bt); // narrower window first
+      });
+      const p = datedMatches[0];
+      return { base: p.base_daily_salary, fraction: p.overtime_rate_fraction };
     }
-    // Fallback to default
+
+    // 2) Fallback: an unbounded period (no effective_from and no effective_to).
+    const unbounded = periods.find(p => !p.effective_from && !p.effective_to);
+    if (unbounded) {
+      return { base: unbounded.base_daily_salary, fraction: unbounded.overtime_rate_fraction };
+    }
+
+    // 3) Last resort: settings default.
     return { base: fallback.base_daily_salary, fraction: fallback.overtime_rate_fraction };
   };
 
@@ -404,9 +427,81 @@ export function StaffAuditTab() {
     }
   }, [salarySettings, bonuses, deductions, prevMonthBalance, prevMonthExtra]);
 
+  // Realtime: when salary settings for the selected staff change (e.g. a new
+  // effective period is added in the "Salary Settings" tab), re-fetch settings
+  // and recalculate the audit automatically. Avoids stale 1,400,000 vs
+  // 1,600,000 issues where the user previously had to re-click "Search".
+  useEffect(() => {
+    if (!selectedStaffCode) return;
+
+    const channel = supabase
+      .channel(`salary-settings-${selectedStaffCode}-${Date.now()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'staff_salary_settings',
+          filter: `staff_code=eq.${selectedStaffCode}`,
+        },
+        async () => {
+          try {
+            const fresh = await fetchSalarySettings(selectedStaffCode);
+            if (records.length > 0) {
+              calculateSummary(records, fresh, bonuses, deductions, prevMonthBalance, prevMonthExtra);
+            }
+            toast.success('تنظیمات حقوق به‌روزرسانی شد');
+          } catch (e) {
+            console.error('Failed to refresh salary settings:', e);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStaffCode, records, bonuses, deductions, prevMonthBalance, prevMonthExtra]);
+
+  // Also refresh salary settings when the window/tab regains focus, so changes
+  // made in another browser tab are picked up without requiring a re-search.
+  useEffect(() => {
+    if (!selectedStaffCode || records.length === 0) return;
+
+    const refresh = async () => {
+      try {
+        const fresh = await fetchSalarySettings(selectedStaffCode);
+        calculateSummary(records, fresh, bonuses, deductions, prevMonthBalance, prevMonthExtra);
+      } catch (e) {
+        console.error('Failed to refresh salary settings on focus:', e);
+      }
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStaffCode, records.length, bonuses, deductions, prevMonthBalance, prevMonthExtra]);
+
   const formatPersianDate = (dateStr: string) => {
     try {
       return format(new Date(dateStr), 'EEEE d MMMM yyyy');
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatPersianDateNumeric = (dateStr: string) => {
+    try {
+      return format(new Date(dateStr), 'yyyy/MM/dd');
     } catch {
       return dateStr;
     }
@@ -452,43 +547,54 @@ export function StaffAuditTab() {
           <div style="background: linear-gradient(135deg, #f5e6d3 0%, #e8d4b8 100%); padding: 12px; border-bottom: 1px solid #d4a574;">
             <h3 style="margin: 0; color: #8b5a2b; font-size: 16px; text-align: center;">جزئیات روزانه</h3>
           </div>
-          <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed;">
+            <colgroup>
+              <col style="width: 3%;" />
+              <col style="width: 9%;" />
+              <col style="width: 6%;" />
+              <col style="width: 7%;" />
+              <col style="width: 10%;" />
+              <col style="width: 19%;" />
+              <col style="width: 10%;" />
+              <col style="width: 19%;" />
+              <col style="width: 17%;" />
+            </colgroup>
             <thead>
               <tr style="background-color: #f5e6d3;">
-                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right; white-space: nowrap;">ردیف</th>
-                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right; white-space: nowrap;">تاریخ</th>
-                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right; white-space: nowrap;">کارکرد</th>
-                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right; white-space: nowrap;">اضافه‌کاری</th>
-                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right; white-space: nowrap;">مبلغ دریافتی</th>
-                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right;">توضیحات دریافت</th>
-                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right; white-space: nowrap;">مبلغ خرج‌کرد</th>
-                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right;">توضیحات خرج</th>
-                <th style="padding: 8px; border: 1px solid #d4a574; text-align: right;">یادداشت</th>
+                <th style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">ردیف</th>
+                <th style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">تاریخ</th>
+                <th style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">کارکرد</th>
+                <th style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">اضافه‌کاری</th>
+                <th style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">مبلغ دریافتی</th>
+                <th style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center;">توضیحات دریافت</th>
+                <th style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">مبلغ خرج‌کرد</th>
+                <th style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center;">توضیحات خرج</th>
+                <th style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center;">یادداشت</th>
               </tr>
             </thead>
             <tbody>
               ${recordsWithData.map((record, index) => `
                 <tr style="background-color: ${index % 2 === 0 ? '#fff' : '#faf5ef'};">
-                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${(index + 1).toLocaleString('fa-IR')}</td>
-                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: right; white-space: nowrap;">${formatPersianDate(record.report_date)}</td>
-                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${record.work_status === 'حاضر' ? '۱ روز' : 'غایب'}</td>
-                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${record.overtime_hours > 0 ? record.overtime_hours + ' ساعت' : '—'}</td>
-                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: center; white-space: nowrap; color: ${record.amount_received > 0 ? '#16a34a' : '#666'};">${record.amount_received > 0 ? formatCurrency(record.amount_received) : '—'}</td>
-                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: right; max-width: 160px; word-break: break-word;">${record.receiving_notes || '—'}</td>
-                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: center; white-space: nowrap; color: ${record.amount_spent > 0 ? '#dc2626' : '#666'};">${record.amount_spent > 0 ? formatCurrency(record.amount_spent) : '—'}</td>
-                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: right; max-width: 160px; word-break: break-word;">${record.spending_notes || '—'}</td>
-                  <td style="padding: 6px; border: 1px solid #d4a574; text-align: right; max-width: 160px; word-break: break-word;">${record.notes || '—'}</td>
+                  <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center;">${(index + 1).toLocaleString('fa-IR')}</td>
+                  <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${formatPersianDateNumeric(record.report_date)}</td>
+                  <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${record.work_status === 'حاضر' ? '۱ روز' : 'غایب'}</td>
+                  <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${record.overtime_hours > 0 ? record.overtime_hours + ' ساعت' : '—'}</td>
+                  <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; color: ${record.amount_received > 0 ? '#16a34a' : '#666'};">${record.amount_received > 0 ? '<span style="white-space: nowrap;">' + record.amount_received.toLocaleString('fa-IR') + '</span><br/>تومان' : '—'}</td>
+                  <td style="padding: 6px 8px; border: 1px solid #d4a574; text-align: right; word-break: break-word;">${record.receiving_notes || '—'}</td>
+                  <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; color: ${record.amount_spent > 0 ? '#dc2626' : '#666'};">${record.amount_spent > 0 ? '<span style="white-space: nowrap;">' + record.amount_spent.toLocaleString('fa-IR') + '</span><br/>تومان' : '—'}</td>
+                  <td style="padding: 6px 8px; border: 1px solid #d4a574; text-align: right; word-break: break-word;">${record.spending_notes || '—'}</td>
+                  <td style="padding: 6px 8px; border: 1px solid #d4a574; text-align: right; word-break: break-word;">${record.notes || '—'}</td>
                 </tr>
               `).join('')}
             </tbody>
             <tfoot>
               <tr style="background-color: #f5e6d3; font-weight: bold;">
-                <td colspan="2" style="padding: 8px; border: 1px solid #d4a574; text-align: right;">جمع کل:</td>
-                <td style="padding: 8px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${summary.totalDaysWorked.toLocaleString('fa-IR')} روز</td>
-                <td style="padding: 8px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${summary.totalOvertime.toLocaleString('fa-IR')} ساعت</td>
-                <td style="padding: 8px; border: 1px solid #d4a574; text-align: center; white-space: nowrap; color: #16a34a;">${formatCurrency(summary.totalReceived)}</td>
+                <td colspan="2" style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">جمع کل:</td>
+                <td style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${summary.totalDaysWorked.toLocaleString('fa-IR')} روز</td>
+                <td style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${summary.totalOvertime.toLocaleString('fa-IR')} ساعت</td>
+                <td style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; color: #16a34a;"><span style="white-space: nowrap;">${summary.totalReceived.toLocaleString('fa-IR')}</span><br/>تومان</td>
                 <td style="padding: 8px; border: 1px solid #d4a574;"></td>
-                <td style="padding: 8px; border: 1px solid #d4a574; text-align: center; white-space: nowrap; color: #dc2626;">${formatCurrency(summary.totalSpent)}</td>
+                <td style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; color: #dc2626;"><span style="white-space: nowrap;">${summary.totalSpent.toLocaleString('fa-IR')}</span><br/>تومان</td>
                 <td colspan="2" style="padding: 8px; border: 1px solid #d4a574;"></td>
               </tr>
             </tfoot>

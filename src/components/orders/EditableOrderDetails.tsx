@@ -33,6 +33,8 @@ import { CustomerOwnershipChain } from './CustomerOwnershipChain';
 import { CentralizedVideoPlayer } from '@/components/media/CentralizedVideoPlayer';
 import { OrderMediaSection } from './OrderMediaSection';
 import { ExpertPricingEditDialog } from './ExpertPricingEditDialog';
+import { InvoiceEmployerOverrideDialog } from './InvoiceEmployerOverrideDialog';
+import { applyFixedPriceToBreakdown } from '@/lib/priceBreakdown';
 
 const scaffoldingTypeLabels: Record<string, string> = {
   facade: 'داربست سطحی نما',
@@ -115,7 +117,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
           .in('status', ['approved', 'completed']),
         supabase
           .from('order_renewals')
-          .select('renewal_price, renewal_number, new_start_date, new_end_date, status')
+          .select('renewal_price, renewal_number, new_start_date, new_end_date, status, manager_notes')
           .eq('order_id', order.id)
           .eq('status', 'approved')
           .order('renewal_number', { ascending: true }),
@@ -284,6 +286,105 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
     }
   }, [rentalItem1TotalPrice, rentalItem2TotalPrice, isRentalExpertPricing]);
 
+  // ===== Multi-scaffold expert pricing support =====
+  const expertScaffolds: any[] = (isExpertPricingRequest && parsedNotes?.is_multi_scaffold && Array.isArray(parsedNotes?.scaffolds))
+    ? parsedNotes.scaffolds
+    : [];
+  const hasExpertScaffolds = expertScaffolds.length > 0;
+
+  // Per-scaffold area calculator
+  const calcScaffoldArea = (sc: any) => {
+    const dims = Array.isArray(sc?.dimensions) ? sc.dimensions : [];
+    if (dims.length === 0) return 0;
+    const hasW = dims.some((d: any) => parseLocalizedNumber(d?.width) > 0);
+    return dims.reduce((sum: number, d: any) => {
+      const l = parseLocalizedNumber(d?.length);
+      const h = parseLocalizedNumber(d?.height);
+      if (l <= 0 || h <= 0) return sum;
+      if (hasW) {
+        const w = parseLocalizedNumber(d?.width);
+        return sum + l * (w > 0 ? w : 1) * h;
+      }
+      return sum + l * h;
+    }, 0);
+  };
+  const scaffoldAreaUnit = (sc: any) => {
+    const dims = Array.isArray(sc?.dimensions) ? sc.dimensions : [];
+    return dims.some((d: any) => parseLocalizedNumber(d?.width) > 0) ? 'متر مکعب' : 'متر مربع';
+  };
+
+  // Per-scaffold price state: keyed by index, value is total price string
+  const initialScaffoldPrices: string[] = expertScaffolds.map((_, i) => {
+    const saved = Array.isArray(parsedNotes?.scaffold_prices) ? parsedNotes.scaffold_prices[i] : null;
+    return saved?.total != null ? String(saved.total) : '';
+  });
+  const [scaffoldPrices, setScaffoldPrices] = useState<string[]>(initialScaffoldPrices);
+  const [savedScaffoldPrices, setSavedScaffoldPrices] = useState<string[]>(initialScaffoldPrices);
+  const isScaffoldPricesChanged = scaffoldPrices.some((v, i) => v !== (savedScaffoldPrices[i] ?? ''));
+
+  // Auto-sum to paymentAmount
+  useEffect(() => {
+    if (!hasExpertScaffolds) return;
+    const sum = scaffoldPrices.reduce((s, v) => s + (parseFloat(v) || 0), 0);
+    if (sum > 0) setPaymentAmount(Math.round(sum).toString());
+  }, [scaffoldPrices, hasExpertScaffolds]);
+
+  // ===== Full-edit support for expert scaffolds (label, description, dimensions) =====
+  type DimRow = { length: string; width: string; height: string };
+  const buildDimRows = (dims: any[]): DimRow[] => (Array.isArray(dims) ? dims : []).map((d: any) => ({
+    length: d?.length != null ? String(d.length) : '',
+    width: d?.width != null ? String(d.width) : '',
+    height: d?.height != null ? String(d.height) : '',
+  }));
+  type ScaffoldEdit = { label: string; description: string; dimensions: DimRow[] };
+  const initialScaffoldEdits: ScaffoldEdit[] = expertScaffolds.map((sc: any) => ({
+    label: sc.label || '',
+    description: sc.description || '',
+    dimensions: buildDimRows(sc.dimensions),
+  }));
+  const [scaffoldEdits, setScaffoldEdits] = useState<ScaffoldEdit[]>(initialScaffoldEdits);
+  const initialScaffoldEditsSer = JSON.stringify(initialScaffoldEdits);
+  const isScaffoldEditsChanged = JSON.stringify(scaffoldEdits) !== initialScaffoldEditsSer;
+
+  // ===== Multi-scaffolds (snapshot-based) full edit =====
+  const initialMultiScaffolds: any[] = Array.isArray(parsedNotes?.multi_scaffolds) ? parsedNotes.multi_scaffolds : [];
+  const hasMultiScaffolds = initialMultiScaffolds.length > 0;
+  type MultiScaffoldEdit = { label: string; description: string; dimensions: DimRow[]; finalPrice: string };
+  const initialMultiScaffoldsEdit: MultiScaffoldEdit[] = initialMultiScaffolds.map((it: any) => ({
+    label: it.label || '',
+    description: it.snapshot?.locationPurpose || it.description || '',
+    dimensions: buildDimRows(it.snapshot?.dimensions),
+    finalPrice: it.finalPrice != null ? String(it.finalPrice) : '',
+  }));
+  const [multiScaffoldsEdit, setMultiScaffoldsEdit] = useState<MultiScaffoldEdit[]>(initialMultiScaffoldsEdit);
+  const initialMultiScaffoldsEditSer = JSON.stringify(initialMultiScaffoldsEdit);
+  const isMultiScaffoldsChanged = JSON.stringify(multiScaffoldsEdit) !== initialMultiScaffoldsEditSer;
+
+  const calcDimsArea = (dims: DimRow[]) => {
+    const hasW = dims.some(d => parseLocalizedNumber(d?.width) > 0);
+    return dims.reduce((sum, d) => {
+      const l = parseLocalizedNumber(d?.length);
+      const h = parseLocalizedNumber(d?.height);
+      if (l <= 0 || h <= 0) return sum;
+      if (hasW) {
+        const w = parseLocalizedNumber(d?.width);
+        return sum + l * (w > 0 ? w : 1) * h;
+      }
+      return sum + l * h;
+    }, 0);
+  };
+  const dimsUnit = (dims: DimRow[]) => dims.some(d => parseLocalizedNumber(d?.width) > 0) ? 'متر مکعب' : 'متر مربع';
+
+  // Auto-sum multi-scaffold finalPrice → paymentAmount during edit
+  useEffect(() => {
+    if (!hasMultiScaffolds || !isEditing) return;
+    const sum = multiScaffoldsEdit.reduce((s, it) => s + (parseFloat(it.finalPrice) || 0), 0);
+    if (sum > 0) setPaymentAmount(Math.round(sum).toString());
+  }, [multiScaffoldsEdit, hasMultiScaffolds, isEditing]);
+
+
+
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -323,18 +424,85 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
             updatedNotes.pricing_unit = 'm2';
           }
         }
+
+        // Store per-scaffold prices if this is a multi-scaffold expert pricing
+        if (hasExpertScaffolds) {
+          updatedNotes.scaffold_prices = expertScaffolds.map((sc, i) => {
+            const ed = scaffoldEdits[i];
+            const dimsForArea = ed?.dimensions || [];
+            return {
+              index: i,
+              label: (ed?.label || sc.label || `داربست ${i + 1}`),
+              description: (ed?.description ?? sc.description ?? ''),
+              area: ed ? calcDimsArea(dimsForArea) : calcScaffoldArea(sc),
+              unit: ed ? dimsUnit(dimsForArea) : scaffoldAreaUnit(sc),
+              total: parseFloat(scaffoldPrices[i] || '0') || 0,
+            };
+          });
+        }
+      }
+
+      // Persist expert scaffold edits (label/description/dimensions) - independent of price flow
+      if (hasExpertScaffolds && expertScaffolds.length > 0) {
+        updatedNotes.scaffolds = expertScaffolds.map((sc: any, i: number) => {
+          const ed = scaffoldEdits[i];
+          if (!ed) return sc;
+          return {
+            ...sc,
+            label: ed.label || sc.label || `داربست ${i + 1}`,
+            description: ed.description,
+            dimensions: ed.dimensions.map(d => ({
+              length: parseLocalizedNumber(d.length),
+              width: parseLocalizedNumber(d.width),
+              height: parseLocalizedNumber(d.height),
+            })),
+          };
+        });
+      }
+
+      // Persist multi-scaffold (snapshot) edits
+      if (hasMultiScaffolds) {
+        updatedNotes.multi_scaffolds = initialMultiScaffolds.map((orig: any, i: number) => {
+          const ed = multiScaffoldsEdit[i];
+          if (!ed) return orig;
+          const cleanDims = ed.dimensions.map(d => ({
+            length: parseLocalizedNumber(d.length),
+            width: parseLocalizedNumber(d.width),
+            height: parseLocalizedNumber(d.height),
+          }));
+          const area = calcDimsArea(ed.dimensions);
+          return {
+            ...orig,
+            label: ed.label || orig.label,
+            description: ed.description,
+            finalPrice: parseFloat(ed.finalPrice) || 0,
+            totalArea: area,
+            snapshot: {
+              ...(orig.snapshot || {}),
+              dimensions: cleanDims,
+              locationPurpose: ed.description,
+            },
+          };
+        });
+      }
+
+
+      const updatePayload: any = {
+        address,
+        detailed_address: detailedAddress,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        payment_amount: paymentAmount ? parseFloat(paymentAmount) : null,
+        notes: updatedNotes
+      };
+      // وقتی مدیر قیمت نهایی را ثبت می‌کند، total_price نیز باید با همان مقدار همگام شود
+      if (paymentAmount && parseFloat(paymentAmount) > 0) {
+        updatePayload.total_price = parseFloat(paymentAmount);
       }
 
       const { error } = await supabase
         .from('projects_v3')
-        .update({
-          address,
-          detailed_address: detailedAddress,
-          customer_name: customerName,
-          customer_phone: customerPhone,
-          payment_amount: paymentAmount ? parseFloat(paymentAmount) : null,
-          notes: updatedNotes
-        })
+        .update(updatePayload)
         .eq('id', order.id);
 
       if (error) throw error;
@@ -349,6 +517,9 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
           item2Unit: rentalItem2UnitPrice,
           item2Total: rentalItem2TotalPrice,
         });
+      }
+      if (hasExpertScaffolds) {
+        setSavedScaffoldPrices([...scaffoldPrices]);
       }
 
       toast({ title: 'موفق', description: 'اطلاعات سفارش به‌روزرسانی شد' });
@@ -371,8 +542,11 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
     setPaymentAmount(order.payment_amount?.toString() || '');
     setDescription(parsedNotes?.description || parsedNotes?.installationDescription || parsedNotes?.additional_notes || '');
     setScaffoldingType(parsedNotes?.service_type || parsedNotes?.scaffoldingType || parsedNotes?.scaffold_type || '');
+    setScaffoldEdits(initialScaffoldEdits);
+    setMultiScaffoldsEdit(initialMultiScaffoldsEdit);
     setIsEditing(false);
   };
+
 
   // Display values from notes
   const dimensions = parsedNotes?.dimensions;
@@ -456,12 +630,19 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
               </div>
               
               {approvedRenewals.map((renewal: any) => (
-                <div key={renewal.renewal_number} className="flex justify-between text-sm p-2 bg-primary/10 rounded border border-primary/20">
-                  <span className="flex items-center gap-1 text-primary">
-                    <RefreshCw className="h-3 w-3" />
-                    تمدید ماه {renewal.renewal_number + 1}:
-                  </span>
-                  <span className="font-bold text-primary">{(renewal.renewal_price || 0).toLocaleString('fa-IR')} تومان</span>
+                <div key={renewal.renewal_number} className="space-y-1">
+                  <div className="flex justify-between text-sm p-2 bg-primary/10 rounded border border-primary/20">
+                    <span className="flex items-center gap-1 text-primary">
+                      <RefreshCw className="h-3 w-3" />
+                      تمدید ماه {renewal.renewal_number + 1}:
+                    </span>
+                    <span className="font-bold text-primary">{(renewal.renewal_price || 0).toLocaleString('fa-IR')} تومان</span>
+                  </div>
+                  {renewal.manager_notes && (
+                    <p className="text-[11px] text-muted-foreground italic px-2 leading-relaxed">
+                      شرح: {renewal.manager_notes}
+                    </p>
+                  )}
                 </div>
               ))}
 
@@ -526,8 +707,171 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
             </div>
           </div>
           
-          {/* Rental Item Pricing - for rental expert pricing orders */}
-          {isRentalExpertPricing ? (
+          {/* Multi-scaffold per-item pricing (expert pricing requests) */}
+          {hasExpertScaffolds ? (
+            <div className="bg-white dark:bg-amber-900/50 rounded-lg p-4 border border-amber-200 dark:border-amber-600 space-y-4">
+              {expertScaffolds.map((sc, i) => {
+                const ed = scaffoldEdits[i] || { label: '', description: '', dimensions: [] };
+                const editableDims = ed.dimensions;
+                const liveArea = isEditing ? calcDimsArea(editableDims) : calcScaffoldArea(sc);
+                const liveUnit = isEditing ? dimsUnit(editableDims) : scaffoldAreaUnit(sc);
+                const staticDims = Array.isArray(sc?.dimensions) ? sc.dimensions : [];
+                const updateEd = (patch: Partial<ScaffoldEdit>) => {
+                  const next = [...scaffoldEdits];
+                  next[i] = { ...next[i], ...patch };
+                  setScaffoldEdits(next);
+                };
+                const updateDim = (dIdx: number, key: keyof DimRow, val: string) => {
+                  const dims = [...editableDims];
+                  dims[dIdx] = { ...dims[dIdx], [key]: val };
+                  updateEd({ dimensions: dims });
+                };
+                return (
+                  <div key={i} className="space-y-2 p-3 bg-muted/30 rounded-lg border">
+                    <div className="flex items-center justify-between gap-2">
+                      {isEditing ? (
+                        <Input
+                          value={ed.label}
+                          onChange={(e) => updateEd({ label: e.target.value })}
+                          placeholder={`داربست ${i + 1}`}
+                          className="text-sm font-bold max-w-[220px]"
+                        />
+                      ) : (
+                        <Label className="text-sm font-bold">{sc.label || `داربست ${i + 1}`}</Label>
+                      )}
+                      {liveArea > 0 && (
+                        <Badge variant="outline">
+                          {liveArea.toLocaleString('fa-IR', { maximumFractionDigits: 2 })} {liveUnit}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {isEditing ? (
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">ابعاد (طول × عرض × ارتفاع)</Label>
+                        {editableDims.length === 0 && (
+                          <p className="text-xs text-muted-foreground">ابعادی ثبت نشده.</p>
+                        )}
+                        {editableDims.map((d, dIdx) => (
+                          <div key={dIdx} className="grid grid-cols-3 gap-2">
+                            <Input
+                              value={d.length}
+                              onChange={(e) => updateDim(dIdx, 'length', e.target.value)}
+                              placeholder="طول"
+                              dir="ltr"
+                            />
+                            <Input
+                              value={d.width}
+                              onChange={(e) => updateDim(dIdx, 'width', e.target.value)}
+                              placeholder="عرض"
+                              dir="ltr"
+                            />
+                            <Input
+                              value={d.height}
+                              onChange={(e) => updateDim(dIdx, 'height', e.target.value)}
+                              placeholder="ارتفاع"
+                              dir="ltr"
+                            />
+                          </div>
+                        ))}
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateEd({ dimensions: [...editableDims, { length: '', width: '', height: '' }] })}
+                          >
+                            + افزودن بُعد
+                          </Button>
+                          {editableDims.length > 0 && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => updateEd({ dimensions: editableDims.slice(0, -1) })}
+                            >
+                              حذف آخرین
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      staticDims.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          ابعاد: {staticDims.map((d: any) => `${d.length || 0}×${d.width || 0}×${d.height || 0}`).join(' ، ')} متر
+                        </p>
+                      )
+                    )}
+
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1 block">توضیحات این آیتم</Label>
+                      {isEditing ? (
+                        <Textarea
+                          value={ed.description}
+                          onChange={(e) => updateEd({ description: e.target.value })}
+                          placeholder="توضیحات داربست..."
+                          rows={2}
+                        />
+                      ) : (
+                        sc.description ? (
+                          <p className="text-xs text-muted-foreground bg-background/60 p-2 rounded border">
+                            📝 {sc.description}
+                          </p>
+                        ) : <p className="text-xs text-muted-foreground">—</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1 block">قیمت کل این آیتم (تومان)</Label>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={scaffoldPrices[i] ? Number(scaffoldPrices[i]).toLocaleString('fa-IR') : ''}
+                        onChange={(e) => {
+                          const rawValue = e.target.value
+                            .replace(/[^\d۰-۹]/g, '')
+                            .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+                          const next = [...scaffoldPrices];
+                          next[i] = rawValue;
+                          setScaffoldPrices(next);
+                        }}
+                        placeholder="قیمت این آیتم"
+                        dir="ltr"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+
+
+              {/* Grand Total + Save */}
+              <div className="border-t pt-4">
+                <Label className="text-sm font-bold text-amber-800 dark:text-amber-200 mb-2 block">
+                  مجموع کل سفارش (تومان)
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    value={paymentAmount ? Number(paymentAmount).toLocaleString('fa-IR') : ''}
+                    readOnly
+                    className="flex-1 text-lg font-bold"
+                    dir="ltr"
+                    placeholder="مجموع آیتم‌ها"
+                  />
+                  <Button
+                    onClick={handleSave}
+                    disabled={saving || !paymentAmount || (!isPriceChanged && !isScaffoldPricesChanged && !isScaffoldEditsChanged)}
+                    className={`bg-amber-600 hover:bg-amber-700 text-white px-6 ${
+                      (!isPriceChanged && !isScaffoldPricesChanged && !isScaffoldEditsChanged) ? 'opacity-50 cursor-not-allowed hover:bg-amber-600' : ''
+                    }`}
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 ml-1" />}
+                    {(!isPriceChanged && !isScaffoldPricesChanged && !isScaffoldEditsChanged) ? 'ذخیره شده ✓' : 'ذخیره قیمت'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : isRentalExpertPricing ? (
             <div className="bg-white dark:bg-amber-900/50 rounded-lg p-4 border border-amber-200 dark:border-amber-600 space-y-4">
               {/* Item 1 */}
               {rentalItem1Name && (
@@ -760,13 +1104,20 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
               {(approvedRenewalCost > 0 || approvedRepairCost > 0 || displayAddOnsAmount > 0) && (
                 <div className="mt-2 pt-2 border-t border-green-200 dark:border-green-800 text-center space-y-1">
                   {approvedRenewals.map((renewal: any) => (
-                    <p key={renewal.renewal_number} className="text-xs text-muted-foreground">
-                      تمدید ماه {renewal.renewal_number + 1}:{' '}
-                      <span className="font-medium" dir="ltr">
-                        {Number(renewal.renewal_price || 0).toLocaleString('fa-IR')}
-                      </span>{' '}
-                      تومان
-                    </p>
+                    <div key={renewal.renewal_number} className="space-y-0.5">
+                      <p className="text-xs text-muted-foreground">
+                        تمدید ماه {renewal.renewal_number + 1}:{' '}
+                        <span className="font-medium" dir="ltr">
+                          {Number(renewal.renewal_price || 0).toLocaleString('fa-IR')}
+                        </span>{' '}
+                        تومان
+                      </p>
+                      {renewal.manager_notes && (
+                        <p className="text-[11px] text-muted-foreground/90 italic px-2 leading-relaxed">
+                          شرح: {renewal.manager_notes}
+                        </p>
+                      )}
+                    </div>
                   ))}
                   {approvedRepairCost > 0 && (
                     <p className="text-xs text-muted-foreground">
@@ -797,6 +1148,15 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
       {/* Edit Toggle Button & Print */}
       <div className="flex justify-end gap-2 flex-wrap">
         <ManagerOrderInvoice order={order} hidePrice={hidePrice} />
+
+        <InvoiceEmployerOverrideDialog
+          orderId={order.id}
+          currentCustomerName={order.customer_name}
+          currentCustomerPhone={order.customer_phone}
+          notes={order.notes}
+          onUpdate={onUpdate}
+        />
+
         
         {/* دکمه ویرایش کامل در فرم قیمت‌گذاری */}
         <Button 
@@ -977,6 +1337,144 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
             )}
           </div>
         )}
+
+        {/* Multi-scaffolds (همزمان در یک مکان) full editor */}
+        {hasMultiScaffolds && (
+          <div className="bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-300 dark:border-blue-700 rounded-xl p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-blue-800 dark:text-blue-200 flex items-center gap-2">
+                <Layers className="h-4 w-4" />
+                داربست‌های همزمان در یک مکان ({initialMultiScaffolds.length.toLocaleString('fa-IR')} آیتم)
+              </h4>
+              {!isEditing && (
+                <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
+                  <Edit className="h-4 w-4 ml-1" />
+                  ویرایش آیتم‌ها
+                </Button>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              {multiScaffoldsEdit.map((ed, i) => {
+                const orig = initialMultiScaffolds[i] || {};
+                const liveArea = isEditing ? calcDimsArea(ed.dimensions) : (orig.totalArea || calcDimsArea(ed.dimensions));
+                const liveUnit = dimsUnit(ed.dimensions);
+                const updateEd = (patch: Partial<MultiScaffoldEdit>) => {
+                  const next = [...multiScaffoldsEdit];
+                  next[i] = { ...next[i], ...patch };
+                  setMultiScaffoldsEdit(next);
+                };
+                const updateDim = (dIdx: number, key: keyof DimRow, val: string) => {
+                  const dims = [...ed.dimensions];
+                  dims[dIdx] = { ...dims[dIdx], [key]: val };
+                  updateEd({ dimensions: dims });
+                };
+                return (
+                  <div key={i} className="bg-background p-3 rounded-lg border space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      {isEditing ? (
+                        <Input
+                          value={ed.label}
+                          onChange={(e) => updateEd({ label: e.target.value })}
+                          placeholder={`داربست #${i + 1}`}
+                          className="text-sm font-bold max-w-[240px]"
+                        />
+                      ) : (
+                        <Label className="text-sm font-bold">{ed.label || `داربست #${i + 1}`}</Label>
+                      )}
+                      {liveArea > 0 && (
+                        <Badge variant="outline">
+                          {Number(liveArea).toLocaleString('fa-IR', { maximumFractionDigits: 2 })} {liveUnit}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {isEditing ? (
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">ابعاد (طول × عرض × ارتفاع)</Label>
+                        {ed.dimensions.length === 0 && (
+                          <p className="text-xs text-muted-foreground">ابعادی ثبت نشده.</p>
+                        )}
+                        {ed.dimensions.map((d, dIdx) => (
+                          <div key={dIdx} className="grid grid-cols-3 gap-2">
+                            <Input value={d.length} onChange={(e) => updateDim(dIdx, 'length', e.target.value)} placeholder="طول" dir="ltr" />
+                            <Input value={d.width} onChange={(e) => updateDim(dIdx, 'width', e.target.value)} placeholder="عرض" dir="ltr" />
+                            <Input value={d.height} onChange={(e) => updateDim(dIdx, 'height', e.target.value)} placeholder="ارتفاع" dir="ltr" />
+                          </div>
+                        ))}
+                        <div className="flex gap-2">
+                          <Button type="button" size="sm" variant="outline"
+                            onClick={() => updateEd({ dimensions: [...ed.dimensions, { length: '', width: '', height: '' }] })}>
+                            + افزودن بُعد
+                          </Button>
+                          {ed.dimensions.length > 0 && (
+                            <Button type="button" size="sm" variant="ghost"
+                              onClick={() => updateEd({ dimensions: ed.dimensions.slice(0, -1) })}>
+                              حذف آخرین
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      ed.dimensions.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          ابعاد: {ed.dimensions.map(d => `${d.length || 0}×${d.width || 0}×${d.height || 0}`).join(' ، ')} متر
+                        </p>
+                      )
+                    )}
+
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1 block">توضیحات این آیتم</Label>
+                      {isEditing ? (
+                        <Textarea
+                          value={ed.description}
+                          onChange={(e) => updateEd({ description: e.target.value })}
+                          placeholder="توضیحات داربست..."
+                          rows={2}
+                        />
+                      ) : (
+                        ed.description ? (
+                          <p className="text-xs text-muted-foreground bg-muted/30 p-2 rounded border">📝 {ed.description}</p>
+                        ) : <p className="text-xs text-muted-foreground">—</p>
+                      )}
+                    </div>
+
+                    {!hidePrice && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground mb-1 block">قیمت کل این آیتم (تومان)</Label>
+                        {isEditing ? (
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            value={ed.finalPrice ? Number(ed.finalPrice).toLocaleString('fa-IR') : ''}
+                            onChange={(e) => {
+                              const raw = e.target.value
+                                .replace(/[^\d۰-۹]/g, '')
+                                .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+                              updateEd({ finalPrice: raw });
+                            }}
+                            placeholder="قیمت این آیتم"
+                            dir="ltr"
+                          />
+                        ) : (
+                          <p className="font-medium">{ed.finalPrice ? Number(ed.finalPrice).toLocaleString('fa-IR') : '-'} تومان</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {isEditing && !hidePrice && (
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-blue-200 dark:border-blue-700">
+                <span className="text-sm font-bold text-blue-800 dark:text-blue-200">مجموع کل آیتم‌ها</span>
+                <span className="text-lg font-bold">{(multiScaffoldsEdit.reduce((s, it) => s + (parseFloat(it.finalPrice) || 0), 0)).toLocaleString('fa-IR')} تومان</span>
+              </div>
+            )}
+          </div>
+        )}
+
 
         {/* Standard Scaffolding Type (non-rental) */}
         {parsedNotes?.service_type !== 'کرایه اجناس داربست' && (
@@ -1246,14 +1744,18 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                   </div>
                 </>
               )}
-              {parsedNotes?.price_breakdown && parsedNotes.price_breakdown.length > 0 && (
+              {parsedNotes?.price_breakdown && parsedNotes.price_breakdown.length > 0 && (() => {
+                const fixedBase = Number(order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || 0);
+                const adjusted = applyFixedPriceToBreakdown(parsedNotes.price_breakdown, fixedBase);
+                return (
                 <div className="mt-3 space-y-1">
                   <Label className="text-xs text-muted-foreground">جزئیات محاسبه قیمت</Label>
-                  {parsedNotes.price_breakdown.map((item: string, idx: number) => (
+                  {adjusted.map((item: string, idx: number) => (
                     <div key={idx} className="text-xs text-muted-foreground p-2 bg-background rounded border">{item}</div>
                   ))}
                 </div>
-              )}
+                );
+              })()}
             </>
           )}
         </div>
@@ -1275,7 +1777,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         approvedCollectionDate={approvedCollectionDate}
         approvals={orderApprovals}
         totalPaid={order.total_paid}
-        totalPrice={order.total_price}
+        totalPrice={order.total_price || order.payment_amount}
       />
 
       {/* زنجیره انتقال و همکاری بین مدیران */}

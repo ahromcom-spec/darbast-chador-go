@@ -18,8 +18,11 @@ import {
   Loader2,
   ShieldCheck,
   Blocks,
+  ArrowDownCircle,
+  ArrowUpCircle,
 } from 'lucide-react';
 import { BankCardModuleAccessDialog } from './BankCardModuleAccessDialog';
+import { BankCardQuickTransactionDialog } from './BankCardQuickTransactionDialog';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -65,11 +68,18 @@ export function BankCardsList({
 }: BankCardsListProps) {
   const [deletingCard, setDeletingCard] = useState<BankCard | null>(null);
   const [moduleAccessCard, setModuleAccessCard] = useState<BankCard | null>(null);
+  const [txCard, setTxCard] = useState<BankCard | null>(null);
+  const [txType, setTxType] = useState<'deposit' | 'withdrawal'>('deposit');
   const [otpStep, setOtpStep] = useState<'confirm' | 'otp'>('confirm');
   const [otpCode, setOtpCode] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpSending, setOtpSending] = useState(false);
   const [otpTimer, setOtpTimer] = useState(0);
+
+  const openTx = (card: BankCard, type: 'deposit' | 'withdrawal') => {
+    setTxType(type);
+    setTxCard(card);
+  };
 
   const startOtpTimer = () => {
     setOtpTimer(120);
@@ -218,6 +228,24 @@ export function BankCardsList({
               </div>
 
               <div className="flex flex-wrap gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openTx(card, 'deposit')}
+                  className="gap-1 text-emerald-700 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950/30"
+                >
+                  <ArrowDownCircle className="h-3 w-3" />
+                  واریز
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openTx(card, 'withdrawal')}
+                  className="gap-1 text-destructive border-destructive/30 hover:bg-destructive/5"
+                >
+                  <ArrowUpCircle className="h-3 w-3" />
+                  برداشت
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => onEdit(card)} className="gap-1">
                   <Edit className="h-3 w-3" />
                   ویرایش
@@ -382,6 +410,15 @@ export function BankCardsList({
         open={!!moduleAccessCard}
         onOpenChange={(open) => !open && setModuleAccessCard(null)}
         onSaved={() => onRefresh?.()}
+      />
+
+      {/* Quick Deposit/Withdraw Dialog */}
+      <BankCardQuickTransactionDialog
+        open={!!txCard}
+        onOpenChange={(open) => !open && setTxCard(null)}
+        card={txCard}
+        type={txType}
+        onComplete={() => onRefresh?.()}
       />
     </>
   );

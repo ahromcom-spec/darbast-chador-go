@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Home } from 'lucide-react';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
+import { getPendingOrder } from '@/lib/pendingOrder';
 
 const registerSchema = z.object({
   fullName: z.string().min(2, { message: 'نام و نام خانوادگی باید حداقل 2 کاراکتر باشد' }),
@@ -40,11 +41,21 @@ export default function Register() {
     }
   }, [location.state]);
 
-  useEffect(() => {
-    if (user) {
+  const goAfterAuth = () => {
+    const pending = getPendingOrder();
+    if (pending) {
+      navigate(pending.path, { replace: true, state: pending.state });
+    } else {
       navigate('/', { replace: true });
     }
-  }, [user, navigate]);
+  };
+
+  useEffect(() => {
+    if (user) {
+      goAfterAuth();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -78,7 +89,7 @@ export default function Register() {
             setErrors({ otp: errorMessage });
           } else {
             toast({ title: 'خوش آمدید', description: 'ثبت نام شما با موفقیت انجام شد.' });
-            navigate('/', { replace: true });
+            goAfterAuth();
           }
         })();
       }
@@ -210,7 +221,7 @@ export default function Register() {
       description: 'ثبت نام شما با موفقیت انجام شد.',
     });
 
-    navigate('/', { replace: true });
+    goAfterAuth();
   };
 
   const handleBackToInfo = () => {
@@ -234,8 +245,8 @@ export default function Register() {
       </div>
 
       {/* Content - Full screen on mobile */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-0 sm:p-4">
-        <Card className="w-full h-full sm:h-auto sm:max-w-md min-h-screen sm:min-h-0 rounded-none sm:rounded-lg shadow-2xl bg-card/95 backdrop-blur-md border-0 sm:border-2 flex flex-col justify-center">
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+        <Card className="w-full max-w-md rounded-lg shadow-2xl bg-card/95 backdrop-blur-md border-2 flex flex-col justify-center">
         <CardHeader className="text-center space-y-2">
           <CardTitle className="text-2xl font-bold text-primary">ثبت نام در اهرم</CardTitle>
           <CardDescription>

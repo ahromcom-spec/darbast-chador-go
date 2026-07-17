@@ -1,0 +1,232 @@
+[
+  {
+    "id": "84418fba-4163-407e-baba-d5f26ea4ba0f",
+    "rating_type": "customer_to_contractor",
+    "key": "quality",
+    "title": "کیفیت کار",
+    "description": "کیفیت اجرای پروژه",
+    "weight": 1.5,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "83a428ce-3702-45a6-9af3-36811417b8da",
+    "rating_type": "customer_to_contractor",
+    "key": "punctuality",
+    "title": "زمان‌بندی",
+    "description": "رعایت زمان‌بندی پروژه",
+    "weight": 1.2,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "f5dd23df-e8e9-4c57-a745-678574952e70",
+    "rating_type": "customer_to_contractor",
+    "key": "communication",
+    "title": "ارتباطات",
+    "description": "کیفیت ارتباطات و پاسخگویی",
+    "weight": 1.0,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "b509e9cc-9844-4d07-af12-c3e7839e99a0",
+    "rating_type": "customer_to_contractor",
+    "key": "professionalism",
+    "title": "حرفه‌ای بودن",
+    "description": "رفتار حرفه‌ای و اخلاق کاری",
+    "weight": 1.0,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "53427d5f-7fcf-438b-8c17-eac233c0915c",
+    "rating_type": "customer_to_contractor",
+    "key": "safety",
+    "title": "ایمنی",
+    "description": "رعایت استانداردهای ایمنی",
+    "weight": 1.3,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "2c35ca75-b370-4666-9ac6-fa8c66f48210",
+    "rating_type": "contractor_to_customer",
+    "key": "payment",
+    "title": "پرداخت",
+    "description": "به‌موقع بودن پرداخت‌ها",
+    "weight": 1.5,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "bb2c72e6-a22d-4279-a129-cc065342eeae",
+    "rating_type": "contractor_to_customer",
+    "key": "communication",
+    "title": "ارتباطات",
+    "description": "وضوح در ارتباطات",
+    "weight": 1.0,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "ab8f4609-bbd3-45be-b704-bf5355843950",
+    "rating_type": "contractor_to_customer",
+    "key": "cooperation",
+    "title": "همکاری",
+    "description": "میزان همکاری در پروژه",
+    "weight": 1.0,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "8ff6f772-805d-444c-8a82-0a71967bf508",
+    "rating_type": "contractor_to_customer",
+    "key": "requirements",
+    "title": "شفافیت",
+    "description": "شفافیت در بیان نیازها",
+    "weight": 1.2,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "b650e5d9-c93c-41a2-a634-35bf9278ff12",
+    "rating_type": "staff_to_contractor",
+    "key": "management",
+    "title": "مدیریت پروژه",
+    "description": "کیفیت مدیریت و هماهنگی",
+    "weight": 1.3,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "f2900055-57ca-4077-bab8-f72ec4d02d65",
+    "rating_type": "staff_to_contractor",
+    "key": "payment",
+    "title": "پرداخت",
+    "description": "به‌موقع بودن پرداخت حقوق",
+    "weight": 1.5,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "41952645-d13a-4689-b963-9d3a32424070",
+    "rating_type": "staff_to_contractor",
+    "key": "work_environment",
+    "title": "محیط کار",
+    "description": "کیفیت محیط کار",
+    "weight": 1.0,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "ec817e8d-f296-46f8-9265-ecc04b57db0b",
+    "rating_type": "staff_to_contractor",
+    "key": "support",
+    "title": "پشتیبانی",
+    "description": "پشتیبانی و تجهیزات",
+    "weight": 1.2,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "2c13ec00-79f3-4051-b708-4b61a668c1fb",
+    "rating_type": "contractor_to_staff",
+    "key": "skill",
+    "title": "مهارت",
+    "description": "سطح مهارت فنی",
+    "weight": 1.5,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "ce59eef7-33c0-48b9-9960-8b3d489d89c3",
+    "rating_type": "contractor_to_staff",
+    "key": "reliability",
+    "title": "قابلیت اطمینان",
+    "description": "قابل اعتماد بودن",
+    "weight": 1.3,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "4cbfd20e-0a00-4b86-86e2-5f199a6b027f",
+    "rating_type": "contractor_to_staff",
+    "key": "teamwork",
+    "title": "کار تیمی",
+    "description": "همکاری با تیم",
+    "weight": 1.0,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "0d25b659-ca2f-4c11-80ec-3e6389f9cd0a",
+    "rating_type": "contractor_to_staff",
+    "key": "initiative",
+    "title": "ابتکار عمل",
+    "description": "خلاقیت و حل مسئله",
+    "weight": 1.0,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "157de019-1cce-418e-8229-e1f12aa6773d",
+    "rating_type": "customer_to_staff",
+    "key": "service",
+    "title": "خدمات",
+    "description": "کیفیت خدمات ارائه شده",
+    "weight": 1.3,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "9e33fe86-3d72-4099-8756-f40e3af96faa",
+    "rating_type": "customer_to_staff",
+    "key": "communication",
+    "title": "ارتباطات",
+    "description": "ارتباطات موثر",
+    "weight": 1.0,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "51e3c7e9-12f2-462b-9b07-cfe0d1429234",
+    "rating_type": "customer_to_staff",
+    "key": "professionalism",
+    "title": "حرفه‌ای بودن",
+    "description": "رفتار حرفه‌ای",
+    "weight": 1.2,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "0d50e834-c256-4b5d-bf2e-5fd5f8879bab",
+    "rating_type": "staff_to_customer",
+    "key": "respect",
+    "title": "احترام",
+    "description": "رفتار محترمانه",
+    "weight": 1.0,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "66a9786c-801a-4fd7-b686-853ef2531132",
+    "rating_type": "staff_to_customer",
+    "key": "cooperation",
+    "title": "همکاری",
+    "description": "همکاری در انجام کار",
+    "weight": 1.2,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  },
+  {
+    "id": "4828b159-fbc8-41c5-afa9-0724dc65ad7a",
+    "rating_type": "staff_to_customer",
+    "key": "clarity",
+    "title": "شفافیت",
+    "description": "شفافیت در درخواست‌ها",
+    "weight": 1.0,
+    "is_active": true,
+    "created_at": "2025-10-17T04:12:32.538448+00:00"
+  }
+]

@@ -52,9 +52,13 @@ interface Collaborator {
 }
 
 const statusLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  pending: { label: 'در انتظار تایید', variant: 'secondary' },
+  pending_manager: { label: 'در انتظار تایید مدیر', variant: 'secondary' },
+  manager_rejected: { label: 'رد شده توسط مدیر', variant: 'destructive' },
+  manager_approved: { label: 'تایید شده توسط مدیر - در انتظار همکار', variant: 'secondary' },
+  pending_registration: { label: 'در انتظار ثبت‌نام همکار', variant: 'secondary' },
+  pending: { label: 'در انتظار تایید همکار', variant: 'secondary' },
   accepted: { label: 'تایید شده', variant: 'default' },
-  rejected: { label: 'رد شده', variant: 'destructive' },
+  rejected: { label: 'رد شده توسط همکار', variant: 'destructive' },
 };
 
 const MAX_COLLABORATORS = 5;
@@ -112,19 +116,19 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
 
       if (error) throw error;
 
-      // Fetch profile names for collaborators
+      // Fetch profile names by phone (uses security-definer RPC to bypass profiles RLS)
       if (data && data.length > 0) {
         const collaboratorsWithProfiles = await Promise.all(
           data.map(async (collab) => {
-            if (collab.invitee_user_id) {
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('full_name')
-                .eq('user_id', collab.invitee_user_id)
+            try {
+              const { data: profileResult } = await supabase
+                .rpc('lookup_profile_by_phone' as any, { _phone: collab.invitee_phone_number })
                 .maybeSingle();
-              return { ...collab, invitee_profile: profile };
+              const profile = profileResult as { full_name: string | null } | null;
+              return { ...collab, invitee_profile: profile ? { full_name: profile.full_name } : undefined };
+            } catch {
+              return collab;
             }
-            return collab;
           })
         );
         setCollaborators(collaboratorsWithProfiles);
@@ -148,13 +152,12 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
     setUserNotFound(false);
 
     try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, phone_number')
-        .eq('phone_number', formattedPhone)
+      const { data: profileResult, error } = await supabase
+        .rpc('lookup_profile_by_phone' as any, { _phone: formattedPhone })
         .maybeSingle();
 
       if (error) throw error;
+      const profile = profileResult as { user_id: string; full_name: string | null; phone_number: string | null } | null;
 
       if (profile) {
         if (profile.user_id === user?.id) {
@@ -167,9 +170,10 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
           return;
         }
 
-        // Check if already a collaborator
+        // Check if already an active collaborator (ignore any rejected statuses to allow re-invitation)
         const existingCollab = collaborators.find(
-          c => c.invitee_phone_number === formattedPhone && c.status !== 'rejected'
+          c => c.invitee_phone_number === formattedPhone &&
+               !['rejected', 'manager_rejected', 'recipient_rejected'].includes(c.status)
         );
         if (existingCollab) {
           toast({
@@ -202,16 +206,27 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
   }, [user?.id, collaborators, toast]);
 
   // Count active (non-rejected) collaborators
-  const activeCollaboratorsCount = collaborators.filter(c => c.status !== 'rejected').length;
+  const INACTIVE_STATUSES = ['rejected', 'manager_rejected', 'recipient_rejected'];
+  const activeCollaboratorsCount = collaborators.filter(c => !INACTIVE_STATUSES.includes(c.status)).length;
   const canAddMoreCollaborators = activeCollaboratorsCount < MAX_COLLABORATORS;
 
   const addCollaborator = async () => {
-    if (!targetUser || !user) return;
+    const formattedPhone = formatPhoneNumber(phoneNumber);
+    if (!user || formattedPhone.length !== 11 || !formattedPhone.startsWith('09')) return;
 
     if (!canAddMoreCollaborators) {
       toast({
         title: 'محدودیت تعداد همکاران',
         description: `حداکثر ${MAX_COLLABORATORS} همکار می‌توانید به هر سفارش اضافه کنید.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (collaborators.some(c => c.invitee_phone_number === formattedPhone && !INACTIVE_STATUSES.includes(c.status))) {
+      toast({
+        title: 'خطا',
+        description: 'این شماره قبلاً به عنوان همکار اضافه شده است',
         variant: 'destructive',
       });
       return;
@@ -224,27 +239,16 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
         .insert({
           order_id: orderId,
           inviter_user_id: user.id,
-          invitee_user_id: targetUser.id,
-          invitee_phone_number: targetUser.phone,
-          status: 'pending',
+          invitee_user_id: targetUser?.id || null,
+          invitee_phone_number: targetUser?.phone || formattedPhone,
+          status: 'pending_manager',
         });
 
       if (error) throw error;
 
-      // Send notification to invitee
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: targetUser.id,
-          title: 'دعوت به همکاری در سفارش',
-          body: `شما به عنوان همکار در سفارش ${orderCode} دعوت شده‌اید. لطفاً دعوتنامه را بررسی و تایید یا رد کنید.`,
-          link: `/user/orders/${orderId}`,
-          type: 'info',
-        });
-
       toast({
-        title: '✓ موفق',
-        description: 'دعوتنامه همکاری ارسال شد. منتظر تایید همکار باشید.',
+        title: '✓ ثبت شد',
+        description: 'درخواست همکاری ثبت شد و در انتظار تایید مدیر است. پس از تایید مدیر، دعوت به همکار ارسال می‌شود.',
       });
 
       setPhoneNumber('');
@@ -366,11 +370,11 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
                       variant={statusLabels[collab.status]?.variant || 'outline'}
                       className="text-xs"
                     >
-                      {collab.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
+                      {(collab.status === 'pending' || collab.status === 'pending_manager' || collab.status === 'manager_approved' || collab.status === 'pending_registration') && <Clock className="h-3 w-3 mr-1" />}
                       {collab.status === 'accepted' && <CheckCircle className="h-3 w-3 mr-1" />}
                       {statusLabels[collab.status]?.label || collab.status}
                     </Badge>
-                    {collab.status === 'pending' && collab.inviter_user_id === user?.id && (
+                    {(collab.status === 'pending' || collab.status === 'pending_manager') && collab.inviter_user_id === user?.id && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -429,9 +433,9 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
           </div>
 
           {userNotFound && (
-            <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
-              <XCircle className="h-4 w-4 flex-shrink-0" />
-              <span>کاربری با این شماره یافت نشد یا قابل اضافه شدن نیست.</span>
+            <div className="flex items-center gap-2 p-3 bg-muted text-muted-foreground rounded-lg text-sm">
+              <Clock className="h-4 w-4 flex-shrink-0" />
+              <span>این شماره هنوز ثبت‌نام نکرده است؛ دعوت با همین شماره ذخیره می‌شود و بعد از ثبت‌نام همکار قابل پذیرش است.</span>
             </div>
           )}
 
@@ -468,7 +472,7 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
 
           <Button
             onClick={addCollaborator}
-            disabled={!targetUser || submitting || !canAddMoreCollaborators}
+            disabled={formatPhoneNumber(phoneNumber).length !== 11 || !formatPhoneNumber(phoneNumber).startsWith('09') || submitting || !canAddMoreCollaborators}
             className="w-full gap-2"
           >
             {submitting ? (

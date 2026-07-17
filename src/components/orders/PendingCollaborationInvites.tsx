@@ -32,8 +32,11 @@ interface CollaborationInvite {
   // New detailed fields
   order_notes?: any;
   payment_amount?: number;
+  total_price?: number;
+  total_paid?: number;
   detailed_address?: string;
   province_name?: string;
+  description?: string;
 }
 
 export function PendingCollaborationInvites() {
@@ -78,7 +81,7 @@ export function PendingCollaborationInvites() {
           invited_at
         `)
         .or(`invitee_user_id.eq.${user.id},invitee_phone_number.eq.${profile.phone_number}`)
-        .eq('status', 'pending')
+        .in('status', ['pending', 'manager_approved', 'pending_registration'])
         .order('invited_at', { ascending: false });
 
       if (error) throw error;
@@ -115,6 +118,8 @@ export function PendingCollaborationInvites() {
               location_lng,
               notes,
               payment_amount,
+              total_price,
+              total_paid,
               subcategories:subcategory_id (name, service_type_id),
               provinces:province_id (name)
             `)
@@ -155,8 +160,19 @@ export function PendingCollaborationInvites() {
             location_lng: order?.location_lng || null,
             order_notes: parsedNotes,
             payment_amount: order?.payment_amount || null,
+            total_price: (order as any)?.total_price || null,
+            total_paid: (order as any)?.total_paid || null,
             detailed_address: order?.detailed_address || '',
             province_name: (order?.provinces as any)?.name || '',
+            description:
+              parsedNotes?.additional_notes ||
+              parsedNotes?.description ||
+              parsedNotes?.activityDescription ||
+              parsedNotes?.installationDescription ||
+              parsedNotes?.location_description ||
+              parsedNotes?.locationPurpose ||
+              parsedNotes?.serviceDescription ||
+              '',
           } as CollaborationInvite;
         })
       );
@@ -410,6 +426,33 @@ export function PendingCollaborationInvites() {
                       })}
                     </span>
                   </div>
+
+                  {/* مبلغ سفارش - همیشه قابل مشاهده قبل از پذیرش/رد */}
+                  {(invite.total_price && invite.total_price > 0) || (invite.payment_amount && invite.payment_amount > 0) ? (
+                    <div className="flex items-center gap-2 text-sm bg-green-500/10 p-2 rounded-md border border-green-500/30">
+                      <Banknote className="h-4 w-4 text-green-600 flex-shrink-0" />
+                      <span className="font-medium">مبلغ سفارش:</span>
+                      <span className="text-green-700 font-bold">
+                        {(invite.total_price || invite.payment_amount || 0).toLocaleString('fa-IR')} تومان
+                      </span>
+                      {invite.total_paid && invite.total_paid > 0 && (
+                        <span className="text-xs text-muted-foreground mr-auto">
+                          پرداختی: {invite.total_paid.toLocaleString('fa-IR')}
+                        </span>
+                      )}
+                    </div>
+                  ) : null}
+
+                  {/* توضیحات سفارش - همیشه قابل مشاهده قبل از پذیرش/رد */}
+                  {invite.description && (
+                    <div className="flex items-start gap-2 text-sm bg-muted/50 p-2 rounded-md">
+                      <FileText className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+                      <div>
+                        <span className="font-medium">توضیحات سفارش: </span>
+                        <span className="text-muted-foreground">{invite.description}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Action Buttons */}

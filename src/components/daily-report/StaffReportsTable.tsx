@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTableArrowNavigation } from '@/hooks/useTableArrowNavigation';
-import { Plus, Trash2, User, CreditCard, Building } from 'lucide-react';
+import { Plus, Trash2, User, CreditCard, Building, Clock } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger, PopoverClose } from '@/components/ui/popover';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { CalculatorInput } from '@/components/ui/CalculatorInput';
 import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { StaffSearchSelect } from '@/components/staff/StaffSearchSelect';
@@ -20,6 +22,9 @@ interface BankCardInfo {
   card_name: string;
   bank_name: string;
 }
+
+const TIME_HOURS = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, '0'));
+const TIME_MINUTES = Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, '0'));
 
 interface StaffReportsTableProps {
   staffReports: StaffReportRow[];
@@ -81,6 +86,24 @@ export function StaffReportsTable({
     return card ? `${card.card_name} (${card.bank_name})` : '';
   };
 
+  // Helper: focus & open the trigger button of the next row in the same column
+  const focusNextRowTrigger = (currentIndex: number, attr: 'data-staff-cell' | 'data-workstatus-cell') => {
+    let attempts = 0;
+    const tryFocus = () => {
+      attempts++;
+      const nextEl = document.querySelector(
+        `[${attr}="${currentIndex + 1}"] button`
+      ) as HTMLButtonElement | null;
+      if (nextEl) {
+        nextEl.focus();
+        nextEl.click();
+        return;
+      }
+      if (attempts < 10) requestAnimationFrame(tryFocus);
+    };
+    requestAnimationFrame(tryFocus);
+  };
+
   const handleStaffSelect = (index: number, code: string, name: string, userId?: string) => {
     // Check if this staff is already selected
     const alreadySelected = staffReports.some(
@@ -117,12 +140,23 @@ export function StaffReportsTable({
           amount_spent: 0,
           spending_notes: '',
           notes: '',
-          is_cash_box: false
+          is_cash_box: false,
+          transaction_time: null,
         });
       }
       
       return updated;
     });
+
+    // After selection, auto-jump to the next row's staff dropdown
+    if (code) {
+      focusNextRowTrigger(index, 'data-staff-cell');
+    }
+  };
+
+  const handleWorkStatusChange = (index: number, value: string) => {
+    onUpdateRow(index, 'work_status', value);
+    focusNextRowTrigger(index, 'data-workstatus-cell');
   };
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -157,7 +191,8 @@ export function StaffReportsTable({
         spending_notes: '',
         notes: '',
         is_cash_box: true,
-        bank_card_id: null
+        bank_card_id: null,
+        transaction_time: null,
       };
       return [newRow, ...prev];
     });
@@ -186,7 +221,7 @@ export function StaffReportsTable({
         </div>
       </CardHeader>
       <CardContent>
-        <div ref={setRefs} className="overflow-x-auto" dir="rtl">
+        <div ref={setRefs} className="overflow-x-auto daily-report-touch-scroll" dir="rtl">
           <Table className="table-fixed border-collapse border border-amber-300 w-[900px]">
             <TableHeader>
               <TableRow className="bg-amber-100 dark:bg-amber-900/30">
@@ -363,13 +398,13 @@ export function StaffReportsTable({
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="border border-amber-200">
+                  <TableCell className="border border-amber-200" {...(!row.is_cash_box && !row.is_company_expense ? { 'data-workstatus-cell': index } : {})}>
                     {row.is_cash_box || row.is_company_expense ? (
                       <span className="text-muted-foreground">—</span>
                     ) : (
                       <WorkStatusSelect
                         value={row.work_status}
-                        onValueChange={(value) => onUpdateRow(index, 'work_status', value)}
+                        onValueChange={(value) => handleWorkStatusChange(index, value)}
                         className="w-[80px]"
                       />
                     )}
@@ -381,27 +416,108 @@ export function StaffReportsTable({
                          <span>ماهیت شرکت اهرم</span>
                         </div>
                       ) : row.is_cash_box ? (
-                        <div className="w-[120px]">
-                         <BankCardSelect
-                           value={row.bank_card_id || null}
-                           onValueChange={(value) => onUpdateRow(index, 'bank_card_id', value)}
-                           placeholder="انتخاب کارت بانکی"
-                           showBalance={true}
-                           moduleKey={moduleKey}
-                           showManagementCards={true}
-                           asOfDate={reportDate}
-                         />
+                        <div className="w-[140px] flex items-center gap-1">
+                          <div className="flex-1 min-w-0">
+                            <BankCardSelect
+                              value={row.bank_card_id || null}
+                              onValueChange={(value) => onUpdateRow(index, 'bank_card_id', value)}
+                              placeholder="انتخاب کارت بانکی"
+                              showBalance={true}
+                              moduleKey={moduleKey}
+                              showManagementCards={true}
+                              asOfDate={reportDate}
+                            />
+                          </div>
+                          {row.bank_card_id && (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  type="button"
+                                  className={`h-7 w-7 shrink-0 ${row.transaction_time ? 'text-emerald-600' : 'text-muted-foreground'}`}
+                                  title={row.transaction_time ? `ساعت تراکنش: ${row.transaction_time}` : 'تنظیم ساعت تراکنش'}
+                                >
+                                  <Clock className="h-4 w-4" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-56 p-3" align="end">
+                                <div className="space-y-2">
+                                  <label className="text-xs font-medium">ساعت تراکنش (۲۴ ساعته)</label>
+                                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2" dir="ltr">
+                                    <Select
+                                      value={row.transaction_time ? row.transaction_time.split(':')[0] : undefined}
+                                      onValueChange={(hour) => {
+                                        const minute = row.transaction_time ? row.transaction_time.split(':')[1] || '00' : '00';
+                                        onUpdateRow(index, 'transaction_time', `${hour}:${minute}`);
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-10 text-center tabular-nums" dir="ltr">
+                                        <SelectValue placeholder="HH" />
+                                      </SelectTrigger>
+                                      <SelectContent className="max-h-60" align="center">
+                                        {TIME_HOURS.map((hour) => (
+                                          <SelectItem key={hour} value={hour} className="text-center tabular-nums">
+                                            {hour}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <span className="font-bold">:</span>
+                                    <Select
+                                      value={row.transaction_time ? row.transaction_time.split(':')[1] || '00' : undefined}
+                                      onValueChange={(minute) => {
+                                        const hour = row.transaction_time ? row.transaction_time.split(':')[0] || '00' : '00';
+                                        onUpdateRow(index, 'transaction_time', `${hour}:${minute}`);
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-10 text-center tabular-nums" dir="ltr">
+                                        <SelectValue placeholder="MM" />
+                                      </SelectTrigger>
+                                      <SelectContent className="max-h-60" align="center">
+                                        {TIME_MINUTES.map((minute) => (
+                                          <SelectItem key={minute} value={minute} className="text-center tabular-nums">
+                                            {minute}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    در صورت خالی بودن، ساعت ۰۰:۰۰ ثبت می‌شود.
+                                  </p>
+                                  <PopoverClose asChild>
+                                    <Button
+                                      type="button"
+                                      variant="default"
+                                      size="sm"
+                                      className="w-full text-xs"
+                                      onClick={() => {
+                                        if (!row.transaction_time) {
+                                          onUpdateRow(index, 'transaction_time', '00:00');
+                                        }
+                                      }}
+                                    >
+                                      تایید ساعت
+                                    </Button>
+                                  </PopoverClose>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          )}
+                        </div>
+                      ) : (
+                      <div data-staff-cell={index}>
+                        <StaffSearchSelect
+                          value={row.staff_user_id || ''}
+                          displayName={row.staff_name?.replace(/^MANUAL-\d+\s*-\s*/, '') || undefined}
+                          onValueChange={(code, name, userId) => handleStaffSelect(index, code, name, userId)}
+                          placeholder="انتخاب نیرو"
+                          excludeCodes={staffReports
+                            .filter((r, i) => i !== index && r.staff_user_id)
+                            .map(r => r.staff_user_id as string)}
+                        />
                       </div>
-                    ) : (
-                      <StaffSearchSelect
-                        value={row.staff_user_id || ''}
-                        displayName={row.staff_name?.replace(/^MANUAL-\d+\s*-\s*/, '') || undefined}
-                        onValueChange={(code, name, userId) => handleStaffSelect(index, code, name, userId)}
-                        placeholder="انتخاب نیرو"
-                        excludeCodes={staffReports
-                          .filter((r, i) => i !== index && r.staff_user_id)
-                          .map(r => r.staff_user_id as string)}
-                      />
                     )}
                   </TableCell>
                 </TableRow>

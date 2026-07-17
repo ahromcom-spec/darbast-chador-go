@@ -1,11 +1,13 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { ArrowRight, User, Phone, Calendar, Shield } from 'lucide-react';
+import { ArrowRight, User, Phone, Calendar, Shield, MessageSquare } from 'lucide-react';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,11 +15,32 @@ import { useCEORole } from '@/hooks/useCEORole';
 import { CEOManagementSection } from '@/components/profile/CEOManagementSection';
 import { ApprovalHistory } from '@/components/profile/ApprovalHistory';
 import { ManagerActivitySummary } from '@/components/profile/ManagerActivitySummary';
+import { toast } from 'sonner';
 
 export default function UserProfileView() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { isCEO } = useCEORole();
+  const queryClient = useQueryClient();
+
+  const toggleSmsMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ sms_notifications_enabled: enabled })
+        .eq('user_id', userId!);
+      if (error) throw error;
+      return enabled;
+    },
+    onSuccess: (enabled) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-user-profile', userId] });
+      toast.success(enabled ? 'ارسال پیامک به این کاربر فعال شد' : 'ارسال پیامک به این کاربر غیرفعال شد');
+    },
+    onError: (err: any) => {
+      toast.error('خطا در ذخیره تنظیمات: ' + (err?.message || 'نامشخص'));
+    },
+  });
+
 
   const { data: userProfile, isLoading: profileLoading } = useQuery({
     queryKey: ['admin-user-profile', userId],
@@ -129,6 +152,24 @@ export default function UserProfileView() {
                 {userProfile?.created_at ? new Date(userProfile.created_at).toLocaleDateString('fa-IR') : '-'}
               </span>
             </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 p-3 rounded-md border bg-muted/30">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="sms-toggle" className="text-sm font-medium cursor-pointer">
+                ارسال پیامک به این کاربر
+              </Label>
+              <span className="text-xs text-muted-foreground">
+                (پیامک‌های ثبت سفارش و تغییر مراحل)
+              </span>
+            </div>
+            <Switch
+              id="sms-toggle"
+              checked={(userProfile as any)?.sms_notifications_enabled !== false}
+              onCheckedChange={(checked) => toggleSmsMutation.mutate(checked)}
+              disabled={toggleSmsMutation.isPending}
+            />
           </div>
         </CardContent>
       </Card>

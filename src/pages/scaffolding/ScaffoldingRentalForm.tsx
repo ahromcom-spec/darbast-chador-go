@@ -21,6 +21,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { sendOrderSms } from '@/lib/orderSms';
 import { OrderForOthers, RecipientData } from '@/components/orders/OrderForOthers';
 import { ExpertPricingRequestDialog } from '@/components/orders/ExpertPricingRequestDialog';
+import { savePendingOrder, getPendingOrder, clearPendingOrder } from '@/lib/pendingOrder';
 
 const rentalFormSchema = z.object({
   itemType: z.string().min(1, 'لطفا نوع جنس را انتخاب کنید'),
@@ -105,6 +106,21 @@ export default function ScaffoldingRentalForm() {
       fetchOrderData();
     }
   }, [editOrderId]);
+
+  // بازیابی مقادیر فرم پس از بازگشت کاربر مهمان از صفحه ورود/ثبت‌نام
+  useEffect(() => {
+    if (editOrderId) return;
+    const pending = getPendingOrder();
+    if (pending?.formKey === 'rental' && pending.values) {
+      form.reset(pending.values as RentalFormValues);
+      clearPendingOrder();
+      toast({
+        title: 'مقادیر فرم بازیابی شد',
+        description: 'اطلاعاتی که قبلاً وارد کرده بودید بازگردانده شد. می‌توانید سفارش را ثبت کنید.',
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Resolve location from DB if not in state
   useEffect(() => {
@@ -258,14 +274,24 @@ export default function ScaffoldingRentalForm() {
 
   const onSubmit = async (values: RentalFormValues) => {
     if (!user) {
-      toast({
-        title: 'خطا',
-        description: 'لطفا ابتدا وارد حساب کاربری خود شوید',
-        variant: 'destructive'
+      // ذخیره مقادیر فرم و وضعیت ناوبری تا پس از ورود/ثبت‌نام به همین فرم برگردیم
+      savePendingOrder({
+        path: '/scaffolding/rental-form',
+        state: stateData,
+        formKey: 'rental',
+        values,
+        ts: Date.now(),
       });
-      navigate('/login');
+      toast({
+        title: 'برای ثبت نهایی سفارش وارد شوید',
+        description: 'پس از ورود/ثبت‌نام به همین فرم برمی‌گردید و مقادیر شما حفظ می‌شود.',
+      });
+      navigate('/auth/login', {
+        state: { from: { pathname: '/scaffolding/rental-form' } },
+      });
       return;
     }
+
 
     setLoading(true);
     try {
@@ -384,20 +410,33 @@ export default function ScaffoldingRentalForm() {
         order_id: orderId,
         customer_name: user?.user_metadata?.full_name || '',
         customer_phone: user?.user_metadata?.phone_number || user?.phone || '',
+        customer_user_id: user?.id,
         service_type: 'کرایه اجناس داربست'
       }).catch(err => {
         console.error('Notify managers error:', err);
       });
 
-      const customerPhone = user?.user_metadata?.phone_number || user?.phone;
-      if (customerPhone && orderCode) {
+      const customerPhone = user?.user_metadata?.phone_number || user?.phone || '';
+      if (orderCode) {
         sendOrderSms(customerPhone, orderCode, 'submitted', {
           orderId: orderId,
           serviceType: 'کرایه اجناس داربست',
-          address: locationAddress || 'ثبت نشده'
+          address: locationAddress || 'ثبت نشده',
+          customerName: user?.user_metadata?.full_name || 'مشتری'
         }).catch(err => {
           console.error('SMS notification error:', err);
         });
+      }
+
+      if (orderCode) {
+        import('@/lib/orderSms').then(({ sendCeoNotificationSms }) =>
+          sendCeoNotificationSms(orderCode, 'submitted', {
+            orderId,
+            serviceType: 'کرایه اجناس داربست',
+            address: locationAddress || 'ثبت نشده',
+            customerName: user?.user_metadata?.full_name || 'مشتری',
+          })
+        ).catch(err => console.error('CEO SMS error:', err));
       }
 
       if (!recipientData) {

@@ -27,14 +27,20 @@ export function usePasswordStatus() {
     }
 
     try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('user_password_hash, recovery_email, recovery_email_verified, phone_number')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      // Recovery-email fields stay readable; the password hash itself is no
+      // longer exposed via the API. Use a security-definer RPC that returns
+      // only a boolean indicating whether a password is set.
+      const [{ data: profile }, { data: hasPasswordData }] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('recovery_email, recovery_email_verified, phone_number')
+          .eq('user_id', user.id)
+          .maybeSingle(),
+        supabase.rpc('current_user_has_password'),
+      ]);
 
       setStatus({
-        hasPassword: !!profile?.user_password_hash,
+        hasPassword: !!hasPasswordData,
         hasEmail: !!profile?.recovery_email,
         emailVerified: !!profile?.recovery_email_verified,
         recoveryEmail: profile?.recovery_email || null,

@@ -14,9 +14,9 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      // همیشه پایین صفحه در همه اندازه‌ها
-      "fixed z-[100] flex max-h-screen w-full flex-col p-4 pointer-events-none",
-      "bottom-0 left-1/2 -translate-x-1/2 flex-col-reverse",
+      // بالای صفحه و بالاتر از همه دیالوگ‌ها تا خطاها هرگز مدفون نشوند
+      "fixed z-[2147483646] flex max-h-screen w-full flex-col p-4 pointer-events-none",
+      "top-0 left-1/2 -translate-x-1/2 flex-col",
       "max-w-[420px]",
       className,
     )}

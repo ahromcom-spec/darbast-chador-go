@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { Button } from '@/components/ui/button';
 import { Satellite, Map as MapIcon } from 'lucide-react';
+import { getNeshanTileUrl, NESHAN_ATTRIBUTION } from '@/lib/neshan';
 
 interface LeafletFallbackMapProps {
   onLocationSelect: (lat: number, lng: number) => void;
@@ -95,14 +96,14 @@ export default function LeafletFallbackMap({
           <MapInitializer />
           {mapStyle === 'satellite' ? (
             <TileLayer
-              attribution='&copy; Esri, Maxar, Earthstar Geographics'
-              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              attribution={NESHAN_ATTRIBUTION}
+              url={getNeshanTileUrl('satellite')}
               maxZoom={22}
             />
           ) : (
             <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution={NESHAN_ATTRIBUTION}
+              url={getNeshanTileUrl('standard-day')}
               maxZoom={22}
             />
           )}

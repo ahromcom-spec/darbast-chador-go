@@ -8,12 +8,14 @@ import { useDailyReportDateCache } from '@/hooks/useDailyReportDateCache';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { CalculatorInput } from '@/components/ui/CalculatorInput';
 import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger, PopoverClose } from '@/components/ui/popover';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +46,9 @@ import { MediaGallery, MediaItem } from '@/components/media/MediaGallery';
 import StaticLocationMap from '@/components/locations/StaticLocationMap';
 import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
 import { OrderRowMediaUpload } from '@/components/daily-report/OrderRowMediaUpload';
+
+const TIME_HOURS = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, '0'));
+const TIME_MINUTES = Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, '0'));
 
 // Helper: check if a row has content (order, text, etc.)
 function rowHasContent(r: { order_id?: string; activity_description?: string; service_details?: string; team_name?: string; notes?: string }) {
@@ -293,6 +298,7 @@ interface StaffReportRow {
   amount_spent: number;
   spending_notes: string;
   bank_card_id?: string | null;
+  transaction_time?: string | null;
   notes: string;
   is_cash_box: boolean;
   is_company_expense?: boolean;
@@ -387,6 +393,12 @@ const toLocalDateString = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
+const buildDailyReportTransactionTimestamp = (dateStr: string, transactionTime?: string | null): string => {
+  const raw = (transactionTime || '').trim();
+  const safeTime = /^([01]?\d|2[0-3]):[0-5]\d$/.test(raw) ? raw.padStart(5, '0') : '00:00';
+  return `${dateStr}T${safeTime}:00+03:30`;
+};
+
 // همگام‌سازی موجودی کارت‌ها به‌صورت «بازتولید مطلق» (بدون Drift)
 // فرمول: current_balance = initial_balance + (manual transactions net) + (sum all daily_report_staff cash-box net)
 async function syncBankCardBalancesFromLedger(params: {
@@ -399,25 +411,17 @@ async function syncBankCardBalancesFromLedger(params: {
   const { reportId, reportDate, userId, staffToSave, moduleName } = params;
 
   // فقط ردیف‌های «کارت/صندوق» روی موجودی کارت اثر دارند
-  const cashBoxTotalsByCard = new Map<
-    string,
-    { received: number; spent: number; receiveDesc?: string; spendDesc?: string }
-  >();
+  const cashBoxRowsByCard = new Map<string, StaffReportRow[]>();
 
   for (const s of staffToSave) {
     if (!s.is_cash_box || !s.bank_card_id) continue;
     const cardId = s.bank_card_id;
-    const prev = cashBoxTotalsByCard.get(cardId) ?? { received: 0, spent: 0 };
-    cashBoxTotalsByCard.set(cardId, {
-      received: prev.received + (Number(s.amount_received ?? 0) || 0),
-      spent: prev.spent + (Number(s.amount_spent ?? 0) || 0),
-      receiveDesc: prev.receiveDesc ?? (s.receiving_notes?.trim() || undefined),
-      spendDesc: prev.spendDesc ?? (s.spending_notes?.trim() || undefined),
-    });
+    const rows = cashBoxRowsByCard.get(cardId) ?? [];
+    rows.push(s);
+    cashBoxRowsByCard.set(cardId, rows);
   }
 
-  const affectedBankCardIds = Array.from(cashBoxTotalsByCard.keys());
-  if (affectedBankCardIds.length === 0) return;
+  const affectedBankCardIds = Array.from(cashBoxRowsByCard.keys());
 
   // Best-effort: حذف لاگ‌های قبلی همین گزارش برای جلوگیری از تکرار
   // حذف بر اساس reportId (reference_id = daily_reports.id) برای این گزارش
@@ -427,13 +431,14 @@ async function syncBankCardBalancesFromLedger(params: {
     .from('bank_card_transactions')
     .delete()
     .eq('reference_type', 'daily_report_staff')
-    .eq('reference_id', reportId)
-    .in('bank_card_id', affectedBankCardIds);
+    .eq('reference_id', reportId);
 
   if (deleteTxError) {
     canReplaceTxLogs = false;
     console.warn('Could not delete previous bank card transactions for report:', deleteTxError);
   }
+
+  if (affectedBankCardIds.length === 0) return;
 
   const dateStr = toLocalDateString(reportDate);
 
@@ -489,39 +494,50 @@ async function syncBankCardBalancesFromLedger(params: {
 
     // لاگ‌های تراکنش همین گزارش (تجمیعی) - اختیاری
     if (canReplaceTxLogs) {
-      const t = cashBoxTotalsByCard.get(cardId);
-      if (t && (t.received > 0 || t.spent > 0)) {
-        const baseOther = newBalance - (t.received - t.spent);
+      const rows = cashBoxRowsByCard.get(cardId) || [];
+      if (rows.length > 0) {
+        const rowsNet = rows.reduce((sum, row) => sum + (Number(row.amount_received ?? 0) || 0) - (Number(row.amount_spent ?? 0) || 0), 0);
+        let runningBalance = newBalance - rowsNet;
         const txRows: any[] = [];
 
-        if (t.received > 0) {
-          txRows.push({
-            bank_card_id: cardId,
-            transaction_type: 'deposit',
-            amount: t.received,
-            balance_after: baseOther + t.received,
-            description: t.receiveDesc || `واریز از گزارش روزانه ${dateStr}`,
-            reference_type: 'daily_report_staff',
-            reference_id: reportId,
-            created_by: userId,
-            module_name: moduleName || null,
-            report_date: dateStr,
-          });
-        }
+        for (const row of rows) {
+          const createdAt = buildDailyReportTransactionTimestamp(dateStr, row.transaction_time);
+          const received = Number(row.amount_received ?? 0) || 0;
+          const spent = Number(row.amount_spent ?? 0) || 0;
 
-        if (t.spent > 0) {
-          txRows.push({
-            bank_card_id: cardId,
-            transaction_type: 'withdrawal',
-            amount: t.spent,
-            balance_after: newBalance,
-            description: t.spendDesc || `برداشت از گزارش روزانه ${dateStr}`,
-            reference_type: 'daily_report_staff',
-            reference_id: reportId,
-            created_by: userId,
-            module_name: moduleName || null,
-            report_date: dateStr,
-          });
+          if (received > 0) {
+            runningBalance += received;
+            txRows.push({
+              bank_card_id: cardId,
+              transaction_type: 'deposit',
+              amount: received,
+              balance_after: runningBalance,
+              description: row.receiving_notes?.trim() || `واریز از گزارش روزانه ${dateStr}`,
+              reference_type: 'daily_report_staff',
+              reference_id: reportId,
+              created_by: userId,
+              created_at: createdAt,
+              module_name: moduleName || null,
+              report_date: dateStr,
+            });
+          }
+
+          if (spent > 0) {
+            runningBalance -= spent;
+            txRows.push({
+              bank_card_id: cardId,
+              transaction_type: 'withdrawal',
+              amount: spent,
+              balance_after: runningBalance,
+              description: row.spending_notes?.trim() || `برداشت از گزارش روزانه ${dateStr}`,
+              reference_type: 'daily_report_staff',
+              reference_id: reportId,
+              created_by: userId,
+              created_at: createdAt,
+              module_name: moduleName || null,
+              report_date: dateStr,
+            });
+          }
         }
 
         if (txRows.length > 0) {
@@ -601,8 +617,8 @@ export default function DailyReportModule() {
   // هوک کش چند-روزه برای نگهداری داده‌های ذخیره‌نشده هنگام جابجایی بین روزها
   const dateCache = useDailyReportDateCache();
 
-  // جلوگیری از Pull-to-refresh روی این فرم (Android Chrome/PWA)
-  // تا صفحه ناخواسته رفرش نشود و داده‌های ذخیره‌نشده پاک نشوند.
+  // اسکرول موبایل باید در این ماژول کاملاً طبیعی بماند؛ محدودیت overscroll روی body/html
+  // باعث گیر کردن کشیدن انگشت در بعضی مرورگرهای موبایل می‌شود.
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
@@ -610,8 +626,8 @@ export default function DailyReportModule() {
     const prevHtml = (html.style as any).overscrollBehaviorY as string;
     const prevBody = (body.style as any).overscrollBehaviorY as string;
 
-    (html.style as any).overscrollBehaviorY = 'contain';
-    (body.style as any).overscrollBehaviorY = 'contain';
+    (html.style as any).overscrollBehaviorY = 'auto';
+    (body.style as any).overscrollBehaviorY = 'auto';
 
     return () => {
       (html.style as any).overscrollBehaviorY = prevHtml || '';
@@ -879,6 +895,7 @@ export default function DailyReportModule() {
             amount_spent: s.amount_spent,
             spending_notes: s.spending_notes,
             bank_card_id: s.bank_card_id,
+            transaction_time: s.transaction_time || null,
             notes: s.notes,
             is_cash_box: s.is_cash_box,
             is_company_expense: s.is_company_expense,
@@ -1072,7 +1089,7 @@ export default function DailyReportModule() {
         if (!txByCard.has(tx.bank_card_id)) txByCard.set(tx.bank_card_id, []);
         txByCard.get(tx.bank_card_id)!.push(tx);
       }
-      // Add null-date transactions filtered by created_at date
+      // Add null-date transactions filtered by created_at date (on or before dateStr → closing balance for that day)
       for (const tx of nullDateTx || []) {
         const txDate = tx.created_at ? tx.created_at.substring(0, 10) : null;
         if (!txDate || txDate > dateStr) continue;
@@ -1287,6 +1304,7 @@ export default function DailyReportModule() {
            is_cash_box: Boolean(s.is_cash_box),
            is_company_expense: Boolean(s.is_company_expense),
            bank_card_id: s.bank_card_id || null,
+           transaction_time: s.transaction_time || null,
          })),
      });
 
@@ -1408,6 +1426,7 @@ export default function DailyReportModule() {
               amount_spent: s.amount_spent,
               spending_notes: s.spending_notes,
               bank_card_id: s.bank_card_id ?? null,
+              transaction_time: s.transaction_time || null,
               notes: s.notes,
               is_cash_box: toDbBoolean(s.is_cash_box),
               is_company_expense:
@@ -2209,6 +2228,7 @@ export default function DailyReportModule() {
               amount_spent: s.amount_spent || 0,
               spending_notes: s.spending_notes || '',
               bank_card_id: s.bank_card_id ?? null,
+              transaction_time: s.transaction_time ?? null,
               notes: s.notes || '',
               is_cash_box: s.is_cash_box || false,
               is_company_expense: isCompanyExpense,
@@ -2219,7 +2239,7 @@ export default function DailyReportModule() {
             };
           });
 
-          // حذف تکراری‌ها بر اساس staff_name (یا bank_card_id برای صندوق)
+          // حذف تکراری‌ها فقط برای نیروی عادی و ماهیت شرکت؛ سطرهای کارت بانکی هرگز حذف/ادغام نشوند.
           const seenStaffKeys = new Set<string>();
           const dedupedStaff = allStaffRows.filter((s) => {
             if (s.is_company_expense) {
@@ -2229,9 +2249,6 @@ export default function DailyReportModule() {
               return true;
             }
             if (s.is_cash_box) {
-              const key = `cashbox_${s.bank_card_id || 'none'}`;
-              if (seenStaffKeys.has(key)) return false;
-              seenStaffKeys.add(key);
               return true;
             }
             const staffKey = (s.staff_name || '').trim().toLowerCase();
@@ -2261,6 +2278,7 @@ export default function DailyReportModule() {
               amount_spent: 0,
               spending_notes: '',
               bank_card_id: null,
+              transaction_time: null,
               notes: '',
               is_cash_box: false,
               is_company_expense: true,
@@ -2272,7 +2290,7 @@ export default function DailyReportModule() {
         } else {
           // ماژول کلی (isAggregated): ادغام نیروها - با تشخیص انواع مختلف
           const companyExpenseRows: StaffReportRow[] = [];
-          const cashBoxRowsMap = new Map<string, StaffReportRow>(); // بر اساس bank_card_id
+          const cashBoxRows: StaffReportRow[] = []; // سطرهای کارت بانکی نباید با هم ادغام شوند
           const regularStaffMap = new Map<string, StaffReportRow>(); // بر اساس staff_user_id یا staff_name
 
           for (const s of allStaffData || []) {
@@ -2299,6 +2317,7 @@ export default function DailyReportModule() {
               amount_spent: s.amount_spent || 0,
               spending_notes: s.spending_notes || '',
               bank_card_id: s.bank_card_id ?? null,
+              transaction_time: s.transaction_time ?? null,
               notes: s.notes || '',
               is_cash_box: s.is_cash_box || false,
               is_company_expense: isCompanyExpense,
@@ -2327,28 +2346,9 @@ export default function DailyReportModule() {
               } else {
                 companyExpenseRows.push(staffRow);
               }
-            } else if (s.is_cash_box && s.bank_card_id) {
-              // ردیف کارت بانکی - ادغام بر اساس bank_card_id
-              const cardId = s.bank_card_id;
-              const existing = cashBoxRowsMap.get(cardId);
-              if (existing) {
-                // جمع مبالغ
-                existing.amount_received = (existing.amount_received || 0) + (staffRow.amount_received || 0);
-                existing.amount_spent = (existing.amount_spent || 0) + (staffRow.amount_spent || 0);
-                // ادغام توضیحات
-                if (staffRow.receiving_notes?.trim() && existing.receiving_notes !== staffRow.receiving_notes) {
-                  existing.receiving_notes = [existing.receiving_notes, staffRow.receiving_notes].filter(Boolean).join(' | ');
-                }
-                if (staffRow.spending_notes?.trim() && existing.spending_notes !== staffRow.spending_notes) {
-                  existing.spending_notes = [existing.spending_notes, staffRow.spending_notes].filter(Boolean).join(' | ');
-                }
-                // ادغام منابع ماژول
-                if (staffRow.source_module_name && !existing.source_module_name?.includes(staffRow.source_module_name)) {
-                  existing.source_module_name = [existing.source_module_name, staffRow.source_module_name].filter(Boolean).join(' + ');
-                }
-              } else {
-                cashBoxRowsMap.set(cardId, staffRow);
-              }
+            } else if (s.is_cash_box) {
+              // ردیف کارت بانکی - حتی کارت/مبلغ/توضیح تکراری هم باید به عنوان تراکنش مستقل بماند
+              cashBoxRows.push(staffRow);
             } else if (!s.is_cash_box) {
               // نیروی عادی - بر اساس staff_user_id یا staff_name ادغام کن
               const key = s.staff_user_id || s.staff_name || s.id;
@@ -2399,6 +2399,7 @@ export default function DailyReportModule() {
               amount_spent: 0,
               spending_notes: '',
               bank_card_id: null,
+              transaction_time: null,
               notes: '',
               is_cash_box: false,
               is_company_expense: true,
@@ -2406,7 +2407,7 @@ export default function DailyReportModule() {
           }
           
           // دوم: کارت‌های بانکی
-          normalizedStaff.push(...Array.from(cashBoxRowsMap.values()));
+          normalizedStaff.push(...cashBoxRows);
           
           // سوم: نیروها
           normalizedStaff.push(...Array.from(regularStaffMap.values()));
@@ -2424,6 +2425,7 @@ export default function DailyReportModule() {
               amount_spent: 0,
               spending_notes: '',
               bank_card_id: null,
+              transaction_time: null,
               notes: '',
               is_cash_box: false,
               is_company_expense: false,
@@ -2520,6 +2522,7 @@ export default function DailyReportModule() {
               amount_spent: s.amount_spent || 0,
               spending_notes: s.spending_notes || '',
               bank_card_id: s.bank_card_id ?? null,
+              transaction_time: s.transaction_time ?? null,
               notes: s.notes || '',
               is_cash_box: s.is_cash_box || false,
               is_company_expense: isCompanyExpense,
@@ -2545,6 +2548,7 @@ export default function DailyReportModule() {
               amount_spent: 0,
               spending_notes: '',
               bank_card_id: null,
+              transaction_time: null,
               notes: '',
               is_cash_box: false,
               is_company_expense: true,
@@ -3058,6 +3062,7 @@ export default function DailyReportModule() {
         amount_spent: 0,
         spending_notes: '',
         bank_card_id: null,
+        transaction_time: null,
         notes: '',
         is_cash_box: true,
       },
@@ -3176,6 +3181,7 @@ export default function DailyReportModule() {
           amount_spent: 0,
           spending_notes: '',
           bank_card_id: null,
+        transaction_time: null,
           notes: '',
           is_cash_box: false
         });
@@ -3599,17 +3605,10 @@ export default function DailyReportModule() {
         Boolean(s.notes?.trim())
     );
 
-    // Deduplication: حذف پرسنل تکراری بر اساس staff_name
+    // Deduplication: فقط ماهیت شرکت و نیروی عادی؛ سطرهای کارت بانکی هرگز حذف/ادغام نشوند.
     const seenStaffKeys = new Set<string>();
     const uniqueStaffToSave = staffToSave.filter((s) => {
-      // برای صندوق‌ها از bank_card_id استفاده کن
       if (s.is_cash_box) {
-        const key = `cashbox_${s.bank_card_id || 'no_card'}_${s.amount_received}_${s.amount_spent}`;
-        if (seenStaffKeys.has(key)) {
-          console.warn(`Duplicate cash box row detected and skipped: ${key}`);
-          return false;
-        }
-        seenStaffKeys.add(key);
         return true;
       }
       // برای ماهیت شرکت
@@ -3655,6 +3654,7 @@ export default function DailyReportModule() {
         amount_spent: s.amount_spent || 0,
         spending_notes: s.spending_notes || '',
         bank_card_id: s.bank_card_id ?? null,
+        transaction_time: s.transaction_time || null,
         notes: s.notes || '',
         is_cash_box: toDbBoolean(s.is_cash_box),
         is_company_expense:
@@ -3895,6 +3895,7 @@ export default function DailyReportModule() {
           amount_spent: s.amount_spent || 0,
           spending_notes: s.spending_notes || '',
           bank_card_id: s.bank_card_id ?? null,
+          transaction_time: s.transaction_time || null,
           notes: s.notes || '',
           is_cash_box: toDbBoolean(s.is_cash_box),
           is_company_expense:
@@ -4065,41 +4066,6 @@ export default function DailyReportModule() {
         Boolean(s.notes?.trim())
     );
 
-    // Collect affected bank cards from cash-box rows only (these rows represent the bank card itself)
-    const cashBoxTotalsByCard = new Map<
-      string,
-      { received: number; spent: number; receiveDesc?: string; spendDesc?: string }
-    >();
-
-    for (const s of staffToSave) {
-      if (!s.is_cash_box || !s.bank_card_id) continue;
-      const cardId = s.bank_card_id as string;
-      const prev = cashBoxTotalsByCard.get(cardId) ?? { received: 0, spent: 0 };
-      cashBoxTotalsByCard.set(cardId, {
-        received: prev.received + (Number(s.amount_received ?? 0) || 0),
-        spent: prev.spent + (Number(s.amount_spent ?? 0) || 0),
-        receiveDesc: prev.receiveDesc ?? (s.receiving_notes?.trim() || undefined),
-        spendDesc: prev.spendDesc ?? (s.spending_notes?.trim() || undefined),
-      });
-    }
-
-    const affectedBankCardIds = Array.from(cashBoxTotalsByCard.keys());
-
-    // Best-effort cleanup of previous transaction logs for this report.
-    // Note: balance correctness is computed from daily_report_staff + manual transactions,
-    // so even if this fails, balances will still be corrected.
-    let canReplaceTxLogs = true;
-    const { error: deleteTxError } = await supabase
-      .from('bank_card_transactions')
-      .delete()
-      .eq('reference_type', 'daily_report_staff')
-      .eq('reference_id', reportId);
-
-    if (deleteTxError) {
-      canReplaceTxLogs = false;
-      console.warn('Could not delete previous bank card transactions for report:', deleteTxError);
-    }
-
     // Delete existing staff reports and insert new ones
     const { error: deleteStaffError } = await supabase
       .from('daily_report_staff')
@@ -4124,6 +4090,7 @@ export default function DailyReportModule() {
         amount_spent: s.amount_spent || 0,
         spending_notes: s.spending_notes || '',
         bank_card_id: s.bank_card_id ?? null,
+        transaction_time: s.transaction_time || null,
         notes: s.notes || '',
         is_cash_box: toDbBoolean(s.is_cash_box),
         is_company_expense:
@@ -4641,8 +4608,8 @@ export default function DailyReportModule() {
       saveVersionRef={saveVersionRef}
       action={
         <div className="flex items-center gap-3">
-          {/* دکمه پاکسازی داده‌های روز - فقط برای ماژول‌های غیر تجمیعی */}
-          {!isAggregated && existingReportId && (
+          {/* دکمه پاکسازی داده‌های روز - فقط برای ماژول‌های غیر تجمیعی و پس از گرفتن کنترل */}
+          {!isAggregated && existingReportId && !isLockReadOnly && (
             <Button
               variant="outline"
               size="sm"
@@ -4685,7 +4652,25 @@ export default function DailyReportModule() {
         </div>
       }
     >
-      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 max-w-full">
+      <div
+        className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 max-w-full"
+        style={{ touchAction: 'pan-x pan-y pinch-zoom' }}
+        onWheel={(e) => {
+          // اطمینان از اسکرول طبیعی صفحه با غلطک ماوس در هر نقطه از این ماژول
+          if (e.deltaY === 0 || e.shiftKey || e.ctrlKey || e.metaKey) return;
+          let el: HTMLElement | null = e.target as HTMLElement;
+          while (el && el !== e.currentTarget) {
+            const s = window.getComputedStyle(el);
+            const oy = s.overflowY;
+            if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight + 1) {
+              return; // داخل ناحیه قابل اسکرول عمودی است؛ مرورگر خودش انجام دهد
+            }
+            el = el.parentElement;
+          }
+          window.scrollBy({ top: e.deltaY, behavior: 'auto' });
+        }}
+      >
+
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="overflow-x-auto -mx-4 px-4 pb-2">
@@ -4896,8 +4881,8 @@ export default function DailyReportModule() {
                     </div>
                   </CardHeader>
                   <CardContent className="px-0 sm:px-6">
-                    <div ref={orderTableScrollRef} className="overflow-x-auto" dir="rtl">
-                      <Table className="table-auto border-collapse border border-blue-300">
+                    <div ref={orderTableScrollRef} className="overflow-x-auto daily-report-touch-scroll" dir="rtl">
+                      <Table className="table-auto min-w-[1080px] border-collapse border border-blue-300">
                         <TableHeader>
                           <TableRow className="bg-blue-100 dark:bg-blue-900/30">
                             <TableHead
@@ -5117,8 +5102,8 @@ export default function DailyReportModule() {
                     </div>
                   </CardHeader>
                   <CardContent className="px-0 sm:px-6">
-                    <div ref={staffTableScrollRef} className="overflow-x-auto" dir="rtl">
-                      <Table className="table-auto border-collapse border border-amber-300">
+                    <div ref={staffTableScrollRef} className="overflow-x-auto daily-report-touch-scroll" dir="rtl">
+                      <Table className="table-auto min-w-[1120px] border-collapse border border-amber-300">
                         <TableHeader>
                           <TableRow className="bg-amber-100 dark:bg-amber-900/30">
                             <TableHead
@@ -5173,6 +5158,7 @@ export default function DailyReportModule() {
                                            <div className="flex items-center gap-2">
                                              <CreditCard className="h-4 w-4 text-emerald-600" />
                                              <span className="font-medium">{cardInfo?.card_name || 'کارت بانکی'}</span>
+              {row.transaction_time && <span className="text-xs text-muted-foreground">{row.transaction_time}</span>}
                                              {cardInfo?.bank_name && (
                                                <span className="text-xs text-muted-foreground">({cardInfo.bank_name})</span>
                                              )}
@@ -5185,8 +5171,9 @@ export default function DailyReportModule() {
                                          </div>
                                        );
                                      })()
-                                   ) : (
-                                     <div className="min-w-[220px]">
+                                    ) : (
+                                      <div className="min-w-[260px] flex items-center gap-1">
+                                        <div className="flex-1 min-w-0">
                                           <BankCardSelect
                                             value={row.bank_card_id ?? null}
                                             onValueChange={(value) => updateStaffRow(index, 'bank_card_id', value)}
@@ -5196,7 +5183,83 @@ export default function DailyReportModule() {
                                             moduleKey={bankCardModuleKey || undefined}
                                             asOfDate={toLocalDateString(reportDate)}
                                           />
-                                     </div>
+                                        </div>
+                                        {row.bank_card_id && (
+                                          <Popover>
+                                            <PopoverTrigger asChild>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                type="button"
+                                                className={`h-8 w-8 shrink-0 ${row.transaction_time ? 'text-primary' : 'text-muted-foreground'}`}
+                                                title={row.transaction_time ? `ساعت تراکنش: ${row.transaction_time}` : 'تنظیم ساعت تراکنش'}
+                                              >
+                                                <Clock className="h-4 w-4" />
+                                              </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-60 p-3" align="end">
+                                              <div className="space-y-2">
+                                                <Label className="text-xs">ساعت تراکنش (۲۴ ساعته)</Label>
+                                                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2" dir="ltr">
+                                                  <Select
+                                                    value={row.transaction_time ? row.transaction_time.split(':')[0] : undefined}
+                                                    onValueChange={(hour) => {
+                                                      const minute = row.transaction_time ? row.transaction_time.split(':')[1] || '00' : '00';
+                                                      updateStaffRow(index, 'transaction_time', `${hour}:${minute}`);
+                                                    }}
+                                                  >
+                                                    <SelectTrigger className="h-10 text-center tabular-nums" dir="ltr">
+                                                      <SelectValue placeholder="HH" />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="max-h-60" align="center">
+                                                      {TIME_HOURS.map((hour) => (
+                                                        <SelectItem key={hour} value={hour} className="text-center tabular-nums">
+                                                          {hour}
+                                                        </SelectItem>
+                                                      ))}
+                                                    </SelectContent>
+                                                  </Select>
+                                                  <span className="font-bold">:</span>
+                                                  <Select
+                                                    value={row.transaction_time ? row.transaction_time.split(':')[1] || '00' : undefined}
+                                                    onValueChange={(minute) => {
+                                                      const hour = row.transaction_time ? row.transaction_time.split(':')[0] || '00' : '00';
+                                                      updateStaffRow(index, 'transaction_time', `${hour}:${minute}`);
+                                                    }}
+                                                  >
+                                                    <SelectTrigger className="h-10 text-center tabular-nums" dir="ltr">
+                                                      <SelectValue placeholder="MM" />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="max-h-60" align="center">
+                                                      {TIME_MINUTES.map((minute) => (
+                                                        <SelectItem key={minute} value={minute} className="text-center tabular-nums">
+                                                          {minute}
+                                                        </SelectItem>
+                                                      ))}
+                                                    </SelectContent>
+                                                  </Select>
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground">اگر خالی باشد، ساعت ۰۰:۰۰ ثبت می‌شود.</p>
+                                                <PopoverClose asChild>
+                                                  <Button
+                                                    type="button"
+                                                    variant="default"
+                                                    size="sm"
+                                                    className="w-full text-xs"
+                                                    onClick={() => {
+                                                      if (!row.transaction_time) {
+                                                        updateStaffRow(index, 'transaction_time', '00:00');
+                                                      }
+                                                    }}
+                                                  >
+                                                    تایید ساعت
+                                                  </Button>
+                                                </PopoverClose>
+                                              </div>
+                                            </PopoverContent>
+                                          </Popover>
+                                        )}
+                                      </div>
                                    )
                                  ) : effectiveReadOnly ? (
                                    <div className="min-w-[220px] p-2 bg-background/50 rounded border text-sm">
@@ -5299,12 +5362,19 @@ export default function DailyReportModule() {
                                       inputMode="decimal"
                                       value={row.overtime_hours === 0 ? '' : row.overtime_hours.toString()}
                                       onChange={(e) => {
-                                        const val = e.target.value.replace(/^0+(?=\d)/, '');
-                                        const numVal = parseFloat(val) || 0;
-                                        if (numVal <= 15) {
+                                        let raw = e.target.value.trim();
+                                        // اجازه‌ی ورود علامت منفی و حالت میانی "-"
+                                        if (raw === '' || raw === '-') {
+                                          updateStaffRow(index, 'overtime_hours', raw === '-' ? ('-' as any) : 0);
+                                          return;
+                                        }
+                                        const isNeg = raw.startsWith('-');
+                                        let digits = (isNeg ? raw.slice(1) : raw).replace(/^0+(?=\d)/, '');
+                                        const numVal = (isNeg ? -1 : 1) * (parseFloat(digits) || 0);
+                                        if (Math.abs(numVal) <= 15) {
                                           updateStaffRow(index, 'overtime_hours', numVal);
                                         } else {
-                                          toast.error('اضافه‌کاری نمی‌تواند بیشتر از ۱۵ ساعت باشد');
+                                          toast.error('اضافه‌کاری نمی‌تواند بیشتر از ۱۵ ساعت (مثبت یا منفی) باشد');
                                         }
                                       }}
                                       className="min-w-[90px] pl-10 text-left"
@@ -5322,23 +5392,9 @@ export default function DailyReportModule() {
                                   </div>
                                 ) : (
                                   <div className="relative">
-                                    <Input
-                                      type="text"
-                                      inputMode="numeric"
-                                      value={((row.amount_received ?? 0) === 0)
-                                        ? ''
-                                        : (row.amount_received ?? 0).toLocaleString('en-US')}
-                                      onChange={(e) => {
-                                        const val = e.target.value
-                                          .replace(/[^0-9۰-۹]/g, '')
-                                          .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
-                                        const numVal = parseInt(val) || 0;
-                                        if (numVal <= 300000000) {
-                                          updateStaffRow(index, 'amount_received', numVal);
-                                        } else {
-                                          toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
-                                        }
-                                      }}
+                                    <CalculatorInput
+                                      value={row.amount_received ?? 0}
+                                      onChange={(val) => updateStaffRow(index, 'amount_received', val)}
                                       className="min-w-[220px] pl-12 text-left tabular-nums"
                                       dir="ltr"
                                       placeholder="0"
@@ -5373,19 +5429,9 @@ export default function DailyReportModule() {
                                   </div>
                                 ) : (
                                   <div className="relative">
-                                    <Input
-                                      type="text"
-                                      inputMode="numeric"
-                                      value={row.amount_spent === 0 ? '' : row.amount_spent.toLocaleString('en-US')}
-                                      onChange={(e) => {
-                                        const val = e.target.value.replace(/[^0-9۰-۹]/g, '').replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
-                                        const numVal = parseInt(val) || 0;
-                                        if (numVal <= 300000000) {
-                                          updateStaffRow(index, 'amount_spent', numVal);
-                                        } else {
-                                          toast.error('مبلغ نمی‌تواند بیشتر از ۳۰۰ میلیون تومان باشد');
-                                        }
-                                      }}
+                                    <CalculatorInput
+                                      value={row.amount_spent ?? 0}
+                                      onChange={(val) => updateStaffRow(index, 'amount_spent', val)}
                                       className="min-w-[220px] pl-12 text-left tabular-nums"
                                       dir="ltr"
                                       placeholder="0"

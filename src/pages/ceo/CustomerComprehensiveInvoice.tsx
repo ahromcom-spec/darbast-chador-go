@@ -54,8 +54,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Separator } from '@/components/ui/separator';
-import { MultiPaymentDialog } from '@/components/orders/MultiPaymentDialog';
-import { CustomerBulkPaymentDialog } from '@/components/orders/CustomerBulkPaymentDialog';
 
 // Types
 interface OrderItem {
@@ -80,7 +78,6 @@ interface PaymentRecord {
   notes: string | null;
   created_at: string;
   order_code: string;
-  order_id: string;
 }
 
 interface CustomerData {
@@ -146,8 +143,6 @@ export default function CustomerComprehensiveInvoice() {
   const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerData | null>(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
-  const [paymentOrder, setPaymentOrder] = useState<{ order: OrderItem; customer: CustomerData } | null>(null);
-  const [bulkPaymentCustomer, setBulkPaymentCustomer] = useState<CustomerData | null>(null);
   
   // Summary stats
   const [summary, setSummary] = useState({
@@ -167,13 +162,6 @@ export default function CustomerComprehensiveInvoice() {
   useEffect(() => {
     filterCustomers();
   }, [searchQuery, customers]);
-
-  // keep selectedCustomer in sync after data refresh (e.g. after registering a payment)
-  useEffect(() => {
-    if (!selectedCustomer) return;
-    const updated = customers.find(c => c.customer_id === selectedCustomer.customer_id);
-    if (updated && updated !== selectedCustomer) setSelectedCustomer(updated);
-  }, [customers]);
 
   const fetchCustomersData = async () => {
     setLoading(true);
@@ -202,9 +190,8 @@ export default function CustomerComprehensiveInvoice() {
           created_at, status, notes,
           subcategory:subcategories(name, service_type:service_types_v3(name))
         `)
-        .not('status', 'in', '(draft,rejected)')
-        .or('is_archived.is.null,is_archived.eq.false')
-        .or('is_deep_archived.is.null,is_deep_archived.eq.false');
+        .not('status', 'in', '(draft,rejected)');
+      // سفارشات بایگانی شده و بایگانی عمیق نیز در صورتحساب و حسابداری نمایش داده می‌شوند
 
       if (ordersError) throw ordersError;
 
@@ -285,8 +272,7 @@ export default function CustomerComprehensiveInvoice() {
             receipt_number: p.receipt_number,
             notes: p.notes,
             created_at: p.created_at,
-            order_code: orderCodeMap.get(p.order_id) || '-',
-            order_id: p.order_id
+            order_code: orderCodeMap.get(p.order_id) || '-'
           }))
         });
       });
@@ -841,20 +827,6 @@ export default function CustomerComprehensiveInvoice() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="gap-1 text-green-700 border-green-300 hover:bg-green-50"
-                          disabled={customer.total_remaining <= 0}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setBulkPaymentCustomer(customer);
-                          }}
-                        >
-                          <Banknote className="h-4 w-4 ml-1" />
-                          ثبت پرداخت کل
-                        </Button>
-
-                        <Button
-                          variant="outline"
-                          size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             openInvoiceDialog(customer);
@@ -894,25 +866,12 @@ export default function CustomerComprehensiveInvoice() {
                               <TableHead>مبلغ</TableHead>
                               <TableHead>پرداختی</TableHead>
                               <TableHead>مانده</TableHead>
-                              <TableHead>عملیات</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {customer.orders.map((order) => (
                               <TableRow key={order.id}>
-                                <TableCell className="font-mono text-xs">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigate(`/ceo/orders?orderId=${order.id}`);
-                                    }}
-                                    className="text-primary hover:underline"
-                                    title="باز کردن سفارش در مدیریت همه سفارشات"
-                                  >
-                                    {order.code}
-                                  </button>
-                                </TableCell>
+                                <TableCell className="font-mono text-xs">{order.code}</TableCell>
                                 <TableCell className="text-sm">{order.service_type_name}</TableCell>
                                 <TableCell className="text-sm max-w-[200px] truncate">{order.address}</TableCell>
                                 <TableCell className="text-xs">{formatDate(order.created_at)}</TableCell>
@@ -925,20 +884,6 @@ export default function CustomerComprehensiveInvoice() {
                                 <TableCell className="text-sm text-green-600">{formatCurrency(order.total_paid)}</TableCell>
                                 <TableCell className={`text-sm ${order.remaining > 0 ? 'text-orange-600 font-medium' : 'text-green-600'}`}>
                                   {formatCurrency(order.remaining)}
-                                </TableCell>
-                                <TableCell>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="gap-1 text-green-700 border-green-300 hover:bg-green-50"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setPaymentOrder({ order, customer });
-                                    }}
-                                  >
-                                    <Banknote className="h-3.5 w-3.5" />
-                                    ثبت پرداخت
-                                  </Button>
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -977,16 +922,6 @@ export default function CustomerComprehensiveInvoice() {
             <DialogTitle className="flex items-center justify-between">
               <span>صورتحساب جامع - {selectedCustomer?.full_name}</span>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1 text-green-700 border-green-300 hover:bg-green-50"
-                  disabled={!selectedCustomer || selectedCustomer.total_remaining <= 0}
-                  onClick={() => selectedCustomer && setBulkPaymentCustomer(selectedCustomer)}
-                >
-                  <Banknote className="h-4 w-4 ml-1" />
-                  ثبت پرداخت کل
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -1065,26 +1000,13 @@ export default function CustomerComprehensiveInvoice() {
                         <TableHead>مبلغ</TableHead>
                         <TableHead>پرداختی</TableHead>
                         <TableHead>مانده</TableHead>
-                        <TableHead>عملیات</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {selectedCustomer.orders.map((order, idx) => (
                         <TableRow key={order.id}>
                           <TableCell>{idx + 1}</TableCell>
-                          <TableCell className="font-mono">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setInvoiceDialogOpen(false);
-                                navigate(`/ceo/orders?orderId=${order.id}`);
-                              }}
-                              className="text-primary hover:underline"
-                              title="باز کردن سفارش در مدیریت همه سفارشات"
-                            >
-                              {order.code}
-                            </button>
-                          </TableCell>
+                          <TableCell className="font-mono">{order.code}</TableCell>
                           <TableCell>{order.service_type_name}</TableCell>
                           <TableCell className="max-w-[200px] truncate">{order.address}</TableCell>
                           <TableCell>{formatDate(order.created_at)}</TableCell>
@@ -1097,17 +1019,6 @@ export default function CustomerComprehensiveInvoice() {
                           <TableCell className="text-green-600">{formatCurrency(order.total_paid)}</TableCell>
                           <TableCell className={order.remaining > 0 ? 'text-orange-600 font-medium' : 'text-green-600'}>
                             {formatCurrency(order.remaining)}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="gap-1 text-green-700 border-green-300 hover:bg-green-50"
-                              onClick={() => setPaymentOrder({ order, customer: selectedCustomer })}
-                            >
-                              <Banknote className="h-3.5 w-3.5" />
-                              ثبت پرداخت
-                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1141,19 +1052,7 @@ export default function CustomerComprehensiveInvoice() {
                           <TableRow key={payment.id}>
                             <TableCell>{idx + 1}</TableCell>
                             <TableCell>{formatDate(payment.created_at)}</TableCell>
-                            <TableCell className="font-mono">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setInvoiceDialogOpen(false);
-                                  navigate(`/ceo/orders?orderId=${payment.order_id}`);
-                                }}
-                                className="text-primary hover:underline"
-                                title="باز کردن سفارش در مدیریت همه سفارشات"
-                              >
-                                {payment.order_code}
-                              </button>
-                            </TableCell>
+                            <TableCell className="font-mono">{payment.order_code}</TableCell>
                             <TableCell className="text-green-600 font-medium">{formatCurrency(payment.amount)}</TableCell>
                             <TableCell>{payment.payment_method || '-'}</TableCell>
                             <TableCell>{payment.receipt_number || '-'}</TableCell>
@@ -1169,49 +1068,6 @@ export default function CustomerComprehensiveInvoice() {
           )}
         </DialogContent>
       </Dialog>
-
-      {/* Multi Payment Dialog - register payment from invoice */}
-      {paymentOrder && (
-        <MultiPaymentDialog
-          open={!!paymentOrder}
-          onOpenChange={(open) => { if (!open) setPaymentOrder(null); }}
-          orderId={paymentOrder.order.id}
-          orderCode={paymentOrder.order.code}
-          customerName={paymentOrder.customer.full_name}
-          customerId={paymentOrder.customer.customer_id}
-          totalPrice={paymentOrder.order.payment_amount}
-          customerPhone={paymentOrder.customer.phone_number}
-          address={paymentOrder.order.address}
-          serviceType={paymentOrder.order.service_type_name}
-          onPaymentSuccess={() => {
-            fetchCustomersData();
-          }}
-        />
-      )}
-
-      {/* Bulk Customer Payment Dialog */}
-      {bulkPaymentCustomer && (
-        <CustomerBulkPaymentDialog
-          open={!!bulkPaymentCustomer}
-          onOpenChange={(open) => { if (!open) setBulkPaymentCustomer(null); }}
-          customerId={bulkPaymentCustomer.customer_id}
-          customerName={bulkPaymentCustomer.full_name}
-          customerPhone={bulkPaymentCustomer.phone_number}
-          orders={bulkPaymentCustomer.orders.map(o => ({
-            id: o.id,
-            code: o.code,
-            payment_amount: o.payment_amount,
-            total_paid: o.total_paid,
-            remaining: o.remaining,
-            service_type_name: o.service_type_name,
-            address: o.address,
-          }))}
-          onSuccess={() => {
-            setBulkPaymentCustomer(null);
-            fetchCustomersData();
-          }}
-        />
-      )}
     </ModuleLayout>
   );
 }

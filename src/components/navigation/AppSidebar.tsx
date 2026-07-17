@@ -134,7 +134,7 @@ export function AppSidebar({ onNavigate, staticMode }: AppSidebarProps) {
             <SidebarMenu>
               {publicItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild tooltip={!open ? item.title : undefined}>
+                  <SidebarMenuButton size="sm" asChild tooltip={!open ? item.title : undefined}>
                     <NavLink to={item.url} className={getNavClass} onClick={handleClick}>
                       <item.icon className="ml-2 h-4 w-4" />
                       <span className={!open ? "md:hidden" : ""}>{item.title}</span>

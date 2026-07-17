@@ -92,30 +92,41 @@ serve(async (req) => {
 
           console.log('[Push] Najva request - subscribers:', subscriberTokens.length);
 
-          const response = await fetch('https://app.najva.com/notification/api/v1/notifications/', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Token ${najvaApiToken}`,
-            },
-            body: JSON.stringify(notificationData),
-          });
+          // Najva's public API URL has shifted a few times. Try known variants
+          // in order and keep the first one that returns a 2xx. This makes the
+          // integration resilient without a manual redeploy.
+          const najvaEndpoints = [
+            'https://app.najva.com/notification/api/v1/notifications/',
+            'https://app.najva.com/api/notifications/v1/notifications/',
+            'https://app.najva.com/api/v1/notifications/',
+            'https://api.najva.com/api/v1/notifications/',
+          ];
 
-          const responseText = await response.text();
-          console.log('[Push] Najva response status:', response.status);
-          console.log('[Push] Najva response:', responseText);
-          
-          if (response.ok || response.status === 201) {
+          for (const endpoint of najvaEndpoints) {
             try {
-              const result = JSON.parse(responseText);
-              console.log('[Push] ✓ Najva notification sent:', result);
-              pushSent = true;
-            } catch {
-              console.log('[Push] ✓ Najva notification sent (non-JSON response)');
-              pushSent = true;
+              const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Token ${najvaApiToken}`,
+                },
+                body: JSON.stringify(notificationData),
+              });
+              const responseText = await response.text();
+              console.log(`[Push] Najva ${endpoint} status=${response.status} body=${responseText.slice(0, 300)}`);
+              if (response.ok || response.status === 201) {
+                console.log('[Push] ✓ Najva notification accepted by', endpoint);
+                pushSent = true;
+                break;
+              }
+              // 404 usually means endpoint moved — try next; otherwise stop.
+              if (response.status !== 404) {
+                console.error('[Push] Najva rejected notification. Aborting fallbacks.');
+                break;
+              }
+            } catch (endpointErr) {
+              console.error(`[Push] Najva fetch failed for ${endpoint}:`, endpointErr);
             }
-          } else {
-            console.error('[Push] Najva error - Status:', response.status, 'Response:', responseText);
           }
         } else {
           console.log('[Push] No Najva subscription found for user:', user_id);

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useServiceTypesWithSubcategories } from '@/hooks/useServiceTypesWithSubcategories';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -30,6 +31,7 @@ export default function ServiceSelection() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const { serviceTypes, loading } = useServiceTypesWithSubcategories();
   const { getOrCreateProject } = useProjectsHierarchy();
 
@@ -45,6 +47,7 @@ export default function ServiceSelection() {
   const preselectedSubcategoryCode = location.state?.subcategoryCode;
   const preselectedServiceTypeId = location.state?.serviceTypeId;
   const preselectedSubcategoryId = location.state?.subcategoryId;
+  const isGuest = !user || location.state?.isGuest === true || (typeof locationId === 'string' && locationId.startsWith('guest-'));
 
   useEffect(() => {
     if (!locationId) {
@@ -112,10 +115,21 @@ export default function ServiceSelection() {
     }
   }, [selectedServiceType, filteredSubcategories, selectedSubcategory, preselectedSubcategoryId, preselectedSubcategoryCode]);
 
-  const getFormPath = (subcategoryCode: string) => {
+  const CARPET_CLEANING_SUBCATEGORY_ID = 'da5fb7be-e703-4dc1-87e8-2386eb1697b9';
+
+  const getFormPath = (subcategoryCode: string, isServiceActive?: boolean, subcategoryIdArg?: string, serviceTypeName?: string) => {
+    // اگر مدیر ارشد این خدمت را غیرفعال کرده، مستقیماً به «فرم جایگزاری نشده» می‌رویم
+    if (isServiceActive === false) return '/form-not-available';
+
+    // مسیر ویژه قالی شویی (تشخیص با شناسه یا نام سرویس اصلی)
+    if (subcategoryIdArg === CARPET_CLEANING_SUBCATEGORY_ID || serviceTypeName?.includes('قالی')) {
+      return '/carpet-cleaning/form';
+    }
+
     // Map subcategory codes to form routes
     const formMap: Record<string, string> = {
       '10': '/scaffolding/form', // داربست فلزی اجرا به همراه اجناس و حمل و نقل
+      '20': '/scaffolding/form', // خدمات اجرای داربست بدون اجناس
       '30': '/scaffolding/rental-form', // اجاره داربست
     };
 
@@ -147,12 +161,16 @@ export default function ServiceSelection() {
     setIsSubmitting(true);
     
     try {
-      // ایجاد پروژه سلسله‌مراتبی برای لینک کردن سفارش به نقشه
-      const projectId = await getOrCreateProject(
-        locationId,
-        selectedServiceType,
-        selectedSubcategory
-      );
+      // برای کاربر مهمان، پروژه‌ای در دیتابیس ساخته نمی‌شود؛
+      // شناسه پروژه فقط در زمان ثبت نهایی (پس از ورود به حساب) ایجاد می‌شود.
+      let projectId: string | null = null;
+      if (!isGuest) {
+        projectId = await getOrCreateProject(
+          locationId,
+          selectedServiceType,
+          selectedSubcategory
+        );
+      }
 
       // محاسبه فاصله از مرکز استان اگر موجود نباشد
       let finalDistanceFromCenter = distanceFromCenter;
@@ -165,12 +183,12 @@ export default function ServiceSelection() {
         );
       }
 
-      const formPath = getFormPath(selectedSubcategoryData.code);
+      const formPath = getFormPath(selectedSubcategoryData.code, (selectedSubcategoryData as any).is_service_active, selectedSubcategoryData.id, selectedServiceTypeObj.name);
 
       // Navigate to the appropriate form with all necessary data including hierarchyProjectId
       navigate(formPath, {
         state: {
-          hierarchyProjectId: projectId, // ✅ شناسه پروژه برای لینک کردن سفارش به نقشه
+          hierarchyProjectId: projectId, // برای کاربر مهمان null می‌ماند
           projectId,
           locationId,
           serviceTypeId: selectedServiceType,
@@ -188,6 +206,7 @@ export default function ServiceSelection() {
           lat: locationData?.lat,
           lng: locationData?.lng,
           distanceFromCenter: finalDistanceFromCenter,
+          isGuest,
         }
       });
     } catch (error) {

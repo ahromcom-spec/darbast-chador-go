@@ -1,0 +1,532 @@
+[
+  {
+    "id": "82b9fd1f-8a1a-4d92-bd2b-9c0091b783ea",
+    "owner_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "type": "assigned",
+    "hierarchy": [
+      {
+        "id": "scaffold_execution_with_materials",
+        "key": "scaffold_execution_with_materials",
+        "href": "/executive",
+        "name": "ماژول مدیریت کلی اجرای داربست به همراه اجناس",
+        "type": "module",
+        "color": "text-amber-600",
+        "bgColor": "bg-amber-50",
+        "description": "مدیریت سفارشات اجرای داربست به همراه اجناس"
+      },
+      {
+        "id": "daily_report",
+        "key": "daily_report",
+        "href": "/daily-report",
+        "name": "ماژول گزارش روزانه اجرایی شرکت اهرم",
+        "type": "module",
+        "color": "text-blue-600",
+        "bgColor": "bg-blue-50",
+        "description": "ثبت گزارش فعالیت‌های روزانه شرکت و نیروها"
+      },
+      {
+        "id": "custom-1767127001910",
+        "key": "custom-1767127001910",
+        "href": "/executive",
+        "name": "ماژول مدیریت اجرایی خدمات اجراء داربست به همراه اجناس",
+        "type": "module",
+        "color": "text-amber-600",
+        "bgColor": "bg-amber-50",
+        "description": "مدیریت سفارشات اجرای داربست به همراه اجناس"
+      },
+      {
+        "id": "personnel_accounting",
+        "key": "personnel_accounting",
+        "href": "/personnel-accounting",
+        "name": "ماژول حسابکتاب و کارکرد پرسنل",
+        "type": "module",
+        "color": "text-purple-600",
+        "bgColor": "bg-purple-50",
+        "description": "مشاهده کارکرد و حسابکتاب شخصی"
+      },
+      {
+        "id": "custom-1767090832986",
+        "key": "custom-1767090832986",
+        "href": "/executive",
+        "name": "ماژول مدیریت کلی کل سفارشات اهرم",
+        "type": "module",
+        "color": "text-amber-600",
+        "bgColor": "bg-amber-50",
+        "description": "مدیریت سفارشات اجرای داربست به همراه اجناس"
+      },
+      {
+        "id": "site_registration",
+        "key": "site_registration",
+        "href": "/site-registration",
+        "name": "ماژول ثبت‌نام در سایت اهرم",
+        "type": "module",
+        "color": "text-teal-600",
+        "bgColor": "bg-teal-50",
+        "description": "ثبت‌نام کاربران جدید بدون نیاز به کد تایید"
+      },
+      {
+        "id": "custom-1769657272050",
+        "key": "custom-1769657272050",
+        "href": "/daily-report",
+        "name": "ماژول گزارش روزانه مدیریت اهرم",
+        "type": "module",
+        "color": "text-blue-600",
+        "bgColor": "bg-blue-50",
+        "description": "ثبت گزارش فعالیت‌های روزانه شرکت و نیروها"
+      },
+      {
+        "id": "custom-1769905111922",
+        "key": "custom-1769905111922",
+        "href": "/daily-report",
+        "name": "ماژول گزارش روزانه کلی اهرم",
+        "type": "module",
+        "color": "text-blue-600",
+        "bgColor": "bg-blue-50",
+        "description": "ثبت گزارش فعالیت‌های روزانه شرکت و نیروها"
+      },
+      {
+        "id": "bank_cards",
+        "key": "bank_cards",
+        "href": "/bank-cards",
+        "name": "ماژول ثبت کارت حساب بانکی",
+        "type": "module",
+        "color": "text-emerald-600",
+        "bgColor": "bg-emerald-50",
+        "description": "مدیریت کارت‌های بانکی و پیگیری موجودی"
+      },
+      {
+        "id": "hr_management",
+        "key": "hr_management",
+        "href": "/hr-management",
+        "name": "ماژول مدیریت منابع انسانی",
+        "type": "module",
+        "color": "text-green-600",
+        "bgColor": "bg-green-50",
+        "description": "ثبت و مدیریت نیروهای شرکت اهرم"
+      },
+      {
+        "id": "custom-1769657233801",
+        "key": "custom-1769657233801",
+        "href": "/daily-report",
+        "name": "ماژول گزارش روزانه پشتیبانی شرکت اهرم",
+        "type": "module",
+        "color": "text-blue-600",
+        "bgColor": "bg-blue-50",
+        "description": "ثبت گزارش فعالیت‌های روزانه شرکت و نیروها"
+      }
+    ],
+    "custom_names": {
+      "custom-1767080149564": {
+        "name": "ماژول ثبت‌نام در سایت 58اهرم (کپی)",
+        "description": "ثبت‌نام کاربران جدید بدون نیاز به کد تایید"
+      },
+      "custom-1767090832986": {
+        "name": "ماژول مدیریت سفارشات کل",
+        "description": "مدیریت سفارشات اجرای داربست به همراه اجناس"
+      },
+      "folder-1767076279784": {
+        "name": "09 پشتیبانی و اداری اهرم",
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      "folder-1767092161021": {
+        "name": "08 حراست و امنیت اهرم",
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      "folder-1767092162037": {
+        "name": "07 فن آوری اطلاعات اهرم",
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      "folder-1767092162511": {
+        "name": "06 انبارداری اهرم",
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      "folder-1767092163173": {
+        "name": "05 منابع انسانی اهرم",
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      "folder-1767092209829": {
+        "name": "04 اجرایی اهرم",
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      "folder-1767092211229": {
+        "name": "03 مالی اهرم",
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      "folder-1767092211685": {
+        "name": "02 فروش اهرم",
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      "folder-1767092212221": {
+        "name": "01 مدیریت اهرم",
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      "assigned-folder-1767093959448": {
+        "name": "01 مدیریت اهرم",
+        "description": "برای دسته‌بندی ماژول‌های اختصاص یافته"
+      },
+      "assigned-folder-1767094289807": {
+        "name": "ببببب",
+        "description": "برای دسته‌بندی ماژول‌های اختصاص یافته"
+      },
+      "assigned-folder-1767094341190": {
+        "name": "2پوشه جدید",
+        "description": "برای دسته‌بندی ماژول‌های اختصاص یافته"
+      },
+      "assigned-folder-1767171933855": {
+        "name": "مدیریت کلی",
+        "description": "برای دسته‌بندی ماژول‌های اختصاص یافته"
+      },
+      "assigned-folder-1767174061143": {
+        "name": "پوشه جدید3",
+        "description": "برای دسته‌بندی ماژول‌های اختصاص یافته"
+      },
+      "assigned-subfolder-1767185679431": {
+        "name": "مدیریت داربست",
+        "description": "زیرپوشه برای دسته‌بندی ماژول‌های اختصاص یافته"
+      }
+    },
+    "created_at": "2025-12-30T11:26:07.387968+00:00",
+    "updated_at": "2026-02-23T02:03:14.602506+00:00"
+  },
+  {
+    "id": "23136fa2-f210-47ca-a711-1b1634ffe6e2",
+    "owner_user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "type": "available",
+    "hierarchy": [
+      {
+        "id": "folder-1767092212221",
+        "key": "folder-1767092212221",
+        "name": "00 مدیریت کلی اهرم",
+        "type": "folder",
+        "isOpen": false,
+        "children": [
+          {
+            "id": "custom-1767090832986",
+            "key": "custom-1767090832986",
+            "href": "/executive",
+            "name": "ماژول مدیریت اجرای داربست به همراه اجناس (کپی)",
+            "type": "module",
+            "color": "text-amber-600",
+            "bgColor": "bg-amber-50",
+            "description": "مدیریت سفارشات اجرای داربست به همراه اجناس"
+          },
+          {
+            "id": "custom-1769905111922",
+            "key": "custom-1769905111922",
+            "href": "/daily-report",
+            "name": "ماژول گزارش روزانه شرکت اهرم (کپی) (کپی) (کپی)",
+            "type": "module",
+            "color": "text-blue-600",
+            "bgColor": "bg-blue-50",
+            "description": "ثبت گزارش فعالیت‌های روزانه شرکت و نیروها"
+          },
+          {
+            "id": "folder-1767170430963",
+            "key": "folder-1767170430963",
+            "name": "مدیریت کلی داربست فلزی",
+            "type": "folder",
+            "isOpen": false,
+            "children": [
+              {
+                "id": "custom-1767170512706",
+                "key": "custom-1767170512706",
+                "href": "/executive",
+                "name": "ماژول مدیریت اجرای داربست به همراه اجناس (کپی)",
+                "type": "module",
+                "color": "text-amber-600",
+                "bgColor": "bg-amber-50",
+                "description": "مدیریت سفارشات اجرای داربست به همراه اجناس"
+              },
+              {
+                "id": "scaffold_execution_with_materials",
+                "key": "scaffold_execution_with_materials",
+                "href": "/executive",
+                "name": "ماژول مدیریت اجرای داربست به همراه اجناس",
+                "type": "module",
+                "color": "text-amber-600",
+                "bgColor": "bg-amber-50",
+                "description": "مدیریت سفارشات اجرای داربست به همراه اجناس"
+              }
+            ],
+            "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+          }
+        ],
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      {
+        "id": "folder-1769905269577",
+        "key": "folder-1769905269577",
+        "name": "01 مدیریت اهرم",
+        "type": "folder",
+        "isOpen": false,
+        "children": [
+          {
+            "id": "custom-1769657272050",
+            "key": "custom-1769657272050",
+            "href": "/daily-report",
+            "name": "ماژول گزارش روزانه شرکت اهرم (کپی) (کپی)",
+            "type": "module",
+            "color": "text-blue-600",
+            "bgColor": "bg-blue-50",
+            "description": "ثبت گزارش فعالیت‌های روزانه شرکت و نیروها"
+          }
+        ],
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      {
+        "id": "folder-1767092211685",
+        "key": "folder-1767092211685",
+        "name": "02 فروش اهرم",
+        "type": "folder",
+        "isOpen": false,
+        "children": [
+          {
+            "id": "media_approval",
+            "key": "media_approval",
+            "href": "/media-approval",
+            "name": "ماژول مدیریت رسانه‌های سایت",
+            "type": "module",
+            "color": "text-pink-600",
+            "bgColor": "bg-pink-50",
+            "description": "تایید و مدیریت عکس‌ها و فیلم‌هایی که در صفحه اصلی فعالیت‌های اخیر نمایش داده می‌شوند"
+          }
+        ],
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      {
+        "id": "folder-1767092211229",
+        "key": "folder-1767092211229",
+        "name": "03 مالی اهرم",
+        "type": "folder",
+        "isOpen": false,
+        "children": [
+          {
+            "id": "custom-1767128389074",
+            "key": "custom-1767128389074",
+            "href": "/executive",
+            "name": "ماژول مدیریت اجرای داربست به همراه اجناس (کپی) (کپی)",
+            "type": "module",
+            "color": "text-amber-600",
+            "bgColor": "bg-amber-50",
+            "description": "مدیریت سفارشات اجرای داربست به همراه اجناس"
+          },
+          {
+            "id": "personnel_accounting",
+            "key": "personnel_accounting",
+            "href": "/personnel-accounting",
+            "name": "ماژول حسابکتاب و کارکرد پرسنل",
+            "type": "module",
+            "color": "text-purple-600",
+            "bgColor": "bg-purple-50",
+            "description": "مشاهده کارکرد و حسابکتاب شخصی"
+          },
+          {
+            "id": "comprehensive_accounting",
+            "key": "comprehensive_accounting",
+            "href": "/comprehensive-accounting",
+            "name": "ماژول حسابداری جامع",
+            "type": "module",
+            "color": "text-emerald-600",
+            "bgColor": "bg-emerald-50",
+            "description": "مدیریت حساب‌های مشتریان، نیروها و پرسنل"
+          },
+          {
+            "id": "bank_cards",
+            "key": "bank_cards",
+            "href": "/bank-cards",
+            "name": "ماژول ثبت کارت حساب بانکی",
+            "type": "module",
+            "color": "text-emerald-600",
+            "bgColor": "bg-emerald-50",
+            "description": "مدیریت کارت‌های بانکی و پیگیری موجودی"
+          }
+        ],
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      {
+        "id": "folder-1767092209829",
+        "key": "folder-1767092209829",
+        "name": "04 اجرایی اهرم",
+        "type": "folder",
+        "isOpen": false,
+        "children": [
+          {
+            "id": "daily_report",
+            "key": "daily_report",
+            "href": "/daily-report",
+            "name": "ماژول گزارش روزانه شرکت اهرم",
+            "type": "module",
+            "color": "text-blue-600",
+            "bgColor": "bg-blue-50",
+            "description": "ثبت گزارش فعالیت‌های روزانه شرکت و نیروها"
+          },
+          {
+            "id": "custom-1767127001910",
+            "key": "custom-1767127001910",
+            "href": "/executive",
+            "name": "ماژول مدیریت اجرای داربست به همراه اجناس (کپی)",
+            "type": "module",
+            "color": "text-amber-600",
+            "bgColor": "bg-amber-50",
+            "description": "مدیریت سفارشات اجرای داربست به همراه اجناس"
+          }
+        ],
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      {
+        "id": "folder-1767092163173",
+        "key": "folder-1767092163173",
+        "name": "05 منابع انسانی اهرم",
+        "type": "folder",
+        "isOpen": false,
+        "children": [
+          {
+            "id": "hr_management",
+            "key": "hr_management",
+            "href": "/hr-management",
+            "name": "ماژول مدیریت منابع انسانی",
+            "type": "module",
+            "color": "text-green-600",
+            "bgColor": "bg-green-50",
+            "description": "ثبت و مدیریت نیروهای شرکت اهرم"
+          }
+        ],
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      {
+        "id": "folder-1767092162511",
+        "key": "folder-1767092162511",
+        "name": "06 انبارداری اهرم",
+        "type": "folder",
+        "isOpen": false,
+        "children": [],
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      {
+        "id": "folder-1767092162037",
+        "key": "folder-1767092162037",
+        "name": "07 فن آوری اطلاعات اهرم",
+        "type": "folder",
+        "isOpen": true,
+        "children": [
+          {
+            "id": "site_registration",
+            "key": "site_registration",
+            "href": "/site-registration",
+            "name": "ماژول ثبت‌نام در سایت اهرم",
+            "type": "module",
+            "color": "text-teal-600",
+            "bgColor": "bg-teal-50",
+            "description": "ثبت‌نام کاربران جدید بدون نیاز به کد تایید"
+          },
+          {
+            "id": "site_analytics",
+            "key": "site_analytics",
+            "href": "/site-analytics",
+            "name": "ماژول آمار بازدید سایت اهرم",
+            "type": "module",
+            "color": "text-cyan-600",
+            "bgColor": "bg-cyan-50",
+            "description": "تحلیل جامع بازدیدکنندگان، کاربران، دستگاه‌ها و رفتار کاربران در سایت"
+          }
+        ],
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      {
+        "id": "folder-1767092161021",
+        "key": "folder-1767092161021",
+        "name": "08 حراست و امنیت اهرم",
+        "type": "folder",
+        "isOpen": false,
+        "children": [],
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      {
+        "id": "folder-1767076279784",
+        "key": "folder-1767076279784",
+        "name": "09 پشتیبانی و اداری اهرم",
+        "type": "folder",
+        "isOpen": false,
+        "children": [
+          {
+            "id": "custom-1769657233801",
+            "key": "custom-1769657233801",
+            "href": "/daily-report",
+            "name": "ماژول گزارش روزانه شرکت اهرم (کپی)",
+            "type": "module",
+            "color": "text-blue-600",
+            "bgColor": "bg-blue-50",
+            "description": "ثبت گزارش فعالیت‌های روزانه شرکت و نیروها"
+          }
+        ],
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      {
+        "id": "my_invoice",
+        "key": "my_invoice",
+        "href": "/my-invoice",
+        "name": "صورتحساب من",
+        "type": "module",
+        "color": "text-indigo-600",
+        "bgColor": "bg-indigo-50",
+        "is_deleted": true,
+        "description": "مشاهده صورتحساب جامع سفارشات و پرداخت‌های شخصی"
+      },
+      {
+        "id": "customer_comprehensive_invoice",
+        "key": "customer_comprehensive_invoice",
+        "href": "/customer-comprehensive-invoice",
+        "name": "ماژول صورتحساب جامع مشتریان",
+        "type": "module",
+        "color": "text-orange-600",
+        "bgColor": "bg-orange-50",
+        "is_deleted": true,
+        "description": "صدور صورتحساب جامع همه خدمات و پرداخت‌ها برای هر مشتری"
+      }
+    ],
+    "custom_names": {
+      "daily_report": {
+        "name": "ماژول گزارش روزانه اجرایی شرکت اهرم",
+        "description": "ثبت گزارش فعالیت‌های روزانه شرکت و نیروها"
+      },
+      "custom-1767090832986": {
+        "name": "ماژول مدیریت کلی کل سفارشات اهرم",
+        "description": "مدیریت سفارشات اجرای داربست به همراه اجناس"
+      },
+      "custom-1767127001910": {
+        "name": "ماژول مدیریت اجرایی خدمات اجراء داربست به همراه اجناس",
+        "description": "مدیریت سفارشات اجرای داربست به همراه اجناس"
+      },
+      "custom-1767170512706": {
+        "name": "ماژول مدیریت کلی خدمات کرایه اجناس داربست از اهرم",
+        "description": "مدیریت سفارشات اجرای داربست به همراه اجناس"
+      },
+      "custom-1769657233801": {
+        "name": "ماژول گزارش روزانه پشتیبانی شرکت اهرم",
+        "description": "ثبت گزارش فعالیت‌های روزانه شرکت و نیروها"
+      },
+      "custom-1769657272050": {
+        "name": "ماژول گزارش روزانه مدیریت اهرم",
+        "description": "ثبت گزارش فعالیت‌های روزانه شرکت و نیروها"
+      },
+      "custom-1769905111922": {
+        "name": "ماژول گزارش روزانه کلی اهرم",
+        "description": "ثبت گزارش فعالیت‌های روزانه کلی شرکت و نیروها"
+      },
+      "folder-1767092212221": {
+        "name": "00 مدیریت کلی اهرم",
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      "folder-1769905269577": {
+        "name": "01 مدیریت اهرم",
+        "description": "برای اضافه کردن ماژول‌ها، آن‌ها را روی این پوشه بکشید"
+      },
+      "scaffold_execution_with_materials": {
+        "name": "ماژول مدیریت کلی اجرای داربست به همراه اجناس",
+        "description": "مدیریت سفارشات اجرای داربست به همراه اجناس"
+      }
+    },
+    "created_at": "2025-12-30T06:31:53.763426+00:00",
+    "updated_at": "2026-02-26T06:47:39.46351+00:00"
+  }
+]

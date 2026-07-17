@@ -8,24 +8,81 @@ const corsHeaders = {
 
 type Point = { lat: number; lng: number };
 
-async function getMapboxRoute(origin: Point, dest: Point): Promise<any | null> {
-  const token = Deno.env.get("MAPBOX_PUBLIC_TOKEN") || Deno.env.get("MAPBOX_TOKEN");
-  if (!token) return null;
+// Decode Google-style polyline (Neshan uses the same encoding)
+function decodePolyline(encoded: string): [number, number][] {
+  const points: [number, number][] = [];
+  let index = 0;
+  const len = encoded.length;
+  let lat = 0;
+  let lng = 0;
+
+  while (index < len) {
+    let b: number;
+    let shift = 0;
+    let result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    const dlat = result & 1 ? ~(result >> 1) : result >> 1;
+    lat += dlat;
+
+    shift = 0;
+    result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    const dlng = result & 1 ? ~(result >> 1) : result >> 1;
+    lng += dlng;
+
+    points.push([lat / 1e5, lng / 1e5]);
+  }
+  return points;
+}
+
+async function getNeshanRoute(origin: Point, dest: Point): Promise<any | null> {
+  const key = Deno.env.get("NESHAN_API_KEY");
+  if (!key) {
+    console.log("[get-road-route] NESHAN_API_KEY not set, skipping Neshan");
+    return null;
+  }
 
   try {
-    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${origin.lng},${origin.lat};${dest.lng},${dest.lat}?overview=full&geometries=geojson&access_token=${token}`;
+    const url = `https://api.neshan.org/v4/direction?type=car&origin=${origin.lat},${origin.lng}&destination=${dest.lat},${dest.lng}`;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
-    
-    const res = await fetch(url, { signal: controller.signal });
+
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { "Api-Key": key },
+    });
     clearTimeout(timeout);
-    
-    if (!res.ok) return null;
+
+    if (!res.ok) {
+      console.log("[get-road-route] Neshan response not OK:", res.status);
+      return null;
+    }
     const json = await res.json();
-    if (json?.routes?.length) return json.routes[0];
-    return null;
+    const route = json?.routes?.[0];
+    if (!route?.overview_polyline?.points) return null;
+
+    const decoded = decodePolyline(route.overview_polyline.points);
+    const coordinates: [number, number][] = decoded.map(([la, ln]) => [ln, la]);
+
+    const totalMeters = (route.legs || []).reduce(
+      (sum: number, leg: any) => sum + (leg?.distance?.value || 0),
+      0,
+    );
+
+    return {
+      distance: totalMeters,
+      geometry: { type: "LineString", coordinates },
+    };
   } catch (e) {
-    console.log("[get-road-route] Mapbox failed:", e);
+    console.log("[get-road-route] Neshan failed:", e);
     return null;
   }
 }
@@ -35,31 +92,25 @@ async function getOsrmRoute(origin: Point, dest: Point): Promise<any | null> {
     "https://router.project-osrm.org/route/v1/driving",
     "https://routing.openstreetmap.de/routed-car/route/v1/driving",
   ];
-  
+
   for (const endpoint of endpoints) {
     try {
       const url = `${endpoint}/${origin.lng},${origin.lat};${dest.lng},${dest.lat}?overview=full&geometries=geojson`;
       console.log("[get-road-route] Trying OSRM:", endpoint);
-      
+
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
-      
-      const res = await fetch(url, { 
+
+      const res = await fetch(url, {
         signal: controller.signal,
-        headers: {
-          "User-Agent": "AhromApp/1.0",
-        }
+        headers: { "User-Agent": "AhromApp/1.0" },
       });
       clearTimeout(timeout);
-      
-      if (!res.ok) {
-        console.log("[get-road-route] OSRM response not OK:", res.status);
-        continue;
-      }
-      
+
+      if (!res.ok) continue;
+
       const json = await res.json();
       if (json?.routes?.length) {
-        console.log("[get-road-route] OSRM success from:", endpoint);
         return json.routes[0];
       }
     } catch (e) {
@@ -69,27 +120,27 @@ async function getOsrmRoute(origin: Point, dest: Point): Promise<any | null> {
   return null;
 }
 
-// فاصله خط مستقیم به عنوان fallback
 function calculateStraightLineDistance(origin: Point, dest: Point): number {
   const R = 6371;
-  const dLat = (dest.lat - origin.lat) * Math.PI / 180;
-  const dLng = (dest.lng - origin.lng) * Math.PI / 180;
+  const dLat = ((dest.lat - origin.lat) * Math.PI) / 180;
+  const dLng = ((dest.lng - origin.lng) * Math.PI) / 180;
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(origin.lat * Math.PI / 180) * Math.cos(dest.lat * Math.PI / 180) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    Math.cos((origin.lat * Math.PI) / 180) *
+      Math.cos((dest.lat * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
 
-// ایجاد geometry ساده (خط مستقیم) به عنوان fallback
 function createStraightLineGeometry(origin: Point, dest: Point) {
   return {
     type: "LineString",
     coordinates: [
       [origin.lng, origin.lat],
-      [dest.lng, dest.lat]
-    ]
+      [dest.lng, dest.lat],
+    ],
   };
 }
 
@@ -103,7 +154,11 @@ serve(async (req) => {
     const origin: Point | undefined = body?.origin;
     const dest: Point | undefined = body?.dest;
 
-    if (!origin || !dest || typeof origin.lat !== "number" || typeof origin.lng !== "number" || typeof dest.lat !== "number" || typeof dest.lng !== "number") {
+    if (
+      !origin || !dest ||
+      typeof origin.lat !== "number" || typeof origin.lng !== "number" ||
+      typeof dest.lat !== "number" || typeof dest.lng !== "number"
+    ) {
       return new Response(JSON.stringify({ error: "Invalid origin/dest" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -112,26 +167,24 @@ serve(async (req) => {
 
     console.log("[get-road-route] Processing route from", origin, "to", dest);
 
-    // 1) Try Mapbox if token exists
-    let route: any | null = null;
-    route = await getMapboxRoute(origin, dest);
+    // 1) Neshan first (Iranian map provider)
+    let route: any | null = await getNeshanRoute(origin, dest);
 
-    // 2) Fallback to OSRM
+    // 2) OSRM fallback
     if (!route) {
       route = await getOsrmRoute(origin, dest);
     }
 
-    // 3) اگر هیچ‌کدام جواب نداد، خط مستقیم برگردان
+    // 3) Straight line as last resort
     if (!route) {
-      console.log("[get-road-route] All routing services failed, using straight line");
       const straightDistance = calculateStraightLineDistance(origin, dest);
       const straightGeometry = createStraightLineGeometry(origin, dest);
-      
+
       return new Response(
-        JSON.stringify({ 
-          distanceKm: straightDistance * 1.3, // ضریب تقریبی برای مسیر جاده‌ای
+        JSON.stringify({
+          distanceKm: straightDistance * 1.3,
           geometry: straightGeometry,
-          isStraightLine: true 
+          isStraightLine: true,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -139,8 +192,6 @@ serve(async (req) => {
 
     const distanceKm = (route.distance ?? 0) / 1000;
     const geometry = route.geometry;
-
-    console.log("[get-road-route] Success, distance:", distanceKm, "km");
 
     return new Response(
       JSON.stringify({ distanceKm, geometry }),

@@ -131,7 +131,7 @@ export function FinanceLayout() {
     <div className="min-h-screen bg-background">
       {/* Module Name Header */}
       <div className="bg-green-50 dark:bg-green-950/30 border-b border-green-200 dark:border-green-800">
-        <div className="container mx-auto px-4 py-2 flex items-center justify-between">
+        <div className="w-full max-w-none px-4 py-2 flex items-center justify-between">
           <Button
             variant="outline"
             size="sm"
@@ -148,7 +148,7 @@ export function FinanceLayout() {
       </div>
       
       <div className="border-b bg-card">
-        <div className="container mx-auto">
+        <div className="w-full max-w-none px-4">
           <nav className="flex gap-1 overflow-x-auto py-1">
             {/* آیتم‌های اصلی ناوبری */}
             {mainNavItems.map((item) => (
@@ -212,7 +212,7 @@ export function FinanceLayout() {
         </div>
       </div>
       
-      <main className="container mx-auto py-6 px-4">
+      <main className="w-full max-w-none py-6 px-4">
         <Outlet />
       </main>
     </div>

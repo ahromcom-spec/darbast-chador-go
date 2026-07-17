@@ -126,6 +126,9 @@ export const OrderTimeline = ({
   };
 
   const currentStageNumber = getCurrentStageNumber();
+  const paidAmount = totalPaid ?? 0;
+  const invoiceAmount = totalPrice ?? 0;
+  const fullyPaid = !!paymentConfirmedAt || (invoiceAmount > 0 && paidAmount >= invoiceAmount);
 
   const isStageCompletedByNumber = (stageNum: number): boolean => {
     return currentStageNumber > stageNum;
@@ -205,30 +208,25 @@ export const OrderTimeline = ({
         ? 'نصب داربست با موفقیت انجام شد ✓'
         : undefined,
     },
-    {
-      status: 'awaiting_payment',
-      label: 'در انتظار پرداخت',
-      icon: Clock,
-      date: paymentConfirmedAt || (executionStage === 'awaiting_payment' ? executionStageUpdatedAt : undefined),
-      completed: !!paymentConfirmedAt, // فقط وقتی پرداخت تایید شده باشد
-      // آیکن سبز بماند تا پرداخت انجام شود - از مرحله اجرا شده تا پرداخت
-      active: (currentStageNumber >= 3) && !paymentConfirmedAt,
-      details: paymentConfirmedAt
-        ? 'پرداخت با موفقیت انجام شد ✓'
-        : (currentStageNumber >= 3)
-          ? (() => {
-              const paid = totalPaid ?? 0;
-              const price = totalPrice ?? 0;
-              if (paid > 0 && price > 0) {
-                const remaining = Math.max(0, price - paid);
-                return remaining > 0
-                  ? `${paid.toLocaleString('fa-IR')} تومان پرداخت شده / ${remaining.toLocaleString('fa-IR')} تومان مانده`
-                  : 'پرداخت با موفقیت انجام شد ✓';
-              }
-              return 'لطفاً مبلغ سفارش را پرداخت کنید';
-            })()
-          : undefined,
-    },
+    (() => {
+      const paid = paidAmount;
+      const price = invoiceAmount;
+      return {
+        status: 'awaiting_payment' as const,
+        label: 'در انتظار پرداخت',
+        icon: Clock,
+        date: paymentConfirmedAt || (executionStage === 'awaiting_payment' ? executionStageUpdatedAt : undefined),
+        completed: fullyPaid,
+        active: (currentStageNumber >= 3) && (executionStage === 'awaiting_payment' || currentStageNumber === 4),
+        details: fullyPaid
+          ? 'پرداخت با موفقیت انجام شد ✓'
+          : (currentStageNumber >= 3)
+            ? (paid > 0 && price > 0
+                ? `${paid.toLocaleString('fa-IR')} تومان پرداخت شده / ${Math.max(0, price - paid).toLocaleString('fa-IR')} تومان مانده`
+                : 'لطفاً مبلغ سفارش را پرداخت کنید')
+            : undefined,
+      };
+    })(),
     {
       status: 'awaiting_collection',
       label: 'در انتظار جمع‌آوری',
@@ -292,7 +290,9 @@ export const OrderTimeline = ({
   ];
 
   // Find current active step
-  const currentStep = steps.find(s => s.active) || steps.find(s => !s.completed) || steps[steps.length - 1];
+  const currentStep = fullyPaid && (executionStage === 'awaiting_payment' || currentStageNumber === 4)
+    ? steps.find(s => s.status === 'awaiting_payment')
+    : steps.find(s => s.active) || steps.find(s => !s.completed) || steps[steps.length - 1];
   const currentStepLabel = isRejected ? 'رد شده' : currentStep?.label || statusMap[orderStatus] || orderStatus;
 
   // تعیین برچسب بج وضعیت بر اساس مرحله فعلی (نه فقط orderStatus)
@@ -301,7 +301,7 @@ export const OrderTimeline = ({
     if (orderStatus === 'closed') return 'اتمام سفارش';
     
     // اگر پرداخت تایید شده باشد و هنوز در مرحله awaiting_payment هستیم
-    if (paymentConfirmedAt && executionStage === 'awaiting_payment') {
+    if (fullyPaid && executionStage === 'awaiting_payment') {
       return 'پرداخت شد';
     }
     
@@ -313,7 +313,7 @@ export const OrderTimeline = ({
         'ready': 'آماده اجرا',
         'in_progress': 'در حال اجرا',
         'order_executed': 'اجرا شده',
-        'awaiting_payment': paymentConfirmedAt ? 'پرداخت شد' : 'در انتظار پرداخت',
+        'awaiting_payment': fullyPaid ? 'پرداخت شد' : 'در انتظار پرداخت',
         'awaiting_collection': 'در انتظار جمع‌آوری',
         'in_collection': 'در حال جمع‌آوری',
         'collected': 'جمع‌آوری شد',

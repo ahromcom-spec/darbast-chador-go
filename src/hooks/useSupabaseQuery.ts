@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 
 interface UseSupabaseQueryOptions<T> {
   queryFn: () => Promise<{ data: T | null; error: any }>;

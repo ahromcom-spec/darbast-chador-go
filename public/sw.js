@@ -1,4 +1,5 @@
-const CACHE_VERSION = 'ahrom-v25-app-badge-support';
+
+const CACHE_VERSION = 'ahrom-v31-offline-shell';
 const CACHE_NAME = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -20,7 +21,7 @@ const SHELL_FILES = [
 
 
 // حداکثر تعداد آیتم‌ها در کش Runtime
-const MAX_RUNTIME_CACHE_SIZE = 50;
+const MAX_RUNTIME_CACHE_SIZE = 1200;
 
 // نصب - فقط فایل‌های Shell را کش می‌کنیم
 self.addEventListener('install', (event) => {
@@ -262,6 +263,83 @@ self.addEventListener('notificationclose', (event) => {
 
 // ==================== CACHING ====================
 
+const OFFLINE_DB_NAME = 'ahrom-offline-backup';
+const OFFLINE_DB_VERSION = 3;
+const OFFLINE_TABLES_STORE = 'tables';
+const OFFLINE_TABLE_ROWS_STORE = 'table_rows';
+const OFFLINE_TABLE_INFO_STORE = 'table_info';
+const OFFLINE_MEDIA_STORE = 'media';
+const OFFLINE_META_STORE = 'meta';
+const OFFLINE_QUEUE_STORE = 'pending_mutations';
+
+let offlineDbPromise = null;
+
+function openOfflineDb() {
+  if (offlineDbPromise) return offlineDbPromise;
+  offlineDbPromise = new Promise((resolve, reject) => {
+    const req = indexedDB.open(OFFLINE_DB_NAME, OFFLINE_DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(OFFLINE_TABLES_STORE)) {
+        db.createObjectStore(OFFLINE_TABLES_STORE, { keyPath: 'name' });
+      }
+      if (!db.objectStoreNames.contains(OFFLINE_TABLE_ROWS_STORE)) {
+        db.createObjectStore(OFFLINE_TABLE_ROWS_STORE, { keyPath: 'k' });
+      }
+      if (!db.objectStoreNames.contains(OFFLINE_TABLE_INFO_STORE)) {
+        db.createObjectStore(OFFLINE_TABLE_INFO_STORE, { keyPath: 'name' });
+      }
+      if (!db.objectStoreNames.contains(OFFLINE_MEDIA_STORE)) {
+        db.createObjectStore(OFFLINE_MEDIA_STORE, { keyPath: 'path' });
+      }
+      if (!db.objectStoreNames.contains(OFFLINE_META_STORE)) {
+        db.createObjectStore(OFFLINE_META_STORE, { keyPath: 'key' });
+      }
+      if (!db.objectStoreNames.contains(OFFLINE_QUEUE_STORE)) {
+        db.createObjectStore(OFFLINE_QUEUE_STORE, { keyPath: 'id', autoIncrement: true });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => {
+      offlineDbPromise = null;
+      reject(req.error);
+    };
+  });
+  return offlineDbPromise;
+}
+
+async function getOfflineMedia(path) {
+  try {
+    const db = await openOfflineDb();
+    const tx = db.transaction(OFFLINE_MEDIA_STORE, 'readonly');
+    const req = tx.objectStore(OFFLINE_MEDIA_STORE).get(path);
+    return await new Promise((resolve) => {
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
+}
+
+function parseStorageMediaKey(url) {
+  const match = url.pathname.match(/\/storage\/v1\/(?:object|render\/image)\/(?:public\/|authenticated\/|sign\/)?([^/]+)\/(.+)$/);
+  if (!match) return null;
+  return `${decodeURIComponent(match[1])}/${decodeURIComponent(match[2])}`;
+}
+
+function offlineMediaResponse(record) {
+  return new Response(record.blob, {
+    status: 200,
+    headers: {
+      'Content-Type': record.mimeType || record.blob?.type || 'application/octet-stream',
+      'Cache-Control': 'private, max-age=0',
+      'Access-Control-Allow-Origin': '*',
+      'X-Offline-Cache': 'ahrom-backup-media'
+    }
+  });
+}
+
 // محدود کردن سایز کش Runtime
 async function trimCache(cacheName, maxItems) {
   const cache = await caches.open(cacheName);
@@ -272,13 +350,82 @@ async function trimCache(cacheName, maxItems) {
   }
 }
 
+// میزبان‌های مجاز برای کش cross-origin (تایل نقشه، آیکن‌های Leaflet، برچسب‌ها)
+const CROSS_ORIGIN_TILE_HOSTS = [
+  'tile.openstreetmap.org',
+  'a.tile.openstreetmap.org',
+  'b.tile.openstreetmap.org',
+  'c.tile.openstreetmap.org',
+  'server.arcgisonline.com',
+  'basemaps.cartocdn.com',
+  'a.basemaps.cartocdn.com',
+  'b.basemaps.cartocdn.com',
+  'c.basemaps.cartocdn.com',
+  'd.basemaps.cartocdn.com',
+  'unpkg.com',
+];
+
+function isCacheableCrossOrigin(url) {
+  if (CROSS_ORIGIN_TILE_HOSTS.includes(url.hostname)) return true;
+  // زیرمجموعه cartocdn را نیز پوشش بده
+  if (url.hostname.endsWith('.basemaps.cartocdn.com')) return true;
+  return false;
+}
+
 // استراتژی Fetch: Network First + Runtime Caching
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // فقط درخواست‌های خودی
+  // رسانه‌های Storage که هنگام بارگذاری بکاپ یا نصب آفلاین داخل IndexedDB ذخیره شده‌اند.
+  // این بخش برای <img>/<video> ضروری است، چون این درخواست‌ها مستقیماً توسط مرورگر
+  // اجرا می‌شوند و همیشه از fetch interceptor داخل صفحه عبور نمی‌کنند.
+  const offlineMediaKey = parseStorageMediaKey(url);
+  if (request.method === 'GET' && offlineMediaKey) {
+    event.respondWith((async () => {
+      try {
+        const response = await fetch(request);
+        if (response && (response.ok || response.type === 'opaque')) return response;
+      } catch {
+        // offline fallback below
+      }
+      const cachedMedia = await getOfflineMedia(offlineMediaKey);
+      if (cachedMedia?.blob) return offlineMediaResponse(cachedMedia);
+      return new Response(null, {
+        status: 404,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'X-Offline-Cache': 'ahrom-backup-media-miss'
+        }
+      });
+    })());
+    return;
+  }
+
+  // درخواست‌های cross-origin مربوط به تایل نقشه و آیکن‌های Leaflet را با
+  // Stale-While-Revalidate کش می‌کنیم تا نقشه در حالت آفلاین قابل استفاده باشد.
   if (url.origin !== self.location.origin) {
+    if (request.method === 'GET' && isCacheableCrossOrigin(url)) {
+      event.respondWith((async () => {
+        const cached = await caches.match(request);
+        const fetchPromise = fetch(request, { mode: 'cors', credentials: 'omit' })
+          .then(async (response) => {
+            // opaque پاسخ‌ها (بدون CORS) هم قابل کش شدن هستند
+            if (response && (response.status === 200 || response.type === 'opaque')) {
+              try {
+                const cache = await caches.open(RUNTIME_CACHE);
+                cache.put(request, response.clone());
+                trimCache(RUNTIME_CACHE, MAX_RUNTIME_CACHE_SIZE);
+              } catch {}
+            }
+            return response;
+          })
+          .catch(() => cached);
+        return cached || fetchPromise;
+      })());
+      return;
+    }
+    // سایر cross-origin ها را دست‌نخورده رها کن
     return;
   }
 
@@ -303,19 +450,38 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       } catch (err) {
-        // اگر آنلاین نیست، از کش استفاده کن
-        const cached = await caches.match(request);
-        return cached || caches.match('/');
+        // آفلاین: ابتدا تطبیق دقیق، سپس بدون توجه به query string، در نهایت fallback به /
+        const cached =
+          (await caches.match(request)) ||
+          (await caches.match(request, { ignoreSearch: true })) ||
+          (await caches.match('/index.html')) ||
+          (await caches.match('/'));
+        if (cached) return cached;
+        return new Response(
+          '<!doctype html><meta charset="utf-8"><title>Offline</title><body style="font-family:sans-serif;padding:2rem;direction:rtl">آفلاین هستید و نسخه‌ی کش‌شده‌ای از این صفحه موجود نیست.</body>',
+          { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+        );
       }
     })());
     return;
   }
 
-  // فایل‌های استاتیک (JS, CSS، فونت): Network Only
-  if (request.destination === 'script' || 
-      request.destination === 'style' || 
+  // فایل‌های استاتیک (JS, CSS، فونت): Stale-While-Revalidate تا آفلاین کار کند
+  if (request.destination === 'script' ||
+      request.destination === 'style' ||
       request.destination === 'font') {
-    event.respondWith(fetch(request));
+    event.respondWith((async () => {
+      const cached = await caches.match(request);
+      const fetchPromise = fetch(request).then(async (response) => {
+        if (response && response.status === 200) {
+          const cache = await caches.open(RUNTIME_CACHE);
+          cache.put(request, response.clone());
+          trimCache(RUNTIME_CACHE, MAX_RUNTIME_CACHE_SIZE);
+        }
+        return response;
+      }).catch(() => cached);
+      return cached || fetchPromise;
+    })());
     return;
   }
 

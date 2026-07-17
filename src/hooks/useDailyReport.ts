@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
 import { cacheSet, cacheGet } from '@/lib/offlineDb';
+import { reportActivity } from '@/lib/activityReporter';
 
 // Types
 export interface OrderReportRow {
@@ -32,6 +33,8 @@ export interface StaffReportRow {
   is_cash_box: boolean;
   is_company_expense?: boolean;
   bank_card_id?: string | null;
+  /** Optional transaction time HH:MM (24h). Empty string means 00:00. */
+  transaction_time?: string | null;
 }
 
 export interface Order {
@@ -154,6 +157,7 @@ const createEmptyStaffRow = (): StaffReportRow => ({
   is_cash_box: false,
   is_company_expense: false,
   bank_card_id: null,
+  transaction_time: null,
 });
 
 const createCashBoxRow = (): StaffReportRow => ({
@@ -169,6 +173,7 @@ const createCashBoxRow = (): StaffReportRow => ({
   is_cash_box: true,
   is_company_expense: false,
   bank_card_id: null,
+  transaction_time: null,
 });
 
 const createCompanyExpenseRow = (): StaffReportRow => ({
@@ -184,6 +189,7 @@ const createCompanyExpenseRow = (): StaffReportRow => ({
   is_cash_box: false,
   is_company_expense: true,
   bank_card_id: null,
+  transaction_time: null,
 });
 
 export function useDailyReport() {
@@ -237,6 +243,7 @@ export function useDailyReport() {
   const isInitialLoadRef = useRef(true);
   const isSavingRef = useRef(false);
   const lastSavedHashRef = useRef<string>('');
+  const lastActivityReportAtRef = useRef<number>(0);
   // Race condition prevention: track the expected date to discard stale fetch results
   const expectedDateRef = useRef<string>('');
 
@@ -300,6 +307,7 @@ export function useDailyReport() {
   const deduplicateStaffRows = (rows: StaffReportRow[]): StaffReportRow[] => {
     let hasCompExp = false;
     const seenStaffIds = new Set<string>();
+    const seenCashBoxSignatures = new Set<string>();
     return rows.filter((s) => {
       // Only one company expense row
       if (s.is_company_expense) {
@@ -307,10 +315,9 @@ export function useDailyReport() {
         hasCompExp = true;
         return true;
       }
-      // Cash box rows: deduplicate by bank_card_id
-      if (s.is_cash_box && s.bank_card_id) {
-        if (seenStaffIds.has(`cashbox_${s.bank_card_id}`)) return false;
-        seenStaffIds.add(`cashbox_${s.bank_card_id}`);
+      // Cash box rows: never deduplicate. Allow multiple rows for the same card,
+      // even if amounts/notes are identical (user may record similar purchases multiple times).
+      if (s.is_cash_box) {
         return true;
       }
       // Regular rows: deduplicate by staff_user_id
@@ -498,6 +505,7 @@ export function useDailyReport() {
             is_cash_box: s.is_cash_box === true,
             is_company_expense: isCompanyExpense,
             bank_card_id: s.bank_card_id || null,
+            transaction_time: s.transaction_time || null,
           };
         });
 
@@ -634,7 +642,8 @@ export function useDailyReport() {
         spent: s.amount_spent,
         is_cash_box: s.is_cash_box,
         is_company_expense: s.is_company_expense,
-        bank_card_id: s.bank_card_id
+        bank_card_id: s.bank_card_id,
+        transaction_time: s.transaction_time || null
       }))
     });
 
@@ -773,7 +782,8 @@ export function useDailyReport() {
               notes: s.notes || '',
               is_cash_box: s.is_cash_box === true,
               is_company_expense: s.is_company_expense === true,
-              bank_card_id: s.bank_card_id || null
+              bank_card_id: s.bank_card_id || null,
+              transaction_time: s.transaction_time || null,
             }))
           );
 
@@ -801,6 +811,24 @@ export function useDailyReport() {
       
       setAutoSaveStatus('saved');
       setTimeout(() => setAutoSaveStatus('idle'), 2000);
+
+      // Activity log + CEO push (throttled to once per 10s per session)
+      const nowTs = Date.now();
+      if (nowTs - lastActivityReportAtRef.current > 10_000) {
+        lastActivityReportAtRef.current = nowTs;
+        const filledOrders = orderReports.filter(r => r.order_id || r.activity_description?.trim() || r.notes?.trim()).length;
+        const filledStaff = staffReports.filter(s => !s.is_cash_box && (s.staff_name?.trim() || (s.amount_received ?? 0) > 0 || (s.amount_spent ?? 0) > 0 || s.notes?.trim())).length;
+        reportActivity({
+          eventType: 'ویرایش گزارش روزانه',
+          eventCategory: 'daily_report',
+          action: 'update',
+          moduleName: moduleKey,
+          entityTable: 'daily_reports',
+          entityId: reportId || existingReportId || null,
+          title: `ویرایش گزارش روزانه — ${toLocalDateString(reportDate)}`,
+          details: { orders: filledOrders, staff: filledStaff, mode: 'autosave', moduleKey },
+        });
+      }
     } catch (error) {
       console.error('Auto-save error:', error);
       setAutoSaveStatus('idle');
@@ -1082,69 +1110,43 @@ export function useDailyReport() {
               .eq('id', existing.bank_card_id);
           }
         }
-        
-        // Delete existing transactions for this report (by reference_id)
-        await supabase
-          .from('bank_card_transactions')
-          .delete()
-          .eq('reference_type', 'daily_report_staff')
-          .eq('reference_id', reportId);
-        
-        // Also clean up any orphaned transactions for the same date and module_key
-        // This handles cases where report was deleted/recreated with a new ID,
-        // or where reference_id points to a non-existent daily_report_staff row
-        const { data: orphanedTx } = await supabase
-          .from('bank_card_transactions')
-          .select('id, reference_id')
-          .eq('reference_type', 'daily_report_staff')
-          .eq('report_date', dateStr)
-          .neq('reference_id', reportId);
-        
-        if (orphanedTx && orphanedTx.length > 0) {
-          // For each orphaned transaction, check if its reference_id still exists
-          // as either a daily_report or daily_report_staff row
-          const refIds = [...new Set(orphanedTx.map(t => t.reference_id).filter(Boolean))];
-          for (const refId of refIds) {
-            // Check if this refId is a valid daily_report for this date+module
-            const { data: reportExists } = await supabase
-              .from('daily_reports')
-              .select('id')
-              .eq('id', refId)
-              .maybeSingle();
-            
-            if (!reportExists) {
-              // This reference_id points to a deleted report — clean up orphaned transactions
-              console.log('Cleaning up orphaned bank card transactions for deleted/replaced report:', refId);
-              await supabase
-                .from('bank_card_transactions')
-                .delete()
-                .eq('reference_type', 'daily_report_staff')
-                .eq('reference_id', refId);
-            }
-          }
-        }
+      }
 
-        // Additionally: clean up any transactions for this date+moduleKey that reference
-        // a daily_report_staff row which no longer exists (truly orphaned)
-        // This covers the case where report_date matches but reference_id is a stale staff ID
-        const { data: allDateTx } = await supabase
-          .from('bank_card_transactions')
-          .select('id, reference_id')
-          .eq('reference_type', 'daily_report_staff')
-          .eq('report_date', dateStr)
-          .neq('reference_id', reportId);
-        
-        if (allDateTx && allDateTx.length > 0) {
-          // These are extra transactions for same date that don't belong to current report
-          // They are safe to delete since we already deleted+reinserted current report's transactions above
-          const staleIds = allDateTx.map(t => t.id);
-          if (staleIds.length > 0) {
-            console.log('Cleaning up stale bank card transactions for date:', dateStr, 'count:', staleIds.length);
-            await supabase
-              .from('bank_card_transactions')
-              .delete()
-              .in('id', staleIds);
-          }
+      // ALWAYS delete existing bank_card_transactions for this report before re-inserting
+      // (moved outside the existingStaffData guard to prevent duplicates on re-save when
+      // staff rows were already removed but transactions were left behind)
+      await supabase
+        .from('bank_card_transactions')
+        .delete()
+        .eq('reference_type', 'daily_report_staff')
+        .eq('reference_id', reportId);
+
+      // Also clean up any orphaned transactions for the same date that reference
+      // a different (deleted/replaced) report
+      const { data: allDateTx } = await supabase
+        .from('bank_card_transactions')
+        .select('id, reference_id')
+        .eq('reference_type', 'daily_report_staff')
+        .eq('report_date', dateStr)
+        .neq('reference_id', reportId);
+
+      if (allDateTx && allDateTx.length > 0) {
+        const refIds = [...new Set(allDateTx.map(t => t.reference_id).filter(Boolean))];
+        const staleRefIds: string[] = [];
+        for (const refId of refIds) {
+          const { data: reportExists } = await supabase
+            .from('daily_reports')
+            .select('id')
+            .eq('id', refId as string)
+            .maybeSingle();
+          if (!reportExists) staleRefIds.push(refId as string);
+        }
+        if (staleRefIds.length > 0) {
+          await supabase
+            .from('bank_card_transactions')
+            .delete()
+            .eq('reference_type', 'daily_report_staff')
+            .in('reference_id', staleRefIds);
         }
       }
 
@@ -1183,7 +1185,8 @@ export function useDailyReport() {
           notes: s.notes || '',
           is_cash_box: s.is_cash_box === true,
           is_company_expense: s.is_company_expense === true,
-          bank_card_id: s.bank_card_id || null
+          bank_card_id: s.bank_card_id || null,
+          transaction_time: s.transaction_time || null
         }));
 
         const { error: staffError } = await supabase
@@ -1243,6 +1246,13 @@ export function useDailyReport() {
             resolvedModuleName = moduleData.module_name;
           }
           
+          // Build created_at from report_date + transaction_time (default 00:00)
+          const txTimeRaw = (staffRow.transaction_time || '').trim();
+          const txTime = /^\d{1,2}:\d{2}$/.test(txTimeRaw)
+            ? txTimeRaw.padStart(5, '0')
+            : '00:00';
+          const txCreatedAt = new Date(`${dateStr}T${txTime}:00`).toISOString();
+
           if (depositAmount > 0) {
             transactionsToInsert.push({
               bank_card_id: staffRow.bank_card_id,
@@ -1253,6 +1263,7 @@ export function useDailyReport() {
               reference_type: 'daily_report_staff',
               reference_id: reportId,
               created_by: user.id,
+              created_at: txCreatedAt,
               module_name: resolvedModuleName,
               report_date: dateStr
             });
@@ -1268,6 +1279,7 @@ export function useDailyReport() {
               reference_type: 'daily_report_staff',
               reference_id: reportId,
               created_by: user.id,
+              created_at: txCreatedAt,
               module_name: resolvedModuleName,
               report_date: dateStr
             });
@@ -1287,6 +1299,18 @@ export function useDailyReport() {
 
       toast.success('گزارش با موفقیت ذخیره شد');
       clearLocalStorageBackup();
+
+      // Activity log + CEO push for manual save
+      lastActivityReportAtRef.current = Date.now();
+      reportActivity({
+        eventType: 'ذخیره گزارش روزانه',
+        eventCategory: 'daily_report',
+        action: 'insert',
+        moduleName: moduleKey,
+        entityTable: 'daily_reports',
+        title: `ذخیره گزارش روزانه — ${toLocalDateString(reportDate)}`,
+        details: { mode: 'manual_save', moduleKey },
+      });
       
       // Reset form
       setExistingReportId(null);

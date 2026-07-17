@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useLocation, Navigate, useSearchParams, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ShoppingCart, Users, ClipboardCheck, Play, Loader, CheckCircle, Banknote, PackageOpen, ArrowLeftRight, ChevronDown, ListOrdered, Archive, PackageCheck, Package, ArrowRight, FileText } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Users, ClipboardCheck, Play, Loader, CheckCircle, Banknote, PackageOpen, ArrowLeftRight, ChevronDown, ListOrdered, Archive, PackageCheck, Package, ArrowRight, Receipt, Lock, FileText, Files } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 
@@ -79,6 +79,13 @@ const orderStagesItems = [
   },
 ];
 
+// آیتم‌های زیرمجموعه صورتحساب‌های مشتریان
+const statementsItems = [
+  { title: 'صورتحساب‌های باز', href: '/executive/statements?filter=open', icon: FileText, key: 'open' },
+  { title: 'صورتحساب‌های بسته شده', href: '/executive/statements?filter=closed', icon: Lock, key: 'closed' },
+  { title: 'همه صورتحساب‌ها', href: '/executive/statements?filter=all', icon: Files, key: 'all' },
+];
+
 // آیتم‌های اصلی ناوبری
 const mainNavItems = [
   {
@@ -92,7 +99,7 @@ const mainNavItems = [
     icon: Users
   },
   {
-    title: 'انتقال سفارش',
+    title: 'انتقال و همکاری سفارش',
     href: '/executive/order-transfers',
     icon: ArrowLeftRight
   },
@@ -100,12 +107,6 @@ const mainNavItems = [
     title: 'بایگانی',
     href: '/executive/archived',
     icon: Archive
-  },
-  {
-    title: 'صورتحساب جامع',
-    href: '/customer-comprehensive-invoice',
-    icon: FileText,
-    external: true
   }
 ];
 
@@ -119,14 +120,20 @@ export function ExecutiveLayout() {
   const activeModuleKey = searchParams.get('moduleKey') || 'scaffold_execution_with_materials';
   const { moduleName } = useModuleAssignmentInfo(activeModuleKey, 'ماژول مدیریت اجرای داربست', '');
 
-  // Redirect "مدیریت کلی" modules to all-orders instead of dashboard
+  // Redirect to "همه سفارشات" on initial entry so managers land on the orders list directly.
+  // They can still navigate back to the dashboard tab manually.
+  const didInitialRedirect = useRef(false);
   useEffect(() => {
-    const isGeneralModule = moduleName.includes('مدیریت کلی') || moduleName.includes('مدیریت کل');
+    if (didInitialRedirect.current) return;
     const isOnIndex = location.pathname === '/executive' || location.pathname === '/executive/';
-    if (isGeneralModule && isOnIndex) {
-      navigate(`/executive/all-orders?moduleKey=${activeModuleKey}`, { replace: true });
+    if (isOnIndex) {
+      didInitialRedirect.current = true;
+      const qs = activeModuleKey ? `?moduleKey=${activeModuleKey}` : '';
+      navigate(`/executive/all-orders${qs}`, { replace: true });
+    } else {
+      didInitialRedirect.current = true;
     }
-  }, [moduleName, location.pathname, activeModuleKey, navigate]);
+  }, [location.pathname, activeModuleKey, navigate]);
 
   useEffect(() => {
     const checkExecutiveRole = async () => {
@@ -171,6 +178,11 @@ export function ExecutiveLayout() {
     location.pathname === item.href || location.pathname.startsWith(item.href + '/')
   );
 
+  // وضعیت دراپ‌داون صورتحساب‌ها
+  const isStatementsActive = location.pathname.startsWith('/executive/statements');
+  const currentFilter = searchParams.get('filter') || 'all';
+  const activeStatement = statementsItems.find(i => i.key === currentFilter);
+
   // نمایش لودینگ در حین بررسی نقش
   if (authLoading || roleLoading) {
     return (
@@ -192,7 +204,7 @@ export function ExecutiveLayout() {
     <div className="min-h-screen bg-background">
       {/* Module Name Header */}
       <div className="bg-primary/5 border-b border-primary/10">
-        <div className="container mx-auto px-4 py-2 flex items-center justify-between">
+        <div className="w-full max-w-none px-4 py-2 flex items-center justify-between">
           <Button
             variant="outline"
             size="sm"
@@ -209,13 +221,13 @@ export function ExecutiveLayout() {
       </div>
       
       <div className="border-b bg-card">
-        <div className="container mx-auto">
+        <div className="w-full max-w-none px-4">
           <nav className="flex gap-1 overflow-x-auto py-1">
             {/* آیتم‌های اصلی ناوبری */}
-            {mainNavItems.map((item: any) => (
+            {mainNavItems.map((item) => (
               <NavLink
                 key={item.href}
-                to={item.external ? item.href : `${item.href}?moduleKey=${activeModuleKey}`}
+                to={`${item.href}?moduleKey=${activeModuleKey}`}
                 end={item.href === '/executive'}
                 className={({ isActive }) =>
                   cn(
@@ -269,11 +281,49 @@ export function ExecutiveLayout() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* دراپ‌داون صورتحساب‌های مشتریان */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    'flex items-center gap-2 px-4 py-3 h-auto text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap',
+                    'hover:bg-accent/10',
+                    isStatementsActive
+                      ? 'bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 hover:text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <Receipt className="h-4 w-4" />
+                  {isStatementsActive && activeStatement ? activeStatement.title : 'صورتحساب‌های مشتریان'}
+                  <ChevronDown className="h-3 w-3 mr-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg z-50">
+                {statementsItems.map((item) => (
+                  <DropdownMenuItem key={item.key} asChild>
+                    <NavLink
+                      to={`${item.href}&moduleKey=${activeModuleKey}`}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex items-center gap-2 w-full cursor-pointer text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700',
+                          isActive && currentFilter === item.key && 'bg-primary/10 text-primary font-medium'
+                        )
+                      }
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.title}
+                    </NavLink>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </nav>
         </div>
       </div>
 
-      <div className="container mx-auto p-6">
+      <div className="w-full max-w-none px-4 py-6">
         <Outlet />
       </div>
     </div>

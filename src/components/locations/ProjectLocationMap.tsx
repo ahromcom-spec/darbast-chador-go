@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { supabase } from '@/integrations/supabase/client';
+import { createNeshanTileLayer } from '@/lib/neshan';
 import { MapPin, Navigation, Map, Car } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -93,11 +94,8 @@ export function ProjectLocationMap({ projectLat, projectLng, projectAddress }: P
 
     mapRef.current = map;
 
-    // اضافه کردن لایه تایل
-    const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 18,
-    }).addTo(map);
+    // اضافه کردن لایه تایل نشان
+    const tileLayer = createNeshanTileLayer('standard-day').addTo(map);
 
     // اطمینان از محاسبه ابعاد پس از نمایش در دیالوگ/کارت
     tileLayer.on('load', () => {

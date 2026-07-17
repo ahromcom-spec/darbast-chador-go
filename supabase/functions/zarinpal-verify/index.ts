@@ -6,8 +6,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+async function recomputeOrderTotalPaid(supabaseClient: any, orderId: string) {
+  const { data: allPayments } = await supabaseClient
+    .from('order_payments')
+    .select('amount')
+    .eq('order_id', orderId);
+  const newTotalPaid = (allPayments || []).reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
+
+  const { data: ord } = await supabaseClient
+    .from('projects_v3')
+    .select('total_price, payment_amount')
+    .eq('id', orderId)
+    .single();
+  const totalPrice = Number(ord?.total_price ?? ord?.payment_amount ?? 0);
+  const isFullyPaid = totalPrice > 0 && newTotalPaid >= totalPrice;
+
+  const updateData: any = { total_paid: newTotalPaid };
+  if (isFullyPaid) {
+    updateData.payment_confirmed_at = new Date().toISOString();
+    updateData.status = 'paid';
+  }
+  await supabaseClient.from('projects_v3').update(updateData).eq('id', orderId);
+  return { newTotalPaid, totalPrice, isFullyPaid };
+}
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -15,10 +38,10 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
 
-    // پشتیبانی از هر دو حالت: callback مستقیم (GET) و فراخوانی از فرانت (POST JSON)
     let authority: string | null = null;
     let status: string | null = null;
     let order_id: string | null = null;
+    let statement_id: string | null = null;
 
     if (req.method === 'POST') {
       try {
@@ -26,32 +49,28 @@ serve(async (req) => {
         authority = body.Authority ?? body.authority ?? null;
         status = body.Status ?? body.status ?? null;
         order_id = body.order_id ?? null;
+        statement_id = body.statement_id ?? null;
       } catch (parseError) {
         console.error('Error parsing JSON body:', parseError);
       }
     }
 
-    // در صورت نبودن body معتبر، از query string استفاده کن (حالت قدیمی)
     if (!authority || !order_id) {
       authority = authority ?? url.searchParams.get('Authority');
       status = status ?? url.searchParams.get('Status');
       order_id = order_id ?? url.searchParams.get('order_id');
+      statement_id = statement_id ?? url.searchParams.get('statement_id');
     }
 
-    console.log('Verify callback:', { authority, status, order_id });
+    console.log('Verify callback:', { authority, status, order_id, statement_id });
 
     if (!authority || !order_id) {
       throw new Error('Missing required parameters');
     }
 
-    // اگر کاربر از درگاه برگشته ولی پرداخت را لغو کرده باشد
     if (status !== 'OK') {
       return new Response(
-        JSON.stringify({
-          success: false,
-          status: 'cancelled',
-          order_id,
-        }),
+        JSON.stringify({ success: false, status: 'cancelled', order_id, statement_id }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -61,106 +80,149 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get order details
     const { data: order, error: orderError } = await supabaseClient
       .from('projects_v3')
-      .select('id, payment_amount, total_price, total_paid, customer_id')
+      .select('id, payment_amount, total_price, total_paid, customer_id, statement_id')
       .eq('id', order_id)
       .single();
 
-    if (orderError || !order) {
-      throw new Error('Order not found');
+    if (orderError || !order) throw new Error('Order not found');
+
+    // Look up requested amount from audit_log (payment_requested)
+    let requestedAmount = 0;
+    const { data: auditRow } = await supabaseClient
+      .from('audit_log')
+      .select('meta')
+      .eq('entity', 'payment')
+      .eq('action', 'payment_requested')
+      .contains('meta', { authority })
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (auditRow?.meta) {
+      requestedAmount = Number((auditRow.meta as any).amount) || 0;
+      if (!statement_id) statement_id = (auditRow.meta as any).statement_id || null;
     }
 
-    // ZarinPal configuration
     const ZARINPAL_MERCHANT_ID = '93f06023-423a-44d6-ac08-8ee0aa9ed257';
     const ZARINPAL_VERIFY_URL = 'https://api.zarinpal.com/pg/v4/payment/verify.json';
 
-    // Verify payment with ZarinPal
+    // Verify amount: prefer requestedAmount (handles over-payment); fallback to order.payment_amount
+    const verifyAmount = (requestedAmount > 0 ? requestedAmount : Number(order.payment_amount || 0)) * 10;
+
     const verifyResponse = await fetch(ZARINPAL_VERIFY_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         merchant_id: ZARINPAL_MERCHANT_ID,
-        amount: order.payment_amount * 10, // Convert Toman to Rial
-        authority: authority,
+        amount: verifyAmount,
+        authority,
       }),
     });
 
     const verifyData = await verifyResponse.json();
-
     console.log('ZarinPal verify response:', verifyData);
 
     if (verifyData.data && verifyData.data.code === 100) {
-      // Payment successful
       const refID = verifyData.data.ref_id;
-      // مبلغ واقعی پرداخت شده از زرین‌پال (ریال به تومان)
       const paidAmount = Math.round(verifyData.data.amount / 10);
-      
-      // ثبت پرداخت در جدول order_payments
-      const { error: paymentInsertError } = await supabaseClient
-        .from('order_payments')
-        .insert({
-          order_id: order_id,
+
+      // --- Waterfall distribution across the statement's orders (oldest first) ---
+      const sid = statement_id || order.statement_id;
+      let distribution: { order_id: string; amount: number }[] = [];
+
+      if (sid) {
+        const { data: stmtOrders } = await supabaseClient
+          .from('projects_v3')
+          .select('id, total_price, payment_amount, total_paid, created_at')
+          .eq('statement_id', sid)
+          .neq('status', 'rejected')
+          .order('created_at', { ascending: true });
+
+        let remainingToAllocate = paidAmount;
+        const list = stmtOrders || [];
+        // Start with the primary order so its row is created first
+        const primaryIdx = list.findIndex((o: any) => o.id === order_id);
+        const ordered = primaryIdx >= 0
+          ? [list[primaryIdx], ...list.slice(0, primaryIdx), ...list.slice(primaryIdx + 1)]
+              .sort((a: any, b: any) => {
+                // Keep oldest first, but ensure primary not double-counted
+                return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+              })
+          : list;
+
+        for (const o of ordered) {
+          if (remainingToAllocate <= 0) break;
+          const total = Number(o.total_price ?? o.payment_amount ?? 0);
+          const paid = Number(o.total_paid ?? 0);
+          const need = Math.max(total - paid, 0);
+          if (need <= 0 && o.id !== ordered[ordered.length - 1].id) continue;
+          const give = (o.id === ordered[ordered.length - 1].id)
+            ? remainingToAllocate  // dump any surplus on the last order
+            : Math.min(need, remainingToAllocate);
+          if (give > 0) {
+            distribution.push({ order_id: o.id, amount: give });
+            remainingToAllocate -= give;
+          }
+        }
+
+        // Safety: if nothing was distributed, put everything on the primary order
+        if (distribution.length === 0) {
+          distribution.push({ order_id: order_id!, amount: paidAmount });
+        }
+      } else {
+        distribution.push({ order_id: order_id!, amount: paidAmount });
+      }
+
+      // Insert order_payments rows
+      for (const d of distribution) {
+        const isPrimary = d.order_id === order_id;
+        await supabaseClient.from('order_payments').insert({
+          order_id: d.order_id,
           paid_by: order.customer_id,
-          amount: paidAmount,
+          amount: d.amount,
           payment_method: 'zarinpal',
           receipt_number: refID.toString(),
-          notes: `پرداخت آنلاین زرین‌پال - کد پیگیری: ${refID}`,
+          notes: isPrimary
+            ? `پرداخت آنلاین زرین‌پال - کد پیگیری: ${refID}`
+            : `سرریز پرداخت صورتحساب - کد پیگیری: ${refID}`,
           payment_date: new Date().toISOString(),
         });
-
-      if (paymentInsertError) {
-        console.error('Error inserting order_payment:', paymentInsertError);
       }
 
-      // محاسبه مجموع پرداخت‌ها
-      const { data: allPayments } = await supabaseClient
-        .from('order_payments')
-        .select('amount')
-        .eq('order_id', order_id);
-      
-      const newTotalPaid = (allPayments || []).reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
-      
-      // بررسی تسویه کامل
-      const totalPrice = order.total_price || order.payment_amount || 0;
-      const isFullyPaid = newTotalPaid >= totalPrice && totalPrice > 0;
-
-      // Update order
-      const updateData: any = {
-        payment_method: 'zarinpal',
-        transaction_reference: refID.toString(),
-        total_paid: newTotalPaid,
-      };
-      
-      // فقط در صورت تسویه کامل payment_confirmed_at را ست کن
-      if (isFullyPaid) {
-        updateData.payment_confirmed_at = new Date().toISOString();
-        updateData.status = 'paid';
+      // Recompute totals on each affected order
+      for (const d of distribution) {
+        await recomputeOrderTotalPaid(supabaseClient, d.order_id);
       }
 
-      const { error: updateError } = await supabaseClient
+      // Set transaction_reference and payment_method on the primary order
+      await supabaseClient
         .from('projects_v3')
-        .update(updateData)
+        .update({
+          payment_method: 'zarinpal',
+          transaction_reference: refID.toString(),
+        })
         .eq('id', order_id);
 
-      if (updateError) {
-        console.error('Error updating order:', updateError);
-      }
+      const { data: primaryOrderAfter } = await supabaseClient
+        .from('projects_v3')
+        .select('total_paid, total_price, payment_amount')
+        .eq('id', order_id)
+        .single();
+      const primaryTotalPrice = Number(primaryOrderAfter?.total_price ?? primaryOrderAfter?.payment_amount ?? 0);
+      const primaryTotalPaid = Number(primaryOrderAfter?.total_paid ?? 0);
+      const isFullyPaid = primaryTotalPrice > 0 && primaryTotalPaid >= primaryTotalPrice;
 
-      // Log successful payment
       await supabaseClient.from('audit_log').insert({
         entity: 'payment',
         entity_id: order_id,
         action: 'payment_verified',
         meta: {
-          authority: authority,
+          authority,
           ref_id: refID,
           amount: paidAmount,
-          total_paid: newTotalPaid,
-          is_fully_paid: isFullyPaid,
+          statement_id: sid,
+          distribution,
         },
       });
 
@@ -169,44 +231,29 @@ serve(async (req) => {
           success: true,
           status: 'success',
           order_id,
+          statement_id: sid,
           ref_id: refID,
-          total_paid: newTotalPaid,
+          amount: paidAmount,
+          distribution,
           is_fully_paid: isFullyPaid,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } else if (verifyData.data && verifyData.data.code === 101) {
-      // Payment already verified
       return new Response(
-        JSON.stringify({
-          success: true,
-          status: 'already_verified',
-          order_id,
-        }),
+        JSON.stringify({ success: true, status: 'already_verified', order_id, statement_id }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } else {
-      // Payment verification failed
       console.error('Payment verification failed:', verifyData);
-      
-      // Log failed payment
       await supabaseClient.from('audit_log').insert({
         entity: 'payment',
         entity_id: order_id,
         action: 'payment_failed',
-        meta: {
-          authority: authority,
-          error: verifyData.errors || 'Unknown error',
-        },
+        meta: { authority, error: verifyData.errors || 'Unknown error' },
       });
-
       return new Response(
-        JSON.stringify({
-          success: false,
-          status: 'failed',
-          order_id,
-          error: verifyData.errors ?? 'Payment verification failed',
-        }),
+        JSON.stringify({ success: false, status: 'failed', order_id, statement_id, error: verifyData.errors ?? 'Payment verification failed' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -215,14 +262,8 @@ serve(async (req) => {
     console.error('Verify error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: errorMessage 
-      }),
-      { 
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      JSON.stringify({ success: false, error: errorMessage }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

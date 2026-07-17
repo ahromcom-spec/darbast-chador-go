@@ -24,14 +24,24 @@ export default function SiteRegistrationModule() {
     return fromUrl || 'site_registration';
   }, [searchParams]);
 
+  // Prefill from URL (e.g. sent by AI assistant)
+  const prefillPhone = searchParams.get('phone') || '';
+  const prefillName = searchParams.get('name') || '';
+
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState(prefillPhone);
+  const [fullName, setFullName] = useState(prefillName);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [registeredInfo, setRegisteredInfo] = useState<{ phone: string; name: string } | null>(null);
   const [existingUser, setExistingUser] = useState<{ name: string } | null>(null);
   const [checkingPhone, setCheckingPhone] = useState(false);
+
+  // Apply prefill when the URL params arrive/change (AI assistant flow)
+  useEffect(() => {
+    if (prefillPhone) setPhoneNumber((v) => v || prefillPhone);
+    if (prefillName) setFullName((v) => v || prefillName);
+  }, [prefillPhone, prefillName]);
 
   // بررسی دسترسی به ماژول
   useEffect(() => {

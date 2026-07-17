@@ -113,7 +113,7 @@ export default function ContractorRegister() {
 
       toast({
         title: "✓ درخواست ثبت شد",
-        description: "درخواست پیمانکاری شما با موفقیت ثبت شد. پس از بررسی و تأیید CEO، اطلاع‌رسانی خواهید شد."
+        description: "درخواست پیمانکاری شما با موفقیت ثبت شد. درخواست در «ماژول مدیریت پیمانکاران» بررسی می‌شود و پس از تأیید، اطلاع‌رسانی خواهید شد."
       });
 
       navigate("/");
@@ -171,7 +171,7 @@ export default function ContractorRegister() {
             <Alert>
               <CheckCircle className="h-4 w-4" />
               <AlertDescription>
-                پس از ثبت درخواست، CEO سیستم آن را بررسی و تأیید خواهد کرد.
+                پس از ثبت درخواست، تیم مدیریت در «ماژول مدیریت پیمانکاران» آن را بررسی و تأیید خواهد کرد.
               </AlertDescription>
             </Alert>
 

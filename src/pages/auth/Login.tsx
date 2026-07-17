@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Home, Eye, EyeOff } from 'lucide-react';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
+import { getPendingOrder } from '@/lib/pendingOrder';
 
 const phoneSchema = z.object({
   phone: z.string()
@@ -44,16 +45,32 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Don't redirect to form pages that require state data
-  const isFormPage = location.state?.from?.pathname?.includes('/form') || 
+  // اگر سفارش معلقی از کاربر مهمان وجود دارد، پس از ورود به همان فرم
+  // (با state اولیه) برمی‌گردیم تا مقادیر فرم بازیابی شوند.
+  const pendingOrder = getPendingOrder();
+  const hasPendingOrder = !!pendingOrder;
+
+  // Don't redirect to form pages that require state data — مگر اینکه pendingOrder داشته باشیم
+  const isFormPage = location.state?.from?.pathname?.includes('/form') ||
                      location.state?.from?.pathname?.includes('/scaffolding');
-  const from = isFormPage ? '/' : (location.state?.from?.pathname || '/');
+  const from = hasPendingOrder
+    ? (pendingOrder!.path)
+    : (isFormPage ? '/' : (location.state?.from?.pathname || '/'));
+
+  const goAfterAuth = () => {
+    if (hasPendingOrder && pendingOrder) {
+      navigate(pendingOrder.path, { replace: true, state: pendingOrder.state });
+    } else {
+      navigate(from, { replace: true });
+    }
+  };
 
   useEffect(() => {
     if (user) {
-      navigate(from, { replace: true });
+      goAfterAuth();
     }
-  }, [user, navigate, from]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -104,7 +121,7 @@ export default function Login() {
             setErrors({ otp: errorMessage });
           } else {
             toast({ title: 'خوش آمدید', description: 'با موفقیت وارد شدید.' });
-            navigate(from, { replace: true });
+            goAfterAuth();
           }
         })();
       }
@@ -353,7 +370,7 @@ const handleResendOTP = async () => {
       description: 'با موفقیت وارد شدید.',
     });
 
-    navigate(from, { replace: true });
+    goAfterAuth();
   };
 
   const handleVerifyPassword = async (e: React.FormEvent) => {
@@ -411,7 +428,7 @@ const handleResendOTP = async () => {
         description: 'با موفقیت وارد شدید.',
       });
 
-      navigate(from, { replace: true });
+      goAfterAuth();
     } catch (err) {
       setLoading(false);
       toast({
@@ -475,10 +492,10 @@ const handleResendOTP = async () => {
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
       </div>
 
-      {/* Content - Full screen on mobile */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-0 sm:p-4">
-        <div className="w-full h-full sm:h-auto sm:max-w-md">
-          <Card className="min-h-screen sm:min-h-0 rounded-none sm:rounded-lg shadow-2xl bg-card/95 backdrop-blur-md border-0 sm:border-2 flex flex-col justify-center">
+      {/* Content - centered card on all sizes */}
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Card className="rounded-lg shadow-2xl bg-card/95 backdrop-blur-md border-2 flex flex-col justify-center">
             <CardHeader className="text-center space-y-2 pb-4">
               <CardTitle className="text-3xl font-bold">ورود به اهرم</CardTitle>
               <CardDescription className="text-base">

@@ -1,7 +1,8 @@
-importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
-
-// Ensure Chromium browsers consider the app installable as a PWA.
-// If this worker becomes the active registration (common with push SDKs),
-// lacking a fetch handler can prevent the install prompt from appearing.
-self.addEventListener('fetch', () => {});
-
+// OneSignal SDK worker has been disabled.
+// Project now uses Najva for web push notifications (its SW is registered automatically by the Najva mini-script).
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.registration.unregister().then(() => self.clients.matchAll()).then((clients) => {
+    clients.forEach((client) => client.navigate && client.navigate(client.url));
+  }));
+});

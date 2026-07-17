@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ImageLightbox } from "@/components/ui/image-lightbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +74,17 @@ import { z } from "zod";
 import { formatPersianDate, formatPersianDateTime, formatPersianDateTimeFull } from "@/lib/dateUtils";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { EditExpertPricingDialog } from "@/components/orders/EditExpertPricingDialog";
+import { applyFixedPriceToBreakdown } from "@/lib/priceBreakdown";
+
+const PAYMENT_GATEWAY_UNAVAILABLE_MESSAGE = 'درگاه پرداخت زرین‌پال در حال حاضر در دسترس نیست. لطفاً چند دقیقه دیگر دوباره تلاش کنید.';
+
+const getPaymentErrorMessage = (message?: string) => {
+  if (!message) return 'لطفاً مجدداً تلاش کنید';
+  if (/api\.zarinpal\.com|ETIMEDOUT|AbortError|Connection timed out|tcp connect error|NETWORK_ERROR|error sending request/i.test(message)) {
+    return PAYMENT_GATEWAY_UNAVAILABLE_MESSAGE;
+  }
+  return message;
+};
 
 interface Order {
   id: string;
@@ -457,7 +469,7 @@ export default function OrderDetail() {
         supabase.from('order_approvals').select('approver_role, approved_at, approver_user_id').eq('order_id', id).order('created_at', { ascending: true }),
         supabase.from('repair_requests').select('final_cost, status, created_at, description').eq('order_id', id),
         supabase.from('collection_requests').select('requested_date, confirmed_date, status').eq('order_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-        supabase.from('order_renewals').select('renewal_price, renewal_number, new_start_date, new_end_date, status').eq('order_id', id).eq('status', 'approved').order('renewal_number', { ascending: true }),
+        supabase.from('order_renewals').select('renewal_price, renewal_number, new_start_date, new_end_date, status, manager_notes').eq('order_id', id).eq('status', 'approved').order('renewal_number', { ascending: true }),
         supabase.from('order_payments').select('*').eq('order_id', id).order('created_at', { ascending: false })
       ]);
 
@@ -744,7 +756,7 @@ export default function OrderDetail() {
   const MAX_IMAGES = 6;
   const MAX_VIDEOS = 6;
   const MAX_IMAGE_SIZE_MB = 10;
-  const MAX_VIDEO_SIZE_MB = 70;
+  const MAX_VIDEO_SIZE_MB = 50;
   const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
   const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024;
 
@@ -1069,7 +1081,10 @@ export default function OrderDetail() {
                 created_at: order.created_at,
                 notes: order.notes,
                 payment_amount: order.payment_amount,
+                total_price: order.total_price,
+                total_paid: order.total_paid,
                 status: order.status,
+                customer_completion_date: order.customer_completion_date,
                 province_id: order.province_id,
                 subcategory_id: order.subcategory_id,
                 rental_start_date: order.rental_start_date
@@ -1308,8 +1323,8 @@ export default function OrderDetail() {
                   {/* Summary View - Always Visible */}
                   {parsedNotes && (
                     <div className="space-y-3">
-                      {/* نوع داربست یا کرایه اجناس */}
-                      {parsedNotes.service_type && (
+                      {/* نوع داربست یا کرایه اجناس (به جز قالی‌شویی) */}
+                      {parsedNotes.service_type && parsedNotes.service_type !== 'carpet_cleaning' && (
                         <div className="p-3 bg-primary/10 rounded-lg flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">نوع داربست</span>
                           <span className="font-semibold">
@@ -1321,6 +1336,34 @@ export default function OrderDetail() {
                             {parsedNotes.service_type === 'کرایه اجناس داربست' && 'کرایه اجناس داربست'}
                             {!['facade', 'formwork', 'ceiling-tiered', 'ceiling-slab', 'column', 'کرایه اجناس داربست'].includes(parsedNotes.service_type) && parsedNotes.service_type}
                           </span>
+                        </div>
+                      )}
+
+                      {/* خلاصه قالی‌شویی */}
+                      {parsedNotes.service_type === 'carpet_cleaning' && Array.isArray(parsedNotes.items) && (
+                        <div className="space-y-2">
+                          <div className="p-3 bg-primary/10 rounded-lg flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">نوع خدمت</span>
+                            <span className="font-semibold">قالی‌شویی و موکت‌شویی</span>
+                          </div>
+                          <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">تعداد آیتم‌ها</span>
+                            <span className="font-bold">{Number(parsedNotes.items.length).toLocaleString('fa-IR')} مورد</span>
+                          </div>
+                          {parsedNotes.estimated_price ? (
+                            <div className="p-3 bg-emerald-500/10 rounded-lg flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">برآورد هزینه</span>
+                              <span className="font-bold text-emerald-700">
+                                {Number(parsedNotes.estimated_price).toLocaleString('fa-IR')} تومان
+                              </span>
+                            </div>
+                          ) : null}
+                          {parsedNotes.user_notes && (
+                            <div className="p-3 bg-muted/30 rounded-lg">
+                              <span className="text-xs text-muted-foreground block mb-1">توضیحات مشتری</span>
+                              <p className="text-sm leading-relaxed">{parsedNotes.user_notes}</p>
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -1425,8 +1468,106 @@ export default function OrderDetail() {
                       </div>
                     )}
 
+                    {/* بلوک چند داربست همزمان - نمایش جداگانه هر داربست */}
+                    {parsedNotes && Array.isArray(parsedNotes.multi_scaffolds) && parsedNotes.multi_scaffolds.length > 0 && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-bold text-base">🏗️ جزئیات تفکیکی داربست‌ها ({parsedNotes.multi_scaffolds.length.toLocaleString('fa-IR')} داربست)</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {parsedNotes.multi_scaffolds.map((item: any, idx: number) => {
+                            const snap = item.snapshot || {};
+                            const sType = snap.activeService || snap.scaffoldType;
+                            const typeLabel =
+                              sType === 'facade' ? 'داربست سطحی نما' :
+                              sType === 'formwork' ? 'داربست حجمی کفراژ' :
+                              sType === 'ceiling-tiered' ? 'داربست زیر بتن - تیرچه' :
+                              sType === 'ceiling-slab' ? 'داربست زیر بتن - دال بتنی' :
+                              sType === 'column' ? 'داربست ستونی' :
+                              sType || '-';
+                            const dims = Array.isArray(snap.dimensions) ? snap.dimensions : [];
+                            const hasWidth = dims.some((d: any) => Number(d?.width) > 0);
+                            const unit = hasWidth ? 'متر مکعب' : 'متر مربع';
+                            const area = typeof item.totalArea === 'number'
+                              ? (item.totalArea % 1 === 0 ? item.totalArea : item.totalArea.toFixed(2))
+                              : item.totalArea;
+                            return (
+                              <section key={idx} className="rounded-2xl border-2 border-primary/30 bg-card/60 p-4 space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="font-bold text-primary">{item.label || `داربست #${idx + 1}`}</h4>
+                                  <span className="text-xs px-2 py-1 bg-primary/10 rounded-full">{typeLabel}</span>
+                                </div>
+                                {dims.length > 0 && (
+                                  <div className="space-y-2">
+                                    {dims.map((d: any, di: number) => (
+                                      <div key={di} className="flex flex-wrap items-center gap-2 p-2 bg-muted/40 rounded-lg text-sm">
+                                        <span className="text-xs px-2 py-0.5 rounded-full bg-background border">بعد {di + 1}</span>
+                                        <span>طول: <span className="font-medium">{d.length}</span> م</span>
+                                        {Number(d.width) > 0 && <span>عرض: <span className="font-medium">{d.width}</span> م</span>}
+                                        <span>ارتفاع: <span className="font-medium">{snap.columnHeight || d.height}</span> م</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                <div className="p-2 bg-primary/10 rounded-lg flex items-center justify-between">
+                                  <span className="text-xs text-muted-foreground">متراژ کل</span>
+                                  <span className="font-bold">{area} <span className="text-xs font-normal">{unit}</span></span>
+                                </div>
+                                <div className="space-y-1 text-xs border-t pt-2">
+                                  <div className="flex justify-between"><span className="text-muted-foreground">قیمت اجرا:</span><span>{Number(item.baseNoDistance || 0).toLocaleString('fa-IR')} تومان</span></div>
+                                  <div className="flex justify-between"><span className="text-muted-foreground">سهم حمل و نقل:</span><span>{Number(item.transportShare || 0).toLocaleString('fa-IR')} تومان</span></div>
+                                  <div className="flex justify-between font-bold text-sm pt-1 border-t"><span>جمع این داربست:</span><span className="text-primary">{Number(item.finalPrice || 0).toLocaleString('fa-IR')} تومان</span></div>
+                                </div>
+                              </section>
+                            );
+                          })}
+                        </div>
+                        {parsedNotes.multi_summary && (
+                          <div className="p-4 rounded-xl bg-gradient-to-l from-primary/10 to-primary/5 border-2 border-primary/30 space-y-2">
+                            <div className="flex justify-between text-sm"><span className="text-muted-foreground">جمع اجرا (بدون حمل):</span><span className="font-medium">{Number(parsedNotes.multi_summary.baseSum || 0).toLocaleString('fa-IR')} تومان</span></div>
+                            <div className="flex justify-between text-sm"><span className="text-muted-foreground">هزینه حمل و نقل مشترک ({parsedNotes.multi_summary.distancePct}%):</span><span className="font-medium">{Number(parsedNotes.multi_summary.sharedTransport || 0).toLocaleString('fa-IR')} تومان</span></div>
+                            <div className="flex justify-between text-base font-bold pt-2 border-t border-primary/30"><span>مجموع کل سفارشات:</span><span className="text-primary">{Number(parsedNotes.multi_summary.grandTotal || 0).toLocaleString('fa-IR')} تومان</span></div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* بلوک ۱: مشخصات فنی داربست - فقط برای داربست معمولی */}
-                    {parsedNotes && parsedNotes.service_type !== 'کرایه اجناس داربست' && (
+
+                    {parsedNotes && parsedNotes.service_type === 'carpet_cleaning' && Array.isArray(parsedNotes.items) && parsedNotes.items.length > 0 && (
+                      <section className="rounded-2xl border border-border bg-card/60 p-4 space-y-3">
+                        <h3 className="font-semibold mb-1">آیتم‌های قالی‌شویی</h3>
+                        <div className="space-y-2">
+                          {parsedNotes.items.map((it: any, idx: number) => (
+                            <div key={idx} className="p-3 bg-muted/40 rounded-xl space-y-1">
+                              <div className="flex items-center justify-between flex-wrap gap-2">
+                                <span className="font-medium text-sm">{it.label || it.id}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  تعداد: <span className="font-semibold text-foreground">{Number(it.quantity || 1).toLocaleString('fa-IR')}</span>
+                                </span>
+                              </div>
+                              {it.kind === 'per_m2' && (it.length || it.width) && (
+                                <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3">
+                                  {it.length ? <span>طول: {it.length} م</span> : null}
+                                  {it.width ? <span>عرض: {it.width} م</span> : null}
+                                  {it.area_m2 ? <span>مساحت: {Number(it.area_m2).toLocaleString('fa-IR')} م²</span> : null}
+                                </div>
+                              )}
+                              <div className="flex items-center justify-between text-xs">
+                                {it.unit_price ? (
+                                  <span className="text-muted-foreground">قیمت واحد: {Number(it.unit_price).toLocaleString('fa-IR')} تومان</span>
+                                ) : <span />}
+                                {it.total_price ? (
+                                  <span className="font-semibold">{Number(it.total_price).toLocaleString('fa-IR')} تومان</span>
+                                ) : null}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+
+                    {parsedNotes && parsedNotes.service_type !== 'کرایه اجناس داربست' && parsedNotes.service_type !== 'carpet_cleaning' && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <section className="rounded-2xl border border-border bg-card/60 p-4 space-y-4">
                           <h3 className="font-semibold mb-1">مشخصات داربست</h3>
@@ -1446,8 +1587,50 @@ export default function OrderDetail() {
                             </div>
                           )}
 
-                          {/* ابعاد */}
-                          {parsedNotes.dimensions && parsedNotes.dimensions.length > 0 && (
+                          {/* ابعاد - حالت چند داربست */}
+                          {parsedNotes.is_multi_scaffold && Array.isArray(parsedNotes.scaffolds) && parsedNotes.scaffolds.length > 0 ? (
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-medium">ابعاد ثبت‌شده (تفکیک شده)</h4>
+                                <span className="text-xs text-muted-foreground">به متر</span>
+                              </div>
+                              {parsedNotes.scaffolds.map((sc: any, sIdx: number) => (
+                                <div key={sIdx} className="p-3 rounded-xl border border-border/60 bg-muted/30 space-y-2">
+                                  <div className="flex items-center justify-between flex-wrap gap-2">
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/30">
+                                      {sc.label || `داربست ${sIdx + 1}`}
+                                    </span>
+                                    {sc.unit_count ? (
+                                      <span className="text-xs text-muted-foreground">تعداد واحد: <span className="font-medium">{sc.unit_count}</span></span>
+                                    ) : null}
+                                  </div>
+                                  {sc.description && (
+                                    <div className="p-2 bg-background/70 rounded-lg border border-border/40">
+                                      <span className="text-xs text-muted-foreground block mb-1">توضیحات این آیتم</span>
+                                      <p className="text-sm whitespace-pre-wrap">{sc.description}</p>
+                                    </div>
+                                  )}
+                                  <div className="space-y-2">
+                                    {(sc.dimensions || []).map((dim: any, index: number) => {
+                                      const length = typeof dim.length === 'number' ? dim.length : parseFloat(dim.length);
+                                      const width = dim.width ? (typeof dim.width === 'number' ? dim.width : parseFloat(dim.width)) : 1;
+                                      const height = typeof dim.height === 'number' ? dim.height : parseFloat(dim.height);
+                                      const volume = length * width * height;
+                                      return (
+                                        <div key={index} className="flex flex-wrap items-center gap-2 md:gap-3 p-2 bg-background/60 rounded-lg">
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-background text-xs font-medium border border-border/60">بعد {index + 1}</span>
+                                          <span className="text-sm">طول: <span className="font-medium">{length}</span> متر</span>
+                                          <span className="text-sm">عرض: <span className="font-medium">{width}</span> متر</span>
+                                          <span className="text-sm">ارتفاع: <span className="font-medium">{height}</span> متر</span>
+                                          <span className="text-xs text-muted-foreground ms-auto">حجم تقریبی: {volume % 1 === 0 ? volume : volume.toFixed(2)} متر مکعب</span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : parsedNotes.dimensions && parsedNotes.dimensions.length > 0 && (
                             <div>
                               <div className="flex items-center justify-between mb-2">
                                 <h4 className="font-medium">ابعاد ثبت‌شده</h4>
@@ -1486,6 +1669,7 @@ export default function OrderDetail() {
                               </div>
                             </div>
                           )}
+
 
                           {/* متراژ کل */}
                           {parsedNotes.totalArea && (
@@ -1775,23 +1959,30 @@ export default function OrderDetail() {
                     {approvedRenewals.length > 0 && (
                       <div className="border-t border-primary/20 pt-3 space-y-2">
                         {approvedRenewals.map((renewal: any) => (
-                          <div key={renewal.renewal_number} className="flex items-center justify-between p-2 bg-primary/10 rounded-lg text-sm">
-                            <div className="flex items-center gap-2">
-                              <RefreshCw className="h-4 w-4 text-primary" />
-                              <span className="text-foreground">
-                                تمدید ماه {renewal.renewal_number + 1}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              {renewal.new_start_date && (
-                                <span className="text-xs text-muted-foreground">
-                                  {formatPersianDate(renewal.new_start_date)} - {renewal.new_end_date ? formatPersianDate(renewal.new_end_date) : '...'}
+                          <div key={renewal.renewal_number} className="space-y-1">
+                            <div className="flex items-center justify-between p-2 bg-primary/10 rounded-lg text-sm">
+                              <div className="flex items-center gap-2">
+                                <RefreshCw className="h-4 w-4 text-primary" />
+                                <span className="text-foreground">
+                                  تمدید ماه {renewal.renewal_number + 1}
                                 </span>
-                              )}
-                              <span className="font-medium text-primary">
-                                {(renewal.renewal_price || 0).toLocaleString('fa-IR')} تومان
-                              </span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                {renewal.new_start_date && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {formatPersianDate(renewal.new_start_date)} - {renewal.new_end_date ? formatPersianDate(renewal.new_end_date) : '...'}
+                                  </span>
+                                )}
+                                <span className="font-medium text-primary">
+                                  {(renewal.renewal_price || 0).toLocaleString('fa-IR')} تومان
+                                </span>
+                              </div>
                             </div>
+                            {renewal.manager_notes && (
+                              <p className="text-[11px] text-muted-foreground italic px-3 leading-relaxed">
+                                شرح: {renewal.manager_notes}
+                              </p>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -1846,12 +2037,19 @@ export default function OrderDetail() {
                             <span className="font-medium">{basePrice.toLocaleString('fa-IR')} تومان</span>
                           </div>
                           {approvedRenewals.length > 0 && approvedRenewals.map((renewal: any) => (
-                            <div key={renewal.renewal_number} className="flex items-center justify-between p-2 bg-primary/10 rounded-lg">
-                              <div className="flex items-center gap-2">
-                                <RefreshCw className="h-4 w-4 text-primary" />
-                                <span className="text-sm text-primary font-medium">تمدید ماه {renewal.renewal_number + 1}:</span>
+                            <div key={renewal.renewal_number} className="space-y-1">
+                              <div className="flex items-center justify-between p-2 bg-primary/10 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  <RefreshCw className="h-4 w-4 text-primary" />
+                                  <span className="text-sm text-primary font-medium">تمدید ماه {renewal.renewal_number + 1}:</span>
+                                </div>
+                                <span className="font-bold text-primary">{(renewal.renewal_price || 0).toLocaleString('fa-IR')} تومان</span>
                               </div>
-                              <span className="font-bold text-primary">{(renewal.renewal_price || 0).toLocaleString('fa-IR')} تومان</span>
+                              {renewal.manager_notes && (
+                                <p className="text-[11px] text-muted-foreground italic px-3 leading-relaxed">
+                                  شرح: {renewal.manager_notes}
+                                </p>
+                              )}
                             </div>
                           ))}
                           {approvedRepairCost > 0 && (
@@ -1924,11 +2122,13 @@ export default function OrderDetail() {
                       )}
 
                       <CollapsibleContent className="space-y-4">
-                        {parsedNotes?.price_breakdown && parsedNotes.price_breakdown.length > 0 && (
+                        {parsedNotes?.price_breakdown && parsedNotes.price_breakdown.length > 0 && (() => {
+                          const adjusted = applyFixedPriceToBreakdown(parsedNotes.price_breakdown, basePrice);
+                          return (
                           <div className="space-y-2">
                             <h4 className="font-medium">جزئیات محاسبه قیمت</h4>
                             <div className="space-y-1">
-                              {parsedNotes.price_breakdown.map((item: string, index: number) => (
+                              {adjusted.map((item: string, index: number) => (
                                 <div
                                   key={index}
                                   className="text-xs sm:text-sm text-muted-foreground p-2 bg-muted/40 rounded-md border border-muted/60"
@@ -1938,7 +2138,8 @@ export default function OrderDetail() {
                               ))}
                             </div>
                           </div>
-                        )}
+                          );
+                        })()}
                       </CollapsibleContent>
 
                       {/* Toggle Button */}
@@ -2009,7 +2210,7 @@ export default function OrderDetail() {
                                       const errorDetails = await error.context.json();
                                       const gatewayMessage =
                                         typeof errorDetails === 'object' && errorDetails !== null
-                                          ? (errorDetails.error || errorDetails.message || 'خطای ناشناخته از درگاه پرداخت')
+                                          ? getPaymentErrorMessage(errorDetails.error || errorDetails.message || 'خطای ناشناخته از درگاه پرداخت')
                                           : 'خطای ناشناخته از درگاه پرداخت';
                                       
                                       toast({
@@ -2036,6 +2237,12 @@ export default function OrderDetail() {
                                 
                                 if (data?.payment_url) {
                                   window.location.href = data.payment_url;
+                                } else if (data?.error) {
+                                  toast({
+                                    title: 'خطا در اتصال به درگاه',
+                                    description: getPaymentErrorMessage(data.error),
+                                    variant: 'destructive'
+                                  });
                                 } else {
                                   throw new Error('URL پرداخت دریافت نشد');
                                 }
@@ -2043,7 +2250,7 @@ export default function OrderDetail() {
                                 console.error('Payment error:', error);
                                 toast({
                                   title: 'خطا در اتصال به درگاه',
-                                  description: 'لطفاً مجدداً تلاش کنید',
+                                  description: getPaymentErrorMessage(error instanceof Error ? error.message : undefined),
                                   variant: 'destructive'
                                 });
                               }
@@ -2174,7 +2381,7 @@ export default function OrderDetail() {
                                           const errorDetails = await error.context.json();
                                           const gatewayMessage =
                                             typeof errorDetails === 'object' && errorDetails !== null
-                                              ? (errorDetails.error || errorDetails.message || 'خطای ناشناخته از درگاه پرداخت')
+                                              ? getPaymentErrorMessage(errorDetails.error || errorDetails.message || 'خطای ناشناخته از درگاه پرداخت')
                                               : 'خطای ناشناخته از درگاه پرداخت';
                                           
                                           toast({
@@ -2201,6 +2408,12 @@ export default function OrderDetail() {
                                     
                                     if (data?.payment_url) {
                                       window.location.href = data.payment_url;
+                                    } else if (data?.error) {
+                                      toast({
+                                        title: 'خطا در اتصال به درگاه',
+                                        description: getPaymentErrorMessage(data.error),
+                                        variant: 'destructive'
+                                      });
                                     } else {
                                       throw new Error('URL پرداخت دریافت نشد');
                                     }
@@ -2208,7 +2421,7 @@ export default function OrderDetail() {
                                     console.error('Payment error:', error);
                                     toast({
                                       title: 'خطا در اتصال به درگاه',
-                                      description: 'لطفاً مجدداً تلاش کنید',
+                                      description: getPaymentErrorMessage(error instanceof Error ? error.message : undefined),
                                       variant: 'destructive'
                                     });
                                   }
@@ -2638,12 +2851,13 @@ export default function OrderDetail() {
                           />
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                           
-                          {/* دکمه حذف - فقط برای عکس‌های خود کاربر */}
-                          {(!order.approved_at) && isOwnMedia && (
+                          {/* دکمه حذف - فقط برای عکس‌های خود کاربر (همیشه قابل حذف) */}
+                          {isOwnMedia && (
                             <Button
                               variant="destructive"
                               size="icon"
-                              className="absolute top-2 left-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                              className="absolute top-2 left-2 h-9 w-9 opacity-100 md:opacity-80 md:group-hover:opacity-100 transition-opacity z-20 shadow-lg"
+                              aria-label="حذف عکس"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteMedia(media.id, media.file_path);
@@ -2792,48 +3006,35 @@ export default function OrderDetail() {
                     
                     return (
                       <div key={media.id} className="relative group rounded-lg overflow-hidden border">
-                        <div 
-                          className="aspect-video bg-muted cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                          onClick={() => window.open(data.publicUrl, '_blank')}
-                        >
-                          {thumbnailData?.data.publicUrl ? (
-                            <div className="relative w-full h-full">
-                              <img
-                                src={thumbnailData.data.publicUrl}
-                                alt="پیش‌نمایش ویدیو"
-                                className="w-full h-full object-cover"
-                              />
-                              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                                <div className="bg-white/90 rounded-full p-4 shadow-lg hover:scale-110 transition-transform">
-                                  <Play className="w-8 h-8 text-primary fill-primary" />
-                                </div>
-                              </div>
-                              <div className="absolute top-2 left-2 right-2 bg-black/80 text-white text-sm px-3 py-1.5 rounded truncate">
-                                {media.file_path.split('/').pop()?.replace(/^\d+_[a-z0-9]+_/, '') || 'ویدیو پروژه'}
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="relative w-full h-full bg-black/5 flex items-center justify-center">
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                              <Film className="w-16 h-16 text-primary opacity-60" />
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="bg-white/90 rounded-full p-4 shadow-lg hover:scale-110 transition-transform">
-                                  <Play className="w-8 h-8 text-primary fill-primary" />
-                                </div>
-                              </div>
-                              <div className="absolute top-2 left-2 right-2 bg-black/80 text-white text-sm px-3 py-1.5 rounded truncate">
-                                {media.file_path.split('/').pop()?.replace(/^\d+_[a-z0-9]+_/, '') || 'ویدیو پروژه'}
-                              </div>
-                            </div>
-                          )}
+                        <div className="aspect-video bg-muted relative">
+                          <video
+                            src={data.publicUrl}
+                            poster={thumbnailData?.data.publicUrl}
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                            controls
+                            preload="metadata"
+                            className="w-full h-full object-contain bg-black cursor-pointer"
+                            onClick={(e) => {
+                              const v = e.currentTarget;
+                              if (v.paused) v.play().catch(() => {});
+                            }}
+                          />
+                          <div className="absolute top-2 left-2 right-2 bg-black/80 text-white text-sm px-3 py-1.5 rounded truncate pointer-events-none">
+                            {media.file_path.split('/').pop()?.replace(/^\d+_[a-z0-9]+_/, '') || 'ویدیو پروژه'}
+                          </div>
                         </div>
+
                         
-                        {/* دکمه حذف - فقط برای ویدیوهای خود کاربر */}
-                        {!order.approved_at && isOwnMedia && (
+                        {/* دکمه حذف - فقط برای ویدیوهای خود کاربر (همیشه قابل حذف) */}
+                        {isOwnMedia && (
                           <Button
                             variant="destructive"
                             size="icon"
-                            className="absolute top-2 left-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            className="absolute top-2 left-2 h-9 w-9 opacity-100 md:opacity-80 md:group-hover:opacity-100 transition-opacity z-20 shadow-lg"
+                            aria-label="حذف ویدیو"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteMedia(media.id, media.file_path);
@@ -2889,38 +3090,14 @@ export default function OrderDetail() {
             </CardContent>
           </Card>
 
-          {/* Image Zoom Dialog */}
-          <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-            <DialogContent className="max-w-7xl w-full p-0">
-              <DialogHeader className="p-6 pb-4">
-                <DialogTitle>عکس پروژه</DialogTitle>
-              </DialogHeader>
-              <div className="px-6 pb-6">
-                {selectedImage && (
-                  <div className="relative w-full">
-                    <img
-                      src={selectedImage}
-                      alt="عکس بزرگ پروژه"
-                      className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
-                    />
-                    <Button
-                      variant="secondary"
-                      className="mt-4 gap-2"
-                      onClick={() => {
-                        const link = document.createElement('a');
-                        link.href = selectedImage;
-                        link.download = 'project-image.jpg';
-                        link.click();
-                      }}
-                    >
-                      <Download className="h-4 w-4" />
-                      دانلود عکس
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
+          {/* Image Zoom Lightbox (full-screen with pan + zoom) */}
+          <ImageLightbox
+            src={selectedImage}
+            title="عکس پروژه"
+            downloadName="project-image.jpg"
+            onClose={() => setSelectedImage(null)}
+          />
+
 
           {/* زنجیره مالکیت سفارش */}
           <OrderOwnershipChain

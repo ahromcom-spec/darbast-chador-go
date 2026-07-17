@@ -116,6 +116,7 @@ export function UnifiedProfileCard({
   
   // Photo states
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [customerCode, setCustomerCode] = useState<string | null>(null);
   const [photos, setPhotos] = useState<ProfilePhoto[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [uploading, setUploading] = useState(false);
@@ -149,13 +150,12 @@ export function UnifiedProfileCard({
   const fetchAvatarUrl = async () => {
     const { data } = await supabase
       .from('profiles')
-      .select('avatar_url')
+      .select('avatar_url, customer_code')
       .eq('user_id', user.id)
       .maybeSingle();
     
-    if (data?.avatar_url) {
-      setAvatarUrl(data.avatar_url);
-    }
+    if (data?.avatar_url) setAvatarUrl(data.avatar_url);
+    if (data?.customer_code) setCustomerCode(data.customer_code);
   };
 
   const fetchPhotos = async () => {
@@ -538,6 +538,14 @@ export function UnifiedProfileCard({
                 {phoneNumber && (
                   <p className="text-xs text-muted-foreground" dir="ltr">
                     📱 {phoneNumber}
+                  </p>
+                )}
+
+                {customerCode && (
+                  <p className="text-xs" dir="ltr">
+                    <span className="font-mono font-bold bg-primary/10 text-primary px-2 py-0.5 rounded border border-primary/20">
+                      🆔 کد مشتری: {customerCode}
+                    </span>
                   </p>
                 )}
                 

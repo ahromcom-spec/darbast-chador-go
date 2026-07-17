@@ -63,6 +63,8 @@ interface TransferRequest {
   location_lat: number | null;
   location_lng: number | null;
   payment_amount: number | null;
+  total_price?: number | null;
+  total_paid?: number | null;
   execution_stage: string | null;
 }
 
@@ -270,7 +272,7 @@ const OrderDetailsDialog = ({
   }
   
   const totalArea = notes?.totalArea;
-  const price = notes?.estimated_price || notes?.estimatedPrice || request.payment_amount;
+  const price = request.total_price || notes?.estimated_price || notes?.estimatedPrice || request.payment_amount;
   const installDate = notes?.installationDate || notes?.installationDateTime || notes?.installation_date;
   const dueDate = notes?.dueDate || notes?.dueDateTime || notes?.due_date;
   const description = notes?.additional_notes || notes?.description || notes?.activityDescription;
@@ -584,7 +586,29 @@ export function IncomingTransferRequests() {
     try {
       const { data, error } = await supabase.rpc('get_incoming_transfer_requests');
       if (error) throw error;
-      setRequests(data || []);
+      const baseRequests = (data || []) as TransferRequest[];
+
+      // Enrich with total_price/total_paid from projects_v3
+      const enriched = await Promise.all(
+        baseRequests.map(async (r) => {
+          try {
+            const { data: orderRow } = await supabase
+              .from('projects_v3')
+              .select('total_price,total_paid')
+              .eq('id', r.order_id)
+              .maybeSingle();
+            return {
+              ...r,
+              total_price: (orderRow as any)?.total_price ?? null,
+              total_paid: (orderRow as any)?.total_paid ?? null,
+            } as TransferRequest;
+          } catch {
+            return r;
+          }
+        })
+      );
+
+      setRequests(enriched);
     } catch (error) {
       console.error('Error fetching incoming requests:', error);
     } finally {
@@ -777,7 +801,8 @@ export function IncomingTransferRequests() {
         <CardContent className="space-y-4">
           {requests.map((request) => {
             const notes = parseNotes(request.order_notes);
-            const price = notes?.estimated_price || notes?.estimatedPrice || request.payment_amount;
+            const price = request.total_price || notes?.estimated_price || notes?.estimatedPrice || request.payment_amount;
+            const description = notes?.additional_notes || notes?.description || notes?.activityDescription || (notes as any)?.installationDescription || (notes as any)?.locationPurpose || (notes as any)?.serviceDescription;
 
             return (
               <Card key={request.id} className="overflow-hidden">
@@ -814,11 +839,26 @@ export function IncomingTransferRequests() {
                       </div>
                     </div>
                     {price && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 bg-green-500/10 p-2 rounded-md border border-green-500/30">
                         <DollarSign className="h-4 w-4 text-green-600" />
-                        <span className="font-bold text-green-600">
-                          {price.toLocaleString('fa-IR')} تومان
+                        <span className="font-medium">مبلغ سفارش:</span>
+                        <span className="font-bold text-green-700">
+                          {Number(price).toLocaleString('fa-IR')} تومان
                         </span>
+                        {request.total_paid && request.total_paid > 0 && (
+                          <span className="text-xs text-muted-foreground mr-auto">
+                            پرداختی: {request.total_paid.toLocaleString('fa-IR')}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {description && (
+                      <div className="flex items-start gap-2 bg-muted/50 p-2 rounded-md">
+                        <FileText className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+                        <div>
+                          <span className="font-medium">توضیحات سفارش: </span>
+                          <span className="text-muted-foreground">{description}</span>
+                        </div>
                       </div>
                     )}
                     <div className="flex items-center gap-2">

@@ -63,7 +63,7 @@ const mainNavItems = [
     icon: Users
   },
   {
-    title: 'انتقال سفارش',
+    title: 'انتقال و همکاری سفارش',
     href: '/sales/order-transfers',
     icon: ArrowLeftRight
   },
@@ -91,7 +91,7 @@ export default function SalesLayout() {
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b bg-card">
-        <div className="container mx-auto">
+        <div className="w-full max-w-none px-4">
           <nav className="flex gap-1 overflow-x-auto py-1">
             {/* آیتم‌های اصلی ناوبری */}
             {mainNavItems.map((item) => (
@@ -165,7 +165,7 @@ export default function SalesLayout() {
         </div>
       </div>
 
-      <div className="container mx-auto p-6">
+      <div className="w-full max-w-none px-4 py-6">
         <Outlet />
       </div>
     </div>

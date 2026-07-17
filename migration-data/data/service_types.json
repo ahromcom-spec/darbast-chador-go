@@ -1,0 +1,43 @@
+[
+  {
+    "id": "3fde8672-194a-4187-a58e-1176a3b2c874",
+    "name": "داربست فلزی",
+    "code": "scaffolding",
+    "requires_permit": true,
+    "default_bom": {
+      "items": [
+        {
+          "qty": 10,
+          "sku": "SCF-001"
+        }
+      ]
+    },
+    "is_active": true,
+    "created_at": "2025-10-08T16:09:48.896781+00:00"
+  },
+  {
+    "id": "f63a322d-c560-4a36-8b4d-ca727e6a2c54",
+    "name": "چادر برزنتی",
+    "code": "tarpaulin",
+    "requires_permit": false,
+    "default_bom": {
+      "items": [
+        {
+          "qty": 5,
+          "sku": "TRP-001"
+        }
+      ]
+    },
+    "is_active": true,
+    "created_at": "2025-10-08T16:09:48.896781+00:00"
+  },
+  {
+    "id": "37c6ee71-ef71-46f8-ab0e-a813ea20948e",
+    "name": "نصب و راه‌اندازی",
+    "code": "installation",
+    "requires_permit": false,
+    "default_bom": null,
+    "is_active": true,
+    "created_at": "2025-10-08T16:09:48.896781+00:00"
+  }
+]

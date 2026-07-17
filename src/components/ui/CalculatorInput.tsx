@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { tryEval } from "@/lib/mathEvaluator";
+import { isMathExpression, tryEval } from "@/lib/mathEvaluator";
 import { toEnglishDigits } from "@/lib/numberParsing";
 
 interface CalculatorInputProps {
@@ -49,13 +49,14 @@ export function CalculatorInput({
     }
   }, [value, isFocused]);
 
-  const isCalcMode = rawText.startsWith("=");
+  const stripLeadingEquals = (input: string) => input.trim().replace(/^[=＝]+/, "");
+  const isCalcMode = rawText.trim().startsWith("=") || rawText.trim().startsWith("＝") || isMathExpression(rawText);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target.value;
 
-    // Allow "=" at start for calculator mode
-    if (input.startsWith("=") || input.startsWith("＝")) {
+    // Allow calculator expressions like Excel: =2+3, 2+3, 2x3, 198/000+4/694
+    if (input.trim().startsWith("=") || input.trim().startsWith("＝") || isMathExpression(input)) {
       setRawText(input);
       setResolvedExpression(null);
       return;
@@ -76,16 +77,16 @@ export function CalculatorInput({
   const evaluate = () => {
     if (!isCalcMode) return;
 
-    const expression = rawText.slice(1); // remove "="
+    const expression = stripLeadingEquals(rawText);
     const normalized = toEnglishDigits(expression);
     const result = tryEval(normalized);
 
     if (result !== null && Number.isFinite(result) && result >= 0) {
       const rounded = Math.round(result);
       if (rounded <= max) {
-        const exprDisplay = `=${expression}=${rounded.toLocaleString("en-US")}`;
-        setResolvedExpression(exprDisplay);
-        setRawText(exprDisplay);
+        const resultText = rounded.toLocaleString("en-US");
+        setResolvedExpression(`=${expression}=${resultText}`);
+        setRawText(resultText);
         onChange(rounded);
       }
     }
@@ -124,7 +125,8 @@ export function CalculatorInput({
     <Input
       ref={inputRef}
       type="text"
-      inputMode={isCalcMode ? "text" : "numeric"}
+      inputMode="text"
+      title="برای محاسبه مثل اکسل، با = شروع کنید. مثال: =1200+500*2"
       value={displayValue}
       onChange={handleChange}
       onFocus={handleFocus}

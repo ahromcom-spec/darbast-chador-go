@@ -23,13 +23,18 @@ interface Token {
 
 /**
  * Tokenize a math expression string into tokens.
- * Supports: numbers (int/float), +, -, *, /, (, )
+ * Supports: numbers (int/float), +, -, *, /, x, ×, ÷, (, )
  */
 function tokenize(expr: string): Token[] {
-  // Normalize: convert Persian/Arabic digits, remove spaces & commas (thousand sep)
+  // Normalize: convert Persian/Arabic digits, common operators, separators and whitespace
   let normalized = toEnglishDigits(expr.trim());
-  normalized = normalized.replace(/,/g, ''); // remove thousand separators
-  normalized = normalized.replace(/\s+/g, ''); // remove whitespace
+  normalized = normalized
+    .replace(/\s+/g, '')
+    .replace(/[−–—]/g, '-')
+    .replace(/[xX×✕✖]/g, '*')
+    .replace(/[÷]/g, '/')
+    .replace(/[٫]/g, '.')
+    .replace(/[٬،]/g, ',');
 
   const tokens: Token[] = [];
   let i = 0;
@@ -37,12 +42,39 @@ function tokenize(expr: string): Token[] {
   while (i < normalized.length) {
     const ch = normalized[i];
 
-    // Number (including decimals)
+    // Number (including decimals and common thousand separators like 198,000 / 198/000)
     if (/[0-9.]/.test(ch)) {
       let numStr = '';
-      while (i < normalized.length && /[0-9.]/.test(normalized[i])) {
-        numStr += normalized[i];
-        i++;
+      let currentGroupLength = 0;
+
+      while (i < normalized.length) {
+        const current = normalized[i];
+
+        if (/[0-9]/.test(current)) {
+          numStr += current;
+          currentGroupLength++;
+          i++;
+          continue;
+        }
+
+        if (current === '.') {
+          numStr += current;
+          currentGroupLength = 0;
+          i++;
+          continue;
+        }
+
+        if (current === ',' || current === '/') {
+          const nextDigits = normalized.slice(i + 1).match(/^\d+/)?.[0] ?? '';
+          const isThousandsSeparator = nextDigits.length === 3 && currentGroupLength >= 1 && currentGroupLength <= 3;
+          if (isThousandsSeparator) {
+            i++;
+            currentGroupLength = 0;
+            continue;
+          }
+        }
+
+        break;
       }
       const num = parseFloat(numStr);
       if (!Number.isFinite(num)) {
@@ -53,8 +85,8 @@ function tokenize(expr: string): Token[] {
     }
 
     // Operators
-    if (ch === '+' || ch === '-' || ch === '*' || ch === '/' || ch === '×' || ch === '÷') {
-      const op = ch === '×' ? '*' : ch === '÷' ? '/' : ch;
+    if (ch === '+' || ch === '-' || ch === '*' || ch === '/') {
+      const op = ch;
       
       // Handle unary minus/plus
       if (ch === '-' || ch === '+') {

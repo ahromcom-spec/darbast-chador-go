@@ -38,6 +38,16 @@ export default function ScaffoldingForm() {
     districtName
   } = state;
 
+  // Redirect to dedicated form for قالی شویی
+  const CARPET_CLEANING_SUBCATEGORY_ID = 'da5fb7be-e703-4dc1-87e8-2386eb1697b9';
+  useEffect(() => {
+    const sid = state.subcategoryId;
+    const sname = state.serviceName;
+    if (!editOrderId && (sid === CARPET_CLEANING_SUBCATEGORY_ID || (typeof sname === 'string' && sname.includes('قالی')))) {
+      navigate('/carpet-cleaning/form', { replace: true, state });
+    }
+  }, [editOrderId, state.subcategoryId, state.serviceName]);
+
   // Fetch order data if editing
   useEffect(() => {
     if (editOrderId) {

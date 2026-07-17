@@ -41,13 +41,18 @@ interface ExpertPricingDialogProps {
 export function ExpertPricingDialog({ open, onOpenChange, order, onSuccess }: ExpertPricingDialogProps) {
   const [unitPrice, setUnitPrice] = useState('');
   const [totalPrice, setTotalPrice] = useState('');
-  const [useUnitPrice, setUseUnitPrice] = useState(true);
+  const [perItemPrice, setPerItemPrice] = useState('');
+  const [unitCountInput, setUnitCountInput] = useState('');
+  // 'unit' = فی متر، 'per_item' = فی هر عدد، 'total' = قیمت کل
+  const [pricingMode, setPricingMode] = useState<'unit' | 'per_item' | 'total'>('unit');
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   const parsedNotes = parseOrderNotes(order.notes);
   const dimensions = parsedNotes?.dimensions || [];
   const description = parsedNotes?.description || '';
+  const storedUnitCount = Number(parsedNotes?.unit_count) || 0;
+  const unitCount = parseInt(unitCountInput) || storedUnitCount || 0;
 
   // محاسبه حجم کل (طول × عرض × ارتفاع)
   const totalVolume = dimensions.reduce((sum: number, dim: any) => {
@@ -57,32 +62,48 @@ export function ExpertPricingDialog({ open, onOpenChange, order, onSuccess }: Ex
     return sum + (length * width * height);
   }, 0);
 
-  // محاسبه قیمت کل از فی قیمت
-  const calculatedTotalPrice = useUnitPrice && unitPrice 
-    ? (parseFloat(unitPrice.replace(/,/g, '')) || 0) * totalVolume 
-    : 0;
+  // محاسبه قیمت کل از فی قیمت یا قیمت هر عدد
+  const calculatedTotalPrice = pricingMode === 'unit' && unitPrice
+    ? (parseFloat(unitPrice.replace(/,/g, '')) || 0) * totalVolume
+    : pricingMode === 'per_item' && perItemPrice
+      ? (parseFloat(perItemPrice.replace(/,/g, '')) || 0) * (unitCount || 1)
+      : 0;
 
   // وقتی فی قیمت تغییر می‌کند، قیمت کل را آپدیت کن
   useEffect(() => {
-    if (useUnitPrice && unitPrice) {
+    if (pricingMode === 'unit' && unitPrice) {
       const calculated = (parseFloat(unitPrice.replace(/,/g, '')) || 0) * totalVolume;
       setTotalPrice(Math.round(calculated).toString());
+    } else if (pricingMode === 'per_item' && perItemPrice) {
+      const calculated = (parseFloat(perItemPrice.replace(/,/g, '')) || 0) * (unitCount || 1);
+      setTotalPrice(Math.round(calculated).toString());
     }
-  }, [unitPrice, useUnitPrice, totalVolume]);
+  }, [unitPrice, perItemPrice, pricingMode, totalVolume, unitCount]);
 
   // وقتی order تغییر می‌کند، مقادیر را ریست کن
   useEffect(() => {
     if (open) {
       const existingUnitPrice = parsedNotes?.unit_price;
+      const existingPerItemPrice = parsedNotes?.per_item_price;
+      const existingMethod = parsedNotes?.pricing_method;
       const existingTotalPrice = order.payment_amount;
-      
-      if (existingUnitPrice) {
-        setUnitPrice(existingUnitPrice.toString());
-        setUseUnitPrice(true);
+
+      setUnitCountInput(storedUnitCount > 0 ? String(storedUnitCount) : '');
+
+      if (existingPerItemPrice && (existingMethod === 'per_item' || storedUnitCount > 0)) {
+        setPerItemPrice(parseInt(existingPerItemPrice).toLocaleString('fa-IR'));
+        setUnitPrice('');
+        setPricingMode('per_item');
+      } else if (existingUnitPrice) {
+        setUnitPrice(parseInt(existingUnitPrice).toLocaleString('fa-IR'));
+        setPerItemPrice('');
+        setPricingMode('unit');
       } else {
         setUnitPrice('');
+        setPerItemPrice('');
+        setPricingMode(storedUnitCount > 0 ? 'per_item' : 'unit');
       }
-      
+
       if (existingTotalPrice) {
         setTotalPrice(existingTotalPrice.toString());
       } else {
@@ -106,10 +127,15 @@ export function ExpertPricingDialog({ open, onOpenChange, order, onSuccess }: Ex
     setTotalPrice(value);
   };
 
+  const handlePerItemPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^\d]/g, '');
+    setPerItemPrice(value ? parseInt(value).toLocaleString('fa-IR') : '');
+  };
+
   const handleSave = async () => {
-    const finalPrice = useUnitPrice 
-      ? calculatedTotalPrice 
-      : (parseFloat(totalPrice.replace(/,/g, '')) || 0);
+    const finalPrice = pricingMode === 'total'
+      ? (parseFloat(totalPrice.replace(/,/g, '')) || 0)
+      : calculatedTotalPrice;
 
     if (finalPrice <= 0) {
       toast({
@@ -122,8 +148,11 @@ export function ExpertPricingDialog({ open, onOpenChange, order, onSuccess }: Ex
 
     setSaving(true);
     try {
-      const unitPriceValue = useUnitPrice 
-        ? parseFloat(unitPrice.replace(/,/g, '')) || 0 
+      const unitPriceValue = pricingMode === 'unit'
+        ? parseFloat(unitPrice.replace(/,/g, '')) || 0
+        : null;
+      const perItemPriceValue = pricingMode === 'per_item'
+        ? parseFloat(perItemPrice.replace(/,/g, '')) || 0
         : null;
 
       // مهم: وقتی کارشناس قیمت را ثبت می‌کند، مرحله تایید مشتری حذف شده
@@ -133,7 +162,9 @@ export function ExpertPricingDialog({ open, onOpenChange, order, onSuccess }: Ex
         price_set_by_manager: true,
         manager_set_price: finalPrice,
         unit_price: unitPriceValue,
-        pricing_method: useUnitPrice ? 'unit_price' : 'total_price',
+        per_item_price: perItemPriceValue,
+        unit_count: unitCount > 0 ? unitCount : (parsedNotes?.unit_count || 0),
+        pricing_method: pricingMode === 'unit' ? 'unit_price' : pricingMode === 'per_item' ? 'per_item' : 'total_price',
         pricing_date: new Date().toISOString(),
         // تایید خودکار قیمت توسط سیستم (بدون نیاز به تایید دستی مشتری)
         customer_price_confirmed: true,
@@ -267,22 +298,61 @@ export function ExpertPricingDialog({ open, onOpenChange, order, onSuccess }: Ex
 
           <Separator />
 
-          {/* انتخاب روش قیمت‌گذاری */}
-          <div className="flex items-center justify-between">
-            <Label className="text-sm">قیمت‌گذاری بر اساس فی متر</Label>
-            <Switch 
-              checked={useUnitPrice} 
-              onCheckedChange={setUseUnitPrice}
+          {/* تعداد سفارش - قابل ویرایش توسط مدیر */}
+          <div className="space-y-2 p-3 border rounded-lg bg-blue-50 dark:bg-blue-950/30">
+            <Label className="text-sm">تعداد سفارش (عدد)</Label>
+            <Input
+              type="number"
+              min="0"
+              value={unitCountInput}
+              onChange={(e) => setUnitCountInput(e.target.value.replace(/[^\d]/g, ''))}
+              placeholder={storedUnitCount > 0 ? `${storedUnitCount} (ثبت‌شده توسط مشتری)` : 'تعداد را وارد کنید'}
             />
+            <p className="text-xs text-muted-foreground">
+              برای استفاده از روش «فی هر عدد»، تعداد را وارد کنید.
+            </p>
           </div>
 
-          {useUnitPrice ? (
+          {/* انتخاب روش قیمت‌گذاری */}
+          <div className="space-y-2">
+            <Label className="text-sm">روش قیمت‌گذاری</Label>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                type="button"
+                variant={pricingMode === 'unit' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setPricingMode('unit')}
+              >
+                فی متر
+              </Button>
+              <Button
+                type="button"
+                variant={pricingMode === 'per_item' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setPricingMode('per_item')}
+                disabled={unitCount <= 0}
+                title={unitCount <= 0 ? 'ابتدا تعداد را وارد کنید' : ''}
+              >
+                فی هر عدد
+              </Button>
+              <Button
+                type="button"
+                variant={pricingMode === 'total' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setPricingMode('total')}
+              >
+                قیمت کل
+              </Button>
+            </div>
+          </div>
+
+          {pricingMode === 'unit' ? (
             <div className="space-y-4">
               {/* فی قیمت */}
               <div className="space-y-2">
                 <Label htmlFor="unit-price" className="flex items-center gap-1">
                   <DollarSign className="h-4 w-4" />
-                  فی قیمت (هر متر مربع)
+                  فی قیمت (هر متر مکعب)
                 </Label>
                 <div className="relative">
                   <Input
@@ -312,6 +382,50 @@ export function ExpertPricingDialog({ open, onOpenChange, order, onSuccess }: Ex
                     <div className="flex items-center justify-between text-sm mb-2">
                       <span>حجم کل:</span>
                       <span>{totalVolume.toFixed(1)} متر مکعب</span>
+                    </div>
+                    <Separator className="my-2" />
+                    <div className="flex items-center justify-between font-bold text-lg text-green-700 dark:text-green-400">
+                      <span>قیمت کل:</span>
+                      <span>{Math.round(calculatedTotalPrice).toLocaleString('fa-IR')} تومان</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          ) : pricingMode === 'per_item' ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="per-item-price" className="flex items-center gap-1">
+                  <DollarSign className="h-4 w-4" />
+                  فی قیمت هر عدد
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="per-item-price"
+                    type="text"
+                    inputMode="numeric"
+                    value={perItemPrice}
+                    onChange={handlePerItemPriceChange}
+                    placeholder="مثال: ۲۰۰,۰۰۰"
+                    className="pl-16 text-lg font-semibold"
+                    autoFocus
+                  />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                    تومان
+                  </span>
+                </div>
+              </div>
+
+              {unitCount > 0 && perItemPrice && (
+                <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span>قیمت هر عدد:</span>
+                      <span>{perItemPrice} تومان</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span>تعداد:</span>
+                      <span>{unitCount.toLocaleString('fa-IR')} عدد</span>
                     </div>
                     <Separator className="my-2" />
                     <div className="flex items-center justify-between font-bold text-lg text-green-700 dark:text-green-400">

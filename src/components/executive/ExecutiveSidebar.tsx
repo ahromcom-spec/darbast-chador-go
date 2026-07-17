@@ -214,7 +214,7 @@ export function ExecutiveSidebar() {
       icon: Users
     },
     {
-      title: 'درخواست‌های انتقال سفارش',
+      title: 'درخواست‌های انتقال و همکاری',
       href: '/admin/order-transfers',
       icon: ArrowLeftRight
     }

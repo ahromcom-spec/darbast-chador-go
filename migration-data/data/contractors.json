@@ -1,0 +1,17 @@
+[
+  {
+    "id": "89b0d691-ce73-4a8e-9fed-e3b5ebca2e5d",
+    "user_id": "1733c786-1dd0-4708-a67e-73e7ed6fff13",
+    "company_name": "داربستی",
+    "contact_person": "رضا محمدی",
+    "phone_number": "09388231167",
+    "email": "phone-09388231167@ahrom.example.com",
+    "address": "استان قم",
+    "experience_years": 10,
+    "description": "",
+    "is_approved": false,
+    "is_active": true,
+    "created_at": "2025-10-11T10:30:58.323387+00:00",
+    "updated_at": "2025-10-11T10:30:58.323387+00:00"
+  }
+]

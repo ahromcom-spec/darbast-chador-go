@@ -1,0 +1,90 @@
+[
+  {
+    "id": "1e62ce3e-85e6-4b45-9ad9-50c02cea40fd",
+    "hierarchy_project_id": "ebb35893-a85f-4444-976f-bac08c48333c",
+    "file_path": "7b9988c6-36e6-4835-b6ce-3a244255d6d5/hierarchy/ebb35893-a85f-4444-976f-bac08c48333c/1763445437758-npu7log9lkm-f644becc0008980199ee5884d1875311.jpg",
+    "file_type": "image",
+    "mime_type": "image/jpeg",
+    "file_size": 246169,
+    "user_id": "7b9988c6-36e6-4835-b6ce-3a244255d6d5",
+    "created_at": "2025-11-18T05:57:20.693321+00:00",
+    "updated_at": "2025-11-18T05:57:20.693321+00:00"
+  },
+  {
+    "id": "d120beab-d7c1-42b1-8c7f-eca1983b0600",
+    "hierarchy_project_id": "f78158ef-38c7-4c01-8210-9ae2ce48db0d",
+    "file_path": "7b9988c6-36e6-4835-b6ce-3a244255d6d5/hierarchy/f78158ef-38c7-4c01-8210-9ae2ce48db0d/1763450379128-codvg8d4opo-video_2025-11-18_09-51-50.mp4",
+    "file_type": "video",
+    "mime_type": "video/mp4",
+    "file_size": 10042839,
+    "user_id": "7b9988c6-36e6-4835-b6ce-3a244255d6d5",
+    "created_at": "2025-11-18T07:20:16.88246+00:00",
+    "updated_at": "2025-11-18T07:20:16.88246+00:00"
+  },
+  {
+    "id": "a9ee9c44-9330-420e-a3bf-675d92b47f7e",
+    "hierarchy_project_id": "515aec07-ec57-4013-ab6f-0040924613bf",
+    "file_path": "7b9988c6-36e6-4835-b6ce-3a244255d6d5/hierarchy/515aec07-ec57-4013-ab6f-0040924613bf/1763588168399-3jpv2b4q9vh-photo_2025-11-17_05-27-17.jpg",
+    "file_type": "image",
+    "mime_type": "image/jpeg",
+    "file_size": 16153,
+    "user_id": "7b9988c6-36e6-4835-b6ce-3a244255d6d5",
+    "created_at": "2025-11-19T21:36:10.036897+00:00",
+    "updated_at": "2025-11-19T21:36:10.036897+00:00"
+  },
+  {
+    "id": "2f29d0a9-25c7-42b6-8350-44382c96baea",
+    "hierarchy_project_id": "515aec07-ec57-4013-ab6f-0040924613bf",
+    "file_path": "7b9988c6-36e6-4835-b6ce-3a244255d6d5/hierarchy/515aec07-ec57-4013-ab6f-0040924613bf/1763606999152-rhn9a5v2ykc-video_2025-11-18_09-51-50.mp4",
+    "file_type": "video",
+    "mime_type": "video/mp4",
+    "file_size": 10042839,
+    "user_id": "7b9988c6-36e6-4835-b6ce-3a244255d6d5",
+    "created_at": "2025-11-20T02:50:22.78862+00:00",
+    "updated_at": "2025-11-20T02:50:22.78862+00:00"
+  },
+  {
+    "id": "c5190678-7803-4d35-bcac-cf97891a713d",
+    "hierarchy_project_id": "f78158ef-38c7-4c01-8210-9ae2ce48db0d",
+    "file_path": "7b9988c6-36e6-4835-b6ce-3a244255d6d5/hierarchy/f78158ef-38c7-4c01-8210-9ae2ce48db0d/1763783391850-2whojx7kbml-video_2025-11-18_09-51-50.mp4",
+    "file_type": "video",
+    "mime_type": "video/mp4",
+    "file_size": 10042839,
+    "user_id": "7b9988c6-36e6-4835-b6ce-3a244255d6d5",
+    "created_at": "2025-11-22T03:50:42.764248+00:00",
+    "updated_at": "2025-11-22T03:50:42.764248+00:00"
+  },
+  {
+    "id": "a7a55772-ed98-4adc-8fad-0a39782f1c04",
+    "hierarchy_project_id": "1db62666-bf67-4889-9da2-631f49b0b13a",
+    "file_path": "7b9988c6-36e6-4835-b6ce-3a244255d6d5/hierarchy/1db62666-bf67-4889-9da2-631f49b0b13a/1763791814277-xbeqt3vrpf-Screenshot 2025-11-20 065504.png",
+    "file_type": "image",
+    "mime_type": "image/png",
+    "file_size": 3201656,
+    "user_id": "7b9988c6-36e6-4835-b6ce-3a244255d6d5",
+    "created_at": "2025-11-22T06:10:16.728019+00:00",
+    "updated_at": "2025-11-22T06:10:16.728019+00:00"
+  },
+  {
+    "id": "9463c26d-a5df-43e9-a29c-e41a14aef6c5",
+    "hierarchy_project_id": "3865b091-61f1-4c52-bc03-298eb03c4407",
+    "file_path": "55edfafc-6890-4b71-8ddd-4426494bb275/hierarchy/3865b091-61f1-4c52-bc03-298eb03c4407/1763839986506-dfvc6ieb5pt-1000206073.jpg",
+    "file_type": "image",
+    "mime_type": "image/jpeg",
+    "file_size": 164348,
+    "user_id": "55edfafc-6890-4b71-8ddd-4426494bb275",
+    "created_at": "2025-11-22T19:33:12.241905+00:00",
+    "updated_at": "2025-11-22T19:33:12.241905+00:00"
+  },
+  {
+    "id": "519e7b50-7887-4556-ad59-1da9d4351036",
+    "hierarchy_project_id": "1db62666-bf67-4889-9da2-631f49b0b13a",
+    "file_path": "7b9988c6-36e6-4835-b6ce-3a244255d6d5/hierarchy/1db62666-bf67-4889-9da2-631f49b0b13a/1763887044346-08e4c95aubq4-5fffaf76-7329-44af-bba5-51e77890592b.png",
+    "file_type": "image",
+    "mime_type": "image/png",
+    "file_size": 1349022,
+    "user_id": "7b9988c6-36e6-4835-b6ce-3a244255d6d5",
+    "created_at": "2025-11-23T08:37:50.720871+00:00",
+    "updated_at": "2025-11-23T08:37:50.720871+00:00"
+  }
+]

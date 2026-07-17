@@ -6,7 +6,7 @@ import { BankCardTransactions } from '@/components/bank-cards/BankCardTransactio
 import { BankCardTransferDialog } from '@/components/bank-cards/BankCardTransferDialog';
 import { useBankCards, BankCard } from '@/hooks/useBankCards';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CreditCard, History, Plus, RefreshCw, ArrowLeftRight } from 'lucide-react';
+import { CreditCard, History, Plus, RefreshCw, ArrowLeftRight, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { recalculateAllBankCardBalances } from '@/hooks/useBankCardRealtimeSync';
@@ -26,6 +26,7 @@ export default function BankCardsModule() {
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [transferFromCardId, setTransferFromCardId] = useState<string | undefined>();
+  const [isTxFullscreen, setIsTxFullscreen] = useState(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   // Setup realtime subscription for daily_report_staff changes
@@ -242,11 +243,21 @@ export default function BankCardsModule() {
         </Dialog>
 
         {/* Transactions Dialog */}
-        <Dialog open={!!viewingCard} onOpenChange={(open) => !open && setViewingCard(null)}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <Dialog open={!!viewingCard} onOpenChange={(open) => { if (!open) { setViewingCard(null); setIsTxFullscreen(false); } }}>
+          <DialogContent className={isTxFullscreen ? "max-w-[100vw] w-screen h-screen max-h-screen rounded-none overflow-y-auto" : "max-w-2xl max-h-[80vh] overflow-y-auto"}>
             <DialogHeader>
-              <DialogTitle>
-                تراکنش‌های کارت: {viewingCard?.card_name}
+              <DialogTitle className="flex items-center justify-between gap-2">
+                <span>تراکنش‌های کارت: {viewingCard?.card_name}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="ms-auto me-8 h-8 w-8"
+                  onClick={() => setIsTxFullscreen(v => !v)}
+                  title={isTxFullscreen ? 'خروج از تمام صفحه' : 'تمام صفحه'}
+                >
+                  {isTxFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                </Button>
               </DialogTitle>
             </DialogHeader>
             {viewingCard && (

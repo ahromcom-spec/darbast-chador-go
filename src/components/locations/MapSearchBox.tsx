@@ -35,6 +35,8 @@ export function MapSearchBox({
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const searchSeqRef = useRef(0);
+  const cacheRef = useRef<Map<string, SearchResult[]>>(new Map());
 
   // Cleanup debounce on unmount
   useEffect(() => {
@@ -58,9 +60,11 @@ export function MapSearchBox({
   }, []);
 
   const searchPlaces = useCallback(async (query: string) => {
-    console.log('[MapSearchBox] searchPlaces called:', { query });
+    const normalizedQuery = query.trim().replace(/\s+/g, ' ');
+    const seq = ++searchSeqRef.current;
+    console.log('[MapSearchBox] searchPlaces called:', { query: normalizedQuery });
 
-    if (!query.trim() || query.length < 2) {
+    if (!normalizedQuery || normalizedQuery.length < 2) {
       console.log('[MapSearchBox] Query too short, skipping');
       setResults([]);
       setIsOpen(false);
@@ -69,16 +73,20 @@ export function MapSearchBox({
 
     setLoading(true);
     try {
-      const searchResults = await geocodeIranNominatim(query);
+      const cached = cacheRef.current.get(normalizedQuery);
+      const searchResults = cached || await geocodeIranNominatim(normalizedQuery);
+      if (!cached) cacheRef.current.set(normalizedQuery, searchResults);
+      if (seq !== searchSeqRef.current) return;
       console.log('[MapSearchBox] Results found:', searchResults.length);
       setResults(searchResults);
       setIsOpen(searchResults.length > 0);
     } catch (error) {
+      if (seq !== searchSeqRef.current) return;
       console.error('[MapSearchBox] Geocoding error:', error);
       setResults([]);
       setIsOpen(false);
     } finally {
-      setLoading(false);
+      if (seq === searchSeqRef.current) setLoading(false);
     }
   }, []);
 
@@ -92,7 +100,7 @@ export function MapSearchBox({
 
     debounceRef.current = setTimeout(() => {
       searchPlaces(value);
-    }, 400);
+    }, 650);
   };
 
   const handleSearchClick = () => {
@@ -185,7 +193,9 @@ export function MapSearchBox({
               className="w-full px-3 py-2 text-right hover:bg-accent flex items-start gap-2 border-b border-border/50 last:border-b-0 transition-colors"
             >
               <MapPin className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-              <span className="text-sm text-foreground line-clamp-2">{result.place_name}</span>
+              <span className="text-sm text-foreground line-clamp-2">
+                {result.place_name.split(',').map(s => s.trim()).reverse().join('، ')}
+              </span>
             </button>
           ))}
         </div>

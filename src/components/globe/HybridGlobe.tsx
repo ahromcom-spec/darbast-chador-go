@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ArrowRight, MapPin, X, Plus, Camera, Video, Search, Satellite, Map as MapIcon } from 'lucide-react';
@@ -26,6 +27,8 @@ import { MobileProjectPanel } from './MobileProjectPanel';
 import { ServiceTypeSelectionDialog } from './ServiceTypeSelectionDialog';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { createNeshanTileLayer, NESHAN_ATTRIBUTION } from '@/lib/neshan';
+import { createOSMBuildingsLayer } from '@/lib/osmBuildings';
 type ProjectHierarchy = ReturnType<typeof useProjectsHierarchy>['projects'][0];
 
 interface HierarchyMedia {
@@ -44,6 +47,7 @@ interface ProjectOrder {
   created_at: string;
   approved_at?: string | null;
   subcategory?: { name: string; code: string };
+  service_type?: { name: string; code: string };
   media?: HierarchyMedia[];
 }
 
@@ -51,6 +55,12 @@ interface ProjectWithMedia extends ProjectHierarchy {
   media?: HierarchyMedia[];
   orders?: ProjectOrder[];
 }
+
+const getMarkerLocationTitle = (project: ProjectWithMedia): string => {
+  const title = project.locations?.title?.trim();
+  if (title) return title;
+  return 'بدون عنوان';
+};
 
 interface HybridGlobeProps {
   onClose: () => void;
@@ -79,7 +89,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [videoLoading, setVideoLoading] = useState(false);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
-  const [mapboxToken, setMapboxToken] = useState<string>('');
+  
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [zoomedImages, setZoomedImages] = useState<string[]>([]);
   const [zoomedImageIndex, setZoomedImageIndex] = useState(0);
@@ -97,6 +107,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const [serviceTypeDialogLocationId, setServiceTypeDialogLocationId] = useState<string>('');
   const [mapStyle, setMapStyle] = useState<'standard' | 'satellite'>('standard');
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const buildingsLayerRef = useRef<L.LayerGroup | null>(null);
 
   const isMobile = useIsMobile();
   const { projects: allProjects, loading, refetch } = useProjectsHierarchy();
@@ -182,67 +193,82 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // State برای ذخیره پروژه‌هایی که حداقل یک سفارش دارند
-  const [projectsWithOrders, setProjectsWithOrders] = useState<Set<string>>(new Set());
+  const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp']);
+  const VIDEO_EXTENSIONS = new Set(['mp4', 'mov', 'm4v', 'webm', 'mkv', 'avi', '3gp', '3g2', 'ogv', 'ogg', 'mpeg', 'mpg']);
+  const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
+  const ALLOWED_VIDEO_MIME_TYPES = new Set([
+    'video/mp4',
+    'video/quicktime',
+    'video/x-msvideo',
+    'video/webm',
+    'video/3gpp',
+    'video/3gpp2',
+    'video/x-matroska',
+    'video/ogg',
+    'video/mpeg',
+  ]);
+  const IMAGE_MIME_BY_EXT: Record<string, string> = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+  };
+  const VIDEO_MIME_BY_EXT: Record<string, string> = {
+    mp4: 'video/mp4',
+    mov: 'video/quicktime',
+    m4v: 'video/mp4',
+    webm: 'video/webm',
+    mkv: 'video/x-matroska',
+    avi: 'video/x-msvideo',
+    '3gp': 'video/3gpp',
+    '3g2': 'video/3gpp2',
+    ogv: 'video/ogg',
+    ogg: 'video/ogg',
+    mpeg: 'video/mpeg',
+    mpg: 'video/mpeg',
+  };
+  const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp';
+  const VIDEO_ACCEPT = 'video/*,.mp4,.mov,.m4v,.webm,.mkv,.avi,.3gp,.3g2,.ogv,.ogg,.mpeg,.mpg';
+  const ALL_MEDIA_ACCEPT = `${IMAGE_ACCEPT},${VIDEO_ACCEPT}`;
 
-  const fetchProjectsWithOrders = useCallback(async () => {
-    // فقط سفارشاتی که is_archived=false و is_deep_archived=false هستند (یا null)
-    const { data: ordersData } = await supabase
-      .from('projects_v3')
-      .select('hierarchy_project_id, is_archived, is_deep_archived')
-      .not('hierarchy_project_id', 'is', null);
-    
-    if (ordersData) {
-      // فیلتر سفارشاتی که بایگانی نشده‌اند
-      const nonArchivedOrders = (ordersData as any[]).filter(o => 
-        (o.is_archived === null || o.is_archived === false) &&
-        (o.is_deep_archived === null || o.is_deep_archived === false)
-      );
-      
-      const uniqueProjectIds = new Set(
-        nonArchivedOrders
-          .map(o => o.hierarchy_project_id)
-          .filter(Boolean) as string[]
-      );
-      setProjectsWithOrders(uniqueProjectIds);
+  const getFileExtension = (file: File) => {
+    const extension = file.name.split('.').pop()?.toLowerCase().trim() || '';
+    return extension.replace(/[^a-z0-9]/g, '');
+  };
+
+  const getUploadFileInfo = (file: File): { kind: 'image' | 'video' | null; mimeType: string; extension: string } => {
+    const extension = getFileExtension(file);
+    const type = (file.type || '').toLowerCase();
+
+    if (type.startsWith('image/') || IMAGE_EXTENSIONS.has(extension)) {
+      const mimeType = IMAGE_MIME_BY_EXT[extension] || (ALLOWED_IMAGE_MIME_TYPES.has(type) ? type : '');
+      if (!mimeType) return { kind: null, mimeType: type || 'application/octet-stream', extension };
+
+      return {
+        kind: 'image',
+        mimeType,
+        extension: extension || 'jpg',
+      };
     }
-  }, []);
 
-  useEffect(() => {
-    fetchProjectsWithOrders();
+    if (ALLOWED_VIDEO_MIME_TYPES.has(type) || VIDEO_EXTENSIONS.has(extension)) {
+      return {
+        kind: 'video',
+        mimeType: VIDEO_MIME_BY_EXT[extension] || (ALLOWED_VIDEO_MIME_TYPES.has(type) ? type : 'video/mp4'),
+        extension: extension || 'mp4',
+      };
+    }
 
-    // Subscribe to realtime changes on projects_v3 for instant map updates
-    const channel = supabase
-      .channel('globe-orders-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'projects_v3'
-        },
-        (payload) => {
-          console.log('Realtime globe order update:', payload);
-          fetchProjectsWithOrders();
-          refetch();
-        }
-      )
-      .subscribe();
+    return { kind: null, mimeType: type || 'application/octet-stream', extension };
+  };
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [fetchProjectsWithOrders, refetch]);
-
-  // فیلتر کردن پروژه‌ها: فقط نمایش پروژه‌هایی که حداقل یک سفارش دارند
-  const filteredProjects = useMemo(() => {
-    return projects.filter(project => projectsWithOrders.has(project.id));
-  }, [projects, projectsWithOrders]);
-
-  // دریافت مجدد داده‌ها وقتی component مانت می‌شود (برای نمایش تغییرات)
-  useEffect(() => {
-    refetch();
-  }, []); // فقط یک بار در mount
+  const openMediaPicker = (accept: string) => {
+    if (!selectedOrderForUpload || !fileInputRef.current) return;
+    fileInputRef.current.value = '';
+    fileInputRef.current.accept = accept;
+    fileInputRef.current.multiple = true;
+    fileInputRef.current.click();
+  };
 
   // مدیریت منبع ویدیو و آزادسازی blob ها
   useEffect(() => {
@@ -489,7 +515,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
   const handleAddImage = () => {
     if (!selectedOrderForUpload) return;
-    fileInputRef.current?.click();
+    openMediaPicker(IMAGE_ACCEPT);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -511,12 +537,16 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
       const newMedia: HierarchyMedia[] = [];
       const fileArray = Array.from(files);
+      let failedCount = 0;
+      let skippedCount = 0;
+      let lastErrorMessage = '';
       
       for (let i = 0; i < fileArray.length; i++) {
         const file = fileArray[i];
-        // قبول تصویر و ویدیو
-        const isImage = file.type.startsWith('image/');
-        const isVideo = file.type.startsWith('video/');
+        // قبول تصویر و ویدیو حتی اگر مرورگر mime-type را خالی/اشتباه بدهد
+        const fileInfo = getUploadFileInfo(file);
+        const isImage = fileInfo.kind === 'image';
+        const isVideo = fileInfo.kind === 'video';
         
         console.log(`[Upload] File ${i + 1}/${fileArray.length}:`, file.name, 'Type:', file.type, 'Size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
         
@@ -527,23 +557,25 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             description: `فقط تصویر یا ویدیو قابل آپلود است: ${file.name}`, 
             variant: 'destructive' 
           });
+          skippedCount++;
           continue;
         }
         
-        // بررسی حجم فایل (حداکثر 100MB برای ویدیو، 10MB برای تصویر)
-        const maxSize = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+        // بررسی حجم فایل (حداکثر ۵۰ مگابایت برای ویدیو، ۱۰ مگابایت برای تصویر — همسو با محدودیت باکت)
+        const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
         if (file.size > maxSize) {
-          const maxMB = isVideo ? 100 : 10;
+          const maxMB = isVideo ? 50 : 10;
           console.warn('[Upload] File too large:', file.size, 'bytes (max:', maxSize, 'bytes)');
           toast({ 
             title: 'حجم فایل بیش از حد', 
             description: `حداکثر ${maxMB} مگابایت مجاز است: ${file.name}`, 
             variant: 'destructive' 
           });
+          skippedCount++;
           continue;
         }
         
-        const filePath = `${user.id}/orders/${selectedOrderForUpload}/${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
+        const filePath = `${user.id}/orders/${selectedOrderForUpload}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileInfo.extension}`;
         console.log('[Upload] Uploading to storage:', filePath);
 
         const startProgress = (i / fileArray.length) * 100;
@@ -552,7 +584,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         const { error: uploadErr } = await supabase.storage
           .from('project-media')
           .upload(filePath, file, { 
-            contentType: file.type, 
+            contentType: fileInfo.mimeType, 
             upsert: false, 
             cacheControl: '3600'
           });
@@ -562,9 +594,11 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         
         if (uploadErr) {
           console.error('[Upload] Storage upload error:', uploadErr);
+          failedCount++;
+          lastErrorMessage = uploadErr.message || 'مشکل در بارگذاری فایل';
           toast({ 
             title: 'خطا در آپلود', 
-            description: uploadErr.message || 'مشکل در بارگذاری فایل', 
+            description: lastErrorMessage, 
             variant: 'destructive' 
           });
           continue;
@@ -578,7 +612,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             project_id: selectedOrderForUpload,
             file_path: filePath,
             file_type: isVideo ? 'video' : 'image',
-            mime_type: file.type,
+            mime_type: fileInfo.mimeType,
             file_size: file.size,
             user_id: user.id,
           })
@@ -587,9 +621,11 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
         if (insertErr) {
           console.error('[Upload] Database insert error:', insertErr);
+          failedCount++;
+          lastErrorMessage = insertErr.message || 'مشکل در ذخیره اطلاعات فایل';
           toast({ 
             title: 'خطا در ثبت', 
-            description: insertErr.message || 'مشکل در ذخیره اطلاعات فایل', 
+            description: lastErrorMessage, 
             variant: 'destructive' 
           });
           continue;
@@ -606,8 +642,27 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       if (newMedia.length > 0) {
         toast({ 
           title: 'موفق', 
-          description: `${newMedia.length} فایل با موفقیت آپلود شد و به گالری اضافه گردید.` 
+          description: `${newMedia.length} فایل با موفقیت آپلود شد و به گالری اضافه گردید.${failedCount + skippedCount > 0 ? ` (${failedCount + skippedCount} فایل اضافه نشد)` : ''}` 
         });
+
+        const orderId = selectedOrderForUpload;
+        const appendUploadedMedia = (projectList: ProjectWithMedia[]): ProjectWithMedia[] =>
+          projectList.map(project => {
+            const hasTargetOrder = project.orders?.some(order => order.id === orderId) || false;
+            return {
+              ...project,
+              media: hasTargetOrder ? [...(project.media || []), ...newMedia] : project.media,
+              orders: project.orders?.map(order =>
+                order.id === orderId
+                  ? { ...order, media: [...(order.media || []), ...newMedia] }
+                  : order
+              ) || project.orders,
+            };
+          });
+
+        setProjectsWithMedia(prev => appendUploadedMedia(prev));
+        setMobileSelectedProject(prev => prev ? appendUploadedMedia([prev])[0] : prev);
+        setMobileSelectedLocationProjects(prev => appendUploadedMedia(prev));
         
         // بستن دیالوگ آپلود
         setSelectedOrderForUpload(null);
@@ -617,7 +672,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       } else {
         toast({ 
           title: 'آپلود ناموفق', 
-          description: 'فرمت فایل نامعتبر بود یا خطای موقت رخ داد.', 
+          description: lastErrorMessage || (skippedCount > 0 ? 'فایل انتخاب‌شده مجاز نبود یا حجم آن بیش از حد مجاز بود.' : 'فرمت فایل نامعتبر بود یا خطای موقت رخ داد.'), 
           variant: 'destructive' 
         });
       }
@@ -637,10 +692,13 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
   const fetchProjectMedia = useCallback(async () => {
     if (projects.length === 0) {
       console.debug('[HybridGlobe] No projects to fetch media for');
+      setProjectsWithMedia([]);
       return;
     }
 
     console.debug('[HybridGlobe] Fetching media for', projects.length, 'projects');
+    // مرحله سریع: قبل از دریافت تصاویر و جزئیات سفارش، پین‌ها فوراً روی نقشه دیده شوند
+    setProjectsWithMedia(projects.map(p => ({ ...p, media: [], orders: [] })));
     
     try {
       const projectIds = projects.map(p => p.id);
@@ -661,11 +719,11 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         o.hierarchy_project_id && projectIds.includes(o.hierarchy_project_id)
       );
 
-      // دریافت تمام order_id ها برای خواندن media (بدون فیلتر اضافه تا حتماً همه رسانه‌ها را بگیریم)
-      const allOrderIds = v3OrdersAll.map(o => o.id);
+      // فقط سفارش‌های مربوط به همین پروژه‌های روی نقشه را برای رسانه بگیریم تا بارگذاری سریع بماند
+      const visibleOrderIds = v3OrdersFiltered.map(o => o.id);
       
       // دریافت موازی داده‌ها برای سرعت بیشتر
-      console.debug('[HybridGlobe] Querying project_media for order IDs:', allOrderIds.slice(0, 5), '... total:', allOrderIds.length);
+      console.debug('[HybridGlobe] Querying project_media for visible order IDs:', visibleOrderIds.slice(0, 5), '... total:', visibleOrderIds.length);
       
       const [phMediaResult, pmMediaResult] = await Promise.all([
         supabase
@@ -676,11 +734,11 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           .order('created_at', { ascending: false })
           .limit(1000),
         
-        allOrderIds.length > 0
+        visibleOrderIds.length > 0
           ? supabase
               .from('project_media')
               .select('id, project_id, file_path, file_type, created_at, mime_type')
-              .in('project_id', allOrderIds)
+              .in('project_id', visibleOrderIds)
               .in('file_type', ['image', 'video'])
               .order('created_at', { ascending: false })
               .limit(2000)
@@ -700,7 +758,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
       console.debug('[HybridGlobe] Hierarchy media fetched:', phMedia?.length || 0);
       console.debug('[HybridGlobe] Project media fetched:', pmMedia.length);
-      console.debug('[HybridGlobe] All order IDs for media query:', allOrderIds.length);
+      console.debug('[HybridGlobe] Visible order IDs for media query:', visibleOrderIds.length);
       console.debug('[HybridGlobe] Sample pmMedia:', pmMedia.slice(0, 3));
 
       // استفاده از Map برای بهینه‌سازی جستجو
@@ -773,6 +831,24 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         });
       }
 
+      // واکشی نام نوع خدمات و زیرمجموعه برای سفارش‌ها (subcategory / service_type)
+      const subIds = Array.from(new Set(v3OrdersFiltered.map((o: any) => o.subcategory_id).filter(Boolean)));
+      const stIds = Array.from(new Set(v3OrdersFiltered.map((o: any) => o.service_type_id).filter(Boolean)));
+      const [subRes, stRes] = await Promise.all([
+        subIds.length > 0
+          ? supabase.from('subcategories').select('id, name, code').in('id', subIds)
+          : Promise.resolve({ data: [] as any[], error: null }),
+        stIds.length > 0
+          ? supabase.from('service_types_v3').select('id, name, code').in('id', stIds)
+          : Promise.resolve({ data: [] as any[], error: null }),
+      ]);
+      const subMap = new Map<string, { name: string; code: string }>(
+        ((subRes as any).data || []).map((s: any) => [s.id, { name: s.name, code: s.code }])
+      );
+      const stMap = new Map<string, { name: string; code: string }>(
+        ((stRes as any).data || []).map((s: any) => [s.id, { name: s.name, code: s.code }])
+      );
+
       const ordersByProject = new Map<string, ProjectOrder[]>();
       if (v3OrdersFiltered) {
         v3OrdersFiltered.forEach((order: any) => {
@@ -787,7 +863,8 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             address: order.address,
             created_at: order.created_at,
             approved_at: order.approved_at || null,
-            subcategory: order.subcategory || undefined,
+            subcategory: order.subcategory || (order.subcategory_id ? subMap.get(order.subcategory_id) : undefined),
+            service_type: order.service_type || (order.service_type_id ? stMap.get(order.service_type_id) : undefined),
             media: orderMediaMap.get(order.id) || []
           });
         });
@@ -803,14 +880,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         return { ...project, media: list, orders };
       });
 
-      // فیلتر کردن پروژه‌ها: فقط پروژه‌هایی که حداقل یک سفارش دارند نمایش داده شوند
-      const filteredProjectsWithMedia = projectsWithMediaData.filter(project => 
-        project.orders && project.orders.length > 0
-      );
-
-      console.debug('[HybridGlobe] Projects with media prepared:', filteredProjectsWithMedia.length);
+      console.debug('[HybridGlobe] Projects with media prepared:', projectsWithMediaData.length);
       
-      setProjectsWithMedia(filteredProjectsWithMedia);
+      setProjectsWithMedia(projectsWithMediaData);
       
       // تابع global برای ویدیو
       (window as any).openProjectVideo = (videoUrl: string, mimeType: string) => {
@@ -825,41 +897,18 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
   // آدرس‌های بدون پروژه دیگر روی نقشه نمایش داده نمی‌شوند - این قسمت حذف شده است
 
-  // دریافت توکن Mapbox برای نمایش قواره‌های ساختمان‌ها
-  useEffect(() => {
-    const cached = sessionStorage.getItem('mapbox_token');
-    if (cached) {
-      setMapboxToken(cached);
-      return;
-    }
-
-    const tryEdgeThenEnv = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('get-mapbox-token');
-        if (!error && data?.token) {
-          setMapboxToken(data.token);
-          sessionStorage.setItem('mapbox_token', data.token);
-          return;
-        }
-      } catch (_) {}
-
-      const envToken = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
-      if (envToken) {
-        setMapboxToken(envToken);
-        sessionStorage.setItem('mapbox_token', envToken);
-      }
-    };
-
-    tryEdgeThenEnv();
-  }, []);
+  // پروژه از پلتفرم نقشه ایرانی نشان استفاده می‌کند؛ نیازی به توکن Mapbox نیست.
 
   useEffect(() => {
     fetchProjectMedia();
   }, [fetchProjectMedia]);
 
   useEffect(() => {
-    // تاخیر کوتاه برای اطمینان از mount شدن کامل container
-    const initTimeout = setTimeout(() => {
+    let initTimeout: ReturnType<typeof setTimeout>;
+    const MAX_INIT_ATTEMPTS = 40; // تا حدود ۶ ثانیه صبر می‌کند تا container آماده شود
+    // تلاش برای مقداردهی اولیه نقشه؛ اگر container هنوز اندازه ندارد، دوباره تلاش می‌کند
+    // (قبلاً فقط یک‌بار چک می‌شد و اگر container آماده نبود، نقشه هرگز ساخته نمی‌شد)
+    const attemptInitMap = (attempt: number = 0) => {
       if (!mapContainer.current || mapRef.current) return;
 
       let map: L.Map;
@@ -881,23 +930,34 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         // بررسی اندازه container قبل از ایجاد نقشه
         const containerRect = mapContainer.current.getBoundingClientRect();
         if (containerRect.width === 0 || containerRect.height === 0) {
-          console.warn('[Map] Container has zero dimensions, waiting...');
+          if (attempt < MAX_INIT_ATTEMPTS) {
+            console.warn('[Map] Container has zero dimensions, retrying...', attempt);
+            initTimeout = setTimeout(() => attemptInitMap(attempt + 1), 150);
+          } else {
+            console.error('[Map] Container never got a size after multiple attempts');
+            toast({
+              title: 'خطای نقشه',
+              description: 'نقشه بارگذاری نشد. لطفاً صفحه را رفرش کنید.',
+              variant: 'destructive'
+            });
+          }
           return;
         }
 
-        // ایجاد نقشه با مرکز ایران - بهینه‌سازی شده برای سازگاری بیشتر
+
+        // ایجاد نقشه با نمای بازتر از ایران تا کل کشور در نگاه اول دیده شود
         map = L.map(mapContainer.current, {
           center: [32.4279, 53.6880],
           zoom: 6,
-          minZoom: 5,
+          minZoom: 4,
           maxZoom: 22,
           scrollWheelZoom: true,
-          zoomControl: true,
+          zoomControl: false,
           preferCanvas: true, // استفاده از Canvas برای عملکرد بهتر
           renderer: L.canvas({ tolerance: 5 }), // بهینه‌سازی رندرینگ
           trackResize: true,
           // تنظیمات اضافی برای سازگاری بهتر
-          attributionControl: true,
+          attributionControl: false,
           fadeAnimation: true,
           zoomAnimation: true,
           markerZoomAnimation: true,
@@ -917,65 +977,35 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
     if (!map) return;
 
-    // لایه تایل با برچسب‌های فقط فارسی (بدون متن لاتین) - OpenStreetMap استاندارد
-    const tileConfigs: { url: string; options?: L.TileLayerOptions }[] = [
-      // OpenStreetMap Standard - فقط نام‌های محلی (فارسی برای ایران)
-      {
-        url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        options: {
-          attribution: '&copy; OpenStreetMap contributors',
-          maxZoom: 22,
-          updateWhenIdle: false,
-          updateWhenZooming: false,
-          keepBuffer: 4,
-          maxNativeZoom: 19,
-          errorTileUrl: '',
-        },
-      },
-      // Wikimedia Maps - نام‌های محلی بدون transliteration
-      {
-        url: 'https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png',
-        options: {
-          attribution: '&copy; OpenStreetMap contributors, Wikimedia',
-          maxZoom: 22,
-          updateWhenIdle: false,
-          updateWhenZooming: false,
-          keepBuffer: 4,
-          maxNativeZoom: 19,
-          errorTileUrl: '',
-        },
-      },
-      // OpenStreetMap HOT - پشتیبانی از نام‌های محلی
-      {
-        url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-        options: {
-          attribution: '&copy; OpenStreetMap contributors, HOT',
-          maxZoom: 22,
-          updateWhenIdle: false,
-          updateWhenZooming: false,
-          keepBuffer: 4,
-          maxNativeZoom: 20,
-          errorTileUrl: '',
-        },
-      },
-    ];
-    
+    // لایه تایل Mapbox (از طریق adapter در src/lib/neshan.ts)
     let tileLayerAdded = false;
-    for (const { url, options } of tileConfigs) {
+    try {
+      const layer = createNeshanTileLayer('standard-day', {
+        updateWhenIdle: false,
+        updateWhenZooming: false,
+        keepBuffer: 4,
+        errorTileUrl: '',
+      }).addTo(map);
+      tileLayerRef.current = layer;
+      tileLayerAdded = true;
+
+      layer.on('tileerror', (e) => {
+        console.error('[Map] Tile load error:', e);
+      });
+
+      console.log('[Map] Mapbox tile layer added successfully');
+
+      // لایه برداری ساختمان‌ها/قواره‌بندی از OSM Overpass
+      // در زوم نزدیک (>=17) خودکار polygon ساختمان‌ها را روی نقشه می‌کشد
+      // تا قواره‌بندی همه‌جا (که در داده OSM وجود دارد) دیده شود.
       try {
-        const layer = L.tileLayer(url, options).addTo(map);
-        tileLayerRef.current = layer; // ذخیره لایه برای تعویض بعدی
-        tileLayerAdded = true;
-
-        layer.on('tileerror', (e) => {
-          console.error('[Map] Tile load error:', e);
-        });
-
-        console.log('[Map] Tile layer added successfully:', url);
-        break;
+        const buildings = createOSMBuildingsLayer().addTo(map);
+        buildingsLayerRef.current = buildings;
       } catch (err) {
-        console.warn('[Map] Failed to add tile layer:', url, err);
+        console.warn('[Map] Failed to add OSM buildings overlay:', err);
       }
+    } catch (err) {
+      console.warn('[Map] Failed to add Mapbox tile layer:', err);
     }
     
     if (!tileLayerAdded) {
@@ -1270,6 +1300,13 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       setSelectedProject(null);
       setSelectedOrderForUpload(null);
       setExpandedClusters(new Set()); // جمع کردن همه پروژه‌ها
+
+      // حذف مارکر موقت افزودن پروژه اگر وجود دارد
+      if (tempMarkerRef.current) {
+        map.removeLayer(tempMarkerRef.current);
+        tempMarkerRef.current = null;
+        setSelectedMapLocation(null);
+      }
     });
 
     // رویدادهای long press
@@ -1326,7 +1363,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     map.whenReady(() => {
       setMapReady(true);
     });
-    }, 50); // پایان setTimeout
+    };
+
+    initTimeout = setTimeout(() => attemptInitMap(0), 50);
+
 
     return () => {
       clearTimeout(initTimeout);
@@ -1412,7 +1452,24 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       locationGroups[key].push(project);
     });
 
+    // زمان آخرین ویدیوی آپلود شده برای یک پروژه (بین همه سفارش‌های آن پروژه)
+    const getProjectLatestVideoTime = (project: ProjectWithMedia) => {
+      let latest = -Infinity;
+      (project.orders || []).forEach(order => {
+        (order.media || []).forEach(m => {
+          if (m.file_type === 'video') {
+            const t = new Date(m.created_at).getTime();
+            if (t > latest) latest = t;
+          }
+        });
+      });
+      return latest;
+    };
+
     Object.values(locationGroups).forEach(group => {
+      // پروژه‌ای که آخرین‌بار ویدیو برایش آپلود شده، اول قرار می‌گیرد
+      // تا در حالت خوشه‌ای (جمع‌شده روی نقشه) همان‌طور نمایش داده شود
+      group.sort((a, b) => getProjectLatestVideoTime(b) - getProjectLatestVideoTime(a));
       const count = group.length;
       const firstProject = group[0];
       const centerLat = firstProject.locations!.lat;
@@ -1464,96 +1521,43 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       ).size;
       
       if (count > 1) {
-        // اضافه کردن popup به نقطه مرکزی برای نمایش تعداد نوع خدمات
-        const centerPopupContent = `
-          <div style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: center; padding: 8px;">
-            <div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;padding:12px;border-radius:8px;margin-bottom:8px;">
-              <span style="font-size:14px;font-weight:bold;">📍 ${uniqueServiceTypes} نوع خدمات</span>
-            </div>
-            <span style="font-size:11px;color:#6b7280;">کلیک کنید تا پروژه‌ها باز یا جمع شوند</span>
-          </div>
-        `;
-        centerMarker.bindPopup(centerPopupContent, {
-          maxWidth: 200,
-          className: 'custom-popup center-marker-popup',
-          autoPan: false // جلوگیری از جابجایی خودکار نقشه هنگام باز شدن کادر
-        });
-        
-        // کلیک روی نقطه مرکزی برای باز/بسته کردن cluster
+        // کلیک روی نقطه مرکزی: مارکرها را به صورت پخش‌شده (fan) نمایش بده
+        // بدون باز کردن کادر لیست؛ کاربر مستقیماً مارکر سفارش موردنظر را انتخاب می‌کند
         centerMarker.on('click', (e) => {
           L.DomEvent.stopPropagation(e);
-          
+          if (expandedClusters.has(clusterKey)) return;
+
           const newExpanded = new Set(expandedClusters);
-          const isExpanded = newExpanded.has(clusterKey);
-          
-          if (isExpanded) {
-            // جمع کردن cluster - مارکرها به مرکز برمی‌گردند
-            console.log('[Map] Collapsing cluster:', clusterKey);
-            newExpanded.delete(clusterKey);
-            setExpandedClusters(newExpanded);
-            
-            // نمایش کامل نقطه مرکزی
-            centerMarker.setOpacity(1);
-            
-            // پیدا کردن تمام مارکرها و خطوط این cluster و جمع کردن آنها
-            markersRef.current.forEach((marker) => {
-              const markerClusterKey = (marker as any).clusterKey;
-              if (markerClusterKey === clusterKey) {
-                // انیمیشن برگشت به مرکز با کوچک شدن
+          newExpanded.add(clusterKey);
+          setExpandedClusters(newExpanded);
+
+          // مخفی کردن نقطه قرمز مرکزی پس از پخش شدن
+          centerMarker.setOpacity(0);
+          centerMarker.closePopup();
+
+          // انیمیشن حرکت مارکرها به موقعیت نهایی
+          markersRef.current.forEach((m) => {
+            if ((m as any).clusterKey === clusterKey) {
+              const tLat = (m as any).targetLat;
+              const tLng = (m as any).targetLng;
+              if (typeof tLat === 'number' && typeof tLng === 'number') {
                 setTimeout(() => {
-                  marker.setLatLng([centerLat, centerLng]);
-                  marker.setOpacity(0);
-                }, 50);
+                  m.setLatLng([tLat, tLng]);
+                  m.setOpacity(1);
+                }, 80);
               }
-            });
-            
-            // مخفی کردن خطوط
-            linesRef.current.forEach((line) => {
-              const lineClusterKey = (line as any).clusterKey;
-              if (lineClusterKey === clusterKey) {
-                setTimeout(() => {
-                  line.setStyle({ opacity: 0 });
-                }, 50);
-              }
-            });
-          } else {
-            // باز کردن cluster - مارکرها از مرکز جدا می‌شوند
-            console.log('[Map] Expanding cluster:', clusterKey);
-            newExpanded.add(clusterKey);
-            setExpandedClusters(newExpanded);
-            
-            // کمرنگ کردن نقطه مرکزی
-            centerMarker.setOpacity(0.3);
-            
-            // پیدا کردن تمام مارکرها و خطوط این cluster
-            markersRef.current.forEach((marker) => {
-              const markerClusterKey = (marker as any).clusterKey;
-              if (markerClusterKey === clusterKey) {
-                const targetLat = (marker as any).targetLat;
-                const targetLng = (marker as any).targetLng;
-                
-                // انیمیشن حرکت به موقعیت نهایی
-                setTimeout(() => {
-                  marker.setLatLng([targetLat, targetLng]);
-                  marker.setOpacity(1);
-                }, 100);
-              }
-            });
-            
-            // نمایش خطوط
-            linesRef.current.forEach((line) => {
-              const lineClusterKey = (line as any).clusterKey;
-              if (lineClusterKey === clusterKey) {
-                setTimeout(() => {
-                  line.setStyle({ opacity: 0.7 });
-                }, 100);
-              }
-            });
-            
-            centerMarker.closePopup();
-          }
+            }
+          });
+
+          // نمایش خطوط اتصال
+          linesRef.current.forEach((line) => {
+            if ((line as any).clusterKey === clusterKey) {
+              setTimeout(() => line.setStyle({ opacity: 0.7 }), 80);
+            }
+          });
         });
       } else {
+
         // برای پروژه تکی، نقطه قرمز را کلیک‌پذیر کن تا popup پروژه باز شود
         (centerMarker as any).singleProjectId = firstProject.id;
         centerMarker.on('click', (e) => {
@@ -1631,36 +1635,44 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         }
 
         let iconToUse: any = projectIcon;
-        // پیدا کردن اولین تصویر از همه سفارشات پروژه
+        // پیدا کردن آخرین ویدیو/عکس آپلود شده در بین همه سفارشات این پروژه (بر اساس زمان واقعی آپلود، نه ترتیب سفارش)
         let firstOrderImage: HierarchyMedia | undefined;
         let firstOrderVideo: any = null;
         let totalOrderImages = 0;
         
         if (project.orders && project.orders.length > 0) {
-          // جستجو در تمام سفارشات برای پیدا کردن اولین تصویر و ویدیو
+          let latestVideoTime = -Infinity;
+          let latestImageTime = -Infinity;
           for (const order of project.orders) {
             const orderImages = (order.media || []).filter(m => m.file_type === 'image');
             const orderVideos = (order.media || []).filter(m => m.file_type === 'video');
             totalOrderImages += orderImages.length;
-            
-            // اگر هنوز تصویری پیدا نشده، اولین تصویر را بگیر
-            if (!firstOrderImage && orderImages.length > 0) {
-              firstOrderImage = orderImages[0];
-            }
-            // اگر ویدیو وجود داشت ذخیره کن
-            if (!firstOrderVideo && orderVideos.length > 0) {
-              firstOrderVideo = orderVideos[0];
-            }
+            orderImages.forEach(img => {
+              const t = new Date(img.created_at).getTime();
+              if (t > latestImageTime) {
+                latestImageTime = t;
+                firstOrderImage = img;
+              }
+            });
+            orderVideos.forEach(vid => {
+              const t = new Date(vid.created_at).getTime();
+              if (t > latestVideoTime) {
+                latestVideoTime = t;
+                firstOrderVideo = vid;
+              }
+            });
           }
           
           console.debug('[HybridGlobe] Project marker:', project.id, 
             'orders:', project.orders.length, 
             'totalImages:', totalOrderImages, 
-            'hasFirstImage:', !!firstOrderImage);
+            'hasFirstImage:', !!firstOrderImage,
+            'hasLatestVideo:', !!firstOrderVideo);
         }
         
-        // عنوان آدرس برای نمایش بالای مارکر (حداکثر 20 کاراکتر)
-        const addressTitle = (project.locations?.title || project.locations?.address_line || 'بدون عنوان').substring(0, 20);
+        // عنوان موقعیت برای نمایش بالای مارکر (عنوان آدرس؛ نه آدرس کامل)
+        const addressTitle = getMarkerLocationTitle(project).substring(0, 20);
+
         const addressLabelHtml = `
           <div style="
             position:absolute;
@@ -1760,7 +1772,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
         const marker = L.marker([lat, lng], { 
           icon: iconToUse,
-          opacity: count > 1 ? (expandedClusters.has(clusterKey) ? 1 : 0.85 - (index * 0.12)) : 1 // پروژه‌های تکی همیشه قابل مشاهده
+          // پروژه‌ای که آخرین ویدیو را دارد (اولین عضو گروه پس از مرتب‌سازی) همیشه کامل و بالای پشته دیده می‌شود
+          opacity: count > 1 ? (expandedClusters.has(clusterKey) ? 1 : (index === 0 ? 1 : 0.85 - (index * 0.12))) : 1,
+          zIndexOffset: count > 1 && !expandedClusters.has(clusterKey) ? (count - index) * 10 : 0
         }).addTo(mapRef.current!);
 
         // ذخیره شناسه پروژه و اطلاعات cluster روی مارکر
@@ -2101,21 +2115,25 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             </div>
           `;
 
-        // دکمه بستن برای موبایل - نمایش فقط در صفحات موبایل
+        // نوار ابزار بالای کادر سفارش: تمام‌صفحه، کوچک‌کردن، زوم + / -، بستن
         const mobileCloseBtn = `
-          <button 
-            class="mobile-popup-close-btn popup-close-trigger" 
-            onclick="event.stopPropagation();"
-            aria-label="بستن"
-          >
-            <svg style="width:24px;height:24px;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          </button>
+          <div class="popup-toolbar" style="position:absolute;top:6px;left:6px;display:flex;gap:4px;z-index:10000;direction:ltr;">
+            <button class="popup-zoom-out-btn" title="کوچک‌نمایی" aria-label="کوچک‌نمایی" style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.95);border:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;font-weight:bold;color:#374151;box-shadow:0 1px 4px rgba(0,0,0,0.15);">−</button>
+            <button class="popup-zoom-in-btn" title="بزرگ‌نمایی" aria-label="بزرگ‌نمایی" style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.95);border:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;font-weight:bold;color:#374151;box-shadow:0 1px 4px rgba(0,0,0,0.15);">+</button>
+            <button class="popup-minimize-btn" title="کوچک کردن" aria-label="کوچک کردن" style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.95);border:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#374151;box-shadow:0 1px 4px rgba(0,0,0,0.15);">
+              <svg style="width:14px;height:14px;" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" d="M5 12h14"/></svg>
+            </button>
+            <button class="popup-fullscreen-btn" title="تمام‌صفحه" aria-label="تمام‌صفحه" style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.95);border:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#374151;box-shadow:0 1px 4px rgba(0,0,0,0.15);">
+              <svg style="width:14px;height:14px;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"/></svg>
+            </button>
+            <button class="mobile-popup-close-btn popup-close-trigger" aria-label="بستن" style="width:30px;height:30px;border-radius:50%;background:#ef4444;border:1px solid #dc2626;color:white;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.2);">
+              <svg style="width:16px;height:16px;" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
         `;
 
         // استخراج عنوان موقعیت - نمایش فقط عنوان آدرس و نه نوع خدمات
-        const locationTitle = project.locations?.title || project.locations?.address_line || 'موقعیت';
+        const locationTitle = getMarkerLocationTitle(project);
         const customerName = allOrdersAtLocation.length > 0 && allOrdersAtLocation[0]
           ? '' // نام مشتری در سفارشات موجود است
           : '';
@@ -2128,17 +2146,15 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             ${locationHeader}
             <strong style="font-size: 15px; color: #1f2937;">${locationTitle}</strong>
             <span style="font-size: 13px; color: #6b7280; margin-top: 6px; display: block;">${project.locations?.address_line || ''}</span>
+            <div class="neshan-plaque-line" data-lat="${project.locations?.lat}" data-lng="${project.locations?.lng}" style="font-size: 12px; color: #0ea5e9; margin-top: 4px; display: block; font-weight: 600;">در حال دریافت پلاک…</div>
             
             ${ordersHTML}
           </div>
         `;
+
         
-        marker.bindPopup(popupContent, {
-          maxWidth: window.innerWidth < 768 ? window.innerWidth : 360,
-          className: 'custom-popup',
-          autoPan: false, // جلوگیری از جابجایی خودکار نقشه هنگام باز شدن کادر
-          closeButton: false // استفاده از دکمه سفارشی بستن
-        });
+        // popup قدیمی Leaflet عمداً bind نمی‌شود تا فقط پنل React قابل تغییر اندازه باز شود.
+        marker.unbindPopup();
 
         // اتصال event listeners بعد از باز شدن popup
         marker.on('popupopen', () => {
@@ -2167,7 +2183,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
             }
           }
           
-          // هندلر دکمه بستن برای موبایل
+          // هندلر دکمه بستن
           const closeBtn = popupElement.querySelector('.popup-close-trigger');
           if (closeBtn) {
             closeBtn.addEventListener('click', (e) => {
@@ -2175,6 +2191,92 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               marker.closePopup();
             });
           }
+
+          // زوم داخلی کادر
+          const innerEl = popupElement.querySelector('.mobile-popup-inner') as HTMLElement | null;
+          const wrapperEl = popupElement.querySelector('.leaflet-popup-content-wrapper') as HTMLElement | null;
+          const contentEl = popupElement.querySelector('.leaflet-popup-content') as HTMLElement | null;
+          let popupScale = 1;
+          const applyScale = () => {
+            if (innerEl) {
+              innerEl.style.transform = `scale(${popupScale})`;
+              innerEl.style.transformOrigin = 'top right';
+            }
+          };
+          popupElement.querySelector('.popup-zoom-in-btn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            popupScale = Math.min(2, popupScale + 0.1);
+            applyScale();
+          });
+          popupElement.querySelector('.popup-zoom-out-btn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            popupScale = Math.max(0.5, popupScale - 0.1);
+            applyScale();
+          });
+
+          // تمام‌صفحه / خروج از تمام‌صفحه
+          let isFullscreen = window.innerWidth < 768;
+          const applyFullscreen = (on: boolean) => {
+            isFullscreen = on;
+            if (on) {
+              popupElement.classList.add('mobile-fullscreen-popup');
+              if (wrapperEl) wrapperEl.style.cssText = 'position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100vw!important;height:100vh!important;height:100dvh!important;margin:0!important;padding:0!important;border-radius:0!important;background:#fff!important;overflow:hidden!important;z-index:9999!important;';
+              if (contentEl) contentEl.style.cssText = 'width:100vw!important;height:100vh!important;height:100dvh!important;margin:0!important;padding:0!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch!important;background:#fff!important;';
+              const tipEl = popupElement.querySelector('.leaflet-popup-tip-container') as HTMLElement | null;
+              if (tipEl) tipEl.style.display = 'none';
+            } else {
+              popupElement.classList.remove('mobile-fullscreen-popup');
+              if (wrapperEl) wrapperEl.style.cssText = '';
+              if (contentEl) contentEl.style.cssText = '';
+              const tipEl = popupElement.querySelector('.leaflet-popup-tip-container') as HTMLElement | null;
+              if (tipEl) tipEl.style.display = '';
+            }
+          };
+          popupElement.querySelector('.popup-fullscreen-btn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            applyFullscreen(!isFullscreen);
+          });
+
+          // کوچک کردن کادر
+          let isMinimized = false;
+          popupElement.querySelector('.popup-minimize-btn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            isMinimized = !isMinimized;
+            if (innerEl) innerEl.style.display = isMinimized ? 'none' : '';
+            if (isMinimized && isFullscreen) applyFullscreen(false);
+          });
+
+          // واکشی پلاک از نشان و درج در کادر
+          const plaqueEl = popupElement.querySelector('.neshan-plaque-line') as HTMLElement | null;
+          if (plaqueEl) {
+            const lat = parseFloat(plaqueEl.dataset.lat || '');
+            const lng = parseFloat(plaqueEl.dataset.lng || '');
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+              import('@/lib/neshan').then(({ neshanReverseGeocode }) => {
+                neshanReverseGeocode(lat, lng).then((res) => {
+                  if (!res) { plaqueEl.style.display = 'none'; return; }
+                  const parts: string[] = [];
+                  if (res.neighbourhood) parts.push(`محله: ${res.neighbourhood}`);
+                  if (res.route_name) parts.push(`${res.route_type || 'خیابان'}: ${res.route_name}`);
+                  if (res.house_number) {
+                    const suffix = res.house_number_source === 'nearby'
+                      ? ` نزدیک‌ترین پلاک${res.plaque_distance_m ? ` در حدود ${res.plaque_distance_m} متر` : ''}`
+                      : 'پلاک';
+                    parts.push(`${suffix}: ${res.house_number}`);
+                  } else {
+                    parts.push('پلاک ثبت‌شده‌ای برای این نقطه پیدا نشد');
+                  }
+                  plaqueEl.innerHTML = parts.length
+                    ? `📍 ${parts.join(' • ')}`
+                    : (res.formatted_address ? `📍 ${res.formatted_address}` : '');
+                  if (!plaqueEl.innerHTML) plaqueEl.style.display = 'none';
+                }).catch(() => { plaqueEl.style.display = 'none'; });
+              });
+            } else {
+              plaqueEl.style.display = 'none';
+            }
+          }
+
           
           // هندلر برای سفارشات (کلیک + گالری)
           if (project.orders) {
@@ -2254,39 +2356,28 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
                 });
               }
 
-              // کلیک روی تصاویر برای بزرگ‌نمایی
-              const clickableImages = popupElement.querySelectorAll<HTMLImageElement>(
-                `.order-image-clickable[data-order-id="${order.id}"]`
+              // کلیک روی تصاویر و ویدیوها برای بزرگ‌نمایی/پخش داخل مودال یکپارچه
+              const mediaItemsAll = popupElement.querySelectorAll<HTMLElement>(
+                `#order-gallery-${order.id} .order-image-clickable, #order-gallery-${order.id} .order-video-item-${order.id}`
               );
-              if (clickableImages.length > 0) {
-                const imageUrls = Array.from(clickableImages).map(
-                  (img) => img.dataset.imageUrl || img.src
-                );
-                clickableImages.forEach((img, idx) => {
-                  img.addEventListener('click', (e) => {
+              if (mediaItemsAll.length > 0) {
+                const mediaUrls = Array.from(mediaItemsAll).map((el) => {
+                  if (el.tagName === 'IMG') {
+                    return (el as HTMLImageElement).dataset.imageUrl || (el as HTMLImageElement).src;
+                  }
+                  return el.dataset.url || '';
+                }).filter(Boolean);
+
+                mediaItemsAll.forEach((el, idx) => {
+                  el.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    setZoomedImages(imageUrls);
+                    setZoomedImages(mediaUrls);
                     setZoomedImageIndex(idx);
-                    setZoomedImage(imageUrls[idx]);
+                    setZoomedImage(mediaUrls[idx]);
                   });
                 });
               }
 
-              // کلیک روی ویدیوها برای پخش در تب جدید
-              const videoItems = popupElement.querySelectorAll<HTMLElement>(`#order-gallery-${order.id} .order-video-item-${order.id}`);
-              if (videoItems.length > 0) {
-                videoItems.forEach((item) => {
-                  item.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const url = (item as HTMLElement).dataset.url;
-                    if (url && (window as any).openProjectVideo) {
-                      (window as any).openProjectVideo(url, 'video/mp4');
-                    } else if (url) {
-                      window.open(url, '_blank');
-                    }
-                  });
-                });
-              }
             });
 
             // کلیک روی دکمه‌های حذف رسانه (برای همه سفارشات این پروژه)
@@ -2492,13 +2583,10 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               marker.closePopup();
               
               // ✅ مسیریابی بر اساس subcategoryCode واقعی
-              // '10' و '15' → /scaffolding/form
-              // '20' → /scaffolding/facade
+              // '10' و '15' و '20' → /scaffolding/form (فرم جامع)
               // '30' → /scaffolding/rental-form
               let targetRoute = '/scaffolding/form'; // default
-              if (subcategoryCode === '20') {
-                targetRoute = '/scaffolding/facade';
-              } else if (subcategoryCode === '30') {
+              if (subcategoryCode === '30') {
                 targetRoute = '/scaffolding/rental-form';
               }
               
@@ -2685,41 +2773,26 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
               }
             });
             
-            // باز کردن popup بعد از expand
-            setTimeout(() => {
-              setSelectedProject(project);
-              setSelectedOrderForUpload(null);
-              setSelectedMapLocation(null);
-              // پیدا کردن همه پروژه‌های این location
-              const locationProjects = projectsWithMedia.filter(p => 
-                p.location_id === project.location_id
-              );
-              // در موبایل از پنل تمام‌صفحه استفاده می‌کنیم
-              if (window.innerWidth < 768) {
-                setMobileSelectedProject(project);
-                setMobileSelectedLocationProjects(locationProjects);
-              } else {
-                marker.openPopup();
-              }
-            }, 500);
+            // فقط پخش (expand) کن؛ کادر پروژه را باز نکن تا کاربر خودش یکی را انتخاب کند
+            return;
+
           } else {
             // اگر cluster expand شده یا پروژه تکی است
             setSelectedProject(project);
             setSelectedOrderForUpload(null);
             setSelectedMapLocation(null);
-            // پیدا کردن همه پروژه‌های این location
-            const locationProjects = projectsWithMedia.filter(p => 
-              p.location_id === project.location_id
+            // فقط پروژه‌های همان نوع خدمات (subcategory/service_type) در همین مکان
+            const locationProjects = projectsWithMedia.filter(p =>
+              p.location_id === project.location_id &&
+              (p.subcategory_id ?? null) === (project.subcategory_id ?? null) &&
+              (p.service_type_id ?? null) === (project.service_type_id ?? null)
             );
-            // در موبایل از پنل تمام‌صفحه استفاده می‌کنیم
-            if (window.innerWidth < 768) {
-              setMobileSelectedProject(project);
-              setMobileSelectedLocationProjects(locationProjects);
-            } else {
-              marker.openPopup();
-            }
+            // همیشه از پنل React استفاده می‌کنیم (هم موبایل هم دسکتاپ)
+            setMobileSelectedProject(project);
+            setMobileSelectedLocationProjects(locationProjects);
           }
         });
+
 
         markersRef.current.push(marker);
         console.debug('[HybridGlobe] Marker added:', { 
@@ -2738,54 +2811,52 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     locationsMarkersRef.current.forEach(marker => marker.remove());
     locationsMarkersRef.current = [];
 
-    // اگر پروژه‌ای انتخاب شده باشد، پاپ‌آپ همان پروژه را پس از به‌روزرسانی مجدد باز نگه می‌داریم
-    if (selectedProject) {
-      const targetMarker = markersRef.current.find(
-        (m) => (m as any).projectId === selectedProject.id
-      );
-      if (targetMarker) {
-        targetMarker.openPopup();
-      }
-    }
+    // پاپ‌آپ Leaflet دیگر استفاده نمی‌شود؛ پنل React جایگزین شده است
 
-    // انیمیشن زوم از نمای کل ایران به پروژه‌ها (فقط در اولین بار)
+
+    // نمایش سریع مارکرها بدون زوم شدید؛ نمای اول باید کل ایران را نشان بدهد
     const allMarkers = markersRef.current;
     console.debug('[HybridGlobe] Total markers created:', allMarkers.length);
     
     if (allMarkers.length > 0 && !hasInitialZoomedRef.current) {
-      hasInitialZoomedRef.current = true; // علامت‌گذاری که زوم اولیه انجام شد
-      const bounds = L.latLngBounds(allMarkers.map(m => m.getLatLng()));
-      console.debug('[HybridGlobe] Animating to project bounds (initial zoom only):', bounds);
-      
-      // ابتدا نقشه را در نمای کل ایران نگه می‌داریم (همان مقدار اولیه)
-      // بعد از 1000ms با انیمیشن نرم به پروژه‌ها می‌رویم
+      hasInitialZoomedRef.current = true;
+
+      // ابتدا نمای کلی ایران را نشان بده تا کاربر موقعیت کلی را ببیند
+      const iranBounds = L.latLngBounds([24.5, 43.5], [40.5, 64.5]);
+      try {
+        mapRef.current?.fitBounds(iranBounds, { padding: [24, 24], animate: false });
+      } catch (e) {
+        console.warn('[HybridGlobe] Iran overview fit failed', e);
+      }
+
+      markersRef.current.forEach(m => {
+        if (!(m as any).isInCluster) m.setOpacity(1);
+      });
+      centerMarkersRef.current.forEach(cm => cm.setOpacity(1));
+
+      // سپس به‌صورت خودکار روی مارکرهای واقعی پروژه‌ها زوم کن
       setTimeout(() => {
         try {
-          mapRef.current?.flyToBounds(bounds, {
-            padding: [80, 80],
-            maxZoom: 14,
-            duration: 5, // مدت زمان انیمیشن به ثانیه - کندتر برای حس بهتر
-            easeLinearity: 0.15, // نرمی انیمیشن (کمتر = نرم‌تر)
+          const points: L.LatLng[] = [];
+          markersRef.current.forEach(m => {
+            if (!(m as any).isInCluster) points.push(m.getLatLng());
           });
-          
-          // نمایش تدریجی مارکرها و خطوط بعد از اتمام انیمیشن
-          setTimeout(() => {
-            // نمایش مارکرهای تکی (که در cluster نیستند)
-            markersRef.current.forEach(m => {
-              if (!(m as any).isInCluster) {
-                m.setOpacity(1);
-              }
+          centerMarkersRef.current.forEach(cm => points.push(cm.getLatLng()));
+
+          if (points.length === 1) {
+            mapRef.current?.flyTo(points[0], 15, { duration: 1.2 });
+          } else if (points.length > 1) {
+            const bounds = L.latLngBounds(points);
+            mapRef.current?.flyToBounds(bounds, {
+              padding: [60, 60],
+              maxZoom: 14,
+              duration: 1.2,
             });
-            
-            // نمایش تمام نقاط قرمز مرکزی (برای همه پروژه‌ها)
-            centerMarkersRef.current.forEach(cm => cm.setOpacity(1));
-            
-            // خطوط و مارکرهای cluster مخفی می‌مانند تا کاربر روی cluster کلیک کند
-          }, 5000); // بعد از 5 ثانیه (مدت زمان انیمیشن)
+          }
         } catch (e) {
-          console.warn('[HybridGlobe] flyToBounds failed', e, bounds);
+          console.warn('[HybridGlobe] Auto-zoom to markers failed', e);
         }
-      }, 1000);
+      }, 1500);
     } else if (allMarkers.length > 0) {
       // در بارهای بعدی، فقط مارکرها را بدون حرکت نقشه نمایش بده
       setTimeout(() => {
@@ -2815,23 +2886,31 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     let newLayer: L.TileLayer;
     
     if (mapStyle === 'satellite') {
-      // لایه ماهواره‌ای از ESRI World Imagery (رایگان)
-      newLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '&copy; Esri, Maxar, Earthstar Geographics',
-        maxZoom: 22,
-        maxNativeZoom: 19,
+      // لایه ماهواره‌ای همراه با برچسب‌های فارسی استان‌ها، شهرها و خیابان‌ها
+      newLayer = createNeshanTileLayer('satellite', {
+        updateWhenIdle: false,
+        updateWhenZooming: false,
+        keepBuffer: 4,
+        errorTileUrl: '',
       });
     } else {
-      // لایه استاندارد OpenStreetMap
-      newLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 22,
-        maxNativeZoom: 19,
+      // لایه استاندارد با نام‌های محلی/فارسی
+      newLayer = createNeshanTileLayer('standard-day', {
+        updateWhenIdle: false,
+        updateWhenZooming: false,
+        keepBuffer: 4,
+        errorTileUrl: '',
       });
     }
     
     newLayer.addTo(map);
     tileLayerRef.current = newLayer;
+
+    // لایه قواره‌بندی همیشه روی تایل پایه باشد
+    if (buildingsLayerRef.current && map.hasLayer(buildingsLayerRef.current)) {
+      map.removeLayer(buildingsLayerRef.current);
+      buildingsLayerRef.current.addTo(map);
+    }
     
     console.log('[Map] Switched to', mapStyle, 'view');
   }, [mapStyle, mapReady]);
@@ -2840,56 +2919,56 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     <div className="fixed inset-0 z-50 bg-background">
       {/* لایه‌ی روی نقشه برای کنترل‌ها */}
       <div className="absolute inset-0 z-[2000] pointer-events-none">
-        {/* دکمه بازگشت - با فاصله بیشتر وقتی بنر impersonation فعال است */}
+        {/* دکمه بازگشت - گوشه راست بالا */}
         <Button
           variant="default"
           size="sm"
           onClick={onClose}
-          className={`pointer-events-auto absolute right-4 shadow-2xl border-2 border-primary/20 text-xs px-3 py-1.5 h-8 ${
-            isImpersonating ? 'top-16' : 'top-4'
+          className={`pointer-events-auto absolute right-2 shadow-lg border border-primary/20 text-[10px] px-2 py-0.5 h-6 rounded-md bg-primary/60 hover:bg-primary/75 backdrop-blur-md ${
+            isImpersonating ? 'top-14' : 'top-2'
           }`}
         >
-          <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
-          <span className="font-semibold text-xs">بازگشت</span>
+          <ArrowRight className="h-2.5 w-2.5 ml-1" />
+          <span className="font-semibold text-[10px]">بازگشت</span>
         </Button>
 
-        {/* کارت تعداد پروژه‌ها - با فاصله بیشتر وقتی بنر impersonation فعال است */}
-        <Card className={`pointer-events-auto absolute left-4 bg-card shadow-2xl border-2 border-primary/20 p-2 ${
-          isImpersonating ? 'top-28' : 'top-16'
-        }`}>
-          <div className="flex items-center gap-1.5">
-            <div className="p-1 bg-primary/10 rounded-lg">
-              <MapPin className="h-3.5 w-3.5 text-primary" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-base font-bold text-primary">{projectsWithMedia.length}</span>
-              <span className="text-[10px] text-muted-foreground leading-tight">پروژه فعال</span>
-            </div>
-          </div>
-        </Card>
-
-        {/* دکمه تغییر نمای نقشه (استاندارد/ماهواره‌ای) */}
+        {/* دکمه تغییر نمای نقشه (استاندارد/ماهواره‌ای) - بالا سمت چپ */}
         <Button
           variant="default"
           size="sm"
           onClick={() => setMapStyle(prev => prev === 'standard' ? 'satellite' : 'standard')}
-          className={`pointer-events-auto absolute left-4 shadow-2xl border-2 border-primary/20 text-xs px-3 py-1.5 h-8 ${
-            isImpersonating ? 'top-48' : 'top-36'
+          className={`pointer-events-auto absolute left-2 shadow-lg border border-primary/20 text-[10px] px-2 py-0.5 h-6 rounded-md bg-primary/60 hover:bg-primary/75 backdrop-blur-md ${
+            isImpersonating ? 'top-14' : 'top-2'
           }`}
           title={mapStyle === 'standard' ? 'نمای ماهواره‌ای' : 'نمای استاندارد'}
         >
           {mapStyle === 'standard' ? (
             <>
-              <Satellite className="h-3.5 w-3.5 ml-1.5" />
-              <span className="font-semibold text-xs">ماهواره‌ای</span>
+              <Satellite className="h-2.5 w-2.5 ml-1" />
+              <span className="font-semibold text-[10px]">ماهواره‌ای</span>
             </>
           ) : (
             <>
-              <MapIcon className="h-3.5 w-3.5 ml-1.5" />
-              <span className="font-semibold text-xs">نقشه</span>
+              <MapIcon className="h-2.5 w-2.5 ml-1" />
+              <span className="font-semibold text-[10px]">نقشه</span>
             </>
           )}
         </Button>
+
+        {/* کارت تعداد پروژه‌ها - زیر دکمه ماهواره‌ای */}
+        <Card className={`pointer-events-auto absolute left-2 bg-card/50 backdrop-blur-md shadow-lg border border-primary/20 p-1 rounded-md ${
+          isImpersonating ? 'top-22' : 'top-10'
+        }`}>
+          <div className="flex items-center gap-1">
+            <div className="p-0.5 bg-primary/10 rounded">
+              <MapPin className="h-2.5 w-2.5 text-primary" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-primary leading-none">{projectsWithMedia.length}</span>
+              <span className="text-[8px] text-muted-foreground leading-tight">پروژه فعال</span>
+            </div>
+          </div>
+        </Card>
 
         {/* کادر جستجوی آدرس - پایین نقشه */}
         <div className="pointer-events-auto absolute bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md">
@@ -2916,89 +2995,100 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       <div ref={mapContainer} className="w-full h-full" style={{ touchAction: 'pan-x pan-y' }} />
 
       {/* کادر آپلود برای سفارش خاص */}
-      {selectedOrderForUpload && (
-        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-[200000] pointer-events-auto" onClick={() => setSelectedOrderForUpload(null)}>
-          <Card 
-            className="w-full max-w-md bg-card shadow-2xl p-4 rounded-t-2xl border-t-2 border-x-2 border-primary/20 mb-0 animate-in slide-in-from-bottom duration-300"
-            onClick={(e) => e.stopPropagation()}
+      {selectedOrderForUpload && typeof document !== 'undefined' && createPortal((() => {
+        const currentOrder = projectsWithMedia
+          .flatMap(p => p.orders || [])
+          .find(o => o.id === selectedOrderForUpload);
+        return (
+          <div
+            className="fixed inset-0 flex items-center justify-center px-3 pointer-events-none"
+            style={{ zIndex: 2147483647, isolation: 'isolate' }}
           >
-            <div className="space-y-4">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold">افزودن عکس و فیلم به سفارش</h3>
-                  <p className="text-sm text-muted-foreground mt-1">فایل‌های انتخابی به سفارش اضافه می‌شود</p>
+            <Card
+              className="relative w-full max-w-sm bg-card shadow-2xl p-4 rounded-2xl border-2 border-primary/40 animate-in slide-in-from-top duration-300 pointer-events-auto"
+              style={{ zIndex: 2147483647 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <h3 className="text-base font-semibold">افزودن عکس و فیلم به سفارش</h3>
+                    {currentOrder?.code && (
+                      <p className="text-xs mt-1">
+                        <span className="text-muted-foreground">سفارش </span>
+                        <span className="font-bold text-primary">#{currentOrder.code}</span>
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setSelectedOrderForUpload(null)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setSelectedOrderForUpload(null);
-                    setSelectedProject(null);
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    onClick={() => {
+                      if (fileInputRef.current) {
+                        openMediaPicker(IMAGE_ACCEPT);
+                      }
+                    }}
+                    disabled={uploading}
+                    variant="outline"
+                    className="h-20 flex flex-col gap-2"
+                  >
+                    <Camera className="h-6 w-6 text-primary" />
+                    <span className="text-sm">افزودن عکس</span>
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (fileInputRef.current) {
+                        openMediaPicker(VIDEO_ACCEPT);
+                      }
+                    }}
+                    disabled={uploading}
+                    variant="outline"
+                    className="h-20 flex flex-col gap-2"
+                  >
+                    <Video className="h-6 w-6 text-primary" />
+                    <span className="text-sm">افزودن فیلم</span>
+                  </Button>
+                </div>
+                {uploading && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>در حال آپلود...</span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div
+                        className="bg-primary h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
                 <Button
                   onClick={() => {
                     if (fileInputRef.current) {
-                      fileInputRef.current.accept = 'image/*';
-                      fileInputRef.current.click();
+                      openMediaPicker(ALL_MEDIA_ACCEPT);
                     }
                   }}
                   disabled={uploading}
-                  variant="outline"
-                  className="h-24 flex flex-col gap-2"
+                  className="w-full"
                 >
-                  <Camera className="h-8 w-8 text-primary" />
-                  <span>افزودن عکس</span>
+                  {uploading ? 'در حال آپلود...' : 'انتخاب همزمان عکس و فیلم'}
                 </Button>
-                <Button
-                  onClick={() => {
-                    if (fileInputRef.current) {
-                      fileInputRef.current.accept = 'video/*';
-                      fileInputRef.current.click();
-                    }
-                  }}
-                  disabled={uploading}
-                  variant="outline"
-                  className="h-24 flex flex-col gap-2"
-                >
-                  <Video className="h-8 w-8 text-primary" />
-                  <span>افزودن فیلم</span>
-                </Button>
+                <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
+                  حداکثر حجم فیلم ۵۰ مگابایت (فرمت mp4، mov، webm، mkv و ...)
+                </p>
               </div>
-              {uploading && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>در حال آپلود...</span>
-                    <span>{uploadProgress}%</span>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-2">
-                    <div 
-                      className="bg-primary h-2 rounded-full transition-all duration-300" 
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-              <Button
-                onClick={() => {
-                  if (fileInputRef.current) {
-                    fileInputRef.current.accept = 'image/*,video/*';
-                    fileInputRef.current.click();
-                  }
-                }}
-                disabled={uploading}
-                className="w-full"
-              >
-                {uploading ? 'در حال آپلود...' : 'انتخاب همزمان عکس و فیلم'}
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
+            </Card>
+          </div>
+        );
+      })(), document.body)}
 
       {/* Input مخفی برای انتخاب فایل */}
       <input
@@ -3127,11 +3217,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
           }}
           onAddMedia={(orderId) => {
             setSelectedOrderForUpload(orderId);
-            // بستن پنل موبایل با تاخیر تا کادر آپلود نمایش داده شود
-            setTimeout(() => {
-              setMobileSelectedProject(null);
-              setMobileSelectedLocationProjects([]);
-            }, 100);
+            // پنل سفارش باز می‌ماند تا کاربر بداند رسانه برای کدام سفارش اضافه می‌شود
           }}
           onViewImage={(images, index) => {
             setZoomedImages(images);

@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, CheckCircle, Clock, Search, MapPin, Phone, User, AlertCircle, Edit, Ruler, FileText, Banknote, Wrench, ArrowLeftRight, Users, Archive, RefreshCw, PackageOpen, XCircle } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, Search, MapPin, Phone, User, AlertCircle, Edit, Ruler, FileText, Banknote, Wrench, ArrowLeftRight, Users, Archive, RefreshCw, PackageOpen, XCircle, ZoomIn, ZoomOut, RotateCcw, MessageSquare, MessageSquareOff } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -28,8 +29,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { CollectionRequestDialog } from '@/components/orders/CollectionRequestDialog';
 import { MultiPaymentDialog } from '@/components/orders/MultiPaymentDialog';
 import { OrderLocationEditor } from '@/components/locations/OrderLocationEditor';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CustomerStatementsTab } from '@/components/executive/CustomerStatementsTab';
+import { Receipt } from 'lucide-react';
 import { RentalStartDatePicker } from '@/components/orders/RentalStartDatePicker';
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
+import ProjectV3AssignmentsInfo from '@/components/orders/ProjectV3AssignmentsInfo';
 
 // مراحل اجرایی سفارش - key برای UI، statusMapping برای status در دیتابیس، executionStageMapping برای execution_stage
 // IMPORTANT: pending_execution باید به status = 'pending_execution' در دیتابیس مپ شود
@@ -169,6 +174,7 @@ export default function ExecutiveOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isApplyingUpdate, setIsApplyingUpdate] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [executionDate, setExecutionDate] = useState('');
   const [completionDate, setCompletionDate] = useState('');
@@ -177,6 +183,15 @@ export default function ExecutiveOrders() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [detailsZoom, setDetailsZoom] = useState<number>(() => {
+    if (typeof window === 'undefined') return 1;
+    const saved = parseFloat(localStorage.getItem('executive-details-zoom') || '');
+    return Number.isFinite(saved) && saved > 0 ? saved : 1;
+  });
+  useEffect(() => {
+    try { localStorage.setItem('executive-details-zoom', String(detailsZoom)); } catch {}
+  }, [detailsZoom]);
+  const clampZoom = (v: number) => Math.min(2, Math.max(0.5, Math.round(v * 100) / 100));
   const [showEditScheduleDialog, setShowEditScheduleDialog] = useState(false);
   const [editStartDate, setEditStartDate] = useState('');
   const [editEndDate, setEditEndDate] = useState('');
@@ -187,6 +202,34 @@ export default function ExecutiveOrders() {
   const [bulkArchiveDialogOpen, setBulkArchiveDialogOpen] = useState(false);
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set());
   const [bulkArchiving, setBulkArchiving] = useState(false);
+  const SMS_DISABLED_STORAGE_KEY = 'executive_orders_sms_disabled_v1';
+  const [smsDisabledOrders, setSmsDisabledOrders] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(SMS_DISABLED_STORAGE_KEY);
+      if (!raw) return new Set();
+      const arr = JSON.parse(raw);
+      return new Set(Array.isArray(arr) ? arr : []);
+    } catch {
+      return new Set();
+    }
+  });
+  const isOrderSmsEnabled = (orderId: string) => !smsDisabledOrders.has(orderId);
+  const toggleOrderSms = (orderId: string, enabled: boolean) => {
+    setSmsDisabledOrders(prev => {
+      const next = new Set(prev);
+      if (enabled) next.delete(orderId); else next.add(orderId);
+      try {
+        localStorage.setItem(SMS_DISABLED_STORAGE_KEY, JSON.stringify(Array.from(next)));
+      } catch {}
+      return next;
+    });
+    toast({
+      title: enabled ? '✓ ارسال پیامک برای این سفارش فعال شد' : 'ارسال پیامک برای این سفارش غیرفعال شد',
+      description: enabled
+        ? 'با تغییر مراحل، پیامک به مشتری ارسال می‌شود.'
+        : 'با تغییر مراحل، هیچ پیامکی به مشتری ارسال نخواهد شد.'
+    });
+  };
   // Stage change confirmation
   const [stageChangeConfirmOpen, setStageChangeConfirmOpen] = useState(false);
   const [pendingStageChange, setPendingStageChange] = useState<{ orderId: string; newStage: string } | null>(null);
@@ -502,7 +545,7 @@ export default function ExecutiveOrders() {
 
       // ارسال پیامک به مشتری (در پس‌زمینه)
       const order = orders.find(o => o.id === orderId);
-      if (order?.customer_phone) {
+      if (order?.customer_phone && isOrderSmsEnabled(orderId)) {
         sendOrderSms(order.customer_phone, order.code, 'in_progress', {
           orderId: order.id,
           address: buildOrderSmsAddress(order.address, order.detailed_address),
@@ -577,7 +620,7 @@ export default function ExecutiveOrders() {
 
       // ارسال پیامک به مشتری (در پس‌زمینه)
       const order = orders.find(o => o.id === orderId);
-      if (order?.customer_phone) {
+      if (order?.customer_phone && isOrderSmsEnabled(orderId)) {
         sendOrderSms(order.customer_phone, order.code, 'executed', {
           orderId: order.id,
           address: buildOrderSmsAddress(order.address, order.detailed_address),
@@ -712,39 +755,68 @@ export default function ExecutiveOrders() {
       const { data: authData } = await supabase.auth.getUser();
       const currentUserId = authData?.user?.id;
 
-      // تنظیم فیلدها بر اساس مرحله جدید - برای برگشت به عقب هم کار کند
-      if (newStage === 'pending') {
-        // بازگشت به انتظار تایید - ریست همه فیلدها
+      // دریافت وضعیت فعلی سفارش برای پر کردن خودکار فیلدهای ناقص هنگام پرش بین مراحل
+      const { data: currentOrder } = await supabase
+        .from('projects_v3')
+        .select('approved_at, approved_by, execution_confirmed_at, execution_start_date, execution_end_date, executive_completion_date, closed_at, payment_amount, total_price')
+        .eq('id', orderId)
+        .single();
+
+      // ایندکس مرحله جدید (برای تشخیص جلو/عقب رفتن چندمرحله‌ای)
+      const targetIdx = executionStages.findIndex(s => s.key === newStage);
+      const nowIso = new Date().toISOString();
+
+      // تنظیم execution_stage بر اساس مرحله مقصد
+      updateData.execution_stage = stage.executionStageMapping ?? null;
+
+      // === برگشت به عقب: ریست کردن فیلدهای مراحل بعدی ===
+      // pending = ریست کامل
+      if (targetIdx <= 0) {
         updateData.approved_at = null;
         updateData.approved_by = null;
-        updateData.execution_stage = null;
+        updateData.execution_confirmed_at = null;
         updateData.execution_start_date = null;
         updateData.execution_end_date = null;
-        updateData.execution_confirmed_at = null;
+        updateData.executive_completion_date = null;
         updateData.closed_at = null;
-      } else if (newStage === 'pending_execution') {
-        // تایید سفارش و انتقال به انتظار اجرا
-        updateData.approved_at = new Date().toISOString();
-        updateData.approved_by = currentUserId;
-        updateData.execution_stage = null;
-        updateData.execution_confirmed_at = null;
-        updateData.closed_at = null;
-        
+      } else {
+        // === جلو رفتن: پر کردن خودکار فیلدهای پیش‌نیاز ناقص ===
+        // pending_execution و بالاتر => approved_at/by لازم است
+        if (targetIdx >= 1) {
+          if (!currentOrder?.approved_at) updateData.approved_at = nowIso;
+          if (!currentOrder?.approved_by) updateData.approved_by = currentUserId;
+        }
+        // in_progress و بالاتر => execution_confirmed_at لازم است
+        if (targetIdx >= 2) {
+          if (!currentOrder?.execution_confirmed_at) updateData.execution_confirmed_at = nowIso;
+        }
+        // closed => closed_at و executive_completion_date
+        if (newStage === 'closed') {
+          updateData.closed_at = nowIso;
+          if (!currentOrder?.executive_completion_date) {
+            updateData.executive_completion_date = nowIso;
+          }
+        } else {
+          // برگشت از closed به مراحل قبلی: ریست closed_at
+          updateData.closed_at = null;
+        }
+      }
+
+      // عملیات جانبی فقط در صورت رسیدن به pending_execution
+      if (newStage === 'pending_execution') {
         // ثبت تایید در جدول order_approvals برای مدیر کل اجرای داربست به همراه اجناس
-        // بررسی اینکه آیا سفارش مربوط به این زیردسته هست
         const isExecutionWithMaterials = orderData?.subcategory_id === SUBCATEGORY_SCAFFOLD_EXECUTION_WITH_MATERIALS;
         if (isExecutionWithMaterials && currentUserId) {
-          // ثبت تایید در جدول order_approvals
           await supabase
             .from('order_approvals')
             .update({
               approver_user_id: currentUserId,
-              approved_at: new Date().toISOString()
+              approved_at: nowIso
             })
             .eq('order_id', orderId)
             .eq('approver_role', 'executive_manager_scaffold_execution_with_materials');
         }
-        
+
         // کپی قیمت از notes.estimated_price به payment_amount و total_price اگر خالی هستند
         const notesObj = orderData?.notes && typeof orderData.notes === 'object'
           ? orderData.notes as any
@@ -754,29 +826,6 @@ export default function ExecutiveOrders() {
           updateData.payment_amount = estimatedPrice;
           updateData.total_price = estimatedPrice;
         }
-      } else if (newStage === 'in_progress') {
-        // شروع اجرا
-        if (!updateData.approved_at) {
-          updateData.approved_at = new Date().toISOString();
-          updateData.approved_by = currentUserId;
-        }
-        updateData.execution_confirmed_at = new Date().toISOString();
-        updateData.execution_stage = null;
-        updateData.closed_at = null;
-      } else if (stage.executionStageMapping) {
-        // مراحل اجرایی - تنظیم execution_stage
-        updateData.execution_stage = stage.executionStageMapping;
-        // ریست closed_at اگر به عقب برگشتیم
-        if (newStage !== 'closed') {
-          updateData.closed_at = null;
-        }
-      }
-
-      // اگر به مرحله closed رسید، closed_at را هم ثبت کن
-      if (newStage === 'closed') {
-        updateData.closed_at = new Date().toISOString();
-        updateData.execution_stage = null;
-        updateData.executive_completion_date = new Date().toISOString();
       }
 
       const { data: updatedRows, error } = await supabase
@@ -862,25 +911,27 @@ export default function ExecutiveOrders() {
                 type: 'order-stage'
               });
               
-              // ارسال SMS برای مراحل کلیدی (اجرا شد و اتمام سفارش)
-              if (newStage === 'order_executed' || newStage === 'closed') {
-                // دریافت شماره مشتری
-                const { data: customerProfile } = await supabase
-                  .from('profiles')
-                  .select('phone_number')
-                  .eq('user_id', customerData.user_id)
-                  .single();
-                
-                if (customerProfile?.phone_number) {
-                  const smsStatus = newStage === 'closed' ? 'completed' : 'executed';
-                  const order = orders.find(o => o.id === orderId);
-                  sendOrderSms(customerProfile.phone_number, orderData.code || '', smsStatus, {
-                    orderId: orderId,
-                    address: buildOrderSmsAddress(order?.address, order?.detailed_address),
-                  }).catch(err => {
-                    console.error('SMS notification error:', err);
-                  });
-                }
+              const smsStatusMap: Record<string, any> = {
+                pending_execution: 'approved',
+                in_progress: 'in_progress',
+                order_executed: 'executed',
+                awaiting_payment: 'awaiting_payment',
+                awaiting_collection: 'awaiting_collection',
+                in_collection: 'in_collection',
+                collected: 'collected',
+                closed: 'completed'
+              };
+              const smsStatus = smsStatusMap[newStage];
+              if (smsStatus && isOrderSmsEnabled(orderId)) {
+                const order = orders.find(o => o.id === orderId);
+                sendOrderSms(order?.customer_phone || '', orderData.code || '', smsStatus, {
+                  orderId,
+                  address: buildOrderSmsAddress(order?.address, order?.detailed_address),
+                  serviceType: order?.service_type_name || order?.subcategory_name || 'خدمات',
+                  customerName: order?.customer_name,
+                }).catch(err => {
+                  console.error('SMS notification error:', err);
+                });
               }
             } catch (notifError) {
               console.error('Error sending notification:', notifError);
@@ -933,7 +984,7 @@ export default function ExecutiveOrders() {
       if (error) throw error;
 
       // ارسال پیامک به مشتری (در پس‌زمینه)
-      if (selectedOrder.customer_phone) {
+      if (selectedOrder.customer_phone && isOrderSmsEnabled(selectedOrder.id)) {
         sendOrderSms(selectedOrder.customer_phone, selectedOrder.code, 'completed', {
           orderId: selectedOrder.id,
           address: buildOrderSmsAddress(selectedOrder.address, selectedOrder.detailed_address),
@@ -1168,35 +1219,11 @@ export default function ExecutiveOrders() {
     }
 
     try {
-      // ذخیره دلیل رد در notes
-      const currentNotesStr = selectedOrder.notes;
-      let currentNotes: Record<string, any> = {};
-      if (currentNotesStr) {
-        try {
-          if (typeof currentNotesStr === 'string') {
-            currentNotes = JSON.parse(currentNotesStr);
-          } else if (typeof currentNotesStr === 'object') {
-            currentNotes = currentNotesStr as Record<string, any>;
-          }
-        } catch {
-          currentNotes = {};
-        }
-      }
-      const updatedNotes = {
-        ...currentNotes,
-        rejection_reason: rejectionReason,
-        rejected_at: new Date().toISOString(),
-        rejected_by: user.id
-      };
-
-      // به‌روزرسانی وضعیت سفارش به rejected و ذخیره دلیل رد
-      const { error: updateError } = await supabase
-        .from('projects_v3')
-        .update({
-          status: 'rejected',
-          notes: JSON.stringify(updatedNotes) as any
-        })
-        .eq('id', selectedOrder.id);
+      // فراخوانی تابع امن دیتابیس برای رد سفارش (دور زدن محدودیت‌های RLS برای نقش‌های مدیریتی)
+      const { error: updateError } = await (supabase as any).rpc('reject_order', {
+        _order_id: selectedOrder.id,
+        _reason: rejectionReason,
+      });
 
       if (updateError) throw updateError;
 
@@ -1249,7 +1276,7 @@ export default function ExecutiveOrders() {
   if (loading) return <LoadingSpinner />;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="w-full max-w-none px-4 py-6 space-y-6">
       <PageHeader
         title="مدیریت سفارشات اجرا"
         description={`${orders.length} سفارش • ${filteredOrders.length} نمایش داده شده`}
@@ -1257,6 +1284,7 @@ export default function ExecutiveOrders() {
         backTo="/executive"
       />
 
+      <div className="space-y-6">
       {/* Filters and Search */}
       {orders.length > 0 && (
         <Card>
@@ -1451,6 +1479,28 @@ export default function ExecutiveOrders() {
                           {serviceLabel}
                         </Badge>
                       )}
+                      <div
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs ${
+                          isOrderSmsEnabled(order.id)
+                            ? 'bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-800 text-green-700 dark:text-green-400'
+                            : 'bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-800 text-red-700 dark:text-red-400'
+                        }`}
+                        title={isOrderSmsEnabled(order.id) ? 'ارسال پیامک به مشتری فعال است' : 'ارسال پیامک به مشتری غیرفعال است'}
+                      >
+                        {isOrderSmsEnabled(order.id) ? (
+                          <MessageSquare className="h-3.5 w-3.5" />
+                        ) : (
+                          <MessageSquareOff className="h-3.5 w-3.5" />
+                        )}
+                        <span className="font-medium whitespace-nowrap">
+                          {isOrderSmsEnabled(order.id) ? 'پیامک: فعال' : 'پیامک: غیرفعال'}
+                        </span>
+                        <Switch
+                          checked={isOrderSmsEnabled(order.id)}
+                          onCheckedChange={(v) => toggleOrderSms(order.id, v)}
+                          aria-label="فعال/غیرفعال کردن ارسال پیامک به مشتری"
+                        />
+                      </div>
                     </div>
                     
                     <div className="space-y-1 text-sm">
@@ -1472,13 +1522,37 @@ export default function ExecutiveOrders() {
                             </div>
                           )}
                         </div>
-                      </div>
                     </div>
+                    <div className="mt-2">
+                      <ProjectV3AssignmentsInfo projectId={order.id} />
+                    </div>
+                  </div>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4 transition-all duration-300 ease-in-out">
                 <Separator />
+
+                {/* شرح محل نصب و نوع فعالیت */}
+                {(() => {
+                  const serviceDescription =
+                    notesObj?.description ||
+                    notesObj?.installationDescription ||
+                    notesObj?.additional_notes ||
+                    '';
+                  if (!serviceDescription) return null;
+                  return (
+                    <div className="rounded-lg border bg-amber-50/60 dark:bg-amber-950/20 border-amber-200/60 dark:border-amber-900/40 p-3">
+                      <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400 mb-1.5">
+                        <FileText className="h-4 w-4" />
+                        <span className="font-medium">شرح محل نصب و نوع فعالیت</span>
+                      </div>
+                      <p className="text-sm leading-6 whitespace-pre-wrap text-foreground/90">
+                        {serviceDescription}
+                      </p>
+                    </div>
+                  );
+                })()}
 
                 {/* Price summary (General Manager module only) */}
                 {!isExecutiveModule && totalAmount > 0 && (
@@ -1501,6 +1575,36 @@ export default function ExecutiveOrders() {
                         تومان
                       </div>
                     )}
+                    {/* وضعیت پرداخت در نمای کلی */}
+                    {(() => {
+                      const paid = Number(order.total_paid ?? 0);
+                      const remaining = Math.max(0, totalAmount - paid);
+                      const isSettled = totalAmount > 0 && paid >= totalAmount;
+                      return (
+                        <div className="mt-2 flex items-center justify-between gap-3 pt-2 border-t border-border/50">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Banknote className="h-3.5 w-3.5" />
+                            <span>وضعیت پرداخت</span>
+                          </div>
+                          {isSettled ? (
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                              تسویه شده ✓
+                            </span>
+                          ) : paid > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">مانده:</span>
+                              <span className="text-xs font-bold text-amber-600 dark:text-amber-400" dir="ltr">
+                                {remaining.toLocaleString('fa-IR')} تومان
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                              پرداخت نشده
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
 
@@ -1874,8 +1978,10 @@ export default function ExecutiveOrders() {
                     </Button>
                   )}
 
-                  {/* دکمه ثبت پرداخت - برای همه مراحل بعد از اجرا (شامل اتمام سفارش) */}
-                  {(order.status === 'closed' || order.execution_stage === 'order_executed' || 
+                  {/* دکمه ثبت پرداخت - بعد از تایید سفارش (مشتری ممکن است قبل از اجرا پرداخت کند) */}
+                  {(order.status === 'approved' || order.status === 'pending_execution' ||
+                    order.status === 'in_progress' || order.status === 'closed' ||
+                    order.execution_stage === 'order_executed' || 
                     order.execution_stage === 'awaiting_payment' || 
                     order.execution_stage === 'awaiting_collection' || 
                     order.execution_stage === 'in_collection' || 
@@ -2134,23 +2240,63 @@ export default function ExecutiveOrders() {
 
       {/* Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent
+          className="manager-order-detail-dialog !w-[96vw] !max-w-[96vw] !h-[96vh] !max-h-[96vh] !p-3 overflow-hidden flex flex-col"
+          style={{ zoom: 1 }}
+        >
           <DialogHeader>
-            <DialogTitle>جزئیات کامل سفارش {selectedOrder?.code}</DialogTitle>
+            <div className="flex items-center justify-between gap-2 pl-6">
+              <DialogTitle>جزئیات کامل سفارش {selectedOrder?.code}</DialogTitle>
+              <div className="flex items-center gap-1 shrink-0">
+                <Button type="button" variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => setDetailsZoom(z => clampZoom(z - 0.1))} title="کوچکتر">
+                  <ZoomOut className="h-3.5 w-3.5" />
+                </Button>
+                <button type="button" onClick={() => setDetailsZoom(1)} className="text-[11px] tabular-nums w-10 text-center hover:underline" title="بازنشانی">
+                  {Math.round(detailsZoom * 100)}%
+                </button>
+                <Button type="button" variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => setDetailsZoom(z => clampZoom(z + 0.1))} title="بزرگتر">
+                  <ZoomIn className="h-3.5 w-3.5" />
+                </Button>
+                <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setDetailsZoom(1)} title="بازنشانی">
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
             <DialogDescription>اطلاعات جامع سفارش</DialogDescription>
           </DialogHeader>
           {selectedOrder && (
-            <>
+            <div
+              className="min-h-0 flex-1 overflow-auto px-1 pb-2 relative"
+              onWheel={(e) => {
+                if (e.ctrlKey || e.metaKey) {
+                  e.preventDefault();
+                  setDetailsZoom(z => clampZoom(z + (e.deltaY < 0 ? 0.1 : -0.1)));
+                }
+              }}
+            >
+              {isApplyingUpdate && (
+                <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background/70 backdrop-blur-sm pointer-events-auto">
+                  <LoadingSpinner />
+                  <p className="text-sm font-medium text-foreground">در حال اعمال تغییرات روی سفارش...</p>
+                  <p className="text-xs text-muted-foreground">لطفاً منتظر بمانید</p>
+                </div>
+              )}
+              <div style={{ zoom: detailsZoom as any, transformOrigin: 'top right', pointerEvents: isApplyingUpdate ? 'none' : 'auto', opacity: isApplyingUpdate ? 0.6 : 1 }}>
               <OrderDetailsContent order={selectedOrder} getStatusBadge={getStatusBadge} onUpdate={async () => {
-                await fetchOrders();
-                // Refresh selectedOrder with latest data from DB
-                const { data: refreshed } = await supabase
-                  .from('projects_v3')
-                  .select('*')
-                  .eq('id', selectedOrder.id)
-                  .maybeSingle();
-                if (refreshed) {
-                  setSelectedOrder(prev => prev ? { ...prev, ...refreshed, notes: refreshed.notes } : prev);
+                setIsApplyingUpdate(true);
+                try {
+                  await fetchOrders();
+                  // Refresh selectedOrder with latest data from DB
+                  const { data: refreshed } = await supabase
+                    .from('projects_v3')
+                    .select('*')
+                    .eq('id', selectedOrder.id)
+                    .maybeSingle();
+                  if (refreshed) {
+                    setSelectedOrder(prev => prev ? { ...prev, ...refreshed, notes: refreshed.notes } : prev);
+                  }
+                } finally {
+                  setIsApplyingUpdate(false);
                 }
               }} hidePrice={isExecutiveModule} hideDetails={isAccountingModule} />
               {/* نقشه موقعیت پروژه با امکان ویرایش - hidden for accounting module */}
@@ -2167,14 +2313,31 @@ export default function ExecutiveOrders() {
                     locationConfirmedByCustomer={selectedOrder.location_confirmed_by_customer}
                     locationConfirmedAt={selectedOrder.location_confirmed_at || undefined}
                     isManager={true}
-                    onLocationUpdated={fetchOrders}
+                    onLocationUpdated={async () => {
+                      setIsApplyingUpdate(true);
+                      try {
+                        await fetchOrders();
+                        const { data: refreshed } = await supabase
+                          .from('projects_v3')
+                          .select('*')
+                          .eq('id', selectedOrder.id)
+                          .maybeSingle();
+                        if (refreshed) {
+                          setSelectedOrder(prev => prev ? { ...prev, ...refreshed, notes: refreshed.notes } : prev);
+                        }
+                      } finally {
+                        setIsApplyingUpdate(false);
+                      }
+                    }}
                   />
                 </div>
               )}
-            </>
+              </div>
+            </div>
           )}
           <Separator />
-          <DialogFooter className="gap-2 flex-wrap">
+          <DialogFooter className="!flex !flex-row !flex-wrap !justify-end gap-2 [&>button]:w-auto [&>button]:flex-none">
+
             {selectedOrder?.status === 'paid' && (
               <Button
                 onClick={() => {
@@ -2500,6 +2663,7 @@ export default function ExecutiveOrders() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

@@ -34,6 +34,13 @@ export interface BankCardTransaction {
   // Enriched fields for daily report transactions
   module_name?: string | null;
   report_date?: string | null;
+  // Effective transaction timestamp resolved from the referenced row
+  // (order_payments.payment_date or daily_report_staff.created_at), falling
+  // back to bank_card_transactions.created_at when no reference is found.
+  effective_time?: string | null;
+  // Timestamp used for the visible report/reference date line.
+  // It is resolved from the referenced source so date-only fields do not always show 00:00.
+  display_report_time?: string | null;
 }
 
 export interface CreateBankCardData {
@@ -261,25 +268,93 @@ export function useBankCards() {
 
   const getCardTransactions = useCallback(async (cardId: string) => {
     try {
-      // Use RPC-style query to sort by effective date (report_date if available, otherwise created_at date)
       const { data, error } = await supabase
         .from('bank_card_transactions')
         .select('*')
-        .eq('bank_card_id', cardId)
-        .order('report_date', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false });
+        .eq('bank_card_id', cardId);
 
       if (error) throw error;
-      
-      // Sort client-side by effective date: report_date first, fallback to created_at date
-      const sorted = ((data || []) as BankCardTransaction[]).sort((a, b) => {
-        const dateA = a.report_date || (a.created_at ? a.created_at.substring(0, 10) : '');
-        const dateB = b.report_date || (b.created_at ? b.created_at.substring(0, 10) : '');
-        if (dateA !== dateB) return dateB.localeCompare(dateA); // DESC
-        // Same effective date: sort by created_at DESC
-        return (b.created_at || '').localeCompare(a.created_at || '');
+
+      const txs = ((data || []) as BankCardTransaction[]);
+
+      const normalizeDatePart = (value?: string | null) => (value || '').slice(0, 10);
+      const buildDailyReportTime = (dateValue?: string | null, timeValue?: string | null) => {
+        const datePart = normalizeDatePart(dateValue);
+        if (!datePart) return null;
+        const rawTime = (timeValue || '').trim();
+        const safeTime = /^([01]?\d|2[0-3]):[0-5]\d$/.test(rawTime) ? rawTime.padStart(5, '0') : '00:00';
+        return `${datePart}T${safeTime}:00+03:30`;
+      };
+
+      // Enrich each transaction with the actual time from its referenced source row.
+      const orderPaymentIds = txs.filter(t => t.reference_type === 'order_payment' && t.reference_id).map(t => t.reference_id as string);
+      const dailyReportIds = [...new Set(txs.filter(t => t.reference_type === 'daily_report_staff' && t.reference_id).map(t => t.reference_id as string))];
+
+      const [opRes, drRes, drsRes] = await Promise.all([
+        orderPaymentIds.length
+          ? supabase.from('order_payments').select('id, payment_date, created_at').in('id', orderPaymentIds)
+          : Promise.resolve({ data: [] as any[] } as any),
+        dailyReportIds.length
+          ? supabase.from('daily_reports').select('id, report_date').in('id', dailyReportIds)
+          : Promise.resolve({ data: [] as any[] } as any),
+        dailyReportIds.length
+          ? supabase
+              .from('daily_report_staff')
+              .select('id, daily_report_id, bank_card_id, transaction_time, created_at, amount_received, amount_spent, receiving_notes, spending_notes')
+              .in('daily_report_id', dailyReportIds)
+              .eq('bank_card_id', cardId)
+          : Promise.resolve({ data: [] as any[] } as any),
+      ]);
+
+      const opMap = new Map<string, string>();
+      (opRes.data || []).forEach((r: any) => opMap.set(r.id, r.payment_date || r.created_at));
+      const drMap = new Map<string, string>();
+      (drRes.data || []).forEach((r: any) => drMap.set(r.id, r.report_date));
+      const staffRowsByReport = new Map<string, any[]>();
+      (drsRes.data || []).forEach((r: any) => {
+        const rows = staffRowsByReport.get(r.daily_report_id) || [];
+        rows.push(r);
+        staffRowsByReport.set(r.daily_report_id, rows);
       });
-      
+
+      const enriched = txs.map(t => {
+        let effective: string | null = null;
+        let displayReportTime: string | null = null;
+        if (t.reference_type === 'order_payment' && t.reference_id) {
+          effective = opMap.get(t.reference_id) || t.created_at;
+          displayReportTime = effective;
+        } else if (t.reference_type === 'daily_report_staff' && t.reference_id) {
+          const sourceRows = staffRowsByReport.get(t.reference_id) || [];
+          const matchedRow = sourceRows.find((row: any) => {
+            const sourceAmount = t.transaction_type === 'deposit' ? row.amount_received : row.amount_spent;
+            return Number(sourceAmount ?? 0) === Number(t.amount ?? 0);
+          }) || sourceRows[0];
+          // Prefer the explicit transaction_time recorded in the source row.
+          // If it is missing, fall back to the transaction's own created_at
+          // (which was set with the precise timestamp when the row was inserted),
+          // NOT to a 00:00 default — that was the bug causing wrong display times.
+          const built = buildDailyReportTime(drMap.get(t.reference_id) || t.report_date, matchedRow?.transaction_time);
+          // Always use the daily_report's date (with the source transaction_time when present,
+          // otherwise 00:00). Never fall back to the bank transaction's own created_at,
+          // because that reflects when the row was inserted into the DB — not the actual
+          // report date of the underlying staff transaction.
+          effective = built || t.created_at;
+          displayReportTime = effective;
+        }
+        if (!effective) effective = t.created_at;
+        if (!displayReportTime) {
+          displayReportTime = t.created_at;
+        }
+        return { ...t, effective_time: effective, display_report_time: displayReportTime } as BankCardTransaction;
+      });
+
+      // Ascending by effective time (oldest first, newest last)
+      const sorted = enriched.sort((a, b) => {
+        const tA = a.effective_time || a.created_at || '';
+        const tB = b.effective_time || b.created_at || '';
+        return tA.localeCompare(tB);
+      });
+
       return sorted;
     } catch (error) {
       console.error('Error fetching transactions:', error);

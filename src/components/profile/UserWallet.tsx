@@ -114,32 +114,8 @@ export function UserWallet() {
           }
         });
         
-        const uniqueOrderCodes = [...new Set(orderCodes)];
-        
-        if (uniqueOrderCodes.length > 0) {
-          // گرفتن وضعیت بایگانی سفارشات بر اساس کد سفارش
-          const { data: orders } = await supabase
-            .from('projects_v3')
-            .select('code, is_archived')
-            .in('code', uniqueOrderCodes);
-          
-          // لیست کدهای سفارشات فعال (غیر بایگانی)
-          const activeOrderCodes = new Set(
-            (orders || []).filter(o => o.is_archived !== true).map(o => o.code)
-          );
-          
-          // حذف تراکنش‌های مربوط به سفارشات بایگانی شده یا حذف شده (سفارشاتی که در دیتابیس نیستند)
-          filteredTransactions = filteredTransactions.filter(tx => {
-            if (tx.reference_type === 'order_approved' || tx.reference_type === 'order_payment') {
-              const match = tx.title?.match(/سفارش\s+(\d+)/);
-              if (match && match[1]) {
-                // فقط اگر سفارش فعال باشد نمایش بده
-                return activeOrderCodes.has(match[1]);
-              }
-            }
-            return true;
-          });
-        }
+        // تراکنش‌های سفارشات بایگانی شده و بایگانی عمیق هم در کیف پول و حسابداری نگه داشته می‌شوند
+        // تا هزینه‌ها و تحلیل‌های مالی روی آنها قابل انجام باشد
       }
 
       setTransactions(filteredTransactions.slice(0, 50));
@@ -182,9 +158,9 @@ export function UserWallet() {
           .from('projects_v3')
           .select('payment_amount, total_price, payment_confirmed_at, notes, total_paid, status, is_archived')
           .eq('customer_id', customer.id)
-          // فقط سفارشات غیر بایگانی را در نظر بگیر
-          .or('is_archived.is.null,is_archived.eq.false')
-          // سفارشات رد شده هم از حسابداری حذف شوند
+          // سفارشات بایگانی شده و بایگانی عمیق هم در حسابداری نگه داشته می‌شوند
+          // تا تراکنش‌ها و بدهی‌های آنها در گردش کار مالی باقی بمانند
+          // سفارشات رد شده از حسابداری حذف می‌شوند
           .neq('status', 'rejected');
 
         if (orders) {

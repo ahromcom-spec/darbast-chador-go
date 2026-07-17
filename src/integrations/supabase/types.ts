@@ -14,6 +14,120 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_email_rules: {
+        Row: {
+          actions: string[]
+          created_at: string
+          created_by: string | null
+          details_filter: Json | null
+          enabled: boolean
+          event_categories: string[]
+          event_types: string[]
+          id: string
+          modules: string[]
+          name: string
+          notes: string | null
+          recipient_emails: string[]
+          schedule: string
+          updated_at: string
+        }
+        Insert: {
+          actions?: string[]
+          created_at?: string
+          created_by?: string | null
+          details_filter?: Json | null
+          enabled?: boolean
+          event_categories?: string[]
+          event_types?: string[]
+          id?: string
+          modules?: string[]
+          name: string
+          notes?: string | null
+          recipient_emails?: string[]
+          schedule?: string
+          updated_at?: string
+        }
+        Update: {
+          actions?: string[]
+          created_at?: string
+          created_by?: string | null
+          details_filter?: Json | null
+          enabled?: boolean
+          event_categories?: string[]
+          event_types?: string[]
+          id?: string
+          modules?: string[]
+          name?: string
+          notes?: string | null
+          recipient_emails?: string[]
+          schedule?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      activity_logs: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_name: string | null
+          actor_phone: string | null
+          actor_user_id: string | null
+          created_at: string
+          details: Json
+          diff: Json | null
+          entity_id: string | null
+          entity_table: string | null
+          event_category: string
+          event_type: string
+          id: string
+          ip_address: string | null
+          module_name: string | null
+          occurred_at: string
+          title: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action?: string
+          actor_email?: string | null
+          actor_name?: string | null
+          actor_phone?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          details?: Json
+          diff?: Json | null
+          entity_id?: string | null
+          entity_table?: string | null
+          event_category?: string
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          module_name?: string | null
+          occurred_at?: string
+          title?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_name?: string | null
+          actor_phone?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          details?: Json
+          diff?: Json | null
+          entity_id?: string | null
+          entity_table?: string | null
+          event_category?: string
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          module_name?: string | null
+          occurred_at?: string
+          title?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       activity_types: {
         Row: {
           created_at: string | null
@@ -240,6 +354,129 @@ export type Database = {
         }
         Relationships: []
       }
+      assistant_chat_usage: {
+        Row: {
+          created_at: string
+          id: number
+          identifier: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          identifier: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          identifier?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      assistant_draft_orders: {
+        Row: {
+          address: string | null
+          calculated_price: number | null
+          created_at: string
+          defaults: Json | null
+          dimensions: Json | null
+          district_id: string | null
+          id: string
+          lat: number | null
+          lng: number | null
+          media_paths: Json | null
+          project_id: string | null
+          province_id: string | null
+          raw_payload: Json | null
+          service_label: string | null
+          service_type_id: string | null
+          status: string
+          subcategory_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          calculated_price?: number | null
+          created_at?: string
+          defaults?: Json | null
+          dimensions?: Json | null
+          district_id?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          media_paths?: Json | null
+          project_id?: string | null
+          province_id?: string | null
+          raw_payload?: Json | null
+          service_label?: string | null
+          service_type_id?: string | null
+          status?: string
+          subcategory_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          calculated_price?: number | null
+          created_at?: string
+          defaults?: Json | null
+          dimensions?: Json | null
+          district_id?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          media_paths?: Json | null
+          project_id?: string | null
+          province_id?: string | null
+          raw_payload?: Json | null
+          service_label?: string | null
+          service_type_id?: string | null
+          status?: string
+          subcategory_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assistant_draft_orders_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assistant_draft_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assistant_draft_orders_province_id_fkey"
+            columns: ["province_id"]
+            isOneToOne: false
+            referencedRelation: "provinces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assistant_draft_orders_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "service_types_v3"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assistant_draft_orders_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -418,6 +655,84 @@ export type Database = {
           },
         ]
       }
+      cheques: {
+        Row: {
+          amount: number
+          bank_card_id: string | null
+          bounced_at: string | null
+          cleared_at: string | null
+          created_at: string
+          created_by: string
+          customer_id: string | null
+          due_date: string
+          id: string
+          image_url: string | null
+          notes: string | null
+          order_payment_ids: string[] | null
+          received_date: string
+          serial_number: string
+          statement_id: string | null
+          status: string
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          bank_card_id?: string | null
+          bounced_at?: string | null
+          cleared_at?: string | null
+          created_at?: string
+          created_by: string
+          customer_id?: string | null
+          due_date: string
+          id?: string
+          image_url?: string | null
+          notes?: string | null
+          order_payment_ids?: string[] | null
+          received_date?: string
+          serial_number: string
+          statement_id?: string | null
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          bank_card_id?: string | null
+          bounced_at?: string | null
+          cleared_at?: string | null
+          created_at?: string
+          created_by?: string
+          customer_id?: string | null
+          due_date?: string
+          id?: string
+          image_url?: string | null
+          notes?: string | null
+          order_payment_ids?: string[] | null
+          received_date?: string
+          serial_number?: string
+          statement_id?: string | null
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cheques_bank_card_id_fkey"
+            columns: ["bank_card_id"]
+            isOneToOne: false
+            referencedRelation: "bank_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cheques_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "bank_card_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collection_request_messages: {
         Row: {
           collection_request_id: string
@@ -513,6 +828,47 @@ export type Database = {
           },
         ]
       }
+      contractor_activity_log: {
+        Row: {
+          contractor_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          message: string
+          metadata: Json | null
+          performed_by: string | null
+          user_id: string
+        }
+        Insert: {
+          contractor_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          message: string
+          metadata?: Json | null
+          performed_by?: string | null
+          user_id: string
+        }
+        Update: {
+          contractor_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          message?: string
+          metadata?: Json | null
+          performed_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_activity_log_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contractor_profiles: {
         Row: {
           activity_type_id: string | null
@@ -582,25 +938,55 @@ export type Database = {
       }
       contractor_services: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           contractor_id: string
           created_at: string
+          created_by: string | null
+          exit_approved_at: string | null
+          exit_approved_by: string | null
+          exit_request_reason: string | null
+          exit_requested_at: string | null
           id: string
+          rejection_reason: string | null
           service_type: string
+          status: string
           sub_type: string | null
+          updated_at: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           contractor_id: string
           created_at?: string
+          created_by?: string | null
+          exit_approved_at?: string | null
+          exit_approved_by?: string | null
+          exit_request_reason?: string | null
+          exit_requested_at?: string | null
           id?: string
+          rejection_reason?: string | null
           service_type: string
+          status?: string
           sub_type?: string | null
+          updated_at?: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           contractor_id?: string
           created_at?: string
+          created_by?: string | null
+          exit_approved_at?: string | null
+          exit_approved_by?: string | null
+          exit_request_reason?: string | null
+          exit_requested_at?: string | null
           id?: string
+          rejection_reason?: string | null
           service_type?: string
+          status?: string
           sub_type?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -684,47 +1070,83 @@ export type Database = {
       }
       contractors: {
         Row: {
+          activity_type_id: string | null
           address: string | null
+          auto_assign_enabled: boolean
           company_name: string
           contact_person: string
           created_at: string
+          deactivated_by_admin: boolean
           description: string | null
           email: string
+          exit_request_reason: string | null
+          exit_requested_at: string | null
           experience_years: number | null
           id: string
           is_active: boolean
           is_approved: boolean
+          pending_edits: Json | null
+          pending_edits_at: string | null
+          pending_edits_by: string | null
           phone_number: string
+          reactivation_request_reason: string | null
+          reactivation_requested_at: string | null
+          region_id: string | null
+          service_category_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          activity_type_id?: string | null
           address?: string | null
+          auto_assign_enabled?: boolean
           company_name: string
           contact_person: string
           created_at?: string
+          deactivated_by_admin?: boolean
           description?: string | null
           email: string
+          exit_request_reason?: string | null
+          exit_requested_at?: string | null
           experience_years?: number | null
           id?: string
           is_active?: boolean
           is_approved?: boolean
+          pending_edits?: Json | null
+          pending_edits_at?: string | null
+          pending_edits_by?: string | null
           phone_number: string
+          reactivation_request_reason?: string | null
+          reactivation_requested_at?: string | null
+          region_id?: string | null
+          service_category_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          activity_type_id?: string | null
           address?: string | null
+          auto_assign_enabled?: boolean
           company_name?: string
           contact_person?: string
           created_at?: string
+          deactivated_by_admin?: boolean
           description?: string | null
           email?: string
+          exit_request_reason?: string | null
+          exit_requested_at?: string | null
           experience_years?: number | null
           id?: string
           is_active?: boolean
           is_approved?: boolean
+          pending_edits?: Json | null
+          pending_edits_at?: string | null
+          pending_edits_by?: string | null
           phone_number?: string
+          reactivation_request_reason?: string | null
+          reactivation_requested_at?: string | null
+          region_id?: string | null
+          service_category_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -739,6 +1161,7 @@ export type Database = {
           customer_id: string
           detailed_address: string | null
           id: string
+          is_manual: boolean
           statement_number: number
           status: string
           subcategory_id: string | null
@@ -754,6 +1177,7 @@ export type Database = {
           customer_id: string
           detailed_address?: string | null
           id?: string
+          is_manual?: boolean
           statement_number: number
           status?: string
           subcategory_id?: string | null
@@ -769,6 +1193,7 @@ export type Database = {
           customer_id?: string
           detailed_address?: string | null
           id?: string
+          is_manual?: boolean
           statement_number?: number
           status?: string
           subcategory_id?: string | null
@@ -1119,6 +1544,93 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      email_send_log: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          message_id: string | null
+          metadata: Json | null
+          recipient_email: string
+          status: string
+          template_name: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          recipient_email: string
+          status: string
+          template_name: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          metadata?: Json | null
+          recipient_email?: string
+          status?: string
+          template_name?: string
+        }
+        Relationships: []
+      }
+      email_send_state: {
+        Row: {
+          auth_email_ttl_minutes: number
+          batch_size: number
+          id: number
+          retry_after_until: string | null
+          send_delay_ms: number
+          transactional_email_ttl_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          auth_email_ttl_minutes?: number
+          batch_size?: number
+          id?: number
+          retry_after_until?: string | null
+          send_delay_ms?: number
+          transactional_email_ttl_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          auth_email_ttl_minutes?: number
+          batch_size?: number
+          id?: number
+          retry_after_until?: string | null
+          send_delay_ms?: number
+          transactional_email_ttl_minutes?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_unsubscribe_tokens: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: []
       }
       email_verification_codes: {
         Row: {
@@ -1868,6 +2380,9 @@ export type Database = {
           invitee_phone_number: string
           invitee_user_id: string | null
           inviter_user_id: string
+          manager_approved_at: string | null
+          manager_approved_by: string | null
+          manager_rejection_reason: string | null
           order_id: string
           responded_at: string | null
           status: string
@@ -1880,6 +2395,9 @@ export type Database = {
           invitee_phone_number: string
           invitee_user_id?: string | null
           inviter_user_id: string
+          manager_approved_at?: string | null
+          manager_approved_by?: string | null
+          manager_rejection_reason?: string | null
           order_id: string
           responded_at?: string | null
           status?: string
@@ -1892,6 +2410,9 @@ export type Database = {
           invitee_phone_number?: string
           invitee_user_id?: string | null
           inviter_user_id?: string
+          manager_approved_at?: string | null
+          manager_approved_by?: string | null
+          manager_rejection_reason?: string | null
           order_id?: string
           responded_at?: string | null
           status?: string
@@ -2388,6 +2909,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          cooperation_rank: number
           created_at: string
           customer_code: string
           full_name: string | null
@@ -2396,6 +2918,7 @@ export type Database = {
           phone_number: string | null
           recovery_email: string | null
           recovery_email_verified: boolean | null
+          sms_notifications_enabled: boolean
           updated_at: string
           user_id: string
           user_password_hash: string | null
@@ -2403,14 +2926,16 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          cooperation_rank?: number
           created_at?: string
-          customer_code?: string
+          customer_code: string
           full_name?: string | null
           id?: string
           password_set_at?: string | null
           phone_number?: string | null
           recovery_email?: string | null
           recovery_email_verified?: boolean | null
+          sms_notifications_enabled?: boolean
           updated_at?: string
           user_id: string
           user_password_hash?: string | null
@@ -2418,6 +2943,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          cooperation_rank?: number
           created_at?: string
           customer_code?: string
           full_name?: string | null
@@ -2426,6 +2952,7 @@ export type Database = {
           phone_number?: string | null
           recovery_email?: string | null
           recovery_email_verified?: boolean | null
+          sms_notifications_enabled?: boolean
           updated_at?: string
           user_id?: string
           user_password_hash?: string | null
@@ -2720,6 +3247,69 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_v3_assignments: {
+        Row: {
+          accepted_at: string | null
+          assigned_at: string
+          assigned_by: string | null
+          assignment_type: string
+          contractor_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          project_id: string
+          rejected_at: string | null
+          rejection_reason: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          assigned_at?: string
+          assigned_by?: string | null
+          assignment_type?: string
+          contractor_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          project_id: string
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          assigned_at?: string
+          assigned_by?: string | null
+          assignment_type?: string
+          contractor_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          project_id?: string
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_v3_assignments_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_v3_assignments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
             referencedColumns: ["id"]
           },
         ]
@@ -3578,6 +4168,84 @@ export type Database = {
           },
         ]
       }
+      scaffolding_no_materials_pricing_config: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          label: string
+          sort_order: number
+          unit: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          label: string
+          sort_order?: number
+          unit?: string
+          updated_at?: string
+          value?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          label?: string
+          sort_order?: number
+          unit?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: []
+      }
+      scaffolding_pricing_config: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          label: string
+          sort_order: number
+          unit: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          label: string
+          sort_order?: number
+          unit?: string
+          updated_at?: string
+          value?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          label?: string
+          sort_order?: number
+          unit?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: []
+      }
       scaffolding_requests: {
         Row: {
           address: string | null
@@ -3655,6 +4323,71 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      service_geo_availability: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          district_id: string | null
+          id: string
+          is_active: boolean
+          province_id: string
+          service_type_id: string
+          subcategory_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          district_id?: string | null
+          id?: string
+          is_active?: boolean
+          province_id: string
+          service_type_id: string
+          subcategory_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          district_id?: string | null
+          id?: string
+          is_active?: boolean
+          province_id?: string
+          service_type_id?: string
+          subcategory_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_geo_availability_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_geo_availability_province_id_fkey"
+            columns: ["province_id"]
+            isOneToOne: false
+            referencedRelation: "provinces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_geo_availability_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "service_types_v3"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_geo_availability_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       service_line_items: {
         Row: {
@@ -3902,6 +4635,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          sort_order: number
         }
         Insert: {
           code: string
@@ -3909,6 +4643,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          sort_order?: number
         }
         Update: {
           code?: string
@@ -3916,6 +4651,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          sort_order?: number
         }
         Relationships: []
       }
@@ -4215,6 +4951,99 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_logs: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          order_code: string | null
+          order_id: string | null
+          provider_response: string | null
+          recipient: string
+          scope: string | null
+          status: string
+          template_key: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          order_code?: string | null
+          order_id?: string | null
+          provider_response?: string | null
+          recipient: string
+          scope?: string | null
+          status: string
+          template_key?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          order_code?: string | null
+          order_id?: string | null
+          provider_response?: string | null
+          recipient?: string
+          scope?: string | null
+          status?: string
+          template_key?: string | null
+        }
+        Relationships: []
+      }
+      sms_templates: {
+        Row: {
+          append_footer: boolean
+          conditions: Json
+          created_at: string
+          default_template: string | null
+          delay_minutes: number
+          description: string | null
+          enabled: boolean
+          footer: string
+          id: string
+          key: string
+          scope: string
+          template: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          append_footer?: boolean
+          conditions?: Json
+          created_at?: string
+          default_template?: string | null
+          delay_minutes?: number
+          description?: string | null
+          enabled?: boolean
+          footer?: string
+          id?: string
+          key: string
+          scope?: string
+          template: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          append_footer?: boolean
+          conditions?: Json
+          created_at?: string
+          default_template?: string | null
+          delay_minutes?: number
+          description?: string | null
+          enabled?: boolean
+          footer?: string
+          id?: string
+          key?: string
+          scope?: string
+          template?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       staff_profiles: {
         Row: {
           approved_at: string | null
@@ -4472,28 +5301,47 @@ export type Database = {
         Row: {
           code: string
           created_at: string | null
+          form_path: string | null
           id: string
           is_active: boolean | null
+          is_service_active: boolean
           name: string
+          parent_id: string | null
           service_type_id: string
+          sort_order: number
         }
         Insert: {
           code: string
           created_at?: string | null
+          form_path?: string | null
           id?: string
           is_active?: boolean | null
+          is_service_active?: boolean
           name: string
+          parent_id?: string | null
           service_type_id: string
+          sort_order?: number
         }
         Update: {
           code?: string
           created_at?: string | null
+          form_path?: string | null
           id?: string
           is_active?: boolean | null
+          is_service_active?: boolean
           name?: string
+          parent_id?: string | null
           service_type_id?: string
+          sort_order?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "subcategories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "subcategories_service_type_id_fkey"
             columns: ["service_type_id"]
@@ -4502,6 +5350,80 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      subcategory_pricing_items: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          label: string
+          sort_order: number
+          subcategory_id: string
+          unit: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          label: string
+          sort_order?: number
+          subcategory_id: string
+          unit?: string
+          updated_at?: string
+          value?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          label?: string
+          sort_order?: number
+          subcategory_id?: string
+          unit?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subcategory_pricing_items_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppressed_emails: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          metadata: Json | null
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          metadata?: Json | null
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          metadata?: Json | null
+          reason?: string
+        }
+        Relationships: []
       }
       ticket_attachments: {
         Row: {
@@ -4773,6 +5695,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_contractor_assignment: {
+        Args: { _assignment_id: string }
+        Returns: Json
+      }
+      accept_v3_assignment: { Args: { _assignment_id: string }; Returns: Json }
       acquire_module_lock: {
         Args: { p_module_date?: string; p_module_key: string }
         Returns: Json
@@ -4788,6 +5715,22 @@ export type Database = {
           _user_id: string
         }
         Returns: string
+      }
+      approve_contractor: {
+        Args: { _contractor_id: string }
+        Returns: undefined
+      }
+      approve_contractor_edit: {
+        Args: { _contractor_id: string }
+        Returns: undefined
+      }
+      approve_contractor_service: {
+        Args: { _service_id: string }
+        Returns: Json
+      }
+      approve_contractor_service_exit: {
+        Args: { _service_id: string }
+        Returns: undefined
       }
       approve_order_as_sales_manager: {
         Args: { _order_id: string }
@@ -4806,6 +5749,10 @@ export type Database = {
             Returns: undefined
           }
         | { Args: { _role: string; _user_id: string }; Returns: undefined }
+      attach_activity_trigger: {
+        Args: { p_module: string; p_table: string }
+        Returns: undefined
+      }
       auto_complete_order_transfer: {
         Args: {
           p_order_id: string
@@ -4817,6 +5764,16 @@ export type Database = {
       calculate_reputation_score: {
         Args: { _user_id: string }
         Returns: undefined
+      }
+      can_manage_contractors: { Args: { _actor_id: string }; Returns: boolean }
+      can_manage_order_renewals: { Args: { _uid: string }; Returns: boolean }
+      cancel_contractor_service_exit: {
+        Args: { _service_id: string }
+        Returns: undefined
+      }
+      cancel_v3_assignment: {
+        Args: { _assignment_id: string; _reason?: string }
+        Returns: Json
       }
       check_directory_rate_limit: {
         Args: { _user_id: string }
@@ -4870,6 +5827,8 @@ export type Database = {
           _detailed_address?: string
           _district_id: string
           _hierarchy_project_id: string
+          _location_lat?: number
+          _location_lng?: number
           _notes?: Json
           _province_id: string
           _subcategory_id: string
@@ -4940,6 +5899,23 @@ export type Database = {
       daily_report_contains_staff: {
         Args: { p_report_id: string; p_user_id: string }
         Returns: boolean
+      }
+      daily_report_module_label: {
+        Args: { _module_key: string }
+        Returns: string
+      }
+      delete_contractor_completely: {
+        Args: { _contractor_id: string }
+        Returns: undefined
+      }
+      delete_email: {
+        Args: { message_id: number; queue_name: string }
+        Returns: boolean
+      }
+      email_queue_dispatch: { Args: never; Returns: undefined }
+      enqueue_email: {
+        Args: { payload: Json; queue_name: string }
+        Returns: number
       }
       generate_customer_code: { Args: never; Returns: string }
       generate_project_code: {
@@ -5172,7 +6148,37 @@ export type Database = {
             }
             Returns: string
           }
+      lookup_profile_by_phone: {
+        Args: { _phone: string }
+        Returns: {
+          full_name: string
+          phone_number: string
+          user_id: string
+        }[]
+      }
+      manual_dispatch_v3: {
+        Args: { _contractor_ids: string[]; _project_id: string }
+        Returns: Json
+      }
+      move_to_dlq: {
+        Args: {
+          dlq_name: string
+          message_id: number
+          payload: Json
+          source_queue: string
+        }
+        Returns: number
+      }
       next_project_code: { Args: never; Returns: string }
+      notify_activity_report: {
+        Args: {
+          p_actor_user_id: string
+          p_details: Json
+          p_event_type: string
+          p_title: string
+        }
+        Returns: undefined
+      }
       notify_role: {
         Args: {
           _body: string
@@ -5182,6 +6188,15 @@ export type Database = {
           _type?: string
         }
         Returns: undefined
+      }
+      purge_old_activity_logs: { Args: never; Returns: undefined }
+      read_email_batch: {
+        Args: { batch_size: number; queue_name: string; vt: number }
+        Returns: {
+          message: Json
+          msg_id: number
+          read_ct: number
+        }[]
       }
       recalc_customer_statement: {
         Args: { _statement_id: string }
@@ -5196,9 +6211,37 @@ export type Database = {
         Args: { p_module_date?: string; p_module_key: string }
         Returns: boolean
       }
+      reject_contractor: {
+        Args: { _contractor_id: string; _reason?: string }
+        Returns: undefined
+      }
+      reject_contractor_assignment: {
+        Args: { _assignment_id: string }
+        Returns: Json
+      }
+      reject_contractor_edit: {
+        Args: { _contractor_id: string; _reason?: string }
+        Returns: undefined
+      }
+      reject_contractor_service: {
+        Args: { _reason: string; _service_id: string }
+        Returns: Json
+      }
+      reject_contractor_service_exit: {
+        Args: { _reason?: string; _service_id: string }
+        Returns: undefined
+      }
+      reject_order: {
+        Args: { _order_id: string; _reason: string }
+        Returns: undefined
+      }
       reject_order_as_sales_manager: {
         Args: { _order_id: string; _rejection_reason: string }
         Returns: undefined
+      }
+      reject_v3_assignment: {
+        Args: { _assignment_id: string; _reason?: string }
+        Returns: Json
       }
       release_module_lock: {
         Args: { p_module_date?: string; p_module_key: string }
@@ -5209,6 +6252,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: undefined
+      }
+      request_contractor_service_exit: {
+        Args: { _reason?: string; _service_id: string }
         Returns: undefined
       }
       save_module_version: {
@@ -5242,6 +6289,10 @@ export type Database = {
             }
             Returns: undefined
           }
+      submit_contractor_edit: {
+        Args: { _contractor_id: string; _edits: Json }
+        Returns: undefined
+      }
       transfer_between_bank_cards: {
         Args: {
           p_amount: number
@@ -5261,6 +6312,10 @@ export type Database = {
           p_transferred_from_phone: string
           p_transferred_from_user_id: string
         }
+        Returns: undefined
+      }
+      transfer_order_to_statement: {
+        Args: { _order_id: string; _target_statement_id: string }
         Returns: undefined
       }
       unarchive_daily_report: {

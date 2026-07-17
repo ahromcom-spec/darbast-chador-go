@@ -1,134 +1,107 @@
-# داده‌های خام برای مهاجرت VPS
+# Database Export
 
-این پوشه شامل داده‌های خام استخراج شده از دیتابیس است. همه فایل‌ها به فرمت JSON هستند.
+Total tables: 99
 
-**آخرین بروزرسانی:** 2026-04-10
+| # | Table | Records |
+|---|-------|--------|
+| 1 | activity_types | 14 |
+| 2 | addresses | 0 |
+| 3 | approved_media | 16 |
+| 4 | assignments | 0 |
+| 5 | assistant_chat_messages | 246 |
+| 6 | audit_log | 537 |
+| 7 | bank_card_transactions | 213 |
+| 8 | bank_cards | 7 |
+| 9 | call_logs | 0 |
+| 10 | collection_request_messages | 0 |
+| 11 | collection_requests | 18 |
+| 12 | contractor_profiles | 0 |
+| 13 | contractor_services | 1 |
+| 14 | contractor_verification_requests | 0 |
+| 15 | contractors | 1 |
+| 16 | customers | 63 |
+| 17 | daily_report_date_locks | 64 |
+| 18 | daily_report_order_media | 13 |
+| 19 | daily_report_orders | 89 |
+| 20 | daily_report_staff | 694 |
+| 21 | daily_reports | 163 |
+| 22 | districts | 27 |
+| 23 | email_verification_codes | 9 |
+| 24 | expert_pricing_request_media | 0 |
+| 25 | expert_pricing_requests | 3 |
+| 26 | hr_employees | 21 |
+| 27 | internal_staff_profiles | 0 |
+| 28 | inventory_items | 0 |
+| 29 | inventory_reservations | 0 |
+| 30 | invoices | 0 |
+| 31 | locations | 217 |
+| 32 | module_assignments | 13 |
+| 33 | module_edit_locks | 3 |
+| 34 | module_hierarchy_states | 2 |
+| 35 | module_shortcuts | 8 |
+| 36 | module_version_history | 659 |
+| 37 | najva_subscriptions | 0 |
+| 38 | notifications | 5340 |
+| 39 | order_approvals | 272 |
+| 40 | order_collaborators | 0 |
+| 41 | order_daily_logs | 18 |
+| 42 | order_messages | 2 |
+| 43 | order_payments | 32 |
+| 44 | order_renewals | 12 |
+| 45 | order_transfer_requests | 8 |
+| 46 | orders | 0 |
+| 47 | organizational_positions | 22 |
+| 48 | otp_codes | 13 |
+| 49 | payments | 0 |
+| 50 | phone_whitelist | 15 |
+| 51 | profile_photos | 11 |
+| 52 | profiles | 64 |
+| 53 | project_assignments | 0 |
+| 54 | project_collaborators | 0 |
+| 55 | project_hierarchy_media | 8 |
+| 56 | project_media | 74 |
+| 57 | project_progress_media | 0 |
+| 58 | project_progress_stages | 0 |
+| 59 | projects | 0 |
+| 60 | projects_hierarchy | 194 |
+| 61 | projects_v2 | 0 |
+| 62 | projects_v3 | 68 |
+| 63 | provinces | 6 |
+| 64 | push_subscriptions | 3 |
+| 65 | rating_criteria | 23 |
+| 66 | rating_helpful_votes | 0 |
+| 67 | rating_responses | 0 |
+| 68 | ratings | 0 |
+| 69 | regions | 53 |
+| 70 | repair_request_media | 0 |
+| 71 | repair_request_messages | 0 |
+| 72 | repair_requests | 0 |
+| 73 | reputation_scores | 0 |
+| 74 | scaffolding_requests | 2 |
+| 75 | service_activity_types | 14 |
+| 76 | service_categories | 6 |
+| 77 | service_line_items | 0 |
+| 78 | service_media | 0 |
+| 79 | service_requests | 4 |
+| 80 | service_requests_v2 | 0 |
+| 81 | service_types | 3 |
+| 82 | service_types_v3 | 7 |
+| 83 | services | 0 |
+| 84 | services_v3 | 0 |
+| 85 | site_analytics | 77287 |
+| 86 | site_sessions | 1506 |
+| 87 | staff_profiles | 2 |
+| 88 | staff_roles | 0 |
+| 89 | staff_salary_settings | 20 |
+| 90 | staff_verification_requests | 0 |
+| 91 | staff_whitelist | 0 |
+| 92 | subcategories | 11 |
+| 93 | ticket_attachments | 0 |
+| 94 | ticket_messages | 0 |
+| 95 | tickets | 1 |
+| 96 | user_roles | 11 |
+| 97 | voice_call_signals | 0 |
+| 98 | wallet_transactions | 365 |
+| 99 | workflow_tasks | 0 |
 
-## فایل‌های موجود
-
-| فایل | جدول | تعداد رکورد |
-|------|-------|-------------|
-| `01-provinces.json` | استان‌ها | 6 |
-| `02-districts.json` | شهرستان‌ها | 27 |
-| `03-service-categories.json` | دسته‌بندی خدمات | 6 |
-| `04-service-types.json` | انواع خدمات | 7 |
-| `05-subcategories.json` | زیردسته‌ها | 11 |
-| `06-phone-whitelist.json` | لیست سفید تلفن | 15 |
-| `07-user-roles.json` | نقش‌های کاربران | 11 |
-| `08-hr-employees.json` | کارمندان | 21 |
-| `09-module-assignments.json` | تخصیص ماژول‌ها | 13 |
-| `10-order-payments.json` | پرداخت‌های سفارشات | 32 |
-| `11-regions.json` | مناطق سلسله‌مراتبی | 53 |
-| `12-service-activity-types.json` | انواع فعالیت خدمات | 14 |
-| `13-organizational-positions.json` | سمت‌های سازمانی | 22 |
-| `14-activity-types.json` | انواع فعالیت | 14 |
-| `15-profiles.json` | پروفایل‌ها | 64 |
-| `16-customers.json` | مشتریان | 63 |
-| `17-locations.json` | مکان‌ها | 217 |
-| `18-projects-hierarchy.json` | سلسله‌مراتب پروژه‌ها | 194 |
-| `19-projects-v3.json` | سفارشات | 68 |
-| `20-bank-cards.json` | کارت‌های بانکی | 7 |
-| `21-staff-salary-settings.json` | تنظیمات حقوق | 20 |
-| `22-order-approvals.json` | تأییدیه‌های سفارش | 272 |
-| `23-order-messages.json` | پیام‌های سفارش | 2 |
-| `24-order-renewals.json` | تمدید سفارش | 12 |
-| `25-order-transfer-requests.json` | درخواست انتقال | 8 |
-| `26-collection-requests.json` | درخواست جمع‌آوری | 18 |
-| `27-daily-reports.json` | گزارش‌های روزانه | 163 |
-| `28-daily-report-orders.json` | سفارشات گزارش روزانه | 89 |
-| `29-daily-report-staff.json` | پرسنل گزارش روزانه | 694 |
-| `30-daily-report-date-locks.json` | قفل تاریخ گزارش | 64 |
-| `31-bank-card-transactions.json` | تراکنش‌های کارت بانکی | 213 |
-| `32-wallet-transactions.json` | تراکنش‌های کیف پول | 365 |
-| `33-project-media.json` | رسانه پروژه‌ها | 74 |
-| `34-daily-report-order-media.json` | رسانه گزارش روزانه | 13 |
-| `35-expert-pricing-requests.json` | درخواست قیمت‌گذاری | 3 |
-| `36-order-collaborators.json` | همکاران سفارش | 0 |
-| `37-order-daily-logs.json` | لاگ روزانه سفارش | 18 |
-| `38-audit-log.json` | لاگ بازرسی | 537 |
-| `39-notifications.json` | اعلان‌ها | 5340 |
-| `40-contractor-profiles.json` | پروفایل پیمانکار | 0 |
-| `41-internal-staff-profiles.json` | پروفایل کارمند داخلی | 0 |
-| `42-staff-profiles.json` | درخواست نقش | 2 |
-| `43-module-shortcuts.json` | میانبر ماژول‌ها | 8 |
-| `44-profile-photos.json` | عکس پروفایل | 11 |
-| `45-contractor-verification-requests.json` | تأیید پیمانکار | 0 |
-| `46-staff-verification-requests.json` | تأیید نیرو | 0 |
-| `47-collection-request-messages.json` | پیام جمع‌آوری | 0 |
-| `48-approved-media.json` | رسانه تأیید شده | 16 |
-| `49-module-edit-locks.json` | قفل ویرایش ماژول | 3 |
-| `50-repair-requests.json` | درخواست تعمیر | 0 |
-
-## نحوه ایمپورت در Supabase Self-Hosted
-
-### روش ۱: با اسکریپت Node.js (توصیه شده)
-
-```bash
-cd migration-data
-
-# 1. اول اسکیماها را اجرا کنید
-cat 01-enums.sql | docker exec -i supabase-db psql -U postgres
-cat 02-base-tables.sql | docker exec -i supabase-db psql -U postgres
-cat 03-user-tables.sql | docker exec -i supabase-db psql -U postgres
-cat 04-location-tables.sql | docker exec -i supabase-db psql -U postgres
-cat 05-project-tables.sql | docker exec -i supabase-db psql -U postgres
-cat 06-order-tables.sql | docker exec -i supabase-db psql -U postgres
-cat 07-daily-report-tables.sql | docker exec -i supabase-db psql -U postgres
-cat 08-finance-tables.sql | docker exec -i supabase-db psql -U postgres
-cat 09-misc-tables.sql | docker exec -i supabase-db psql -U postgres
-cat 10-functions.sql | docker exec -i supabase-db psql -U postgres
-cat 11-triggers.sql | docker exec -i supabase-db psql -U postgres
-
-# 2. سپس داده‌ها را ایمپورت کنید
-SUPABASE_URL=http://localhost:8000 \
-SUPABASE_SERVICE_KEY=your-service-role-key \
-node import.js
-```
-
-### روش ۲: مستقیم با psql
-
-```bash
-# برای هر فایل JSON:
-cat data/01-provinces.json | docker exec -i supabase-db psql -U postgres -c "
-  CREATE TEMP TABLE tmp (data jsonb);
-  \\copy tmp FROM STDIN;
-  INSERT INTO provinces SELECT * FROM jsonb_populate_recordset(null::provinces, (SELECT data FROM tmp));
-"
-```
-
-### روش ۳: با اسکریپت psql ایمپورت
-
-```bash
-cat import-psql.sql | docker exec -i supabase-db psql -U postgres
-```
-
-## ترتیب ایمپورت
-
-1. provinces → districts → regions
-2. service_categories → service_types_v3 → subcategories
-3. service_activity_types, organizational_positions, activity_types
-4. phone_whitelist
-5. profiles → customers
-6. user_roles, hr_employees
-7. locations → projects_hierarchy → projects_v3
-8. order_approvals, order_payments, order_messages, order_renewals
-9. daily_reports → daily_report_orders, daily_report_staff
-10. bank_cards → bank_card_transactions
-11. wallet_transactions, notifications, audit_log
-
-## نکات مهم
-
-- داده‌های `profiles` نیاز به ایجاد کاربران مطابق در `auth.users` دارند
-- قبل از ایمپورت profiles باید کاربران را در GoTrue ثبت کنید
-- فایل‌های رسانه (عکس/ویدیو) باید از Storage جداگانه دانلود شوند
-- مجموع حجم داده: ~4.2 مگابایت
-
-## Storage Buckets
-
-باکت‌های موجود:
-- `profile-images` - عکس پروفایل کاربران
-- `project-media` - فایل‌های رسانه پروژه‌ها
-- `project-hierarchy-media` - رسانه سلسله‌مراتب پروژه
-- `order-media` - رسانه سفارشات  
-- `expert-pricing-media` - رسانه قیمت‌گذاری کارشناسی
-- `daily-report-media` - رسانه گزارش روزانه
+Exported at: latest

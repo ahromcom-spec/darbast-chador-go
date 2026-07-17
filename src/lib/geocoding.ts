@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { neshanSearch } from "@/lib/neshan";
 
 export type GeocodeResult = {
   id: string;
@@ -7,44 +7,23 @@ export type GeocodeResult = {
   lng: number;
 };
 
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const id = setTimeout(() => reject(new Error(label)), ms);
-    promise
-      .then((value) => {
-        clearTimeout(id);
-        resolve(value);
-      })
-      .catch((err) => {
-        clearTimeout(id);
-        reject(err);
-      });
-  });
-}
-
 export async function geocodeIranNominatim(query: string): Promise<GeocodeResult[]> {
   const t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
-  console.log("[geocodeIranNominatim] start", { query });
+  console.log("[geocodeIran] start", { query });
 
-  const invokePromise = supabase.functions.invoke("geocode-nominatim", {
-    body: { q: query },
-  });
+  try {
+    const items = await neshanSearch(query);
+    const t1 = typeof performance !== "undefined" ? performance.now() : Date.now();
+    console.log("[geocodeIran] done", { ms: Math.round(t1 - t0), count: items.length });
 
-  const { data, error } = await withTimeout(
-    invokePromise,
-    9000,
-    "Geocoding request timed out"
-  );
-
-  const t1 = typeof performance !== "undefined" ? performance.now() : Date.now();
-  console.log("[geocodeIranNominatim] done", { ms: Math.round(t1 - t0) });
-
-  if (error) {
-    console.error("[geocodeIranNominatim] invoke error", error);
-    throw error;
+    return items.map((item, idx) => ({
+      id: `${item.title || item.address}-${idx}-${item.location.x}-${item.location.y}`,
+      place_name: [item.title, item.address].filter(Boolean).join(' - '),
+      lat: item.location.y,
+      lng: item.location.x,
+    })).filter((item) => item.place_name && Number.isFinite(item.lat) && Number.isFinite(item.lng));
+  } catch (error) {
+    console.error("[geocodeIran] error", error);
+    return [];
   }
-
-  const results = (data as any)?.results;
-  if (!Array.isArray(results)) return [];
-  return results as GeocodeResult[];
 }

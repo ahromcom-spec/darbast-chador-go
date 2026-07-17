@@ -27,6 +27,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { formatPersianDateTime } from "@/lib/dateUtils";
+import { sendOrderSms } from "@/lib/orderSms";
 
 interface CollectionRequest {
   id: string;
@@ -55,6 +56,7 @@ interface CollectionRequestDialogProps {
   orderCode: string;
   customerId: string;
   isManager?: boolean;
+  onSaved?: () => void;
 }
 
 export function CollectionRequestDialog({
@@ -64,6 +66,7 @@ export function CollectionRequestDialog({
   orderCode,
   customerId,
   isManager = false,
+  onSaved,
 }: CollectionRequestDialogProps) {
   const [loading, setLoading] = useState(true);
   const [existingRequest, setExistingRequest] = useState<CollectionRequest | null>(null);
@@ -229,12 +232,17 @@ export function CollectionRequestDialog({
           console.error('Error updating order stage:', orderError);
         }
 
+        sendOrderSms('', orderCode, 'awaiting_collection', {
+          orderId,
+        }).catch(err => console.error('SMS notification error:', err));
+
         toast({
           title: '✓ موفق',
           description: 'درخواست جمع‌آوری ثبت و سفارش به مرحله در انتظار جمع‌آوری منتقل شد',
         });
 
         setExistingRequest(request);
+        onSaved?.();
       } else {
         // مشتری: درخواست به حالت pending ثبت شود
         const { data: request, error } = await supabase
@@ -354,6 +362,10 @@ export function CollectionRequestDialog({
         throw new Error('خطا در بروزرسانی سفارش');
       }
 
+      sendOrderSms('', orderCode, 'awaiting_collection', {
+        orderId,
+      }).catch(err => console.error('SMS notification error:', err));
+
       setExistingRequest({
         ...existingRequest,
         status: 'approved',
@@ -366,6 +378,7 @@ export function CollectionRequestDialog({
         description: 'درخواست جمع‌آوری تایید شد و سفارش به مرحله در انتظار جمع‌آوری منتقل شد',
       });
       
+      onSaved?.();
       // بستن دیالوگ بعد از تایید موفق
       onOpenChange(false);
     } catch (error: any) {
@@ -557,6 +570,7 @@ export function CollectionRequestDialog({
         title: '✓ موفق',
         description: 'تاریخ جمع‌آوری به‌روزرسانی شد',
       });
+      onSaved?.();
     } catch (error: any) {
       console.error('Error updating date:', error);
       // Revert on error
@@ -611,6 +625,7 @@ export function CollectionRequestDialog({
         title: '✓ موفق',
         description: 'تاریخ جمع‌آوری پاک شد',
       });
+      onSaved?.();
     } catch (error: any) {
       console.error('Error clearing date:', error);
       toast({
