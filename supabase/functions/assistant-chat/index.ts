@@ -399,11 +399,13 @@ const TOOLS_GUIDE = `
 4. create_pricing_order_request → فقط پس از تایید نهایی و صریح کاربر، و بعد از جمع‌آوری خدمت + استان + آدرس، درخواست سفارش/قیمت‌گذاری را در صف کارشناسان اهرم ثبت می‌کند.
 
 قوانین اجباری:
-- همیشه ابتدا list_active_services را صدا بزن تا subcategory_id درست خدمتی که کاربر گفته را پیدا کنی. اسم خدمت را با متن آزاد کاربر خودت تطبیق نده و حدس نزن.
-- اگر estimate_service_price مقدار requires_expert_review=true برگرداند، صادقانه به کاربر بگو قیمت دقیق این خدمت را کارشناس اهرم پس از بررسی جزئیات کار اعلام می‌کند (این دروغ نیست، این واقعیت فرآیند فعلی اهرم است)، و پیشنهاد بده که درخواستش را همین الان ثبت کنی.
+- همیشه ابتدا list_active_services را صدا بزن تا subcategory_id درست خدمتی که کاربر گفته را پیدا کنی. اسم خدمت را با متن آزاد کاربر خودت تطبیق نده و حدس نزن. توجه: خدمات فعلی سایت اهرم شامل «داربست فلزی»، «چادر برزنتی»، «فنس کشی»، «آرماتوربندی»، «ابزارآلات»، «قالی شویی» و «سیمانکاری ساختمان» است؛ اگر کاربر درباره‌ی هر یک از این‌ها پرسید حتماً از ابزارها استفاده کن و نگو «نداریم».
+- برای سوالات قیمتی حتماً estimate_service_price را صدا بزن. اگر پاسخ pricing_model="item_catalog" داشت، از لیست items بر اساس درخواست کاربر آیتم درست را انتخاب کن (مثلاً «فرش ۱۲ متری» → key=carpet_12، «فرش ۹ متری» → carpet_9، «فرش ۶ متری» → carpet_6، متراژ غیر استاندارد → carpet_custom و قیمت را در مساحت ضرب کن، «موکت معمولی» → moquette_standard، «پالاز موکت» → moquette_palaz) و قیمت دقیق را با اعداد فارسی و جداکننده هزارگان به تومان اعلام کن.
+- اگر estimate_service_price مقدار requires_expert_review=true برگرداند، صادقانه به کاربر بگو قیمت دقیق این خدمت را کارشناس اهرم پس از بررسی جزئیات کار اعلام می‌کند و پیشنهاد بده که درخواستش را همین الان ثبت کنی.
 - create_pricing_order_request را بدون تایید صریح کاربر («بله ثبت کن»، «باشه سفارش بده» و مشابه) صدا نزن.
 - اگر کاربر لاگین نکرده و می‌خواهد سفارش ثبت کند، بگو باید ابتدا وارد حساب کاربری خود شود.
 - بعد از ثبت موفق، فقط خلاصه کوتاه بده: چه چیزی ثبت شد و مرحله بعدی (تماس کارشناس) چیست.
+- هیچ محدودیت تعدادی روی سوالات کاربر وجود ندارد؛ هر تعداد سوال بپرسد به همه پاسخ بده.
 `;
 
 const ASSISTANT_TOOLS = [
@@ -543,7 +545,35 @@ async function estimateServicePrice(supabase: any, args: any) {
     .eq("is_active", true)
     .maybeSingle();
 
+  // اگر فرمول service_pricing_rules نبود، از آیتم‌های subcategory_pricing_items استفاده کن
+  // (مثل قالی‌شویی که هر آیتم قیمت جدا دارد: فرش ۱۲ متری، ۹ متری، ۶ متری، سفارشی، موکت ...)
   if (!rule) {
+    const { data: items } = await supabase
+      .from("subcategory_pricing_items")
+      .select("key,category,label,value,unit,description,sort_order")
+      .eq("subcategory_id", subcategoryId)
+      .order("sort_order", { ascending: true });
+
+    if (items && items.length > 0) {
+      return {
+        requires_expert_review: false,
+        pricing_model: "item_catalog",
+        note:
+          "قیمت این خدمت بر اساس نوع آیتم انتخابی از کاتالوگ زیر محاسبه می‌شود. " +
+          "اگر واحد آیتم «per_m2» یا مشابه است، قیمت را در متراژ ضرب کن. " +
+          "اگر آیتم مربوط به «فرش ۱۲ متری/۹ متری/۶ متری» بود، مساحت اصلی همان است و قیمت آیتم قیمت ثابت است. " +
+          "برای متراژهای غیر استاندارد از آیتم فرش سفارشی (per_m2) استفاده کن.",
+        items: items.map((i: any) => ({
+          key: i.key,
+          label: i.label,
+          category: i.category,
+          price_toman: Number(i.value) || 0,
+          unit: i.unit,
+          description: i.description,
+        })),
+      };
+    }
+
     return {
       requires_expert_review: true,
       message:
@@ -2822,35 +2852,56 @@ ${accessibleTopics.map(topic => `• ${topic}`).join("\n")}
     // END حلقه ابزارها (NEW)
     // ═══════════════════════════════════════════════════════════
 
-    const response = await fetch(GEMINI_ENDPOINT, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${GEMINI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: GEMINI_MODEL,
-        messages: conversation,
-        stream: true,
-      }),
-    });
+    // تلاش با مدل اصلی و در صورت 429/سرور، fallback به مدل lite
+    const modelChain = [GEMINI_MODEL, "gemini-2.5-flash-lite", "gemini-2.5-flash"];
+    const uniqModels = Array.from(new Set(modelChain));
+    let response: Response | null = null;
+    let lastErrText = "";
+    let lastStatus = 0;
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "سرویس پرمشغول است. لطفاً چند لحظه صبر کنید." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+    for (const m of uniqModels) {
+      const attempt = await fetch(GEMINI_ENDPOINT, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${GEMINI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: m,
+          messages: conversation,
+          stream: true,
+        }),
+      });
+
+      if (attempt.ok) {
+        response = attempt;
+        break;
       }
-      if (response.status === 402) {
+
+      lastStatus = attempt.status;
+      lastErrText = await attempt.text();
+      console.error(`AI gateway error (model=${m}):`, attempt.status, lastErrText);
+
+      // فقط روی 429 و 5xx مدل بعدی را امتحان کن
+      if (attempt.status !== 429 && attempt.status < 500) break;
+      // مکث کوتاه قبل از تلاش بعدی
+      await new Promise((r) => setTimeout(r, 400));
+    }
+
+    if (!response) {
+      if (lastStatus === 402) {
         return new Response(JSON.stringify({ error: "سرویس موقتاً در دسترس نیست." }), {
           status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      return new Response(JSON.stringify({ error: "خطا در پردازش درخواست" }), {
+      if (lastStatus === 429) {
+        return new Response(
+          JSON.stringify({ error: "سرویس هوش مصنوعی به سقف درخواست در دقیقه رسید. لطفاً چند ثانیه صبر کنید و دوباره بپرسید." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      return new Response(JSON.stringify({ error: "خطا در پردازش درخواست", details: lastErrText.slice(0, 500) }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
