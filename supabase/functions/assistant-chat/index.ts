@@ -543,7 +543,35 @@ async function estimateServicePrice(supabase: any, args: any) {
     .eq("is_active", true)
     .maybeSingle();
 
+  // اگر فرمول service_pricing_rules نبود، از آیتم‌های subcategory_pricing_items استفاده کن
+  // (مثل قالی‌شویی که هر آیتم قیمت جدا دارد: فرش ۱۲ متری، ۹ متری، ۶ متری، سفارشی، موکت ...)
   if (!rule) {
+    const { data: items } = await supabase
+      .from("subcategory_pricing_items")
+      .select("key,category,label,value,unit,description,sort_order")
+      .eq("subcategory_id", subcategoryId)
+      .order("sort_order", { ascending: true });
+
+    if (items && items.length > 0) {
+      return {
+        requires_expert_review: false,
+        pricing_model: "item_catalog",
+        note:
+          "قیمت این خدمت بر اساس نوع آیتم انتخابی از کاتالوگ زیر محاسبه می‌شود. " +
+          "اگر واحد آیتم «per_m2» یا مشابه است، قیمت را در متراژ ضرب کن. " +
+          "اگر آیتم مربوط به «فرش ۱۲ متری/۹ متری/۶ متری» بود، مساحت اصلی همان است و قیمت آیتم قیمت ثابت است. " +
+          "برای متراژهای غیر استاندارد از آیتم فرش سفارشی (per_m2) استفاده کن.",
+        items: items.map((i: any) => ({
+          key: i.key,
+          label: i.label,
+          category: i.category,
+          price_toman: Number(i.value) || 0,
+          unit: i.unit,
+          description: i.description,
+        })),
+      };
+    }
+
     return {
       requires_expert_review: true,
       message:
