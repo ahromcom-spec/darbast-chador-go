@@ -2852,35 +2852,56 @@ ${accessibleTopics.map(topic => `• ${topic}`).join("\n")}
     // END حلقه ابزارها (NEW)
     // ═══════════════════════════════════════════════════════════
 
-    const response = await fetch(GEMINI_ENDPOINT, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${GEMINI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: GEMINI_MODEL,
-        messages: conversation,
-        stream: true,
-      }),
-    });
+    // تلاش با مدل اصلی و در صورت 429/سرور، fallback به مدل lite
+    const modelChain = [GEMINI_MODEL, "gemini-2.5-flash-lite", "gemini-2.5-flash"];
+    const uniqModels = Array.from(new Set(modelChain));
+    let response: Response | null = null;
+    let lastErrText = "";
+    let lastStatus = 0;
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "سرویس پرمشغول است. لطفاً چند لحظه صبر کنید." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+    for (const m of uniqModels) {
+      const attempt = await fetch(GEMINI_ENDPOINT, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${GEMINI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: m,
+          messages: conversation,
+          stream: true,
+        }),
+      });
+
+      if (attempt.ok) {
+        response = attempt;
+        break;
       }
-      if (response.status === 402) {
+
+      lastStatus = attempt.status;
+      lastErrText = await attempt.text();
+      console.error(`AI gateway error (model=${m}):`, attempt.status, lastErrText);
+
+      // فقط روی 429 و 5xx مدل بعدی را امتحان کن
+      if (attempt.status !== 429 && attempt.status < 500) break;
+      // مکث کوتاه قبل از تلاش بعدی
+      await new Promise((r) => setTimeout(r, 400));
+    }
+
+    if (!response) {
+      if (lastStatus === 402) {
         return new Response(JSON.stringify({ error: "سرویس موقتاً در دسترس نیست." }), {
           status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      return new Response(JSON.stringify({ error: "خطا در پردازش درخواست" }), {
+      if (lastStatus === 429) {
+        return new Response(
+          JSON.stringify({ error: "سرویس هوش مصنوعی به سقف درخواست در دقیقه رسید. لطفاً چند ثانیه صبر کنید و دوباره بپرسید." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      return new Response(JSON.stringify({ error: "خطا در پردازش درخواست", details: lastErrText.slice(0, 500) }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
