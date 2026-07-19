@@ -442,11 +442,27 @@ export function AssistantAvatar() {
   // Native scroll container: scrollRef points directly to the scrollable div.
   // Async message load + streamed content means scrollHeight settles late,
   // so we retry several times to keep the latest message pinned.
-  const scrollChatToBottom = () => {
+  const [showJumpToBottom, setShowJumpToBottom] = useState(false);
+  const scrollChatToBottom = (smooth = false) => {
     const viewport = scrollRef.current;
     if (!viewport) return;
-    viewport.scrollTop = viewport.scrollHeight;
+    viewport.scrollTo({ top: viewport.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
   };
+
+  // Track scroll position to toggle the "jump to latest" button
+  useEffect(() => {
+    if (!isOpen) return;
+    const viewport = scrollRef.current;
+    if (!viewport) return;
+    const onScroll = () => {
+      const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      setShowJumpToBottom(distanceFromBottom > 240);
+    };
+    viewport.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => viewport.removeEventListener('scroll', onScroll);
+  }, [isOpen, messages.length]);
+
 
   useEffect(() => {
     if (!isOpen) return;
