@@ -489,7 +489,7 @@ export function AssistantAvatar() {
     });
     observer.observe(viewport, { childList: true, subtree: true, characterData: true });
     // Initial pin
-    const t = setTimeout(scrollChatToBottom, 350);
+    const t = setTimeout(() => scrollChatToBottom(), 350);
     return () => { observer.disconnect(); clearTimeout(t); };
   }, [isOpen]);
 
