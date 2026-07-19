@@ -1518,7 +1518,9 @@ export function AssistantAvatar() {
 
 
           {/* پیام‌ها */}
+          <div className="flex-1 relative flex flex-col min-h-0">
           <div className="flex-1 p-4 overflow-y-auto ahrom-chat-scroll" ref={scrollRef} style={{ overscrollBehavior: 'contain' }}>
+
             {messages.length === 0 ? (
               <div className="py-4">
                 {/* پیام خوش‌آمدگویی با آواتار */}
