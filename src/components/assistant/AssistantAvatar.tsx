@@ -702,7 +702,9 @@ export function AssistantAvatar() {
 
   // Toggle fullscreen mode
   const toggleFullscreen = useCallback(() => {
+    if (isMobile) return; // موبایل همیشه تمام صفحه
     const vp = getViewportSize();
+
     if (isFullscreen) {
       // Restore previous state or use a reasonable default centered
       if (previousChatState && previousChatState.size.width < vp.width - 16) {
