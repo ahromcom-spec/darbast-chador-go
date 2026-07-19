@@ -399,14 +399,22 @@ const TOOLS_GUIDE = `
 4. create_pricing_order_request → فقط پس از تایید نهایی و صریح کاربر، و بعد از جمع‌آوری خدمت + استان + آدرس، درخواست سفارش/قیمت‌گذاری را در صف کارشناسان اهرم ثبت می‌کند.
 
 قوانین اجباری:
-- همیشه ابتدا list_active_services را صدا بزن تا subcategory_id درست خدمتی که کاربر گفته را پیدا کنی. اسم خدمت را با متن آزاد کاربر خودت تطبیق نده و حدس نزن. توجه: خدمات فعلی سایت اهرم شامل «داربست فلزی»، «چادر برزنتی»، «فنس کشی»، «آرماتوربندی»، «ابزارآلات»، «قالی شویی» و «سیمانکاری ساختمان» است؛ اگر کاربر درباره‌ی هر یک از این‌ها پرسید حتماً از ابزارها استفاده کن و نگو «نداریم».
-- برای سوالات قیمتی حتماً estimate_service_price را صدا بزن. اگر پاسخ pricing_model="item_catalog" داشت، از لیست items بر اساس درخواست کاربر آیتم درست را انتخاب کن (مثلاً «فرش ۱۲ متری» → key=carpet_12، «فرش ۹ متری» → carpet_9، «فرش ۶ متری» → carpet_6، متراژ غیر استاندارد → carpet_custom و قیمت را در مساحت ضرب کن، «موکت معمولی» → moquette_standard، «پالاز موکت» → moquette_palaz) و قیمت دقیق را با اعداد فارسی و جداکننده هزارگان به تومان اعلام کن.
-- اگر estimate_service_price مقدار requires_expert_review=true برگرداند، صادقانه به کاربر بگو قیمت دقیق این خدمت را کارشناس اهرم پس از بررسی جزئیات کار اعلام می‌کند و پیشنهاد بده که درخواستش را همین الان ثبت کنی.
-- create_pricing_order_request را بدون تایید صریح کاربر («بله ثبت کن»، «باشه سفارش بده» و مشابه) صدا نزن.
-- اگر کاربر لاگین نکرده و می‌خواهد سفارش ثبت کند، بگو باید ابتدا وارد حساب کاربری خود شود.
-- بعد از ثبت موفق، فقط خلاصه کوتاه بده: چه چیزی ثبت شد و مرحله بعدی (تماس کارشناس) چیست.
+- همیشه ابتدا list_active_services را صدا بزن تا subcategory_id درست خدمتی که کاربر گفته را پیدا کنی. اسم خدمت را با متن آزاد کاربر خودت تطبیق نده و حدس نزن. توجه: خدمات فعلی سایت اهرم شامل «داربست فلزی (اجرا با اجناس / اجرا بدون اجناس / کرایه / خرید و فروش)»، «چادر برزنتی»، «فنس کشی»، «آرماتوربندی»، «ابزارآلات»، «قالی شویی» و «سیمانکاری ساختمان» است؛ اگر کاربر درباره‌ی هر یک از این‌ها پرسید حتماً از ابزارها استفاده کن و نگو «نداریم».
+- برای سوالات قیمتی حتماً estimate_service_price را صدا بزن.
+  * اگر پاسخ pricing_model="item_catalog" داشت (مثل قالی‌شویی)، از لیست items بر اساس درخواست کاربر آیتم درست را انتخاب کن (مثلاً «فرش ۱۲ متری» → key=carpet_12، «فرش ۹ متری» → carpet_9، «فرش ۶ متری» → carpet_6، متراژ غیر استاندارد → carpet_custom و قیمت را در مساحت ضرب کن، «موکت معمولی» → moquette_standard، «پالاز موکت» → moquette_palaz) و قیمت دقیق را به تومان اعلام کن.
+  * اگر پاسخ pricing_model="scaffolding_config" داشت (داربست با یا بدون اجناس)، بر اساس نوع کار (نما=facade، کفراژ=formwork، زیربتن تیرچه=ceiling_beam، زیربتن دال=ceiling_slab، داربست لوله‌ای=pipe_length، ستونی=column) و متراژ داده شده، **حتماً قیمت پیش‌فرض بده** و به کاربر بگو این قیمت پایه بر اساس تنظیمات پیش‌فرض سایت است و قیمت نهایی پس از تایید ابعاد و آدرس دقیق ممکن است اندکی تغییر کند. **هرگز برای داربست نگو «قیمت را کارشناس اعلام می‌کند»**.
+- فقط اگر estimate_service_price مقدار requires_expert_review=true برگرداند (که برای داربست و قالی‌شویی نباید اتفاق بیفتد)، صادقانه بگو قیمت دقیق را کارشناس اعلام می‌کند.
+- بعد از اعلام قیمت هر خدمت، حتماً به کاربر پیشنهاد ثبت سفارش بده و لینک فرم مناسب را به صورت Markdown در پاسخ بگذار:
+  * قالی‌شویی → [ثبت سفارش قالی‌شویی](/carpet-cleaning/form)
+  * داربست به همراه اجناس → [ثبت سفارش داربست با اجناس](/scaffolding/form)
+  * داربست بدون اجناس → [ثبت سفارش داربست بدون اجناس](/scaffolding/form)
+  * سایر خدمات → [ثبت درخواست سفارش](/user/select-service)
+- در همان پیام از کاربر بخواه که هنگام تکمیل فرم، **آدرس دقیق پستی** و **لوکیشن دقیق روی نقشه** را ثبت کند (روی نقشه داخل فرم، پین موقعیت را دقیقاً روی محل کار قرار دهد) چون بدون آدرس و لوکیشن دقیق، امکان اعزام تیم و محاسبه هزینه فاصله وجود ندارد.
+- create_pricing_order_request را فقط زمانی صدا بزن که کاربر صراحتاً بگوید نمی‌خواهد فرم را پر کند و می‌خواهد از طریق دستیار درخواستش را در صف کارشناس بگذاری، و آدرس هم داده باشد.
+- اگر کاربر لاگین نکرده و می‌خواهد سفارش ثبت کند، بگو باید ابتدا وارد حساب کاربری خود شود و لینک [ورود / ثبت‌نام](/auth/login) را بده.
 - هیچ محدودیت تعدادی روی سوالات کاربر وجود ندارد؛ هر تعداد سوال بپرسد به همه پاسخ بده.
 `;
+
 
 const ASSISTANT_TOOLS = [
   {
@@ -574,12 +582,52 @@ async function estimateServicePrice(supabase: any, args: any) {
       };
     }
 
+    // Fallback ویژه داربست فلزی: جداول scaffolding_pricing_config / scaffolding_no_materials_pricing_config
+    const SCAFFOLDING_WITH_MATERIALS_SUB = "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d";
+    const SCAFFOLDING_NO_MATERIALS_SUB = "527e9baa-54c6-4131-81cb-32d29ebae91a";
+    const isScaffoldingWith = subcategoryId === SCAFFOLDING_WITH_MATERIALS_SUB;
+    const isScaffoldingNo = subcategoryId === SCAFFOLDING_NO_MATERIALS_SUB;
+
+    if (isScaffoldingWith || isScaffoldingNo) {
+      const table = isScaffoldingWith
+        ? "scaffolding_pricing_config"
+        : "scaffolding_no_materials_pricing_config";
+      const { data: cfg } = await supabase
+        .from(table)
+        .select("key,category,label,value,unit,description,sort_order")
+        .order("sort_order", { ascending: true });
+
+      if (cfg && cfg.length > 0) {
+        return {
+          requires_expert_review: false,
+          pricing_model: "scaffolding_config",
+          subcategory: isScaffoldingWith ? "اجرای داربست به همراه اجناس" : "اجرای داربست بدون اجناس",
+          order_form_url: isScaffoldingWith ? "/scaffolding/form" : "/scaffolding/form",
+          note:
+            "قیمت داربست از جدول پیکربندی رسمی سایت اهرم محاسبه می‌شود. " +
+            "بر اساس نوع کاربری (نما/کفراژ/زیربتن تیرچه/زیربتن دال/لوله‌ای/ستونی) قیمت پایه را از category متناظر بردار، " +
+            "برای متراژ زیر آستانه از fixed_under، برای متراژ بین آستانه‌ها از fixed_..._to_... و برای متراژ بالاتر از per_meter_over استفاده کن. " +
+            "افزایش‌های درصدی مربوط به فاصله (distance)، ارتفاع پای کار (platform_height)، ارتفاع داربست (scaffold_height) و فاصله خودرو (vehicle_distance) را در صورت داشتن اطلاعات اعمال کن؛ در غیر این صورت با فرض پیش‌فرض (بدون افزایش) قیمت پایه را اعلام کن و صریحاً بگو قیمت نهایی پس از تایید ابعاد و آدرس دقیق ممکن است اندکی تغییر کند. " +
+            "هرگز نگو قیمت باید توسط کارشناس اعلام شود؛ همیشه قیمت پیش‌فرض بده.",
+          items: cfg.map((i: any) => ({
+            key: i.key,
+            label: i.label,
+            category: i.category,
+            price_toman: Number(i.value) || 0,
+            unit: i.unit,
+            description: i.description,
+          })),
+        };
+      }
+    }
+
     return {
       requires_expert_review: true,
       message:
         "برای این خدمت فرمول قیمت‌گذاری ثبت نشده و قیمت باید توسط کارشناس اهرم پس از بررسی جزئیات کار اعلام شود.",
     };
   }
+
 
   let estimated = Number(rule.base_price) || 0;
   switch (rule.pricing_model) {
