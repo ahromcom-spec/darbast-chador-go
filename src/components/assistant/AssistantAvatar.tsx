@@ -256,13 +256,19 @@ export function AssistantAvatar() {
   const [chatSize, setChatSize] = useState({ width: 384, height: 512 }); // sm:w-96 = 384px, h-[32rem] = 512px
   const [isResizing, setIsResizing] = useState(false);
 
-  // Assistant-only zoom (independent of app zoom). Default 0.25 so users see ~4x more content.
+  // Assistant-only zoom (independent of app zoom).
+  // Default: desktop 0.25 (dense view), mobile 1.0 (readable text).
   const ASSISTANT_ZOOM_KEY = 'assistant-chat-zoom';
+  const ASSISTANT_ZOOM_KEY_MOBILE = 'assistant-chat-zoom-mobile';
   const [assistantZoom, setAssistantZoom] = useState<number>(() => {
     if (typeof window === 'undefined') return 0.25;
-    const saved = parseFloat(localStorage.getItem(ASSISTANT_ZOOM_KEY) || '');
-    return Number.isFinite(saved) && saved > 0 ? saved : 0.25;
+    const mobile = window.innerWidth < 640;
+    const key = mobile ? ASSISTANT_ZOOM_KEY_MOBILE : ASSISTANT_ZOOM_KEY;
+    const saved = parseFloat(localStorage.getItem(key) || '');
+    if (Number.isFinite(saved) && saved > 0) return saved;
+    return mobile ? 1 : 0.25;
   });
+
   useEffect(() => {
     try { localStorage.setItem(ASSISTANT_ZOOM_KEY, String(assistantZoom)); } catch {}
   }, [assistantZoom]);
