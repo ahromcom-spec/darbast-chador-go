@@ -466,12 +466,13 @@ export function AssistantAvatar() {
 
   useEffect(() => {
     if (!isOpen) return;
-    const raf = requestAnimationFrame(scrollChatToBottom);
-    const t1 = setTimeout(scrollChatToBottom, 60);
-    const t2 = setTimeout(scrollChatToBottom, 200);
-    const t3 = setTimeout(scrollChatToBottom, 500);
-    const t4 = setTimeout(scrollChatToBottom, 1000);
-    const t5 = setTimeout(scrollChatToBottom, 1800);
+    const raf = requestAnimationFrame(() => scrollChatToBottom());
+    const t1 = setTimeout(() => scrollChatToBottom(), 60);
+    const t2 = setTimeout(() => scrollChatToBottom(), 200);
+    const t3 = setTimeout(() => scrollChatToBottom(), 500);
+    const t4 = setTimeout(() => scrollChatToBottom(), 1000);
+    const t5 = setTimeout(() => scrollChatToBottom(), 1800);
+
     return () => { cancelAnimationFrame(raf); clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); clearTimeout(t5); };
   }, [messages, isOpen, isLoadingMessages]);
 
