@@ -1456,9 +1456,12 @@ export function AssistantAvatar() {
                 <ZoomOut className="h-5 w-5" />
               </Button>
               <span
-                onClick={(e) => { e.stopPropagation(); setAssistantZoom(0.25); }}
-                title="بازنشانی زوم (پیش‌فرض ۲۵٪)"
-                className="text-[11px] text-white/90 min-w-[34px] text-center select-none cursor-pointer hover:bg-white/20 rounded px-1"
+                onClick={(e) => { e.stopPropagation(); setAssistantZoom(isMobile ? 1 : 0.25); }}
+                title={`بازنشانی زوم (پیش‌فرض ${isMobile ? '۱۰۰٪' : '۲۵٪'})`}
+                className={cn(
+                  "text-white/90 min-w-[34px] text-center select-none cursor-pointer hover:bg-white/20 rounded px-1",
+                  isMobile ? "text-sm" : "text-[11px]"
+                )}
               >
                 {Math.round(assistantZoom * 100)}%
               </span>
@@ -1466,34 +1469,42 @@ export function AssistantAvatar() {
                 variant="ghost"
                 size="icon"
                 onClick={(e) => { e.stopPropagation(); zoomIn(); }}
-                className="h-8 w-8 text-white hover:bg-white/20"
+                className={cn("text-white hover:bg-white/20", isMobile ? "h-11 w-11" : "h-8 w-8")}
                 title="بزرگ‌تر کردن متن"
               >
-                <ZoomIn className="h-5 w-5" />
+                <ZoomIn className={isMobile ? "h-6 w-6" : "h-5 w-5"} />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
-                className="h-8 w-8 text-white hover:bg-white/20"
-                title={isFullscreen ? "خروج از تمام صفحه" : "تمام صفحه"}
-              >
-                {isFullscreen ? (
-                  <Minimize2 className="h-5 w-5" />
-                ) : (
-                  <Maximize2 className="h-5 w-5" />
-                )}
-              </Button>
+              {!isMobile && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
+                  className="h-8 w-8 text-white hover:bg-white/20"
+                  title={isFullscreen ? "خروج از تمام صفحه" : "تمام صفحه"}
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="h-5 w-5" />
+                  ) : (
+                    <Maximize2 className="h-5 w-5" />
+                  )}
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={(e) => { e.stopPropagation(); setIsOpen(false); setIsFullscreen(false); }}
-                className="h-8 w-8 text-white hover:bg-white/20"
+                className={cn(
+                  "text-white hover:bg-white/20 active:bg-white/30",
+                  isMobile ? "h-12 w-12 -mr-1" : "h-8 w-8"
+                )}
+                aria-label="بستن گفتگو"
+                title="بستن"
               >
-                <X className="h-5 w-5" />
+                <X className={isMobile ? "h-7 w-7" : "h-5 w-5"} />
               </Button>
             </div>
           </div>
+
 
           {/* پیام‌ها */}
           <div className="flex-1 p-4 overflow-y-auto ahrom-chat-scroll" ref={scrollRef} style={{ overscrollBehavior: 'contain' }}>
