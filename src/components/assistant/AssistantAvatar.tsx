@@ -503,8 +503,16 @@ export function AssistantAvatar() {
   useEffect(() => {
     if (isOpen) {
       composerRef.current?.focus();
+      // موبایل: همیشه تمام صفحه باشد
+      if (isMobile && !isFullscreen) {
+        const vp = getViewportSize();
+        setChatPosition({ x: vp.offsetLeft, y: vp.offsetTop });
+        setChatSize({ width: vp.width, height: vp.height });
+        setIsFullscreen(true);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, isMobile]);
+
 
   // Handle viewport resize to clamp positions (and follow keyboard in fullscreen)
   useEffect(() => {
