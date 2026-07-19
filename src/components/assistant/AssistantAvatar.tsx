@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Send, User, Image, Trash2, Maximize2, Minimize2, ZoomIn, ZoomOut, Mic, MicOff, Volume2, VolumeX, Loader2, Copy, Check } from 'lucide-react';
+import { X, Send, User, Image, Trash2, Maximize2, Minimize2, ZoomIn, ZoomOut, Mic, MicOff, Volume2, VolumeX, Loader2, Copy, Check, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -256,16 +256,26 @@ export function AssistantAvatar() {
   const [chatSize, setChatSize] = useState({ width: 384, height: 512 }); // sm:w-96 = 384px, h-[32rem] = 512px
   const [isResizing, setIsResizing] = useState(false);
 
-  // Assistant-only zoom (independent of app zoom). Default 0.25 so users see ~4x more content.
+  // Assistant-only zoom (independent of app zoom).
+  // Default: desktop 0.25 (dense view), mobile 1.0 (readable text).
   const ASSISTANT_ZOOM_KEY = 'assistant-chat-zoom';
+  const ASSISTANT_ZOOM_KEY_MOBILE = 'assistant-chat-zoom-mobile';
   const [assistantZoom, setAssistantZoom] = useState<number>(() => {
     if (typeof window === 'undefined') return 0.25;
-    const saved = parseFloat(localStorage.getItem(ASSISTANT_ZOOM_KEY) || '');
-    return Number.isFinite(saved) && saved > 0 ? saved : 0.25;
+    const mobile = window.innerWidth < 640;
+    const key = mobile ? ASSISTANT_ZOOM_KEY_MOBILE : ASSISTANT_ZOOM_KEY;
+    const saved = parseFloat(localStorage.getItem(key) || '');
+    if (Number.isFinite(saved) && saved > 0) return saved;
+    return mobile ? 1 : 0.25;
   });
+
   useEffect(() => {
-    try { localStorage.setItem(ASSISTANT_ZOOM_KEY, String(assistantZoom)); } catch {}
-  }, [assistantZoom]);
+    try {
+      const key = isMobile ? ASSISTANT_ZOOM_KEY_MOBILE : ASSISTANT_ZOOM_KEY;
+      localStorage.setItem(key, String(assistantZoom));
+    } catch {}
+  }, [assistantZoom, isMobile]);
+
   const zoomIn = () => setAssistantZoom(z => Math.min(2, +(z + 0.1).toFixed(2)));
   const zoomOut = () => setAssistantZoom(z => Math.max(0.1, +(z - 0.05).toFixed(2)));
   const adjustZoom = (delta: number) => setAssistantZoom(z => Math.max(0.1, Math.min(2, +(z + delta).toFixed(3))));
@@ -432,20 +442,37 @@ export function AssistantAvatar() {
   // Native scroll container: scrollRef points directly to the scrollable div.
   // Async message load + streamed content means scrollHeight settles late,
   // so we retry several times to keep the latest message pinned.
-  const scrollChatToBottom = () => {
+  const [showJumpToBottom, setShowJumpToBottom] = useState(false);
+  const scrollChatToBottom = (smooth = false) => {
     const viewport = scrollRef.current;
     if (!viewport) return;
-    viewport.scrollTop = viewport.scrollHeight;
+    viewport.scrollTo({ top: viewport.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
   };
+
+  // Track scroll position to toggle the "jump to latest" button
+  useEffect(() => {
+    if (!isOpen) return;
+    const viewport = scrollRef.current;
+    if (!viewport) return;
+    const onScroll = () => {
+      const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      setShowJumpToBottom(distanceFromBottom > 240);
+    };
+    viewport.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => viewport.removeEventListener('scroll', onScroll);
+  }, [isOpen, messages.length]);
+
 
   useEffect(() => {
     if (!isOpen) return;
-    const raf = requestAnimationFrame(scrollChatToBottom);
-    const t1 = setTimeout(scrollChatToBottom, 60);
-    const t2 = setTimeout(scrollChatToBottom, 200);
-    const t3 = setTimeout(scrollChatToBottom, 500);
-    const t4 = setTimeout(scrollChatToBottom, 1000);
-    const t5 = setTimeout(scrollChatToBottom, 1800);
+    const raf = requestAnimationFrame(() => scrollChatToBottom());
+    const t1 = setTimeout(() => scrollChatToBottom(), 60);
+    const t2 = setTimeout(() => scrollChatToBottom(), 200);
+    const t3 = setTimeout(() => scrollChatToBottom(), 500);
+    const t4 = setTimeout(() => scrollChatToBottom(), 1000);
+    const t5 = setTimeout(() => scrollChatToBottom(), 1800);
+
     return () => { cancelAnimationFrame(raf); clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); clearTimeout(t5); };
   }, [messages, isOpen, isLoadingMessages]);
 
@@ -462,7 +489,7 @@ export function AssistantAvatar() {
     });
     observer.observe(viewport, { childList: true, subtree: true, characterData: true });
     // Initial pin
-    const t = setTimeout(scrollChatToBottom, 350);
+    const t = setTimeout(() => scrollChatToBottom(), 350);
     return () => { observer.disconnect(); clearTimeout(t); };
   }, [isOpen]);
 
@@ -476,8 +503,16 @@ export function AssistantAvatar() {
   useEffect(() => {
     if (isOpen) {
       composerRef.current?.focus();
+      // موبایل: همیشه تمام صفحه باشد
+      if (isMobile && !isFullscreen) {
+        const vp = getViewportSize();
+        setChatPosition({ x: vp.offsetLeft, y: vp.offsetTop });
+        setChatSize({ width: vp.width, height: vp.height });
+        setIsFullscreen(true);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, isMobile]);
+
 
   // Handle viewport resize to clamp positions (and follow keyboard in fullscreen)
   useEffect(() => {
@@ -675,7 +710,9 @@ export function AssistantAvatar() {
 
   // Toggle fullscreen mode
   const toggleFullscreen = useCallback(() => {
+    if (isMobile) return; // موبایل همیشه تمام صفحه
     const vp = getViewportSize();
+
     if (isFullscreen) {
       // Restore previous state or use a reasonable default centered
       if (previousChatState && previousChatState.size.width < vp.width - 16) {
@@ -698,7 +735,7 @@ export function AssistantAvatar() {
       setChatSize({ width: vp.width, height: vp.height });
       setIsFullscreen(true);
     }
-  }, [isFullscreen, previousChatState, chatPosition, chatSize]);
+  }, [isFullscreen, previousChatState, chatPosition, chatSize, isMobile]);
 
   const makeResizePointerDown = (dir: ResizeDirection) => (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -1423,15 +1460,19 @@ export function AssistantAvatar() {
                 variant="ghost"
                 size="icon"
                 onClick={(e) => { e.stopPropagation(); zoomOut(); }}
-                className="h-8 w-8 text-white hover:bg-white/20"
+                className={cn("text-white hover:bg-white/20", isMobile ? "h-11 w-11" : "h-8 w-8")}
                 title="کوچک‌تر کردن متن"
               >
-                <ZoomOut className="h-5 w-5" />
+                <ZoomOut className={isMobile ? "h-6 w-6" : "h-5 w-5"} />
               </Button>
+
               <span
-                onClick={(e) => { e.stopPropagation(); setAssistantZoom(0.25); }}
-                title="بازنشانی زوم (پیش‌فرض ۲۵٪)"
-                className="text-[11px] text-white/90 min-w-[34px] text-center select-none cursor-pointer hover:bg-white/20 rounded px-1"
+                onClick={(e) => { e.stopPropagation(); setAssistantZoom(isMobile ? 1 : 0.25); }}
+                title={`بازنشانی زوم (پیش‌فرض ${isMobile ? '۱۰۰٪' : '۲۵٪'})`}
+                className={cn(
+                  "text-white/90 min-w-[34px] text-center select-none cursor-pointer hover:bg-white/20 rounded px-1",
+                  isMobile ? "text-sm" : "text-[11px]"
+                )}
               >
                 {Math.round(assistantZoom * 100)}%
               </span>
@@ -1439,37 +1480,47 @@ export function AssistantAvatar() {
                 variant="ghost"
                 size="icon"
                 onClick={(e) => { e.stopPropagation(); zoomIn(); }}
-                className="h-8 w-8 text-white hover:bg-white/20"
+                className={cn("text-white hover:bg-white/20", isMobile ? "h-11 w-11" : "h-8 w-8")}
                 title="بزرگ‌تر کردن متن"
               >
-                <ZoomIn className="h-5 w-5" />
+                <ZoomIn className={isMobile ? "h-6 w-6" : "h-5 w-5"} />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
-                className="h-8 w-8 text-white hover:bg-white/20"
-                title={isFullscreen ? "خروج از تمام صفحه" : "تمام صفحه"}
-              >
-                {isFullscreen ? (
-                  <Minimize2 className="h-5 w-5" />
-                ) : (
-                  <Maximize2 className="h-5 w-5" />
-                )}
-              </Button>
+              {!isMobile && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
+                  className="h-8 w-8 text-white hover:bg-white/20"
+                  title={isFullscreen ? "خروج از تمام صفحه" : "تمام صفحه"}
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="h-5 w-5" />
+                  ) : (
+                    <Maximize2 className="h-5 w-5" />
+                  )}
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={(e) => { e.stopPropagation(); setIsOpen(false); setIsFullscreen(false); }}
-                className="h-8 w-8 text-white hover:bg-white/20"
+                className={cn(
+                  "text-white hover:bg-white/20 active:bg-white/30",
+                  isMobile ? "h-12 w-12 -mr-1" : "h-8 w-8"
+                )}
+                aria-label="بستن گفتگو"
+                title="بستن"
               >
-                <X className="h-5 w-5" />
+                <X className={isMobile ? "h-7 w-7" : "h-5 w-5"} />
               </Button>
             </div>
           </div>
 
+
           {/* پیام‌ها */}
+          <div className="flex-1 relative flex flex-col min-h-0">
           <div className="flex-1 p-4 overflow-y-auto ahrom-chat-scroll" ref={scrollRef} style={{ overscrollBehavior: 'contain' }}>
+
             {messages.length === 0 ? (
               <div className="py-4">
                 {/* پیام خوش‌آمدگویی با آواتار */}
@@ -1640,6 +1691,20 @@ export function AssistantAvatar() {
               </div>
             )}
           </div>
+            {showJumpToBottom && (
+              <button
+                type="button"
+                onClick={() => { scrollChatToBottom(true); setShowJumpToBottom(false); }}
+                aria-label="رفتن به آخرین پیام"
+                title="آخرین پیام"
+                className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white rounded-full shadow-lg flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium animate-in fade-in slide-in-from-bottom-2"
+              >
+                <ArrowDown className="h-5 w-5" />
+                <span>آخرین پیام</span>
+              </button>
+            )}
+          </div>
+
 
           {/* پیش‌نمایش تصویر انتخاب شده */}
           {selectedImage && (
