@@ -1691,6 +1691,20 @@ export function AssistantAvatar() {
               </div>
             )}
           </div>
+            {showJumpToBottom && (
+              <button
+                type="button"
+                onClick={() => { scrollChatToBottom(true); setShowJumpToBottom(false); }}
+                aria-label="رفتن به آخرین پیام"
+                title="آخرین پیام"
+                className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white rounded-full shadow-lg flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium animate-in fade-in slide-in-from-bottom-2"
+              >
+                <ArrowDown className="h-5 w-5" />
+                <span>آخرین پیام</span>
+              </button>
+            )}
+          </div>
+
 
           {/* پیش‌نمایش تصویر انتخاب شده */}
           {selectedImage && (
