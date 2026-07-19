@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Send, User, Image, Trash2, Maximize2, Minimize2, ZoomIn, ZoomOut, Mic, MicOff, Volume2, VolumeX, Loader2, Copy, Check } from 'lucide-react';
+import { X, Send, User, Image, Trash2, Maximize2, Minimize2, ZoomIn, ZoomOut, Mic, MicOff, Volume2, VolumeX, Loader2, Copy, Check, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
