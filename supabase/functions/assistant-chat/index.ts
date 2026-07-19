@@ -574,12 +574,52 @@ async function estimateServicePrice(supabase: any, args: any) {
       };
     }
 
+    // Fallback ویژه داربست فلزی: جداول scaffolding_pricing_config / scaffolding_no_materials_pricing_config
+    const SCAFFOLDING_WITH_MATERIALS_SUB = "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d";
+    const SCAFFOLDING_NO_MATERIALS_SUB = "527e9baa-54c6-4131-81cb-32d29ebae91a";
+    const isScaffoldingWith = subcategoryId === SCAFFOLDING_WITH_MATERIALS_SUB;
+    const isScaffoldingNo = subcategoryId === SCAFFOLDING_NO_MATERIALS_SUB;
+
+    if (isScaffoldingWith || isScaffoldingNo) {
+      const table = isScaffoldingWith
+        ? "scaffolding_pricing_config"
+        : "scaffolding_no_materials_pricing_config";
+      const { data: cfg } = await supabase
+        .from(table)
+        .select("key,category,label,value,unit,description,sort_order")
+        .order("sort_order", { ascending: true });
+
+      if (cfg && cfg.length > 0) {
+        return {
+          requires_expert_review: false,
+          pricing_model: "scaffolding_config",
+          subcategory: isScaffoldingWith ? "اجرای داربست به همراه اجناس" : "اجرای داربست بدون اجناس",
+          order_form_url: isScaffoldingWith ? "/scaffolding/form" : "/scaffolding/form",
+          note:
+            "قیمت داربست از جدول پیکربندی رسمی سایت اهرم محاسبه می‌شود. " +
+            "بر اساس نوع کاربری (نما/کفراژ/زیربتن تیرچه/زیربتن دال/لوله‌ای/ستونی) قیمت پایه را از category متناظر بردار، " +
+            "برای متراژ زیر آستانه از fixed_under، برای متراژ بین آستانه‌ها از fixed_..._to_... و برای متراژ بالاتر از per_meter_over استفاده کن. " +
+            "افزایش‌های درصدی مربوط به فاصله (distance)، ارتفاع پای کار (platform_height)، ارتفاع داربست (scaffold_height) و فاصله خودرو (vehicle_distance) را در صورت داشتن اطلاعات اعمال کن؛ در غیر این صورت با فرض پیش‌فرض (بدون افزایش) قیمت پایه را اعلام کن و صریحاً بگو قیمت نهایی پس از تایید ابعاد و آدرس دقیق ممکن است اندکی تغییر کند. " +
+            "هرگز نگو قیمت باید توسط کارشناس اعلام شود؛ همیشه قیمت پیش‌فرض بده.",
+          items: cfg.map((i: any) => ({
+            key: i.key,
+            label: i.label,
+            category: i.category,
+            price_toman: Number(i.value) || 0,
+            unit: i.unit,
+            description: i.description,
+          })),
+        };
+      }
+    }
+
     return {
       requires_expert_review: true,
       message:
         "برای این خدمت فرمول قیمت‌گذاری ثبت نشده و قیمت باید توسط کارشناس اهرم پس از بررسی جزئیات کار اعلام شود.",
     };
   }
+
 
   let estimated = Number(rule.base_price) || 0;
   switch (rule.pricing_model) {
