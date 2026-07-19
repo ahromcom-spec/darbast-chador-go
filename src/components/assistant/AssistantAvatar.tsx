@@ -727,7 +727,7 @@ export function AssistantAvatar() {
       setChatSize({ width: vp.width, height: vp.height });
       setIsFullscreen(true);
     }
-  }, [isFullscreen, previousChatState, chatPosition, chatSize]);
+  }, [isFullscreen, previousChatState, chatPosition, chatSize, isMobile]);
 
   const makeResizePointerDown = (dir: ResizeDirection) => (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
