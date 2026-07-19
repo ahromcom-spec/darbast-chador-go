@@ -1450,11 +1450,12 @@ export function AssistantAvatar() {
                 variant="ghost"
                 size="icon"
                 onClick={(e) => { e.stopPropagation(); zoomOut(); }}
-                className="h-8 w-8 text-white hover:bg-white/20"
+                className={cn("text-white hover:bg-white/20", isMobile ? "h-11 w-11" : "h-8 w-8")}
                 title="کوچک‌تر کردن متن"
               >
-                <ZoomOut className="h-5 w-5" />
+                <ZoomOut className={isMobile ? "h-6 w-6" : "h-5 w-5"} />
               </Button>
+
               <span
                 onClick={(e) => { e.stopPropagation(); setAssistantZoom(isMobile ? 1 : 0.25); }}
                 title={`بازنشانی زوم (پیش‌فرض ${isMobile ? '۱۰۰٪' : '۲۵٪'})`}
