@@ -270,8 +270,12 @@ export function AssistantAvatar() {
   });
 
   useEffect(() => {
-    try { localStorage.setItem(ASSISTANT_ZOOM_KEY, String(assistantZoom)); } catch {}
-  }, [assistantZoom]);
+    try {
+      const key = isMobile ? ASSISTANT_ZOOM_KEY_MOBILE : ASSISTANT_ZOOM_KEY;
+      localStorage.setItem(key, String(assistantZoom));
+    } catch {}
+  }, [assistantZoom, isMobile]);
+
   const zoomIn = () => setAssistantZoom(z => Math.min(2, +(z + 0.1).toFixed(2)));
   const zoomOut = () => setAssistantZoom(z => Math.max(0.1, +(z - 0.05).toFixed(2)));
   const adjustZoom = (delta: number) => setAssistantZoom(z => Math.max(0.1, Math.min(2, +(z + delta).toFixed(3))));
