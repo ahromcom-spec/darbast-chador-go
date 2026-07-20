@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { syncLocationActiveStatusByOrderId } from '@/hooks/useLocations';
 
 export function useOrderArchive(onSuccess?: () => void) {
   const { user } = useAuth();
@@ -52,6 +53,8 @@ export function useOrderArchive(onSuccess?: () => void) {
 
       if (error) throw error;
 
+      await syncLocationActiveStatusByOrderId(orderToArchive.id);
+
       toast({
         title: '✓ بایگانی شد',
         description: `سفارش ${orderToArchive.code} با موفقیت بایگانی شد.`
@@ -87,6 +90,10 @@ export function useOrderArchive(onSuccess?: () => void) {
         .in('id', Array.from(selectedOrderIds));
 
       if (error) throw error;
+
+      await Promise.all(
+        Array.from(selectedOrderIds).map(id => syncLocationActiveStatusByOrderId(id))
+      );
 
       toast({
         title: '✓ بایگانی شد',

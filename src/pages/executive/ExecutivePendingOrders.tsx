@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
 import { useAuth } from '@/contexts/AuthContext';
+import { syncLocationActiveStatusByOrderId } from '@/hooks/useLocations';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { formatPersianDate } from '@/lib/dateUtils';
 import {
@@ -808,6 +809,8 @@ export default function ExecutivePendingOrders() {
 
       if (error) throw error;
 
+      await syncLocationActiveStatusByOrderId(selectedOrder.id);
+
       toast({
         title: 'سفارش بایگانی شد',
         description: `سفارش ${selectedOrder.code} به بایگانی منتقل شد.`
@@ -863,6 +866,8 @@ export default function ExecutivePendingOrders() {
         .in('id', orderIdsArray);
 
       if (error) throw error;
+
+      await Promise.all(orderIdsArray.map(id => syncLocationActiveStatusByOrderId(id)));
 
       toast({
         title: 'سفارشات بایگانی شدند',

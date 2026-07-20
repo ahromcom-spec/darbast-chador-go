@@ -26,6 +26,7 @@ import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaff
 import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
 import { sendPushNotification, sendNotificationRpc } from '@/lib/notifications';
 import { useAuth } from '@/contexts/AuthContext';
+import { syncLocationActiveStatusByOrderId } from '@/hooks/useLocations';
 import { CollectionRequestDialog } from '@/components/orders/CollectionRequestDialog';
 import { MultiPaymentDialog } from '@/components/orders/MultiPaymentDialog';
 import { OrderLocationEditor } from '@/components/locations/OrderLocationEditor';
@@ -1149,6 +1150,8 @@ export default function ExecutiveOrders() {
 
       if (error) throw error;
 
+      await syncLocationActiveStatusByOrderId(selectedOrder.id);
+
       toast({
         title: 'سفارش بایگانی شد',
         description: `سفارش ${selectedOrder.code} به بایگانی منتقل شد.`
@@ -1184,6 +1187,8 @@ export default function ExecutiveOrders() {
         .in('id', orderIdsArray);
 
       if (error) throw error;
+
+      await Promise.all(orderIdsArray.map(id => syncLocationActiveStatusByOrderId(id)));
 
       toast({
         title: 'سفارشات بایگانی شدند',
