@@ -808,6 +808,8 @@ export default function ExecutivePendingOrders() {
 
       if (error) throw error;
 
+      await syncLocationActiveStatusByOrderId(selectedOrder.id);
+
       toast({
         title: 'سفارش بایگانی شد',
         description: `سفارش ${selectedOrder.code} به بایگانی منتقل شد.`
@@ -863,6 +865,8 @@ export default function ExecutivePendingOrders() {
         .in('id', orderIdsArray);
 
       if (error) throw error;
+
+      await Promise.all(orderIdsArray.map(id => syncLocationActiveStatusByOrderId(id)));
 
       toast({
         title: 'سفارشات بایگانی شدند',

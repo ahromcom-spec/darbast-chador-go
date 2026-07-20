@@ -1,6 +1,45 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
+/**
+ * پس از بایگانی/بازیابی سفارش، وضعیت is_active آدرس مرتبط را همگام می‌کند.
+ * اگر هیچ سفارش فعالی برای پروژه/آدرس باقی نمانده باشد، is_active=false می‌شود.
+ */
+export async function syncLocationActiveStatusByOrderId(orderId: string) {
+  try {
+    const { data: order } = await supabase
+      .from('projects_v3')
+      .select('hierarchy_project_id')
+      .eq('id', orderId)
+      .maybeSingle();
+
+    const hierarchyProjectId = (order as any)?.hierarchy_project_id;
+    if (!hierarchyProjectId) return;
+
+    const { data: hierarchyProject } = await supabase
+      .from('projects_hierarchy')
+      .select('location_id')
+      .eq('id', hierarchyProjectId)
+      .maybeSingle();
+
+    const locationId = (hierarchyProject as any)?.location_id;
+    if (!locationId) return;
+
+    const { count } = await supabase
+      .from('projects_v3')
+      .select('id', { count: 'exact', head: true })
+      .eq('hierarchy_project_id', hierarchyProjectId)
+      .or('is_archived.is.null,is_archived.eq.false');
+
+    await supabase
+      .from('locations')
+      .update({ is_active: (count ?? 0) > 0 })
+      .eq('id', locationId);
+  } catch (err) {
+    console.error('syncLocationActiveStatusByOrderId error:', err);
+  }
+}
+
 export interface Location {
   id: string;
   user_id: string;
