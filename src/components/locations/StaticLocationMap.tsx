@@ -148,9 +148,9 @@ export default function StaticLocationMap({
         // فقط اگر detailedAddress متفاوت از address باشد نمایش داده شود
         const showDetailedAddress = detailedAddress && detailedAddress.trim() !== address.trim();
         const popupContent = `
-          <div style="padding: 8px; max-width: 200px;">
-            <p style="font-weight: bold; margin-bottom: 4px; color: hsl(var(--foreground));">${address}</p>
-            ${showDetailedAddress ? `<p style="font-size: 12px; color: hsl(var(--muted-foreground));">${detailedAddress}</p>` : ''}
+          <div style="padding: 8px; min-width: 260px; max-width: 320px; direction: rtl; text-align: right; font-family: Vazir, sans-serif;">
+            <p style="font-weight: 600; margin: 0 0 4px 0; font-size: 11px; line-height: 1.7; color: hsl(var(--foreground)); white-space: normal; word-break: normal; overflow-wrap: break-word;">${address}</p>
+            ${showDetailedAddress ? `<p style="font-size: 10px; line-height: 1.6; margin: 0; color: hsl(var(--muted-foreground)); white-space: normal; word-break: normal; overflow-wrap: break-word;">${detailedAddress}</p>` : ''}
           </div>
         `;
         marker.bindPopup(popupContent).openPopup();
