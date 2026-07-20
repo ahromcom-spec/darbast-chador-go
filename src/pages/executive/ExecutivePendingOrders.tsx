@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
 import { useAuth } from '@/contexts/AuthContext';
+import { syncLocationActiveStatusByOrderId } from '@/hooks/useLocations';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { formatPersianDate } from '@/lib/dateUtils';
 import {

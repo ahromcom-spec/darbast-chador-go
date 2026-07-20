@@ -26,6 +26,7 @@ import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaff
 import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
 import { sendPushNotification, sendNotificationRpc } from '@/lib/notifications';
 import { useAuth } from '@/contexts/AuthContext';
+import { syncLocationActiveStatusByOrderId } from '@/hooks/useLocations';
 import { CollectionRequestDialog } from '@/components/orders/CollectionRequestDialog';
 import { MultiPaymentDialog } from '@/components/orders/MultiPaymentDialog';
 import { OrderLocationEditor } from '@/components/locations/OrderLocationEditor';
