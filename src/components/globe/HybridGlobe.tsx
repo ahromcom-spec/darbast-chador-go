@@ -29,7 +29,6 @@ import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { createNeshanTileLayer, NESHAN_ATTRIBUTION } from '@/lib/neshan';
 import { createOSMBuildingsLayer } from '@/lib/osmBuildings';
-import { syncLocationActiveStatusByOrderId } from '@/hooks/useLocations';
 type ProjectHierarchy = ReturnType<typeof useProjectsHierarchy>['projects'][0];
 
 interface HierarchyMedia {
@@ -714,8 +713,6 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     }
 
     console.debug('[HybridGlobe] Fetching media for', projects.length, 'projects');
-    // مرحله سریع: قبل از دریافت تصاویر و جزئیات سفارش، پین‌ها فوراً روی نقشه دیده شوند
-    setProjectsWithMedia(projects.map(p => ({ ...p, media: [], orders: [] })));
     
     try {
       const projectIds = projects.map(p => p.id);
