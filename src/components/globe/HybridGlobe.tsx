@@ -386,12 +386,28 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
     try {
       setIsDeleting(true);
+      const projectForOrder = projectsWithMedia.find(project => project.orders?.some(o => o.id === orderId));
       const { error } = await supabase
         .from('projects_v3')
         .delete()
         .eq('id', orderId);
       
       if (error) throw error;
+
+      if (projectForOrder?.location_id) {
+        const { count } = await supabase
+          .from('projects_v3')
+          .select('id', { count: 'exact', head: true })
+          .eq('hierarchy_project_id', projectForOrder.id)
+          .or('is_archived.is.null,is_archived.eq.false')
+          .or('is_deep_archived.is.null,is_deep_archived.eq.false')
+          .neq('status', 'rejected');
+
+        await supabase
+          .from('locations')
+          .update({ is_active: (count ?? 0) > 0 })
+          .eq('id', projectForOrder.location_id);
+      }
       
       toast({
         title: 'موفق',
@@ -697,8 +713,6 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     }
 
     console.debug('[HybridGlobe] Fetching media for', projects.length, 'projects');
-    // مرحله سریع: قبل از دریافت تصاویر و جزئیات سفارش، پین‌ها فوراً روی نقشه دیده شوند
-    setProjectsWithMedia(projects.map(p => ({ ...p, media: [], orders: [] })));
     
     try {
       const projectIds = projects.map(p => p.id);
@@ -716,8 +730,19 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
       // فقط سفارش‌هایی که به پروژه‌های فعلی روی نقشه تعلق دارند
       const v3OrdersFiltered = v3OrdersAll.filter(o =>
-        o.hierarchy_project_id && projectIds.includes(o.hierarchy_project_id)
+        o.hierarchy_project_id && projectIds.includes(o.hierarchy_project_id) && o.status !== 'rejected'
       );
+
+      const projectIdsWithActiveOrders = new Set(
+        v3OrdersFiltered.map((o: any) => o.hierarchy_project_id).filter(Boolean)
+      );
+
+      if (projectIdsWithActiveOrders.size === 0) {
+        setProjectsWithMedia([]);
+        return;
+      }
+
+      const visibleProjectIds = projectIds.filter(id => projectIdsWithActiveOrders.has(id));
 
       // فقط سفارش‌های مربوط به همین پروژه‌های روی نقشه را برای رسانه بگیریم تا بارگذاری سریع بماند
       const visibleOrderIds = v3OrdersFiltered.map(o => o.id);
@@ -729,7 +754,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
         supabase
           .from('project_hierarchy_media')
           .select('id, hierarchy_project_id, file_path, file_type, created_at, mime_type')
-          .in('hierarchy_project_id', projectIds)
+          .in('hierarchy_project_id', visibleProjectIds)
           .in('file_type', ['image', 'video'])
           .order('created_at', { ascending: false })
           .limit(1000),
@@ -871,7 +896,9 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       }
 
       // ترکیب نهایی با بهینه‌سازی
-      const projectsWithMediaData: ProjectWithMedia[] = projects.map(project => {
+      const projectsWithMediaData: ProjectWithMedia[] = projects
+        .filter(project => projectIdsWithActiveOrders.has(project.id))
+        .map(project => {
         const list = (mediaByProject.get(project.id) || [])
           .sort((a, b) => a.created_at > b.created_at ? -1 : 1)
           .slice(0, 2); // فقط 2 تصویر اول
@@ -1398,7 +1425,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       projectsCount: projectsWithMedia.length
     });
     
-    if (!mapRef.current || !mapReady || loading || projectsWithMedia.length === 0) {
+    if (!mapRef.current || !mapReady || loading) {
       console.debug('[HybridGlobe] Skipping marker creation - conditions not met');
       return;
     }
@@ -1410,6 +1437,13 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
     linesRef.current = [];
     centerMarkersRef.current.forEach(cm => cm.remove());
     centerMarkersRef.current = [];
+
+    if (projectsWithMedia.length === 0) {
+      console.debug('[HybridGlobe] No active-order projects to display');
+      locationsMarkersRef.current.forEach(marker => marker.remove());
+      locationsMarkersRef.current = [];
+      return;
+    }
 
     // فیلتر پروژه‌هایی که مختصات معتبر دارند
     const projectsWithLocation = projectsWithMedia.filter(function(p) {

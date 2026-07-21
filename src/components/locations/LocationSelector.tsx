@@ -21,6 +21,8 @@ export const LocationSelector = ({ onLocationSelected, serviceTypeName }: Locati
   const { projects: allProjects } = useProjectsHierarchy();
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [locationProjectCounts, setLocationProjectCounts] = useState<Record<string, number>>({});
+  const [locationCountsReady, setLocationCountsReady] = useState(false);
+  const [newlyCreatedLocationId, setNewlyCreatedLocationId] = useState<string | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
   
   // مرکز استان قم و محدوده مجاز
@@ -97,17 +99,15 @@ export const LocationSelector = ({ onLocationSelected, serviceTypeName }: Locati
     });
   }, [allProjects]);
 
-  // Auto-select first location when locations load
-  useEffect(() => {
-    if (locations.length > 0 && !selectedLocationId) {
-      setSelectedLocationId(locations[0].id);
-    }
-  }, [locations, selectedLocationId]);
-
   // بارگذاری تعداد پروژه‌های هر مکان
   useEffect(() => {
     const fetchProjectCounts = async () => {
-      if (locations.length === 0 || filteredProjects.length === 0) return;
+      setLocationCountsReady(false);
+      if (locations.length === 0 || filteredProjects.length === 0) {
+        setLocationProjectCounts({});
+        setLocationCountsReady(true);
+        return;
+      }
       
       const filteredProjectIds = filteredProjects.map(p => p.id);
       
@@ -115,6 +115,9 @@ export const LocationSelector = ({ onLocationSelected, serviceTypeName }: Locati
         .from('projects_v3')
         .select('hierarchy_project_id')
         .in('hierarchy_project_id', filteredProjectIds)
+        .neq('status', 'rejected')
+        .or('is_archived.is.null,is_archived.eq.false')
+        .or('is_deep_archived.is.null,is_deep_archived.eq.false')
         .not('hierarchy_project_id', 'is', null);
       
       if (data) {
@@ -129,10 +132,28 @@ export const LocationSelector = ({ onLocationSelected, serviceTypeName }: Locati
         
         setLocationProjectCounts(counts);
       }
+      setLocationCountsReady(true);
     };
     
     fetchProjectCounts();
   }, [locations, filteredProjects]);
+
+  const visibleLocations = useMemo(
+    () => locations.filter(location =>
+      (locationProjectCounts[location.id] || 0) > 0 || location.id === newlyCreatedLocationId
+    ),
+    [locations, locationProjectCounts, newlyCreatedLocationId]
+  );
+
+  // Auto-select first visible location when counts load
+  useEffect(() => {
+    if (!locationCountsReady) return;
+    if (visibleLocations.length > 0 && !visibleLocations.some(location => location.id === selectedLocationId)) {
+      setSelectedLocationId(visibleLocations[0].id);
+    } else if (visibleLocations.length === 0 && selectedLocationId) {
+      setSelectedLocationId(null);
+    }
+  }, [visibleLocations, selectedLocationId, locationCountsReady]);
 
   const [showNewLocationDialog, setShowNewLocationDialog] = useState(false);
 
@@ -154,6 +175,7 @@ export const LocationSelector = ({ onLocationSelected, serviceTypeName }: Locati
 
   const handleLocationCreated = async (locationId: string) => {
     setShowNewLocationDialog(false);
+    setNewlyCreatedLocationId(locationId);
     // For guests: skip refetch/list selection and forward immediately
     if (!user) {
       toast.success('آدرس با موفقیت ثبت شد');
@@ -193,16 +215,18 @@ export const LocationSelector = ({ onLocationSelected, serviceTypeName }: Locati
         </DialogContent>
       </Dialog>
 
-      {locations.length === 0 ? (
+      {!locationCountsReady ? (
+        <LoadingSpinner />
+      ) : visibleLocations.length === 0 ? (
         <div className="text-center py-8 border border-dashed rounded-lg bg-muted/30">
           <MapPin className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
-          <p className="text-muted-foreground text-sm">هنوز آدرسی ثبت نشده است</p>
+          <p className="text-muted-foreground text-sm">آدرس فعالی برای انتخاب وجود ندارد</p>
         </div>
       ) : (
         <div className="border-2 rounded-xl bg-background shadow-sm">
-          {/* لیست همه آدرس‌ها به صورت کارت */}
+          {/* لیست آدرس‌های دارای سفارش فعال */}
           <div className="space-y-2 max-h-[300px] overflow-y-auto p-4">
-            {locations.map((location) => {
+            {visibleLocations.map((location) => {
               const projectCount = locationProjectCounts[location.id] || 0;
               const isSelected = selectedLocationId === location.id;
               
