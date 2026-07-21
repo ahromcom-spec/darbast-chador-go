@@ -157,8 +157,9 @@ export const CustomerInvoice = () => {
         .from('projects_v3')
         .select('id, code, status, payment_amount, total_price, total_paid, created_at, statement_id, address, detailed_address, notes, subcategories(name)')
         .eq('customer_id', customer.id)
-        // سفارشات بایگانی شده هم در صورتحساب نمایش داده می‌شوند تا تراکنش‌ها و هزینه‌هایشان قابل بررسی باشد
         .neq('status', 'rejected')
+        .or('is_archived.is.null,is_archived.eq.false')
+        .or('is_deep_archived.is.null,is_deep_archived.eq.false')
         .order('created_at', { ascending: true });
       if (e2) throw e2;
 
@@ -224,8 +225,9 @@ export const CustomerInvoice = () => {
           .from('projects_v3')
           .select('id, code, status, payment_amount, total_price, total_paid, created_at, address, detailed_address, notes, subcategories(name)')
           .in('id', collabOrderIds)
-          // سفارشات بایگانی هم در صورتحساب همکاری نمایش داده می‌شوند
-          .neq('status', 'rejected');
+          .neq('status', 'rejected')
+          .or('is_archived.is.null,is_archived.eq.false')
+          .or('is_deep_archived.is.null,is_deep_archived.eq.false');
 
         const myCollabOrders: OrderRow[] = (collabOrders || []).map((o: any) => {
           const total = Number(o.total_price) || Number(o.payment_amount) || 0;
