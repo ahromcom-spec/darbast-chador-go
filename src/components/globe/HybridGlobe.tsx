@@ -730,7 +730,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
 
       // فقط سفارش‌هایی که به پروژه‌های فعلی روی نقشه تعلق دارند
       const v3OrdersFiltered = v3OrdersAll.filter(o =>
-        o.hierarchy_project_id && projectIds.includes(o.hierarchy_project_id)
+        o.hierarchy_project_id && projectIds.includes(o.hierarchy_project_id) && o.status !== 'rejected'
       );
 
       const projectIdsWithActiveOrders = new Set(
