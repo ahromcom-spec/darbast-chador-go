@@ -79,7 +79,9 @@ export function RepairRequestDialog({
   isManager = false,
 }: RepairRequestDialogProps) {
   const [loading, setLoading] = useState(true);
+  const [requests, setRequests] = useState<RepairRequest[]>([]);
   const [existingRequest, setExistingRequest] = useState<RepairRequest | null>(null);
+  const [showNewForm, setShowNewForm] = useState(false);
   const [description, setDescription] = useState("");
   const [message, setMessage] = useState("");
   const [media, setMedia] = useState<RepairMedia[]>([]);
