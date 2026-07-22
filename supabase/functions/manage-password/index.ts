@@ -302,48 +302,47 @@ serve(async (req) => {
         }
       }
 
-      // Create session using the same technique as verify-otp
-      const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
-      // Try ALL known password formats to avoid updateUserById (which invalidates other sessions)
-      const allPasswords = [
-        `stable-${normalizedPhone}-ahrom-x`,
-        `user-pwd-${normalizedPhone}-x`,
-        `whitelist-${normalizedPhone}-x`,
-      ];
-
-      let signInData: any = null;
-      let signInErr: any = null;
-
-      for (const pw of allPasswords) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: derivedEmail,
-          password: pw,
-        });
-        if (!error && data?.session) {
-          signInData = data;
-          signInErr = null;
-          console.log('[MULTI-DEVICE] manage-password login SUCCESS with existing password');
-          break;
+      // Rotate legacy predictable password to a random opaque secret on first
+      // login after the fix, so the account can never again be signed into via
+      // a phone-derived password. Idempotent via user_metadata.pw_rotated.
+      try {
+        const { data: userInfo } = await supabase.auth.admin.getUserById(profile.user_id);
+        const meta = (userInfo?.user?.user_metadata as any) || {};
+        if (meta.pw_rotated !== true) {
+          const randBytes = new Uint8Array(48);
+          crypto.getRandomValues(randBytes);
+          let bin = '';
+          for (let i = 0; i < randBytes.length; i++) bin += String.fromCharCode(randBytes[i]);
+          const newSecret = btoa(bin).replace(/[^A-Za-z0-9]/g, '') + crypto.randomUUID();
+          await supabase.auth.admin.updateUserById(profile.user_id, {
+            password: newSecret,
+            user_metadata: { ...meta, pw_rotated: true },
+          });
         }
-        signInErr = error;
+      } catch (e) {
+        console.error('Password rotation skipped:', e);
       }
 
-      // Only if ALL passwords fail, update as last resort (will invalidate other sessions)
-      if (!signInData?.session) {
-        console.log('[MULTI-DEVICE] manage-password: all passwords failed, updating (will invalidate other sessions)');
-        const loginPassword = `stable-${normalizedPhone}-ahrom-x`;
-        await supabase.auth.admin.updateUserById(profile.user_id, {
-          password: loginPassword,
-          email_confirm: true,
-        });
+      // Issue session via admin-generated magic link (no predictable password).
+      const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
 
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: derivedEmail,
-          password: loginPassword,
-        });
-        signInData = data;
-        signInErr = error;
+      const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email: derivedEmail,
+      });
+      const tokenHash = (linkData as any)?.properties?.hashed_token;
+      if (linkErr || !tokenHash) {
+        console.error('Magic link generation error:', linkErr);
+        return new Response(
+          JSON.stringify({ error: 'خطا در ورود به سیستم' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
+      const anonClient = createClient(supabaseUrl, supabaseAnonKey);
+      const { data: signInData, error: signInErr } = await anonClient.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: 'magiclink',
+      });
 
       if (signInErr || !signInData?.session) {
         console.error('Sign in error:', signInErr);
