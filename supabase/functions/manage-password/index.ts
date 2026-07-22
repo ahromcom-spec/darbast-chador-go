@@ -302,8 +302,28 @@ serve(async (req) => {
         }
       }
 
+      // Rotate legacy predictable password to a random opaque secret on first
+      // login after the fix, so the account can never again be signed into via
+      // a phone-derived password. Idempotent via user_metadata.pw_rotated.
+      try {
+        const { data: userInfo } = await supabase.auth.admin.getUserById(profile.user_id);
+        const meta = (userInfo?.user?.user_metadata as any) || {};
+        if (meta.pw_rotated !== true) {
+          const randBytes = new Uint8Array(48);
+          crypto.getRandomValues(randBytes);
+          let bin = '';
+          for (let i = 0; i < randBytes.length; i++) bin += String.fromCharCode(randBytes[i]);
+          const newSecret = btoa(bin).replace(/[^A-Za-z0-9]/g, '') + crypto.randomUUID();
+          await supabase.auth.admin.updateUserById(profile.user_id, {
+            password: newSecret,
+            user_metadata: { ...meta, pw_rotated: true },
+          });
+        }
+      } catch (e) {
+        console.error('Password rotation skipped:', e);
+      }
+
       // Issue session via admin-generated magic link (no predictable password).
-      // Password on the Supabase auth account is an opaque, never-derived secret.
       const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
 
       const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
