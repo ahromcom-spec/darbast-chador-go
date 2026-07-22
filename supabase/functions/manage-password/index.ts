@@ -302,48 +302,27 @@ serve(async (req) => {
         }
       }
 
-      // Create session using the same technique as verify-otp
+      // Issue session via admin-generated magic link (no predictable password).
+      // Password on the Supabase auth account is an opaque, never-derived secret.
       const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
-      // Try ALL known password formats to avoid updateUserById (which invalidates other sessions)
-      const allPasswords = [
-        `stable-${normalizedPhone}-ahrom-x`,
-        `user-pwd-${normalizedPhone}-x`,
-        `whitelist-${normalizedPhone}-x`,
-      ];
 
-      let signInData: any = null;
-      let signInErr: any = null;
-
-      for (const pw of allPasswords) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: derivedEmail,
-          password: pw,
-        });
-        if (!error && data?.session) {
-          signInData = data;
-          signInErr = null;
-          console.log('[MULTI-DEVICE] manage-password login SUCCESS with existing password');
-          break;
-        }
-        signInErr = error;
+      const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email: derivedEmail,
+      });
+      const tokenHash = (linkData as any)?.properties?.hashed_token;
+      if (linkErr || !tokenHash) {
+        console.error('Magic link generation error:', linkErr);
+        return new Response(
+          JSON.stringify({ error: 'خطا در ورود به سیستم' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
-
-      // Only if ALL passwords fail, update as last resort (will invalidate other sessions)
-      if (!signInData?.session) {
-        console.log('[MULTI-DEVICE] manage-password: all passwords failed, updating (will invalidate other sessions)');
-        const loginPassword = `stable-${normalizedPhone}-ahrom-x`;
-        await supabase.auth.admin.updateUserById(profile.user_id, {
-          password: loginPassword,
-          email_confirm: true,
-        });
-
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: derivedEmail,
-          password: loginPassword,
-        });
-        signInData = data;
-        signInErr = error;
-      }
+      const anonClient = createClient(supabaseUrl, supabaseAnonKey);
+      const { data: signInData, error: signInErr } = await anonClient.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: 'magiclink',
+      });
 
       if (signInErr || !signInData?.session) {
         console.error('Sign in error:', signInErr);
