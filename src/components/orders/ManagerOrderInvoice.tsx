@@ -1433,13 +1433,10 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
         >
           <div
             style={{
-              transform: `scale(${zoom})`,
-              transformOrigin: 'top center',
+              zoom: zoom,
               width: '794px',
-              maxWidth: 'none',
               margin: '0 auto',
-              height: printRef.current ? `${(printRef.current.scrollHeight || 0) * zoom}px` : undefined,
-            }}
+            } as React.CSSProperties}
           >
             <div
               ref={printRef}
@@ -1449,6 +1446,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
               style={{ fontFamily: 'Vazirmatn, Tahoma, sans-serif', width: '794px' }}
             />
           </div>
+
 
         </div>
       </DialogContent>
