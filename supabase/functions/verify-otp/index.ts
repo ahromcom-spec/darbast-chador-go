@@ -327,6 +327,16 @@ serve(async (req) => {
       }
     }
 
+    // Rotate legacy predictable passwords for existing accounts on next login.
+    if (!is_registration) {
+      const { data: profileForRotate } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('phone_number', normalizedPhone)
+        .maybeSingle();
+      await rotateLegacyPasswordIfNeeded(profileForRotate?.user_id ?? createdUserId);
+    }
+
     const { session: issued, error: issueErr } = await issueSessionForEmail(derivedEmail);
     if (issueErr || !issued) {
       console.error('Session issue error:', issueErr);
