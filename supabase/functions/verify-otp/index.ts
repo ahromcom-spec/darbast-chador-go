@@ -79,6 +79,24 @@ serve(async (req) => {
       return { session: data?.session ?? null, error };
     };
 
+    // Lazily rotate legacy predictable passwords to a random secret on next
+    // successful login. Uses user_metadata.pw_rotated as an idempotency flag
+    // so we only invalidate password-grant sessions once per user.
+    const rotateLegacyPasswordIfNeeded = async (userId: string | null | undefined) => {
+      if (!userId) return;
+      try {
+        const { data: userInfo } = await supabase.auth.admin.getUserById(userId);
+        const meta = (userInfo?.user?.user_metadata as any) || {};
+        if (meta.pw_rotated === true) return;
+        await supabase.auth.admin.updateUserById(userId, {
+          password: randomSecret(),
+          user_metadata: { ...meta, pw_rotated: true },
+        });
+      } catch (e) {
+        console.error('Password rotation skipped:', e);
+      }
+    };
+
     const isProduction = supabaseUrl.includes('gclbltatkbwbqxqqrcea');
     const isTestPhone = (phone_number.startsWith('aaa') || phone_number.startsWith('bbb'));
 
