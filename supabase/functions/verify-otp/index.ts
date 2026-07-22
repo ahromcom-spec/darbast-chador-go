@@ -8,6 +8,17 @@ const corsHeaders = {
 // رمز ثابت برای شماره‌های لیست سفید - از متغیر محیطی خوانده می‌شود
 const WHITELIST_FIXED_PASSWORD = Deno.env.get('WHITELIST_PASSWORD');
 
+// Cryptographically random, non-guessable password. Never derived from public
+// attributes like phone numbers. Used only as the auth account's opaque secret;
+// sessions are issued via admin-generated magic links, not password sign-in.
+function randomSecret(): string {
+  const bytes = new Uint8Array(48);
+  crypto.getRandomValues(bytes);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/[^A-Za-z0-9]/g, '') + crypto.randomUUID();
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -25,16 +36,13 @@ serve(async (req) => {
 
     // Normalize to Iranian mobile format: 09XXXXXXXXX (same as send-otp)
     const normalizeIranPhone = (input: string) => {
-      // Security: Limit input length to prevent memory exhaustion
       if (input.length > 40) return '';
-
       const persian = '۰۱۲۳۴۵۶۷۸۹';
       const arabic = '٠١٢٣٤٥٦٧٨٩';
       const normalizedDigits = input
         .slice(0, 40)
         .replace(/[۰-۹]/g, (d) => String(persian.indexOf(d)))
         .replace(/[٠-٩]/g, (d) => String(arabic.indexOf(d)));
-
       let raw = normalizedDigits.replace(/[^0-9+]/g, '');
       if (raw.startsWith('0098')) raw = '0' + raw.slice(4);
       else if (raw.startsWith('098')) raw = '0' + raw.slice(3);
@@ -45,28 +53,45 @@ serve(async (req) => {
       return raw;
     };
 
-    // Initialize Supabase client first (needed for whitelist check)
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY') || '';
     const supabase = createClient(supabaseUrl, supabaseKey);
+    const anonClient = createClient(supabaseUrl, supabaseAnonKey);
 
-    // Security: Block ONLY explicit test prefixes in production (keep behavior consistent with send-otp)
-    // NOTE: We intentionally do NOT block “repeating digit” patterns here because it breaks whitelist checks
-    // and can block real/whitelisted staff numbers.
+    // Issue a Supabase session for a given email without relying on a password.
+    // Uses admin-generated magic-link token_hash exchanged via anon client's
+    // verifyOtp. This means we never need to know or store a predictable
+    // password, and existing sessions on other devices are NOT invalidated.
+    const issueSessionForEmail = async (email: string) => {
+      const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email,
+      });
+      const tokenHash = (linkData as any)?.properties?.hashed_token;
+      if (linkErr || !tokenHash) {
+        return { session: null, error: linkErr || new Error('magic link generation failed') };
+      }
+      const { data, error } = await anonClient.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: 'magiclink',
+      });
+      return { session: data?.session ?? null, error };
+    };
+
     const isProduction = supabaseUrl.includes('gclbltatkbwbqxqqrcea');
     const isTestPhone = (phone_number.startsWith('aaa') || phone_number.startsWith('bbb'));
 
-    // Reject test phones in production (but allow whitelist-check action so UI can route correctly)
     if (action !== 'check_whitelist' && isProduction && isTestPhone) {
       return new Response(
         JSON.stringify({ error: 'شماره تلفن نامعتبر است' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
+
     let normalizedPhone: string;
     let authPhone: string;
-    
+
     if (isTestPhone) {
       normalizedPhone = phone_number;
       authPhone = phone_number;
@@ -78,14 +103,13 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      authPhone = normalizedPhone.startsWith('0') 
-        ? '+98' + normalizedPhone.slice(1) 
+      authPhone = normalizedPhone.startsWith('0')
+        ? '+98' + normalizedPhone.slice(1)
         : '+98' + normalizedPhone;
     }
 
     const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
 
-    // بررسی وجود در لیست سفید (با نرمال‌سازی برای جلوگیری از اختلاف فرمت)
     const { data: whitelistRows } = await supabase
       .from('phone_whitelist')
       .select('phone_number, allowed_roles')
@@ -98,16 +122,15 @@ serve(async (req) => {
 
     const isWhitelistedPhone = !!whitelistData;
 
-    // فقط برای تصمیم‌گیری UI (قبل از ورود) — بدون افشای لیست یا نقش‌ها
     if (action === 'check_whitelist') {
       return new Response(
         JSON.stringify({ success: true, is_whitelisted: isWhitelistedPhone }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    // اگر درخواست ورود با رمز عبور است
+
+    // Whitelist password login
     if (is_password_login) {
-      // بررسی وجود رمز عبور لیست سفید در متغیرهای محیطی
       if (!WHITELIST_FIXED_PASSWORD) {
         console.error('WHITELIST_PASSWORD environment variable not configured');
         return new Response(
@@ -115,8 +138,7 @@ serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
-      // فقط شماره‌های لیست سفید مجاز به ورود با رمز عبور هستند
+
       if (!isWhitelistedPhone) {
         return new Response(
           JSON.stringify({ error: 'این شماره مجاز به ورود با رمز عبور نیست' }),
@@ -124,7 +146,6 @@ serve(async (req) => {
         );
       }
 
-      // بررسی رمز عبور ثابت
       if (code !== WHITELIST_FIXED_PASSWORD) {
         return new Response(
           JSON.stringify({ error: 'رمز عبور اشتباه است' }),
@@ -132,98 +153,46 @@ serve(async (req) => {
         );
       }
 
-      // رمز عبور درست است - ورود کاربر
-      // Use stable password derived from phone number (not changing per login)
-      const loginPassword = `stable-${normalizedPhone}-ahrom-x`;
-      // All known password formats to try before resorting to password update (which invalidates sessions)
-      const oldPasswords = [
-        `whitelist-${normalizedPhone}-x`,
-        `user-pwd-${normalizedPhone}-x`,
-      ];
+      // Ensure the auth account exists (create with random opaque password).
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('phone_number', normalizedPhone)
+        .maybeSingle();
 
-      // تلاش برای ورود
-      let session;
-      console.log('[MULTI-DEVICE] Password login attempt for:', normalizedPhone);
-      const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ 
-        email: derivedEmail, 
-        password: loginPassword 
-      });
-
-      if (!signInErr && signInData?.session) {
-        console.log('[MULTI-DEVICE] ✅ Stable password login SUCCESS - no session invalidation');
-        session = signInData.session;
-      } else {
-        console.log('[MULTI-DEVICE] ⚠️ Stable password failed, trying old passwords...', signInErr?.message);
-        // Try old password formats first (doesn't invalidate sessions)
-        let migratedFromOld = false;
-        for (const oldPw of oldPasswords) {
-          const { data: oldData, error: oldErr } = await supabase.auth.signInWithPassword({
-            email: derivedEmail,
-            password: oldPw,
-          });
-          if (!oldErr && oldData?.session) {
-            console.log('[MULTI-DEVICE] ✅ Old password login SUCCESS');
-            session = oldData.session;
-            migratedFromOld = true;
-            // Migrate password in background - NOTE: updateUserById WITH password WILL invalidate other sessions!
-            // Instead, we skip the migration here to preserve multi-device sessions
-            // The next login will also succeed with the old password
-            console.log('[MULTI-DEVICE] Skipping password migration to preserve other sessions');
-            break;
-          }
+      let createdUser: any = null;
+      if (!existingProfile?.user_id) {
+        const { data: created, error: createErr } = await supabase.auth.admin.createUser({
+          email: derivedEmail,
+          password: randomSecret(),
+          email_confirm: true,
+          user_metadata: { full_name: full_name || '', phone_number: normalizedPhone },
+        });
+        if (createErr) {
+          console.error('User creation error');
+          return new Response(
+            JSON.stringify({ error: 'خطا در ایجاد حساب کاربری' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
+        createdUser = created?.user ?? null;
 
-        if (!session) {
-          console.log('[MULTI-DEVICE] ⚠️ All password attempts failed, creating/recovering user...');
-          // اگر کاربر وجود ندارد، ایجاد کاربر جدید
-          const { data: created, error: createErr } = await supabase.auth.admin.createUser({
-            email: derivedEmail,
-            password: loginPassword,
-            email_confirm: true,
-            user_metadata: { full_name: full_name || '', phone_number: normalizedPhone },
-          });
-
-          if (createErr) {
-            console.log('[MULTI-DEVICE] User exists, updating password (will invalidate other sessions)...');
-            // اگر کاربر قبلاً وجود دارد، بروزرسانی رمز عبور
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('user_id')
-              .eq('phone_number', normalizedPhone)
-              .maybeSingle();
-
-            if (profile?.user_id) {
-              await supabase.auth.admin.updateUserById(profile.user_id, {
-                password: loginPassword,
-                email_confirm: true,
-              });
-            }
-          }
-
-          // تلاش مجدد برای ورود
-          const { data: retryData, error: retryErr } = await supabase.auth.signInWithPassword({ 
-            email: derivedEmail, 
-            password: loginPassword 
-          });
-
-          if (retryErr) {
-            console.error('Password login error:', retryErr);
-            return new Response(
-              JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
-              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
-          }
-          session = retryData.session;
-
-          // اختصاص نقش‌ها از لیست سفید
-          if (whitelistData?.allowed_roles && created?.user) {
-            const roleInserts = whitelistData.allowed_roles.map((role: string) => ({
-              user_id: created.user.id,
-              role,
-            }));
-            await supabase.from('user_roles').insert(roleInserts);
-          }
+        if (whitelistData?.allowed_roles && createdUser) {
+          const roleInserts = whitelistData.allowed_roles.map((role: string) => ({
+            user_id: createdUser.id,
+            role,
+          }));
+          await supabase.from('user_roles').insert(roleInserts);
         }
+      }
+
+      const { session, error: issueErr } = await issueSessionForEmail(derivedEmail);
+      if (issueErr || !session) {
+        console.error('Session issue error:', issueErr);
+        return new Response(
+          JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
       return new Response(
@@ -244,7 +213,7 @@ serve(async (req) => {
         .replace(/[^0-9]/g, '');
       return normalized.length === 5 ? normalized : '';
     };
-    
+
     const normalizedCode = normalizeOtpCode(code);
     if (!normalizedCode) {
       return new Response(
@@ -252,18 +221,12 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
-    // Use a stable password derived from phone number (not OTP code) 
-    // so existing sessions on other devices are NOT invalidated
-    const loginPassword = `stable-${normalizedPhone}-ahrom-x`;
 
-    // Run OTP verification
-    const { data: otpResult } = await supabase.rpc('verify_otp_code', { 
-      _phone_number: normalizedPhone, 
-      _code: normalizedCode 
+    const { data: otpResult } = await supabase.rpc('verify_otp_code', {
+      _phone_number: normalizedPhone,
+      _code: normalizedCode
     });
-    
-    // Check validity
+
     const isValid = (isWhitelistedPhone && normalizedCode === '12345') || !!otpResult;
 
     if (!isValid) {
@@ -281,135 +244,75 @@ serve(async (req) => {
       .eq('code', normalizedCode)
       .then(() => {});
 
-    // Auth: attempt password sign-in first, then create/recover as needed
-    let session;
-
-    const signInDirect = async (email: string) => {
-      return await supabase.auth.signInWithPassword({ email, password: loginPassword });
-    };
+    let session: any = null;
+    let createdUserId: string | null = null;
 
     if (is_registration) {
-      // Registration flow: prevent duplicate signups
       const { data: created, error: createErr } = await supabase.auth.admin.createUser({
         email: derivedEmail,
-        password: loginPassword,
+        password: randomSecret(),
         email_confirm: true,
         user_metadata: { full_name: full_name || '', phone_number: normalizedPhone },
       });
 
       if (createErr) {
-        // Security: Use generic error message to prevent user enumeration
         console.error('User creation error');
         return new Response(
           JSON.stringify({ error: 'خطا در احراز هویت. لطفا دوباره تلاش کنید.' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+      createdUserId = created?.user?.id ?? null;
 
-      const { data: signInData, error: signInErr } = await signInDirect(derivedEmail);
-      if (signInErr) {
-        console.error('Authentication error');
-        return new Response(
-          JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      session = signInData.session;
-
-      // Assign roles from whitelist for special phones
-      if (isTestPhone || isWhitelistedPhone) {
-        if (whitelistData?.allowed_roles && created?.user) {
-          const roleInserts = whitelistData.allowed_roles.map((role: string) => ({
-            user_id: created.user.id,
-            role,
-          }));
-          await supabase.from('user_roles').insert(roleInserts);
-        }
+      if ((isTestPhone || isWhitelistedPhone) && whitelistData?.allowed_roles && created?.user) {
+        const roleInserts = whitelistData.allowed_roles.map((role: string) => ({
+          user_id: created.user.id,
+          role,
+        }));
+        await supabase.from('user_roles').insert(roleInserts);
       }
     } else {
-      // Login flow
-      console.log('[MULTI-DEVICE] OTP login attempt for:', normalizedPhone);
-      const { data: signInData, error: signInErr } = await signInDirect(derivedEmail);
-      if (!signInErr && signInData?.session) {
-        console.log('[MULTI-DEVICE] ✅ OTP stable password login SUCCESS');
-        session = signInData.session;
-      } else {
-        console.log('[MULTI-DEVICE] ⚠️ OTP stable password failed:', signInErr?.message);
-        // Try old password formats - do NOT migrate to preserve other sessions
-        const oldOtpPasswords = [
-          `whitelist-${normalizedPhone}-x`,
-          `user-pwd-${normalizedPhone}-x`,
-        ];
-        for (const oldPw of oldOtpPasswords) {
-          const { data: oldData, error: oldErr } = await supabase.auth.signInWithPassword({
+      // Login flow — auto-provision account if missing (for whitelist/test)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('phone_number', normalizedPhone)
+        .maybeSingle();
+
+      if (!profile?.user_id) {
+        if (isWhitelistedPhone || isTestPhone) {
+          const { data: created, error: createErr } = await supabase.auth.admin.createUser({
             email: derivedEmail,
-            password: oldPw,
-          });
-          if (!oldErr && oldData?.session) {
-            console.log('[MULTI-DEVICE] ✅ Old OTP password SUCCESS - skipping migration');
-            session = oldData.session;
-            // Do NOT call updateUserById - it invalidates all other sessions!
-            break;
-          }
-        }
-
-        if (!session) {
-          // If sign-in failed, try to recover the account password if user exists
-          if (isWhitelistedPhone || isTestPhone) {
-            // Auto-provision for whitelisted/test numbers
-            const { data: created, error: createErr } = await supabase.auth.admin.createUser({
-              email: derivedEmail,
-              password: loginPassword,
-              email_confirm: true,
-              user_metadata: { full_name: full_name || '', phone_number: normalizedPhone },
-            });
-            if (!createErr) {
-              const { data: retry, error: retryErr } = await signInDirect(derivedEmail);
-              if (retryErr) {
-                console.error('Authentication error');
-                return new Response(
-                  JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
-                  { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-                );
-              }
-              session = retry.session;
-            }
-          }
-        }
-
-        if (!session) {
-          // Last resort: lookup by phone in profiles
-          const { data: profile, error: profileErr } = await supabase
-            .from('profiles')
-            .select('user_id')
-            .eq('phone_number', normalizedPhone)
-            .maybeSingle();
-
-          if (profileErr || !profile?.user_id) {
-            return new Response(
-              JSON.stringify({ error: 'اطلاعات ورود نامعتبر است' }),
-              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
-          }
-
-          console.log('[MULTI-DEVICE] ⚠️ Last resort: updating password (WILL invalidate other sessions)');
-          await supabase.auth.admin.updateUserById(profile.user_id, {
-            password: loginPassword,
+            password: randomSecret(),
             email_confirm: true,
+            user_metadata: { full_name: full_name || '', phone_number: normalizedPhone },
           });
-
-          const { data: retry, error: retryErr } = await signInDirect(derivedEmail);
-          if (retryErr) {
-            console.error('Sign in error');
+          if (createErr) {
+            console.error('User creation error');
             return new Response(
               JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
               { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
           }
-          session = retry.session;
+          createdUserId = created?.user?.id ?? null;
+        } else {
+          return new Response(
+            JSON.stringify({ error: 'اطلاعات ورود نامعتبر است' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
       }
     }
+
+    const { session: issued, error: issueErr } = await issueSessionForEmail(derivedEmail);
+    if (issueErr || !issued) {
+      console.error('Session issue error:', issueErr);
+      return new Response(
+        JSON.stringify({ error: 'خطا در سیستم احراز هویت' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    session = issued;
 
     // Clean up old OTP codes in background (non-blocking)
     Promise.resolve(supabase.rpc('cleanup_expired_otps')).catch(() => {});
