@@ -318,8 +318,9 @@ export function RepairRequestDialog({
       setPendingMediaPreviews([]);
 
       setExistingRequest(request);
+      setShowNewForm(false);
       onRepairCostChange?.(1500000);
-      fetchRepairRequest();
+      fetchRepairRequest(request.id);
     } catch (error: any) {
       console.error('Error submitting repair request:', error);
       toast({
