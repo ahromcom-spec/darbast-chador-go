@@ -98,7 +98,12 @@ serve(async (req) => {
     }
 
     const derivedEmail = `phone-${normalizedPhone}@ahrom.example.com`;
-    const randomPassword = `reg-${normalizedPhone}-${Date.now()}`;
+    // Cryptographically random opaque secret — never derived from phone/time.
+    const randBytes = new Uint8Array(48);
+    crypto.getRandomValues(randBytes);
+    let randBin = '';
+    for (let i = 0; i < randBytes.length; i++) randBin += String.fromCharCode(randBytes[i]);
+    const randomPassword = btoa(randBin).replace(/[^A-Za-z0-9]/g, '') + crypto.randomUUID();
 
     // بررسی وجود کاربر
     const { data: existingProfile } = await supabase
