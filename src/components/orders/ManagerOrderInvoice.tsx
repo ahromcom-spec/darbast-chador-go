@@ -1428,8 +1428,10 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
             style={{
               transform: `scale(${zoom})`,
               transformOrigin: 'top center',
-              width: zoom >= 1 ? `${100 / zoom}%` : '100%',
+              width: '794px',
+              maxWidth: 'none',
               margin: '0 auto',
+              height: printRef.current ? `${(printRef.current.scrollHeight || 0) * zoom}px` : undefined,
             }}
           >
             <div
@@ -1437,9 +1439,10 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
               className="bg-white rounded-lg border"
               dir="rtl"
               dangerouslySetInnerHTML={{ __html: `${getInvoiceStyles()}${getInvoiceHTML()}` }}
-              style={{ fontFamily: 'Vazirmatn, Tahoma, sans-serif' }}
+              style={{ fontFamily: 'Vazirmatn, Tahoma, sans-serif', width: '794px' }}
             />
           </div>
+
         </div>
       </DialogContent>
     </Dialog>
