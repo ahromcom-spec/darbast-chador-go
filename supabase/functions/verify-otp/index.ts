@@ -204,6 +204,11 @@ serve(async (req) => {
         }
       }
 
+      // Rotate legacy predictable password for existing users on first login.
+      if (existingProfile?.user_id) {
+        await rotateLegacyPasswordIfNeeded(existingProfile.user_id);
+      }
+
       const { session, error: issueErr } = await issueSessionForEmail(derivedEmail);
       if (issueErr || !session) {
         console.error('Session issue error:', issueErr);
