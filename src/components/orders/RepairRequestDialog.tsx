@@ -148,42 +148,44 @@ export function RepairRequestDialog({
     }
   }, [open, orderId]);
 
-  const fetchRepairRequest = async () => {
+  const fetchRepairRequest = async (preferSelectedId?: string) => {
     setLoading(true);
     try {
-      const { data: request, error: requestError } = await supabase
+      const { data: rows, error: requestError } = await supabase
         .from('repair_requests')
         .select('*')
         .eq('order_id', orderId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order('created_at', { ascending: false });
 
       if (requestError) throw requestError;
 
-      if (request) {
-        setExistingRequest(request);
-        setDescription(request.description || '');
+      const list = (rows || []) as RepairRequest[];
+      setRequests(list);
 
-        const { data: mediaData } = await supabase
-          .from('repair_request_media')
-          .select('*')
-          .eq('repair_request_id', request.id)
-          .order('created_at', { ascending: false });
+      // انتخاب درخواست فعلی: اولویت با preferSelectedId، سپس انتخاب قبلی، در نهایت جدیدترین
+      const currentId = preferSelectedId || existingRequest?.id;
+      const selected = list.find(r => r.id === currentId) || list[0] || null;
 
-        if (mediaData) {
-          setMedia(mediaData as RepairMedia[]);
-        }
+      if (selected) {
+        setExistingRequest(selected);
+        setDescription(selected.description || '');
+        setShowNewForm(false);
 
-        const { data: messagesData } = await supabase
-          .from('repair_request_messages')
-          .select('*')
-          .eq('repair_request_id', request.id)
-          .order('created_at', { ascending: true });
+        const [{ data: mediaData }, { data: messagesData }] = await Promise.all([
+          supabase
+            .from('repair_request_media')
+            .select('*')
+            .eq('repair_request_id', selected.id)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('repair_request_messages')
+            .select('*')
+            .eq('repair_request_id', selected.id)
+            .order('created_at', { ascending: true }),
+        ]);
 
-        if (messagesData) {
-          setMessages(messagesData as RepairMessage[]);
-        }
+        setMedia((mediaData as RepairMedia[]) || []);
+        setMessages((messagesData as RepairMessage[]) || []);
       } else {
         setExistingRequest(null);
         setDescription('');
@@ -200,6 +202,19 @@ export function RepairRequestDialog({
     } finally {
       setLoading(false);
     }
+  };
+
+  const selectRequest = (req: RepairRequest) => {
+    setShowNewForm(false);
+    fetchRepairRequest(req.id);
+  };
+
+  const openNewForm = () => {
+    setShowNewForm(true);
+    setDescription('');
+    pendingMediaPreviews.forEach(p => URL.revokeObjectURL(p.url));
+    setPendingMediaFiles([]);
+    setPendingMediaPreviews([]);
   };
 
   // Handle pending media selection (before submission)
