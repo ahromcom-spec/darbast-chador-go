@@ -605,9 +605,54 @@ export function RepairRequestDialog({
           <div className="flex justify-center py-8">
             <LoadingSpinner size="md" />
           </div>
-        ) : existingRequest ? (
+        ) : (!showNewForm && existingRequest) ? (
           // Show existing request details
           <div className="space-y-4">
+            {/* Multi-request switcher */}
+            {requests.length > 1 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">
+                    درخواست‌های تعمیر ({requests.length.toLocaleString('fa-IR')})
+                  </span>
+                  <Button variant="outline" size="sm" onClick={openNewForm} className="gap-1">
+                    <Wrench className="h-4 w-4" />
+                    درخواست جدید
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {requests.map((r, idx) => {
+                    const cost = r.final_cost || r.estimated_cost;
+                    const active = existingRequest.id === r.id;
+                    return (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => selectRequest(r)}
+                        className={`px-3 py-1.5 rounded-md text-xs border transition-colors ${
+                          active
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background hover:bg-muted border-border'
+                        }`}
+                      >
+                        <span className="font-medium">#{(requests.length - idx).toLocaleString('fa-IR')}</span>
+                        <span className="mx-1">·</span>
+                        <span>{cost.toLocaleString('fa-IR')} ت</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            {requests.length === 1 && (
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={openNewForm} className="gap-1">
+                  <Wrench className="h-4 w-4" />
+                  درخواست تعمیر جدید
+                </Button>
+              </div>
+            )}
+
             {/* Status */}
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <span className="text-sm text-muted-foreground">وضعیت درخواست:</span>
