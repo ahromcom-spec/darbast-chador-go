@@ -150,6 +150,13 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
   useEffect(() => {
     if (!open) return;
 
+    // Auto-fit zoom to viewport width on open (mobile/tablet get a smaller initial zoom)
+    const INVOICE_WIDTH = 794;
+    const available = Math.min(window.innerWidth * 0.92, 1024) - 24;
+    const fit = Math.min(1, Math.max(0.35, +(available / INVOICE_WIDTH).toFixed(2)));
+    setZoom(fit);
+
+
     const fetchData = async () => {
       setIsLoading(true);
       setMedia([]);
@@ -1353,7 +1360,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
           پرینت فاکتور
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-5xl w-[95vw] sm:w-auto max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col p-3 sm:p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between flex-wrap gap-2">
             <span>پیش‌نمایش فاکتور سفارش {order.code}</span>
@@ -1426,20 +1433,21 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
         >
           <div
             style={{
-              transform: `scale(${zoom})`,
-              transformOrigin: 'top center',
-              width: zoom >= 1 ? `${100 / zoom}%` : '100%',
+              zoom: zoom,
+              width: '794px',
               margin: '0 auto',
-            }}
+            } as React.CSSProperties}
           >
             <div
               ref={printRef}
               className="bg-white rounded-lg border"
               dir="rtl"
               dangerouslySetInnerHTML={{ __html: `${getInvoiceStyles()}${getInvoiceHTML()}` }}
-              style={{ fontFamily: 'Vazirmatn, Tahoma, sans-serif' }}
+              style={{ fontFamily: 'Vazirmatn, Tahoma, sans-serif', width: '794px' }}
             />
           </div>
+
+
         </div>
       </DialogContent>
     </Dialog>
