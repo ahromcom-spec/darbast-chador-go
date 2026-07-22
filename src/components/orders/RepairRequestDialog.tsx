@@ -901,6 +901,16 @@ export function RepairRequestDialog({
         ) : (
           // Single-step form for new request
           <div className="space-y-4">
+            {requests.length > 0 && (
+              <div className="flex justify-between items-center p-2 bg-muted/40 rounded-md">
+                <span className="text-xs text-muted-foreground">
+                  درخواست جدید (علاوه بر {requests.length.toLocaleString('fa-IR')} درخواست قبلی)
+                </span>
+                <Button variant="ghost" size="sm" onClick={() => { setShowNewForm(false); }}>
+                  بازگشت به لیست
+                </Button>
+              </div>
+            )}
             {/* Description */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">توضیحات مشکل و نیاز به تعمیر: *</Label>
