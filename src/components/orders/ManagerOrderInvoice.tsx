@@ -150,6 +150,13 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
   useEffect(() => {
     if (!open) return;
 
+    // Auto-fit zoom to viewport width on open (mobile/tablet get a smaller initial zoom)
+    const INVOICE_WIDTH = 794;
+    const available = Math.min(window.innerWidth * 0.92, 1024) - 24;
+    const fit = Math.min(1, Math.max(0.35, +(available / INVOICE_WIDTH).toFixed(2)));
+    setZoom(fit);
+
+
     const fetchData = async () => {
       setIsLoading(true);
       setMedia([]);
