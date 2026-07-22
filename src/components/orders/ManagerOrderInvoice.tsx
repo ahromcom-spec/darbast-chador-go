@@ -1353,7 +1353,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
           پرینت فاکتور
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-5xl w-[95vw] sm:w-auto max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col p-3 sm:p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between flex-wrap gap-2">
             <span>پیش‌نمایش فاکتور سفارش {order.code}</span>
