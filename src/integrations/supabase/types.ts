@@ -6207,6 +6207,10 @@ export type Database = {
         Args: { p_card_id: string }
         Returns: undefined
       }
+      recompute_projects_v3_total_price: {
+        Args: { _order_id: string }
+        Returns: undefined
+      }
       refresh_module_lock: {
         Args: { p_module_date?: string; p_module_key: string }
         Returns: boolean

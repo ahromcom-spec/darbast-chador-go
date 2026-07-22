@@ -79,7 +79,9 @@ export function RepairRequestDialog({
   isManager = false,
 }: RepairRequestDialogProps) {
   const [loading, setLoading] = useState(true);
+  const [requests, setRequests] = useState<RepairRequest[]>([]);
   const [existingRequest, setExistingRequest] = useState<RepairRequest | null>(null);
+  const [showNewForm, setShowNewForm] = useState(false);
   const [description, setDescription] = useState("");
   const [message, setMessage] = useState("");
   const [media, setMedia] = useState<RepairMedia[]>([]);
@@ -146,42 +148,44 @@ export function RepairRequestDialog({
     }
   }, [open, orderId]);
 
-  const fetchRepairRequest = async () => {
+  const fetchRepairRequest = async (preferSelectedId?: string) => {
     setLoading(true);
     try {
-      const { data: request, error: requestError } = await supabase
+      const { data: rows, error: requestError } = await supabase
         .from('repair_requests')
         .select('*')
         .eq('order_id', orderId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order('created_at', { ascending: false });
 
       if (requestError) throw requestError;
 
-      if (request) {
-        setExistingRequest(request);
-        setDescription(request.description || '');
+      const list = (rows || []) as RepairRequest[];
+      setRequests(list);
 
-        const { data: mediaData } = await supabase
-          .from('repair_request_media')
-          .select('*')
-          .eq('repair_request_id', request.id)
-          .order('created_at', { ascending: false });
+      // انتخاب درخواست فعلی: اولویت با preferSelectedId، سپس انتخاب قبلی، در نهایت جدیدترین
+      const currentId = preferSelectedId || existingRequest?.id;
+      const selected = list.find(r => r.id === currentId) || list[0] || null;
 
-        if (mediaData) {
-          setMedia(mediaData as RepairMedia[]);
-        }
+      if (selected) {
+        setExistingRequest(selected);
+        setDescription(selected.description || '');
+        setShowNewForm(false);
 
-        const { data: messagesData } = await supabase
-          .from('repair_request_messages')
-          .select('*')
-          .eq('repair_request_id', request.id)
-          .order('created_at', { ascending: true });
+        const [{ data: mediaData }, { data: messagesData }] = await Promise.all([
+          supabase
+            .from('repair_request_media')
+            .select('*')
+            .eq('repair_request_id', selected.id)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('repair_request_messages')
+            .select('*')
+            .eq('repair_request_id', selected.id)
+            .order('created_at', { ascending: true }),
+        ]);
 
-        if (messagesData) {
-          setMessages(messagesData as RepairMessage[]);
-        }
+        setMedia((mediaData as RepairMedia[]) || []);
+        setMessages((messagesData as RepairMessage[]) || []);
       } else {
         setExistingRequest(null);
         setDescription('');
@@ -198,6 +202,19 @@ export function RepairRequestDialog({
     } finally {
       setLoading(false);
     }
+  };
+
+  const selectRequest = (req: RepairRequest) => {
+    setShowNewForm(false);
+    fetchRepairRequest(req.id);
+  };
+
+  const openNewForm = () => {
+    setShowNewForm(true);
+    setDescription('');
+    pendingMediaPreviews.forEach(p => URL.revokeObjectURL(p.url));
+    setPendingMediaFiles([]);
+    setPendingMediaPreviews([]);
   };
 
   // Handle pending media selection (before submission)
@@ -301,8 +318,9 @@ export function RepairRequestDialog({
       setPendingMediaPreviews([]);
 
       setExistingRequest(request);
+      setShowNewForm(false);
       onRepairCostChange?.(1500000);
-      fetchRepairRequest();
+      fetchRepairRequest(request.id);
     } catch (error: any) {
       console.error('Error submitting repair request:', error);
       toast({
@@ -587,9 +605,54 @@ export function RepairRequestDialog({
           <div className="flex justify-center py-8">
             <LoadingSpinner size="md" />
           </div>
-        ) : existingRequest ? (
+        ) : (!showNewForm && existingRequest) ? (
           // Show existing request details
           <div className="space-y-4">
+            {/* Multi-request switcher */}
+            {requests.length > 1 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">
+                    درخواست‌های تعمیر ({requests.length.toLocaleString('fa-IR')})
+                  </span>
+                  <Button variant="outline" size="sm" onClick={openNewForm} className="gap-1">
+                    <Wrench className="h-4 w-4" />
+                    درخواست جدید
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {requests.map((r, idx) => {
+                    const cost = r.final_cost || r.estimated_cost;
+                    const active = existingRequest.id === r.id;
+                    return (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => selectRequest(r)}
+                        className={`px-3 py-1.5 rounded-md text-xs border transition-colors ${
+                          active
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background hover:bg-muted border-border'
+                        }`}
+                      >
+                        <span className="font-medium">#{(requests.length - idx).toLocaleString('fa-IR')}</span>
+                        <span className="mx-1">·</span>
+                        <span>{cost.toLocaleString('fa-IR')} ت</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            {requests.length === 1 && (
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={openNewForm} className="gap-1">
+                  <Wrench className="h-4 w-4" />
+                  درخواست تعمیر جدید
+                </Button>
+              </div>
+            )}
+
             {/* Status */}
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <span className="text-sm text-muted-foreground">وضعیت درخواست:</span>
@@ -838,6 +901,16 @@ export function RepairRequestDialog({
         ) : (
           // Single-step form for new request
           <div className="space-y-4">
+            {requests.length > 0 && (
+              <div className="flex justify-between items-center p-2 bg-muted/40 rounded-md">
+                <span className="text-xs text-muted-foreground">
+                  درخواست جدید (علاوه بر {requests.length.toLocaleString('fa-IR')} درخواست قبلی)
+                </span>
+                <Button variant="ghost" size="sm" onClick={() => { setShowNewForm(false); }}>
+                  بازگشت به لیست
+                </Button>
+              </div>
+            )}
             {/* Description */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">توضیحات مشکل و نیاز به تعمیر: *</Label>
