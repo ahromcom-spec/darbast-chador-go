@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ChevronLeft, ChevronRight, Eye, Trash2, Plus, Camera, ZoomIn, ZoomOut } from 'lucide-react';
 
@@ -6,7 +6,11 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { ServiceTypeSelectionDialog } from './ServiceTypeSelectionDialog';
+
+const formatToman = (n: number) => new Intl.NumberFormat('fa-IR').format(Math.round(n || 0));
 
 // ✅ مپ مسیرهای فرم بر اساس کد زیرشاخه — برای رفتن مستقیم به فرم همان خدماتی که قبلا ثبت شده
 // برای داربست (10/15) به فرم جامع می‌رویم که شامل ثبت برای دیگری، درخواست قیمت‌گذاری و چند سفارش همزمان است
