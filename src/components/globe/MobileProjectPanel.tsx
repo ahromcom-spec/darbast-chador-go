@@ -728,12 +728,16 @@ export function MobileProjectPanel({
                         const isSettled = s.settled || (s.total_price > 0 && remaining === 0);
                         return (
                           <div className="px-3 py-2.5 border-b border-border bg-muted/30 space-y-2">
-                            {s.notes && (
-                              <div className="text-xs text-foreground/90 leading-relaxed line-clamp-3 whitespace-pre-wrap">
-                                <span className="font-medium text-muted-foreground">توضیحات: </span>
-                                {s.notes}
-                              </div>
-                            )}
+                            {(() => {
+                              const desc = extractOrderDescription(s.notes);
+                              if (!desc) return null;
+                              return (
+                                <div className="text-xs text-foreground/90 leading-relaxed line-clamp-3 whitespace-pre-wrap">
+                                  <span className="font-medium text-muted-foreground">توضیحات: </span>
+                                  {desc}
+                                </div>
+                              );
+                            })()}
                             <div className="grid grid-cols-3 gap-1.5 text-[11px]">
                               <div className="rounded-md bg-background border border-border px-2 py-1.5 text-center">
                                 <div className="text-muted-foreground">قیمت کل</div>
