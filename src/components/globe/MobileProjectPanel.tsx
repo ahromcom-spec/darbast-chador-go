@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ChevronLeft, ChevronRight, Eye, Trash2, Plus, Camera, ZoomIn, ZoomOut } from 'lucide-react';
 
@@ -6,7 +6,11 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { ServiceTypeSelectionDialog } from './ServiceTypeSelectionDialog';
+
+const formatToman = (n: number) => new Intl.NumberFormat('fa-IR').format(Math.round(n || 0));
 
 // ✅ مپ مسیرهای فرم بر اساس کد زیرشاخه — برای رفتن مستقیم به فرم همان خدماتی که قبلا ثبت شده
 // برای داربست (10/15) به فرم جامع می‌رویم که شامل ثبت برای دیگری، درخواست قیمت‌گذاری و چند سفارش همزمان است
@@ -263,6 +267,31 @@ export function MobileProjectPanel({
   });
   
   const hasOrders = allOrders.length > 0;
+
+  // خلاصه مالی + توضیحات هر سفارش
+  const orderIds = useMemo(() => allOrders.map(o => o.id), [allOrders]);
+  const { data: orderSummaries } = useQuery({
+    queryKey: ['mobile-panel-order-summary', orderIds],
+    enabled: orderIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects_v3')
+        .select('id, total_price, total_paid, notes, payment_confirmed_at')
+        .in('id', orderIds);
+      if (error) throw error;
+      const map: Record<string, { total_price: number; total_paid: number; notes: string | null; settled: boolean }> = {};
+      (data || []).forEach((r: any) => {
+        map[r.id] = {
+          total_price: Number(r.total_price) || 0,
+          total_paid: Number(r.total_paid) || 0,
+          notes: r.notes || null,
+          settled: !!r.payment_confirmed_at,
+        };
+      });
+      return map;
+    },
+    staleTime: 30_000,
+  });
 
   // گروه‌بندی سفارشات بر اساس هر پروژه/نوع خدمات تا دکمه «سفارش جدید» همان پروژه و همان فرم کامل را باز کند
   const serviceTypeGroups = projectsToUse
@@ -690,7 +719,45 @@ export function MobileProjectPanel({
                         </button>
                       )}
 
+                      {/* خلاصه توضیحات و مالی سفارش */}
+                      {(() => {
+                        const s = orderSummaries?.[order.id];
+                        if (!s) return null;
+                        const remaining = Math.max(0, s.total_price - s.total_paid);
+                        const isSettled = s.settled || (s.total_price > 0 && remaining === 0);
+                        return (
+                          <div className="px-3 py-2.5 border-b border-border bg-muted/30 space-y-2">
+                            {s.notes && (
+                              <div className="text-xs text-foreground/90 leading-relaxed line-clamp-3 whitespace-pre-wrap">
+                                <span className="font-medium text-muted-foreground">توضیحات: </span>
+                                {s.notes}
+                              </div>
+                            )}
+                            <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+                              <div className="rounded-md bg-background border border-border px-2 py-1.5 text-center">
+                                <div className="text-muted-foreground">قیمت کل</div>
+                                <div className="font-bold text-foreground mt-0.5">{formatToman(s.total_price)}</div>
+                              </div>
+                              <div className="rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 px-2 py-1.5 text-center">
+                                <div className="text-green-700 dark:text-green-400">پرداختی</div>
+                                <div className="font-bold text-green-700 dark:text-green-400 mt-0.5">{formatToman(s.total_paid)}</div>
+                              </div>
+                              <div className={`rounded-md border px-2 py-1.5 text-center ${remaining > 0 ? 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-900' : 'bg-muted border-border'}`}>
+                                <div className={remaining > 0 ? 'text-orange-700 dark:text-orange-400' : 'text-muted-foreground'}>مانده</div>
+                                <div className={`font-bold mt-0.5 ${remaining > 0 ? 'text-orange-700 dark:text-orange-400' : 'text-foreground'}`}>{formatToman(remaining)}</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-center">
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${isSettled ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'}`}>
+                                {isSettled ? '✓ تسویه شده' : '● تسویه نشده'}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                       {/* Action Buttons */}
+
                       <div className="p-3 flex gap-2">
                         <Button
                           variant="default"
