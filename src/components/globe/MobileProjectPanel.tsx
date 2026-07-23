@@ -9,6 +9,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { ServiceTypeSelectionDialog } from './ServiceTypeSelectionDialog';
+import { extractOrderDescription } from '@/lib/orderDescription';
 
 const formatToman = (n: number) => new Intl.NumberFormat('fa-IR').format(Math.round(n || 0));
 
