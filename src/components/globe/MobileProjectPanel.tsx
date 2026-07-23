@@ -268,6 +268,31 @@ export function MobileProjectPanel({
   
   const hasOrders = allOrders.length > 0;
 
+  // خلاصه مالی + توضیحات هر سفارش
+  const orderIds = useMemo(() => allOrders.map(o => o.id), [allOrders]);
+  const { data: orderSummaries } = useQuery({
+    queryKey: ['mobile-panel-order-summary', orderIds],
+    enabled: orderIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects_v3')
+        .select('id, total_price, total_paid, notes, payment_confirmed_at')
+        .in('id', orderIds);
+      if (error) throw error;
+      const map: Record<string, { total_price: number; total_paid: number; notes: string | null; settled: boolean }> = {};
+      (data || []).forEach((r: any) => {
+        map[r.id] = {
+          total_price: Number(r.total_price) || 0,
+          total_paid: Number(r.total_paid) || 0,
+          notes: r.notes || null,
+          settled: !!r.payment_confirmed_at,
+        };
+      });
+      return map;
+    },
+    staleTime: 30_000,
+  });
+
   // گروه‌بندی سفارشات بر اساس هر پروژه/نوع خدمات تا دکمه «سفارش جدید» همان پروژه و همان فرم کامل را باز کند
   const serviceTypeGroups = projectsToUse
     .map((p): ServiceTypeGroup | null => {
