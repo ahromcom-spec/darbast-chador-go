@@ -1811,11 +1811,10 @@ export default function OrderDetail() {
           {/* Repair and Collection Request Buttons - Outside the collapsible order details card */}
           {(parsedNotes || order.payment_amount || notesParseError) && (
             <>
-                {/* دکمه درخواست تعمیر - فقط بعد از نصب داربست (مرحله در حال اجرا به بعد) */}
-                {order.subcategory?.code === '10' && 
-                 ['in_progress', 'completed', 'paid', 'closed'].includes(order.status) &&
-                 order.execution_stage && 
-                 ['in_progress', 'awaiting_collection', 'in_collection', 'closed'].includes(order.execution_stage) && (
+                {/* دکمه درخواست تعمیر - بعد از ثبت تاریخ شروع کرایه (نصب داربست) */}
+                {order.subcategory?.code === '10' &&
+                 !!order.rental_start_date &&
+                 ['in_progress', 'completed', 'paid', 'closed'].includes(order.status) && (
                   <section className="rounded-2xl border-2 border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 p-4 space-y-3">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div className="flex items-start gap-3">
