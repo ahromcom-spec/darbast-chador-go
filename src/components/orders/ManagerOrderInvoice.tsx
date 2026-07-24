@@ -962,10 +962,23 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
               const baseCount = Array.isArray(parsedNotes?.multi_scaffolds) && parsedNotes.multi_scaffolds.length > 0
                 ? parsedNotes.multi_scaffolds.length
                 : 1;
+              const baseDescText = description
+                ? escapeHtml(description)
+                : escapeHtml(`${scaffoldTypeName} - ${subtypeName}`);
+              const lN = Number(getLength()) || 0, wN = Number(getWidth()) || 0, hN = Number(getHeight()) || 0;
+              const dimParts: string[] = [];
+              if (lN > 0) dimParts.push(lN.toLocaleString('fa-IR'));
+              if (wN > 0) dimParts.push(wN.toLocaleString('fa-IR'));
+              if (hN > 0) dimParts.push(hN.toLocaleString('fa-IR'));
+              const dimProduct = dimParts.length >= 2 ? dimParts.join(' × ') : '';
+              const dimComputed = (lN > 0 && hN > 0) ? (wN > 0 ? lN * wN * hN : lN * hN) : 0;
+              const dimLine = dimProduct
+                ? `<div style="font-size:11px;color:#475569;margin-top:2px;">ابعاد: ${dimProduct}${dimComputed > 0 ? ` = ${dimComputed.toLocaleString('fa-IR')} ${getMeasurementUnit()}` : ''}</div>`
+                : '';
               const renewalRows = renewals.map((renewal, idx) => `
                 <tr class="renewal-row">
                   <td>${(idx + baseCount + 1).toLocaleString('fa-IR')}</td>
-                  <td>تمدید ماه ${(renewal.renewal_number + 1)?.toLocaleString('fa-IR') || (idx + baseCount + 1).toLocaleString('fa-IR')}</td>
+                  <td style="text-align:right;"><strong>تمدید ماه ${(renewal.renewal_number + 1)?.toLocaleString('fa-IR') || (idx + baseCount + 1).toLocaleString('fa-IR')}</strong><div style="font-size:11.5px;color:#334155;margin-top:2px;">${baseDescText}</div>${dimLine}</td>
                   <td>${renewal.new_start_date ? formatPersianDate(renewal.new_start_date) : '-'}</td>
                   <td>${renewal.new_end_date ? formatPersianDate(renewal.new_end_date) : '-'}</td>
                   <td>-</td>
@@ -975,8 +988,8 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
               const repairRows = repairRequests.map((repair, idx) => `
                 <tr class="repair-row">
                   <td>${(idx + baseCount + renewals.length + 1).toLocaleString('fa-IR')}</td>
-                  <td>تعمیر داربست${repair.description ? ` - ${escapeHtml(repair.description)}` : ''}</td>
-                  <td>-</td>
+                  <td style="text-align:right;">تعمیر داربست${repair.description ? ` - ${escapeHtml(repair.description)}` : ''}</td>
+                  <td>${repair.created_at ? formatPersianDate(repair.created_at) : '-'}</td>
                   <td>-</td>
                   <td>-</td>
                   <td>${(repair.final_cost || repair.estimated_cost || 0).toLocaleString('fa-IR')}</td>
@@ -1140,10 +1153,23 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
               const baseCount = Array.isArray(parsedNotes?.multi_scaffolds) && parsedNotes.multi_scaffolds.length > 0
                 ? parsedNotes.multi_scaffolds.length
                 : 1;
+              const baseDescText = description
+                ? escapeHtml(description)
+                : escapeHtml(`${scaffoldTypeName} - ${subtypeName}`);
+              const lN = Number(getLength()) || 0, wN = Number(getWidth()) || 0, hN = Number(getHeight()) || 0;
+              const dimParts: string[] = [];
+              if (lN > 0) dimParts.push(lN.toLocaleString('fa-IR'));
+              if (wN > 0) dimParts.push(wN.toLocaleString('fa-IR'));
+              if (hN > 0) dimParts.push(hN.toLocaleString('fa-IR'));
+              const dimProduct = dimParts.length >= 2 ? dimParts.join(' × ') : '';
+              const dimComputed = (lN > 0 && hN > 0) ? (wN > 0 ? lN * wN * hN : lN * hN) : 0;
+              const dimLine = dimProduct
+                ? `<div style="font-size:11px;color:#475569;margin-top:2px;">ابعاد: ${dimProduct}${dimComputed > 0 ? ` = ${dimComputed.toLocaleString('fa-IR')} ${getMeasurementUnit()}` : ''}</div>`
+                : '';
               const renewalRows = renewals.map((renewal, idx) => `
                 <tr class="renewal-row">
                   <td>${(idx + baseCount + 1).toLocaleString('fa-IR')}</td>
-                  <td>تمدید ماه ${(renewal.renewal_number + 1)?.toLocaleString('fa-IR') || (idx + baseCount + 1).toLocaleString('fa-IR')}</td>
+                  <td style="text-align:right;"><strong>تمدید ماه ${(renewal.renewal_number + 1)?.toLocaleString('fa-IR') || (idx + baseCount + 1).toLocaleString('fa-IR')}</strong><div style="font-size:11.5px;color:#334155;margin-top:2px;">${baseDescText}</div>${dimLine}</td>
                   <td>${renewal.new_start_date ? formatPersianDate(renewal.new_start_date) : '-'}</td>
                   <td>${renewal.new_end_date ? formatPersianDate(renewal.new_end_date) : '-'}</td>
                   <td>-</td>
@@ -1152,8 +1178,8 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
               const repairRows = repairRequests.map((repair, idx) => `
                 <tr class="repair-row">
                   <td>${(idx + baseCount + renewals.length + 1).toLocaleString('fa-IR')}</td>
-                  <td>تعمیر داربست${repair.description ? ` - ${escapeHtml(repair.description)}` : ''}</td>
-                  <td>-</td>
+                  <td style="text-align:right;">تعمیر داربست${repair.description ? ` - ${escapeHtml(repair.description)}` : ''}</td>
+                  <td>${repair.created_at ? formatPersianDate(repair.created_at) : '-'}</td>
                   <td>-</td>
                   <td>-</td>
                 </tr>
