@@ -93,6 +93,29 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
   const [historyStmt, setHistoryStmt] = useState<{ statement: Statement; customer: CustomerGroup } | null>(null);
   const [transferOrder, setTransferOrder] = useState<{ order: OrderRow; customer: CustomerGroup; currentStatementId: string } | null>(null);
   const [chequesStmt, setChequesStmt] = useState<{ statement: Statement; customer: CustomerGroup } | null>(null);
+  const [globalPay, setGlobalPay] = useState<CustomerGroup | null>(null);
+  const [globalHistory, setGlobalHistory] = useState<CustomerGroup | null>(null);
+
+  /**
+   * All invoices of a customer across every statement, ordered by statement number
+   * then invoice date, so a global payment waterfalls from the lowest statement up.
+   */
+  const buildAllOrders = (g: CustomerGroup) => {
+    const orders = g.statements
+      .flatMap(s => s.orders.map(o => ({
+        id: o.id,
+        code: o.code,
+        total: o.total,
+        paid: o.paid,
+        remaining: o.remaining,
+        created_at: o.created_at,
+        sortKey: `${String(s.statement_number).padStart(8, '0')}-${o.created_at}`,
+      })))
+      .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+    const anchor = g.statements.find(s => s.status === 'open') || g.statements[g.statements.length - 1];
+    return { orders, anchor };
+  };
+
 
   const load = async () => {
     try {
