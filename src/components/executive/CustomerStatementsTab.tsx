@@ -691,6 +691,40 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
           onSuccess={load}
         />
       )}
+      {globalPay && (() => {
+        const { orders, anchor } = buildAllOrders(globalPay);
+        if (!anchor) return null;
+        return (
+          <StatementManualPaymentDialog
+            open={!!globalPay}
+            onOpenChange={(o) => !o && setGlobalPay(null)}
+            statementId={anchor.id}
+            statementNumber={anchor.statement_number}
+            customerId={globalPay.customer_id}
+            customerName={globalPay.full_name}
+            orders={orders}
+            scopeLabel={`کل صورتحساب‌ها (${new Intl.NumberFormat('fa-IR').format(globalPay.statements.length)} صورتحساب)`}
+            onSuccess={load}
+          />
+        );
+      })()}
+      {globalHistory && (() => {
+        const { orders, anchor } = buildAllOrders(globalHistory);
+        if (!anchor) return null;
+        return (
+          <StatementPaymentsHistoryDialog
+            open={!!globalHistory}
+            onOpenChange={(o) => !o && setGlobalHistory(null)}
+            statementId={anchor.id}
+            statementNumber={anchor.statement_number}
+            customerName={globalHistory.full_name}
+            orders={orders}
+            scopeLabel="کل صورتحساب‌ها"
+            onChanged={load}
+          />
+        );
+      })()}
+
     </div>
   );
 }
