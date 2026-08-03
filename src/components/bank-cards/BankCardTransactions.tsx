@@ -7,6 +7,8 @@ import { BankCardTransactionEditDialog } from './BankCardTransactionEditDialog';
 import { format } from 'date-fns-jalali';
 import { supabase } from '@/integrations/supabase/client';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
+import { isStatementTransaction, deleteStatementAllocationsForTransaction } from '@/lib/statementPaymentSync';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
