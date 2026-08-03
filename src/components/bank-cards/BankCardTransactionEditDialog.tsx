@@ -94,11 +94,26 @@ export function BankCardTransactionEditDialog({ open, onOpenChange, transaction,
         }
       }
 
+      // Statement/cheque payments: re-allocate the new amount across the invoices
+      if (isStatementTransaction(transaction as any)) {
+        const { data: auth } = await supabase.auth.getUser();
+        const res = await resyncStatementAllocationsForTransaction(
+          transaction as any,
+          parsedAmount,
+          createdAt,
+          auth?.user?.id || null,
+        );
+        if (res.allocated > 0) {
+          toast.success(`تخصیص پرداخت روی ${res.allocated.toLocaleString('fa-IR')} فاکتور به‌روزرسانی شد`);
+        }
+      }
+
       await recalculateBankCardBalance(transaction.bank_card_id);
 
       toast.success('تراکنش با موفقیت ویرایش شد');
       onOpenChange(false);
       onSaved();
+
     } catch (err: any) {
       console.error('Error editing transaction:', err);
       toast.error(err?.message || 'خطا در ویرایش تراکنش');
