@@ -626,10 +626,11 @@ export function StatementPaymentsHistoryDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <History className="h-5 w-5 text-primary" />
-              تاریخچه پرداخت‌های صورتحساب
+              {scopeLabel ? 'تاریخچه پرداخت‌های کل صورتحساب‌ها' : 'تاریخچه پرداخت‌های صورتحساب'}
             </DialogTitle>
             <DialogDescription>
-              صورتحساب شماره {new Intl.NumberFormat('fa-IR').format(statementNumber)} — {customerName || ''}
+              {scopeLabel || `صورتحساب شماره ${new Intl.NumberFormat('fa-IR').format(statementNumber)}`} — {customerName || ''}
+
             </DialogDescription>
           </DialogHeader>
 
