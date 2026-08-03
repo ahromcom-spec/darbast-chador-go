@@ -364,7 +364,31 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                         )}
                         <span className="text-sm">کل: <b>{formatPrice(g.total_amount)}</b></span>
                         <span className="text-sm text-red-600">مانده: <b>{formatPrice(g.total_remaining)}</b></span>
+                        <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 flex-wrap">
+                          <Button
+                            size="sm"
+                            className="bg-emerald-700 hover:bg-emerald-800 text-white gap-1"
+                            onClick={() => setGlobalPay(g)}
+                            disabled={buildAllOrders(g).orders.length === 0}
+                            title="ثبت پرداخت روی کل صورتحساب‌ها (از کوچک‌ترین شماره)"
+                          >
+                            <Banknote className="h-3.5 w-3.5" />
+                            پرداخت کل صورتحساب‌ها
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1"
+                            onClick={() => setGlobalHistory(g)}
+                            disabled={buildAllOrders(g).orders.length === 0}
+                            title="تاریخچه و ویرایش پرداخت‌های کل صورتحساب‌ها"
+                          >
+                            <History className="h-3.5 w-3.5" />
+                            تاریخچه پرداخت کل
+                          </Button>
+                        </div>
                         {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+
                       </div>
                     </div>
                   </CardHeader>
