@@ -45,8 +45,9 @@ const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0
 type PayMode = 'cash' | 'cheque';
 
 export function StatementManualPaymentDialog({
-  open, onOpenChange, statementId, statementNumber, customerId, customerName, orders, onSuccess,
+  open, onOpenChange, statementId, statementNumber, customerId, customerName, orders, onSuccess, scopeLabel,
 }: Props) {
+
   const { user } = useAuth();
   const { toast } = useToast();
   const [mode, setMode] = useState<PayMode>('cash');
