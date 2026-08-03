@@ -21,6 +21,8 @@ interface OrderLite {
   paid: number;
   remaining: number;
   created_at: string;
+  /** Optional explicit waterfall ordering key (e.g. statement number + date) */
+  sortKey?: string;
 }
 
 interface Props {
@@ -31,7 +33,10 @@ interface Props {
   customerName: string | null;
   orders: OrderLite[];
   onChanged?: () => void;
+  /** Label shown instead of "صورتحساب شماره X" (used for the all-statements history) */
+  scopeLabel?: string;
 }
+
 
 interface PaymentRow {
   id: string;
@@ -80,8 +85,9 @@ function stripTag(s: string | null): string {
 }
 
 export function StatementPaymentsHistoryDialog({
-  open, onOpenChange, statementId, statementNumber, customerName, orders, onChanged,
+  open, onOpenChange, statementId, statementNumber, customerName, orders, onChanged, scopeLabel,
 }: Props) {
+
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -480,11 +486,13 @@ export function StatementPaymentsHistoryDialog({
         .from('projects_v3')
         .select('id, code, total_price, payment_amount, total_paid, created_at')
         .in('id', orderIds);
+      const sortKeyById = new Map(orders.map(o => [o.id, o.sortKey || o.created_at]));
       const list = (fresh || []).map((o: any) => {
         const total = Number(o.total_price ?? o.payment_amount ?? 0);
         const paid = Math.min(Number(o.total_paid ?? 0), total > 0 ? total : Number.MAX_SAFE_INTEGER);
-        return { id: o.id, code: o.code, total, paid, remaining: Math.max(total - paid, 0), created_at: o.created_at };
-      }).sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+        return { id: o.id, code: o.code, total, paid, remaining: Math.max(total - paid, 0), created_at: o.created_at, sortKey: sortKeyById.get(o.id) || o.created_at };
+      }).sort((a, b) => (a.sortKey || '').localeCompare(b.sortKey || ''));
+
 
       // 4) Waterfall allocate
       let remaining = newAmount;
@@ -618,10 +626,11 @@ export function StatementPaymentsHistoryDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <History className="h-5 w-5 text-primary" />
-              تاریخچه پرداخت‌های صورتحساب
+              {scopeLabel ? 'تاریخچه پرداخت‌های کل صورتحساب‌ها' : 'تاریخچه پرداخت‌های صورتحساب'}
             </DialogTitle>
             <DialogDescription>
-              صورتحساب شماره {new Intl.NumberFormat('fa-IR').format(statementNumber)} — {customerName || ''}
+              {scopeLabel || `صورتحساب شماره ${new Intl.NumberFormat('fa-IR').format(statementNumber)}`} — {customerName || ''}
+
             </DialogDescription>
           </DialogHeader>
 

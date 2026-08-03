@@ -21,6 +21,8 @@ interface OrderLite {
   paid: number;
   remaining: number;
   created_at: string;
+  /** Optional explicit waterfall ordering key (e.g. statement number + date) */
+  sortKey?: string;
 }
 
 interface Props {
@@ -32,7 +34,10 @@ interface Props {
   customerName: string | null;
   orders: OrderLite[];
   onSuccess?: () => void;
+  /** Label shown instead of "صورتحساب شماره X" (used for the all-statements payment) */
+  scopeLabel?: string;
 }
+
 
 const fmt = (n: number) => new Intl.NumberFormat('fa-IR').format(Math.round(n || 0)) + ' تومان';
 const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
@@ -40,8 +45,9 @@ const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0
 type PayMode = 'cash' | 'cheque';
 
 export function StatementManualPaymentDialog({
-  open, onOpenChange, statementId, statementNumber, customerId, customerName, orders, onSuccess,
+  open, onOpenChange, statementId, statementNumber, customerId, customerName, orders, onSuccess, scopeLabel,
 }: Props) {
+
   const { user } = useAuth();
   const { toast } = useToast();
   const [mode, setMode] = useState<PayMode>('cash');
@@ -114,7 +120,10 @@ export function StatementManualPaymentDialog({
 
     setSubmitting(true);
     try {
-      const sorted = [...orders].sort((a, b) => a.created_at.localeCompare(b.created_at));
+      const sorted = [...orders].sort((a, b) =>
+        (a.sortKey || a.created_at).localeCompare(b.sortKey || b.created_at)
+      );
+
       let remaining = amount;
       const allocations: { order: OrderLite; portion: number }[] = [];
 
@@ -349,12 +358,13 @@ export function StatementManualPaymentDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Banknote className="h-5 w-5 text-emerald-600" />
-            ثبت پرداخت صورتحساب
+            {scopeLabel ? 'ثبت پرداخت کل صورتحساب‌ها' : 'ثبت پرداخت صورتحساب'}
           </DialogTitle>
           <DialogDescription>
-            صورتحساب شماره {new Intl.NumberFormat('fa-IR').format(statementNumber)} — مانده فعلی:{' '}
+            {scopeLabel || `صورتحساب شماره ${new Intl.NumberFormat('fa-IR').format(statementNumber)}`} — مانده فعلی:{' '}
             <span className="font-bold text-red-600">{fmt(totalRemaining)}</span>
           </DialogDescription>
+
         </DialogHeader>
 
         {formError && (
