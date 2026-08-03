@@ -428,7 +428,7 @@ export function BankCardTransactions({ card, getTransactions }: BankCardTransact
                     مانده: {tx.balance_after.toLocaleString('fa-IR')}
                   </div>
                 </div>
-                {(tx.reference_type === 'manual' || tx.reference_type === 'card_transfer' || !tx.reference_type) && (
+                {(tx.reference_type === 'manual' || tx.reference_type === 'card_transfer' || !tx.reference_type || isStatementTransaction(tx as any)) && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -439,7 +439,7 @@ export function BankCardTransactions({ card, getTransactions }: BankCardTransact
                     <Pencil className="h-4 w-4" />
                   </Button>
                 )}
-                {(tx.reference_type === 'manual' || tx.reference_type === 'card_transfer' || !tx.reference_type) && (
+                {(tx.reference_type === 'manual' || tx.reference_type === 'card_transfer' || !tx.reference_type || isStatementTransaction(tx as any)) && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -452,6 +452,7 @@ export function BankCardTransactions({ card, getTransactions }: BankCardTransact
                 )}
               </div>
             </div>
+
           ))}
         </div>
       )}
