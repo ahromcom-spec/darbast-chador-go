@@ -21,6 +21,8 @@ interface OrderLite {
   paid: number;
   remaining: number;
   created_at: string;
+  /** Optional explicit waterfall ordering key (e.g. statement number + date) */
+  sortKey?: string;
 }
 
 interface Props {
@@ -31,7 +33,10 @@ interface Props {
   customerName: string | null;
   orders: OrderLite[];
   onChanged?: () => void;
+  /** Label shown instead of "صورتحساب شماره X" (used for the all-statements history) */
+  scopeLabel?: string;
 }
+
 
 interface PaymentRow {
   id: string;
