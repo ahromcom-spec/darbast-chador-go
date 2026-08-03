@@ -486,11 +486,13 @@ export function StatementPaymentsHistoryDialog({
         .from('projects_v3')
         .select('id, code, total_price, payment_amount, total_paid, created_at')
         .in('id', orderIds);
+      const sortKeyById = new Map(orders.map(o => [o.id, o.sortKey || o.created_at]));
       const list = (fresh || []).map((o: any) => {
         const total = Number(o.total_price ?? o.payment_amount ?? 0);
         const paid = Math.min(Number(o.total_paid ?? 0), total > 0 ? total : Number.MAX_SAFE_INTEGER);
-        return { id: o.id, code: o.code, total, paid, remaining: Math.max(total - paid, 0), created_at: o.created_at };
-      }).sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+        return { id: o.id, code: o.code, total, paid, remaining: Math.max(total - paid, 0), created_at: o.created_at, sortKey: sortKeyById.get(o.id) || o.created_at };
+      }).sort((a, b) => (a.sortKey || '').localeCompare(b.sortKey || ''));
+
 
       // 4) Waterfall allocate
       let remaining = newAmount;
