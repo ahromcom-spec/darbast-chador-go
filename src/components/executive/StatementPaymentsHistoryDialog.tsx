@@ -85,8 +85,9 @@ function stripTag(s: string | null): string {
 }
 
 export function StatementPaymentsHistoryDialog({
-  open, onOpenChange, statementId, statementNumber, customerName, orders, onChanged,
+  open, onOpenChange, statementId, statementNumber, customerName, orders, onChanged, scopeLabel,
 }: Props) {
+
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
