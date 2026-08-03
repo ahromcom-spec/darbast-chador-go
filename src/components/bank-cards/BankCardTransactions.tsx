@@ -199,6 +199,12 @@ export function BankCardTransactions({ card, getTransactions }: BankCardTransact
         }
       }
 
+      // پرداخت صورتحساب / چک: تخصیص‌های ثبت‌شده روی فاکتورها هم حذف شود
+      if (isStatementTransaction(tx as any)) {
+        const { data: auth } = await supabase.auth.getUser();
+        await deleteStatementAllocationsForTransaction(tx as any, auth?.user?.id || null);
+      }
+
       // حذف تراکنش انتخاب‌شده
       const { error } = await supabase
         .from('bank_card_transactions')
@@ -206,6 +212,7 @@ export function BankCardTransactions({ card, getTransactions }: BankCardTransact
         .eq('id', tx.id);
 
       if (error) throw error;
+
 
       // محاسبه‌ی مجدد موجودی کارت‌های درگیر
       await recalculateBankCardBalance(card.id);
