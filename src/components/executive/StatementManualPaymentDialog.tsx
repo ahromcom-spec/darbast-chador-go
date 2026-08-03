@@ -21,6 +21,8 @@ interface OrderLite {
   paid: number;
   remaining: number;
   created_at: string;
+  /** Optional explicit waterfall ordering key (e.g. statement number + date) */
+  sortKey?: string;
 }
 
 interface Props {
@@ -32,7 +34,10 @@ interface Props {
   customerName: string | null;
   orders: OrderLite[];
   onSuccess?: () => void;
+  /** Label shown instead of "صورتحساب شماره X" (used for the all-statements payment) */
+  scopeLabel?: string;
 }
+
 
 const fmt = (n: number) => new Intl.NumberFormat('fa-IR').format(Math.round(n || 0)) + ' تومان';
 const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
