@@ -15,6 +15,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { toast } from 'sonner';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
+import { isStatementTransaction, resyncStatementAllocationsForTransaction } from '@/lib/statementPaymentSync';
+
 
 interface Props {
   open: boolean;
