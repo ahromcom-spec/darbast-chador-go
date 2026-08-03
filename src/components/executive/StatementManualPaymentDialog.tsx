@@ -355,12 +355,13 @@ export function StatementManualPaymentDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Banknote className="h-5 w-5 text-emerald-600" />
-            ثبت پرداخت صورتحساب
+            {scopeLabel ? 'ثبت پرداخت کل صورتحساب‌ها' : 'ثبت پرداخت صورتحساب'}
           </DialogTitle>
           <DialogDescription>
-            صورتحساب شماره {new Intl.NumberFormat('fa-IR').format(statementNumber)} — مانده فعلی:{' '}
+            {scopeLabel || `صورتحساب شماره ${new Intl.NumberFormat('fa-IR').format(statementNumber)}`} — مانده فعلی:{' '}
             <span className="font-bold text-red-600">{fmt(totalRemaining)}</span>
           </DialogDescription>
+
         </DialogHeader>
 
         {formError && (
