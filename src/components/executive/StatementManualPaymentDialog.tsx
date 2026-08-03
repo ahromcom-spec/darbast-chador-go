@@ -120,7 +120,10 @@ export function StatementManualPaymentDialog({
 
     setSubmitting(true);
     try {
-      const sorted = [...orders].sort((a, b) => a.created_at.localeCompare(b.created_at));
+      const sorted = [...orders].sort((a, b) =>
+        (a.sortKey || a.created_at).localeCompare(b.sortKey || b.created_at)
+      );
+
       let remaining = amount;
       const allocations: { order: OrderLite; portion: number }[] = [];
 
