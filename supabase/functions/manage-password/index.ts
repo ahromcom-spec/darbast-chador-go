@@ -313,7 +313,7 @@ serve(async (req) => {
           crypto.getRandomValues(randBytes);
           let bin = '';
           for (let i = 0; i < randBytes.length; i++) bin += String.fromCharCode(randBytes[i]);
-          const newSecret = btoa(bin).replace(/[^A-Za-z0-9]/g, '') + crypto.randomUUID();
+          const newSecret = (btoa(bin).replace(/[^A-Za-z0-9]/g, '') + crypto.randomUUID().replace(/-/g, '')).slice(0, 64);
           await supabase.auth.admin.updateUserById(profile.user_id, {
             password: newSecret,
             user_metadata: { ...meta, pw_rotated: true },

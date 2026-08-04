@@ -312,7 +312,7 @@ export function OrderTransfer({ orderId, orderCode, open, onOpenChange, onTransf
               <div className="flex gap-2">
                 <Input
                   id="phone"
-                  placeholder="09123456789"
+                  placeholder="09100000000"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   className="flex-1"
@@ -331,7 +331,7 @@ export function OrderTransfer({ orderId, orderCode, open, onOpenChange, onTransf
                 </Button>
               </div>
               {phoneNumber && formatPhoneNumber(phoneNumber).length < 11 && (
-                <p className="text-xs text-muted-foreground">شماره باید ۱۱ رقم باشد (مثال: 09123456789)</p>
+                <p className="text-xs text-muted-foreground">شماره باید ۱۱ رقم باشد (مثال: 09100000000)</p>
               )}
             </div>
 

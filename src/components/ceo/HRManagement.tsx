@@ -489,7 +489,7 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                   type="tel"
                   value={newPhoneNumber}
                   onChange={(e) => setNewPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                  placeholder="09123456789"
+                  placeholder="09100000000"
                   dir="ltr"
                   className={!newPhoneNumber ? '' : isValidPhone ? 'border-green-500' : 'border-destructive'}
                 />

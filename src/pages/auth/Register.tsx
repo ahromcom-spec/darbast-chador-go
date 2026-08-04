@@ -321,7 +321,7 @@ export default function Register() {
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="09123456789"
+                  placeholder="09100000000"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   maxLength={11}

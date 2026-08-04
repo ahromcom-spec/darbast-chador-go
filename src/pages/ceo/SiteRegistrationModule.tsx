@@ -266,7 +266,7 @@ export default function SiteRegistrationModule() {
                 <Input
                   id="phoneNumber"
                   type="tel"
-                  placeholder="مثال: 09123456789"
+                  placeholder="مثال: 09100000000"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   dir="ltr"

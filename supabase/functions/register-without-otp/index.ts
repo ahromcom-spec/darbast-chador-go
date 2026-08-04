@@ -103,7 +103,7 @@ serve(async (req) => {
     crypto.getRandomValues(randBytes);
     let randBin = '';
     for (let i = 0; i < randBytes.length; i++) randBin += String.fromCharCode(randBytes[i]);
-    const randomPassword = btoa(randBin).replace(/[^A-Za-z0-9]/g, '') + crypto.randomUUID();
+    const randomPassword = (btoa(randBin).replace(/[^A-Za-z0-9]/g, '') + crypto.randomUUID().replace(/-/g, '')).slice(0, 64);
 
     // بررسی وجود کاربر
     const { data: existingProfile } = await supabase

@@ -33,7 +33,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         <input
           type={type}
           className={cn(
-            "flex h-12 w-full rounded-md border-2 border-input bg-background px-3 py-3 text-base text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground placeholder:text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm transition-all duration-300 ease-out hover:border-primary/50 text-right",
+            "flex h-12 w-full rounded-md border-2 border-input bg-background px-3 py-3 text-base text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground/50 placeholder:text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm transition-all duration-300 ease-out hover:border-primary/50 text-right",
             // Enhanced focus state - double size on mobile (can be disabled via compactFocus)
             isFocused && !compactFocus &&
               "h-24 text-xl border-primary border-3 shadow-xl ring-2 ring-primary/40 z-20 relative bg-background scale-100",

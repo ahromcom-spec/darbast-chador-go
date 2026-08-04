@@ -275,7 +275,7 @@ export default function ForgotPassword() {
                     <Label>شماره موبایل</Label>
                     <Input
                       type="tel"
-                      placeholder="09123456789"
+                      placeholder="09100000000"
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(toAsciiDigits(e.target.value))}
                       maxLength={11}
