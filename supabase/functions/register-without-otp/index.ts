@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { phone_number, full_name, registered_by } = await req.json();
+    const { phone_number, full_name, bio, registered_by } = await req.json();
 
     if (!phone_number || !full_name) {
       return new Response(
@@ -128,6 +128,7 @@ serve(async (req) => {
         full_name: full_name, 
         phone_number: normalizedPhone,
         registered_by_module: true,
+        bio: typeof bio === 'string' ? bio.slice(0, 500) : undefined,
       },
     });
 
@@ -144,6 +145,13 @@ serve(async (req) => {
       await supabase
         .from('customers')
         .insert({ user_id: created.user.id });
+
+      if (typeof bio === 'string' && bio.trim()) {
+        await supabase
+          .from('profiles')
+          .update({ bio: bio.trim().slice(0, 500) })
+          .eq('user_id', created.user.id);
+      }
     }
 
     return new Response(
