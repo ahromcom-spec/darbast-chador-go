@@ -47,3 +47,5 @@ project_id = "gclbltatkbwbqxqqrcea"
     verify_jwt = false
   [functions.report-activity]
     verify_jwt = false
+  [functions.track-visit]
+    verify_jwt = false
