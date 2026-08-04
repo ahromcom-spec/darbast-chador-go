@@ -152,8 +152,124 @@ export default function UsersList() {
             />
           </div>
 
-          <div className="rounded-md border w-full overflow-hidden">
+          {/* Mobile card list */}
+          <div className="md:hidden space-y-2">
+            {filteredUsers?.map((user) => {
+              const smsEnabled = (user as any).sms_notifications_enabled !== false;
+              const orders = user.orders || [];
+              const latest = orders[0];
+              const isExpanded = expandedAddresses.has(user.user_id);
+              const hasMore = orders.length > 1;
+              return (
+                <div key={user.user_id} className="rounded-lg border p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="font-medium text-sm break-words">{user.full_name || 'نامشخص'}</div>
+                      <div dir="ltr" className="text-xs text-muted-foreground text-right">{user.phone_number || '-'}</div>
+                      {(user as any).bio ? (
+                        <div className="mt-1 text-[11px] text-muted-foreground break-words whitespace-pre-wrap">
+                          {(user as any).bio}
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {smsEnabled ? (
+                        <MessageSquare className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <MessageSquareOff className="h-4 w-4 text-red-600" />
+                      )}
+                      <Switch
+                        checked={smsEnabled}
+                        disabled={toggleSmsMutation.isPending}
+                        onCheckedChange={(checked) => toggleSmsMutation.mutate({ userId: user.user_id, enabled: checked })}
+                        aria-label="فعال/غیرفعال کردن پیامک"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-1 flex-wrap">
+                    {user.roles.length > 0 ? (
+                      user.roles.map(role => (
+                        <Badge key={role} variant="secondary" className="text-[10px] px-1.5 py-0">{role}</Badge>
+                      ))
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">کاربر عادی</Badge>
+                    )}
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                      ثبت‌نام: {new Date(user.created_at).toLocaleDateString('fa-IR')}
+                    </Badge>
+                  </div>
+
+                  <div className="text-xs">
+                    {latest ? (
+                      <div className="space-y-1">
+                        <button
+                          type="button"
+                          onClick={() => hasMore && toggleAddr(user.user_id)}
+                          className={`w-full text-right flex items-start gap-1 ${hasMore ? 'cursor-pointer' : 'cursor-default'}`}
+                        >
+                          <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0 text-muted-foreground" />
+                          <span className="break-words flex-1 leading-5">
+                            {latest.address || '-'}
+                            {latest.detailed_address ? ` - ${latest.detailed_address}` : ''}
+                          </span>
+                          {hasMore && (isExpanded
+                            ? <ChevronUp className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                            : <ChevronDown className="h-3.5 w-3.5 mt-0.5 shrink-0" />)}
+                        </button>
+                        {hasMore && (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0">{orders.length} سفارش</Badge>
+                        )}
+                        {isExpanded && hasMore && (
+                          <div className="mt-1 space-y-1 border-r-2 border-primary/30 pr-2">
+                            {orders.slice(1).map(o => (
+                              <div key={o.id} className="text-[11px] text-muted-foreground flex items-start gap-1">
+                                <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
+                                <span className="break-words leading-5">
+                                  {o.code ? `[${o.code}] ` : ''}
+                                  {o.address || '-'}
+                                  {o.detailed_address ? ` - ${o.detailed_address}` : ''}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">بدون سفارش</span>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 h-9 text-xs"
+                      onClick={() => navigate(`/admin/users/${user.user_id}`)}
+                    >
+                      <Eye className="h-4 w-4 ml-1" />
+                      مشاهده
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => loginAsUser(user.user_id)}
+                      disabled={isLoginAsUserLoading}
+                      className="flex-1 gap-1 h-9 text-xs"
+                    >
+                      <LogIn className="h-4 w-4" />
+                      ورود
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block rounded-md border w-full overflow-x-auto">
             <Table className="w-full table-fixed text-xs">
+
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-right p-2 w-[14%]">نام کامل</TableHead>
