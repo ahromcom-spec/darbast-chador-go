@@ -89,6 +89,7 @@ interface ManagerOrderInvoiceProps {
     rental_start_date?: string | null;
   };
   hidePrice?: boolean; // Hide price/financial information in invoice
+  className?: string;
 }
 
 interface RepairRequest {
@@ -125,7 +126,7 @@ const isInvoiceImage = (item: { file_path?: string | null; file_type?: string | 
   return /\.(jpe?g|png|gif|webp|bmp|svg|heic|heif)$/i.test(path);
 };
 
-export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderInvoiceProps) => {
+export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: ManagerOrderInvoiceProps) => {
   const [open, setOpen] = useState(false);
   const [media, setMedia] = useState<Array<{ id: string; file_path: string; file_type: string | null; mime_type?: string | null }>>([]);
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
@@ -1381,7 +1382,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderIn
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className={className}>
           <Printer className="h-4 w-4 ml-1" />
           پرینت فاکتور
         </Button>
