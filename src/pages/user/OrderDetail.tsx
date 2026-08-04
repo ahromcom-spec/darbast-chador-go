@@ -23,7 +23,6 @@ import { useToast } from "@/hooks/use-toast";
 import { MainLayout } from "@/components/layouts/MainLayout";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import OrderChat from "@/components/orders/OrderChat";
-import VoiceCall from "@/components/orders/VoiceCall";
 import CallHistory from "@/components/calls/CallHistory";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
 import { OrderDailyLogs } from "@/components/orders/OrderDailyLogs";
@@ -3120,13 +3119,6 @@ export default function OrderDetail() {
 
           {/* بخش چت و تعامل با مدیریت */}
           <OrderChat orderId={order.id} orderStatus={order.status} />
-
-          {/* تماس صوتی اینترنتی با مدیر */}
-          <VoiceCall 
-            orderId={order.id} 
-            managerId={order.executed_by || order.approved_by}
-            isManager={false}
-          />
 
           {/* تاریخچه تماس‌ها */}
           <CallHistory orderId={order.id} />
