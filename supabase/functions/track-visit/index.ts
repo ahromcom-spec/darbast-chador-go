@@ -22,6 +22,7 @@ Deno.serve(async (req) => {
   const pageTitle: string | null = body.pageTitle || null
   const referrer: string | null = body.referrer || null
   const sessionId: string | null = body.sessionId || null
+  const deviceId: string | null = body.deviceId || body.device_id || null
   const deviceType: string | null = body.deviceType || null
   const clientIp: string | null = body.ip || null
   const userId: string | null = body.userId || null
@@ -30,7 +31,7 @@ Deno.serve(async (req) => {
     req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     req.headers.get('cf-connecting-ip') ||
     null
-  const ip = headerIp || clientIp
+  let ip = headerIp || clientIp
   const ua = req.headers.get('user-agent') || body.userAgent || null
 
   let actorName: string | null = null
@@ -47,6 +48,37 @@ Deno.serve(async (req) => {
 
   const isGuest = !userId
   const displayName = actorName || (isGuest ? 'بازدیدکننده مهمان (ثبت‌نام نشده)' : 'کاربر ناشناس')
+
+  // One IP per device: reuse the first IP ever recorded for this device, and
+  // avoid duplicate rows for the same device within the last 24 hours.
+  if (deviceId) {
+    const { data: firstForDevice } = await supabase
+      .from('activity_logs')
+      .select('id, ip_address, occurred_at')
+      .eq('event_type', 'site_visit')
+      .contains('details', { device_id: deviceId })
+      .order('occurred_at', { ascending: true })
+      .limit(1)
+
+    if (firstForDevice && firstForDevice.length > 0) {
+      // Keep the device's canonical IP stable
+      if (firstForDevice[0].ip_address) ip = firstForDevice[0].ip_address
+
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      const { data: recent } = await supabase
+        .from('activity_logs')
+        .select('id')
+        .eq('event_type', 'site_visit')
+        .gte('occurred_at', since)
+        .contains('details', { device_id: deviceId })
+        .limit(1)
+      if (recent && recent.length > 0) {
+        return new Response(JSON.stringify({ ok: true, skipped: true, reason: 'device_recent' }), {
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    }
+  }
 
   // Avoid duplicate rows for the same session within the last 30 minutes
   if (sessionId) {
@@ -65,6 +97,7 @@ Deno.serve(async (req) => {
     }
   }
 
+
   const title = isGuest
     ? `بازدید مهمان از سایت${ip ? ` — IP: ${ip}` : ''}`
     : `بازدید ${displayName}${actorPhone ? ` (${actorPhone})` : ''} از سایت`
@@ -82,6 +115,8 @@ Deno.serve(async (req) => {
     actor_phone: actorPhone,
     details: {
       session_id: sessionId,
+      device_id: deviceId,
+
       page,
       page_title: pageTitle,
       referrer,

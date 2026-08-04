@@ -12,12 +12,31 @@ const getSessionId = (): string => {
   return sessionId;
 };
 
-// Fetch IP address from external API
+// Persistent per-device identifier (survives sessions, one per phone/computer)
+const getDeviceId = (): string => {
+  try {
+    let id = localStorage.getItem('site_device_id');
+    if (!id) {
+      id = `dev-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+      localStorage.setItem('site_device_id', id);
+    }
+    return id;
+  } catch {
+    return 'dev-unknown';
+  }
+};
+
+// Fetch IP address from external API (stable per device: first detected IP is reused)
 const getIPAddress = async (): Promise<string | null> => {
-  // Check cache first
+  // Stable device-level IP takes priority so the same phone is not logged with many IPs
+  try {
+    const deviceIP = localStorage.getItem('device_ip_address');
+    if (deviceIP) return deviceIP;
+  } catch { /* ignore */ }
+
   const cachedIP = sessionStorage.getItem('user_ip_address');
   if (cachedIP) return cachedIP;
-  
+
   try {
     const response = await fetch('https://api.ipify.org?format=json', { 
       signal: AbortSignal.timeout(5000) 
@@ -26,6 +45,7 @@ const getIPAddress = async (): Promise<string | null> => {
       const data = await response.json();
       if (data.ip) {
         sessionStorage.setItem('user_ip_address', data.ip);
+        try { localStorage.setItem('device_ip_address', data.ip); } catch { /* ignore */ }
         return data.ip;
       }
     }
@@ -34,6 +54,7 @@ const getIPAddress = async (): Promise<string | null> => {
   }
   return null;
 };
+
 
 // Detect device type
 const getDeviceType = (): string => {
@@ -221,6 +242,8 @@ export function useSiteAnalytics() {
             pageTitle: document.title,
             referrer: document.referrer || null,
             sessionId: sessionId.current,
+            deviceId: getDeviceId(),
+
             deviceType: getDeviceType(),
             ip: ipAddress,
             userAgent: navigator.userAgent,
