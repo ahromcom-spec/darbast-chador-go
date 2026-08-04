@@ -1382,7 +1382,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className={className}>
           <Printer className="h-4 w-4 ml-1" />
           پرینت فاکتور
         </Button>
