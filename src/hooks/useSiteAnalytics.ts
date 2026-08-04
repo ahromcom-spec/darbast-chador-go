@@ -242,6 +242,8 @@ export function useSiteAnalytics() {
             pageTitle: document.title,
             referrer: document.referrer || null,
             sessionId: sessionId.current,
+            deviceId: getDeviceId(),
+
             deviceType: getDeviceType(),
             ip: ipAddress,
             userAgent: navigator.userAgent,
