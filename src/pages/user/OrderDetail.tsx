@@ -3367,7 +3367,7 @@ export default function OrderDetail() {
             orderCode={order.code}
             customerId={(order as any).customer_id || ''}
             rentalStartDate={order.rental_start_date || null}
-            originalPrice={order.total_price || order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || 0}
+            originalPrice={order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || order.total_price || 0}
             onRenewalComplete={fetchOrderDetails}
           />
 

@@ -6,12 +6,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, RefreshCw, Clock, CheckCircle, XCircle, Edit, Trash2 } from 'lucide-react';
+import { CalendarDays, RefreshCw, Clock, CheckCircle, XCircle, Edit, Trash2, Undo2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { format, addMonths } from 'date-fns-jalali';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
+import { parseLocalizedNumber } from '@/lib/numberParsing';
 
 interface ManagerRenewalDialogProps {
   open: boolean;
@@ -61,13 +62,13 @@ export function ManagerRenewalDialog({
   const [renewals, setRenewals] = useState<RenewalRecord[]>([]);
   const [loadingRenewals, setLoadingRenewals] = useState(true);
   const [editingRenewal, setEditingRenewal] = useState<RenewalRecord | null>(null);
-  const [editPrice, setEditPrice] = useState<number>(0);
+  const [editPrice, setEditPrice] = useState<string>('');
   const [editStartDate, setEditStartDate] = useState<string>('');
   const [editEndDate, setEditEndDate] = useState<string>('');
   const [managerNotes, setManagerNotes] = useState<string>('');
   const [rejectionReason, setRejectionReason] = useState<string>('');
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newRenewalPrice, setNewRenewalPrice] = useState<number>(originalPrice);
+  const [newRenewalPrice, setNewRenewalPrice] = useState<string>(String(originalPrice || ''));
   const [newRenewalStartDate, setNewRenewalStartDate] = useState<string>('');
   const [newRenewalEndDate, setNewRenewalEndDate] = useState<string>('');
   const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
@@ -81,9 +82,9 @@ export function ManagerRenewalDialog({
   };
 
   // محاسبه تاریخ شروع تمدید بعدی - زنجیره‌ای از تمام تمدیدها (تایید شده و در انتظار)
-  const calculateNewStartDate = () => {
+  const calculateNewStartDate = (rows: RenewalRecord[] = renewals) => {
     // از بین تمام تمدیدها (approved + pending) آخرین تمدید بر اساس شماره سری را پیدا کن
-    const activeRenewals = renewals.filter((r) => r.status === 'approved' || r.status === 'pending');
+    const activeRenewals = rows.filter((r) => r.status === 'approved' || r.status === 'pending');
     if (activeRenewals.length > 0) {
       const lastRenewal = activeRenewals.reduce((prev, current) =>
         prev.renewal_number > current.renewal_number ? prev : current,
@@ -97,6 +98,14 @@ export function ManagerRenewalDialog({
     }
 
     return calculateCurrentEndDate();
+  };
+
+  const getNextRenewalNumber = (rows: RenewalRecord[] = renewals) => {
+    const usedNumbers = new Set(rows.filter((r) => r.status !== 'rejected').map((r) => r.renewal_number));
+    for (let number = 1; number <= 12; number += 1) {
+      if (!usedNumbers.has(number)) return number;
+    }
+    return null;
   };
 
   // همگام‌سازی total_price با جمع payment_amount + تمدیدهای تایید شده
@@ -141,10 +150,11 @@ export function ManagerRenewalDialog({
         .order('renewal_number', { ascending: true });
 
       if (error) throw error;
-      setRenewals((data as RenewalRecord[]) || []);
+      const fetchedRenewals = (data as RenewalRecord[]) || [];
+      setRenewals(fetchedRenewals);
 
       // تنظیم تاریخ‌های پیش‌فرض برای تمدید جدید
-      const newStart = calculateNewStartDate();
+      const newStart = calculateNewStartDate(fetchedRenewals);
       if (newStart) {
         setNewRenewalStartDate(newStart.toISOString());
         setNewRenewalEndDate(addMonths(newStart, 1).toISOString());
@@ -159,7 +169,7 @@ export function ManagerRenewalDialog({
   useEffect(() => {
     if (open) {
       fetchRenewals();
-      setNewRenewalPrice(originalPrice);
+      setNewRenewalPrice(String(originalPrice || ''));
     }
   }, [open, orderId, originalPrice]);
 
@@ -173,7 +183,7 @@ export function ManagerRenewalDialog({
 
   const handleEditRenewal = (renewal: RenewalRecord) => {
     setEditingRenewal(renewal);
-    setEditPrice(toNumber(renewal.renewal_price));
+    setEditPrice(String(toNumber(renewal.renewal_price) || ''));
     setEditStartDate(renewal.new_start_date);
     setEditEndDate(renewal.new_end_date);
     setManagerNotes(renewal.manager_notes || '');
@@ -190,7 +200,7 @@ export function ManagerRenewalDialog({
 
       // اگر در حال ویرایش هستیم، قیمت و تاریخ‌ها را هم به‌روز کن
       if (editingRenewal && editingRenewal.id === renewalId) {
-        updateData.renewal_price = editPrice;
+        updateData.renewal_price = parseLocalizedNumber(editPrice);
         updateData.new_start_date = editStartDate;
         updateData.new_end_date = editEndDate;
         updateData.manager_notes = managerNotes;
@@ -276,7 +286,7 @@ export function ManagerRenewalDialog({
       const { error } = await supabase
         .from('order_renewals')
         .update({
-          renewal_price: editPrice,
+          renewal_price: parseLocalizedNumber(editPrice),
           new_start_date: editStartDate,
           new_end_date: editEndDate,
           manager_notes: managerNotes,
@@ -344,6 +354,26 @@ export function ManagerRenewalDialog({
     }
   };
 
+  const handleRestoreRenewal = async (renewal: RenewalRecord) => {
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('order_renewals')
+        .update({ status: 'pending', rejection_reason: null, approved_by: null, approved_at: null })
+        .eq('id', renewal.id)
+        .eq('status', 'rejected');
+      if (error) throw error;
+      toast({ title: '✓ تمدید بازگردانده شد', description: 'درخواست دوباره در انتظار بررسی مدیر قرار گرفت' });
+      await fetchRenewals();
+      onRenewalComplete?.();
+    } catch (error) {
+      console.error('Error restoring renewal:', error);
+      toast({ variant: 'destructive', title: 'خطا', description: 'خطا در بازگرداندن تمدید' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCreateRenewal = async () => {
     if (!newRenewalStartDate || !newRenewalEndDate) {
       toast({
@@ -356,8 +386,8 @@ export function ManagerRenewalDialog({
 
     setLoading(true);
     try {
-      const renewalCount = renewals.length;
-      if (renewalCount >= 12) {
+      const nextNumber = getNextRenewalNumber();
+      if (nextNumber === null) {
         toast({
           variant: 'destructive',
           title: 'محدودیت تمدید',
@@ -366,15 +396,21 @@ export function ManagerRenewalDialog({
         return;
       }
 
+      const parsedRenewalPrice = parseLocalizedNumber(newRenewalPrice);
+      if (parsedRenewalPrice <= 0) {
+        toast({ variant: 'destructive', title: 'خطا', description: 'مبلغ تمدید باید بیشتر از صفر باشد' });
+        return;
+      }
+
       const { error } = await supabase.from('order_renewals').insert({
         order_id: orderId,
         customer_id: customerId,
-        renewal_number: renewalCount + 1,
+        renewal_number: nextNumber,
         previous_end_date: newRenewalStartDate,
         new_start_date: newRenewalStartDate,
         new_end_date: newRenewalEndDate,
         original_price: originalPrice,
-        renewal_price: newRenewalPrice,
+        renewal_price: parsedRenewalPrice,
         status: 'approved',
         approved_by: user?.id,
         approved_at: new Date().toISOString(),
@@ -409,7 +445,8 @@ export function ManagerRenewalDialog({
   const currentEndDate = calculateCurrentEndDate();
   const approvedRenewalsCount = renewals.filter((r) => r.status === 'approved').length;
   const pendingRenewals = renewals.filter((r) => r.status === 'pending');
-  const canCreateRenewal = renewals.length < 12;
+  const nextRenewalNumber = getNextRenewalNumber();
+  const canCreateRenewal = nextRenewalNumber !== null;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -496,9 +533,9 @@ export function ManagerRenewalDialog({
                           <div>
                             <Label>قیمت تمدید (تومان)</Label>
                             <Input
-                              type="number"
+                              inputMode="numeric"
                               value={editPrice}
-                              onChange={(e) => setEditPrice(Number(e.target.value))}
+                              onChange={(e) => setEditPrice(e.target.value)}
                               className="mt-1"
                             />
                           </div>
@@ -603,15 +640,15 @@ export function ManagerRenewalDialog({
                 <div className="bg-primary/5 p-4 rounded-lg space-y-3 border border-primary/20">
                   <h4 className="font-medium flex items-center gap-2 text-primary">
                     <RefreshCw className="h-4 w-4" />
-                    ایجاد تمدید ماه {renewals.length + 2}
+                    ایجاد تمدید ماه {(nextRenewalNumber || 1) + 1}
                   </h4>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label>قیمت تمدید (تومان)</Label>
                       <Input
-                        type="number"
+                        inputMode="numeric"
                         value={newRenewalPrice}
-                        onChange={(e) => setNewRenewalPrice(Number(e.target.value))}
+                        onChange={(e) => setNewRenewalPrice(e.target.value)}
                         className="mt-1"
                       />
                     </div>
@@ -692,9 +729,9 @@ export function ManagerRenewalDialog({
                               <div>
                                 <Label>قیمت تمدید (تومان)</Label>
                                 <Input
-                                  type="number"
+                                  inputMode="numeric"
                                   value={editPrice}
-                                  onChange={(e) => setEditPrice(Number(e.target.value))}
+                                  onChange={(e) => setEditPrice(e.target.value)}
                                   className="mt-1"
                                 />
                               </div>
@@ -782,7 +819,38 @@ export function ManagerRenewalDialog({
             </>
           )}
 
-          {renewals.length >= 12 && (
+          {renewals.filter((r) => r.status === 'rejected').length > 0 && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <h4 className="font-medium text-destructive flex items-center gap-2">
+                  <XCircle className="h-4 w-4" />
+                  تمدیدهای رد شده
+                </h4>
+                {renewals.filter((r) => r.status === 'rejected').map((renewal) => (
+                  <div key={renewal.id} className="border border-destructive/30 bg-destructive/5 p-3 rounded-lg space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">تمدید ماه {renewal.renewal_number + 1}</span>
+                      {getStatusBadge(renewal.status)}
+                    </div>
+                    {renewal.rejection_reason && <p className="text-sm text-muted-foreground">دلیل رد: {renewal.rejection_reason}</p>}
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button variant="outline" size="sm" onClick={() => handleRestoreRenewal(renewal)} disabled={loading}>
+                        <Undo2 className="h-4 w-4 mr-2" />
+                        بازگرداندن
+                      </Button>
+                      <Button variant="destructive" size="sm" onClick={() => handleDeleteRenewal(renewal)} disabled={deleteLoadingId === renewal.id}>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        حذف
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {nextRenewalNumber === null && (
             <div className="bg-muted p-4 rounded-lg text-center">
               <p className="text-muted-foreground">به حداکثر تعداد تمدید (12 سری) رسیده‌اید</p>
             </div>
