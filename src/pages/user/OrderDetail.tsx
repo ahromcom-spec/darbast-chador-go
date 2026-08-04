@@ -3131,80 +3131,85 @@ export default function OrderDetail() {
           <CallHistory orderId={order.id} />
 
           {/* Action Buttons */}
-          {/* Action Buttons - Above Card */}
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            {order.subcategory?.code === 'scaffolding_with_materials_and_transport' && 
-             (order.status === 'completed' || order.status === 'paid') && (
-              <Button
-                onClick={handleRenewOrder}
-                disabled={isRenewing}
-                variant="default"
-                size="sm"
-                className="gap-2"
-              >
-                <RefreshCw className={`h-4 w-4 ${isRenewing ? 'animate-spin' : ''}`} />
-                تمدید سفارش
-              </Button>
-            )}
-            {canEdit && (
-              <Button
-                onClick={() => {
-                  // اگر سفارش کارشناسی قیمت‌گذاری است، دیالوگ ویرایش کارشناسی را باز کن
-                  if (isExpertPricingRequest) {
-                    setShowEditExpertPricingDialog(true);
-                  } else {
-                    navigate(`/scaffolding/form?edit=${order.id}`);
-                  }
-                }}
-                size="sm"
-              >
-                <Edit className="h-4 w-4 ml-2" />
-                ویرایش سفارش
-              </Button>
-            )}
-            {order.status !== 'rejected' && order.status !== 'closed' && (
-              <Button
-                variant="outline"
-                onClick={() => setShowTransferDialog(true)}
-                size="sm"
-                className="gap-2"
-              >
-                <ArrowLeftRight className="h-4 w-4" />
-                انتقال سفارش
-              </Button>
-            )}
-            {order.status !== 'rejected' && order.status !== 'closed' && (
-              <Button
-                variant="outline"
-                onClick={() => setShowCollaboratorDialog(true)}
-                size="sm"
-                className="gap-2"
-              >
-                <Users className="h-4 w-4" />
-                افزودن همکار
-              </Button>
-            )}
+          <div className="space-y-2 mb-4">
+            <div className="flex flex-wrap items-center gap-2">
+              {order.subcategory?.code === 'scaffolding_with_materials_and_transport' && 
+               (order.status === 'completed' || order.status === 'paid') && (
+                <Button
+                  onClick={handleRenewOrder}
+                  disabled={isRenewing}
+                  variant="default"
+                  size="sm"
+                  className="gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRenewing ? 'animate-spin' : ''}`} />
+                  تمدید سفارش
+                </Button>
+              )}
+              {canEdit && (
+                <Button
+                  onClick={() => {
+                    // اگر سفارش کارشناسی قیمت‌گذاری است، دیالوگ ویرایش کارشناسی را باز کن
+                    if (isExpertPricingRequest) {
+                      setShowEditExpertPricingDialog(true);
+                    } else {
+                      navigate(`/scaffolding/form?edit=${order.id}`);
+                    }
+                  }}
+                  size="sm"
+                >
+                  <Edit className="h-4 w-4 ml-2" />
+                  ویرایش سفارش
+                </Button>
+              )}
+              {order.status !== 'rejected' && order.status !== 'closed' && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowTransferDialog(true)}
+                  size="sm"
+                  className="gap-2 bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-800"
+                >
+                  <ArrowLeftRight className="h-4 w-4" />
+                  انتقال سفارش
+                </Button>
+              )}
+              {order.status !== 'rejected' && order.status !== 'closed' && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCollaboratorDialog(true)}
+                  size="sm"
+                  className="gap-2 bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 hover:text-amber-800"
+                >
+                  <Users className="h-4 w-4" />
+                  افزودن همکار
+                </Button>
+              )}
+            </div>
+
             {/* دکمه پرینت فاکتور - برای همه سفارشات */}
-            <ManagerOrderInvoice 
-              order={{
-                id: order.id,
-                code: order.code,
-                customer_name: order.customer_name || parsedNotes?.customerName,
-                customer_phone: order.customer_phone || parsedNotes?.phoneNumber,
-                address: order.address,
-                detailed_address: order.detailed_address,
-                created_at: order.created_at,
-                notes: order.notes,
-                payment_amount: order.payment_amount,
-                total_price: order.total_price,
-                total_paid: order.total_paid,
-                status: order.status,
-                customer_completion_date: order.customer_completion_date,
-                province_id: order.province_id,
-                subcategory_id: order.subcategory_id,
-                rental_start_date: order.rental_start_date
-              }}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <ManagerOrderInvoice
+                className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:text-blue-800"
+                order={{
+                  id: order.id,
+                  code: order.code,
+                  customer_name: order.customer_name || parsedNotes?.customerName,
+                  customer_phone: order.customer_phone || parsedNotes?.phoneNumber,
+                  address: order.address,
+                  detailed_address: order.detailed_address,
+                  created_at: order.created_at,
+                  notes: order.notes,
+                  payment_amount: order.payment_amount,
+                  total_price: order.total_price,
+                  total_paid: order.total_paid,
+                  status: order.status,
+                  customer_completion_date: order.customer_completion_date,
+                  province_id: order.province_id,
+                  subcategory_id: order.subcategory_id,
+                  rental_start_date: order.rental_start_date
+                }}
+              />
+            </div>
           </div>
 
           {/* بخش امتیازدهی - فقط برای سفارشات تکمیل شده یا بسته شده */}
