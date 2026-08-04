@@ -158,6 +158,7 @@ interface ActivityLog {
   actor_name: string | null;
   actor_phone: string | null;
   actor_email: string | null;
+  ip_address: string | null;
   details: any;
   diff: any;
   occurred_at: string;
