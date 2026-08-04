@@ -74,6 +74,14 @@ export function RenewalRequestDialog({
     return null;
   };
 
+  const getNextRenewalNumber = () => {
+    const usedNumbers = new Set(renewals.map(r => r.renewal_number));
+    for (let number = 1; number <= 12; number += 1) {
+      if (!usedNumbers.has(number)) return number;
+    }
+    return null;
+  };
+
   const fetchRenewals = async () => {
     try {
       const { data, error } = await supabase
@@ -101,8 +109,8 @@ export function RenewalRequestDialog({
     setLoading(true);
     try {
       // بررسی تعداد تمدیدها
-      const renewalCount = renewals.length;
-      if (renewalCount >= 12) {
+      const nextRenewalNumber = getNextRenewalNumber();
+      if (nextRenewalNumber === null) {
         toast({
           variant: 'destructive',
           title: 'محدودیت تمدید',
@@ -143,7 +151,7 @@ export function RenewalRequestDialog({
         .insert({
           order_id: orderId,
           customer_id: customerId,
-          renewal_number: renewalCount + 1,
+          renewal_number: nextRenewalNumber,
           previous_end_date: previousEndDate.toISOString(),
           new_start_date: newStartDate.toISOString(),
           new_end_date: newEndDate.toISOString(),
@@ -207,7 +215,8 @@ export function RenewalRequestDialog({
   const newStartDate = calculateNewStartDate();
   const approvedRenewalsCount = renewals.filter(r => r.status === 'approved').length;
   const pendingRenewal = renewals.find(r => r.status === 'pending');
-  const canRequestRenewal = renewals.length < 12 && !pendingRenewal && rentalStartDate;
+  const nextRenewalNumber = getNextRenewalNumber();
+  const canRequestRenewal = nextRenewalNumber !== null && !pendingRenewal && rentalStartDate;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -281,7 +290,7 @@ export function RenewalRequestDialog({
               <div className="bg-primary/5 p-4 rounded-lg space-y-3 border border-primary/20">
                 <h4 className="font-medium flex items-center gap-2 text-primary">
                   <RefreshCw className="h-4 w-4" />
-                  درخواست تمدید ماه {renewals.length + 2}
+                  درخواست تمدید ماه {(nextRenewalNumber || 1) + 1}
                 </h4>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>

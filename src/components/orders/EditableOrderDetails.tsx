@@ -1889,7 +1889,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         orderCode={order.code}
         customerId={order.customer_id || ''}
         rentalStartDate={order.rental_start_date || null}
-        originalPrice={order.total_price || order.payment_amount || 0}
+        originalPrice={order.payment_amount || order.total_price || 0}
         onRenewalComplete={onUpdate}
       />
 
