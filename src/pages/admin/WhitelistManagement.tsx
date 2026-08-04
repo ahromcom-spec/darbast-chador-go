@@ -277,7 +277,7 @@ export const WhitelistManagement = () => {
               <Label htmlFor="phone">شماره تلفن *</Label>
               <Input
                 id="phone"
-                placeholder="09121234567"
+                placeholder="09100000000"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 maxLength={11}

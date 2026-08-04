@@ -3,10 +3,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { UserPlus, Loader2, CheckCircle, Phone, User, AlertCircle, UserCheck } from 'lucide-react';
+import { UserPlus, Loader2, CheckCircle, Phone, User, AlertCircle, UserCheck, FileText } from 'lucide-react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -31,6 +32,7 @@ export default function SiteRegistrationModule() {
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [phoneNumber, setPhoneNumber] = useState(prefillPhone);
   const [fullName, setFullName] = useState(prefillName);
+  const [bio, setBio] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [registeredInfo, setRegisteredInfo] = useState<{ phone: string; name: string } | null>(null);
@@ -178,6 +180,7 @@ export default function SiteRegistrationModule() {
         body: {
           phone_number: normalizedPhone,
           full_name: fullName.trim(),
+          bio: bio.trim(),
           registered_by: user?.id,
         },
       });
@@ -194,6 +197,7 @@ export default function SiteRegistrationModule() {
       toast.success('کاربر با موفقیت ثبت‌نام شد');
       setPhoneNumber('');
       setFullName('');
+      setBio('');
     } catch (error: any) {
       console.error('Registration error:', error);
       toast.error(error.message || 'خطا در ثبت‌نام کاربر');
@@ -259,6 +263,22 @@ export default function SiteRegistrationModule() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="bio" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  بیوگرافی / یادداشت (اختیاری)
+                </Label>
+                <Textarea
+                  id="bio"
+                  placeholder="یادداشتی برای شناسایی راحت‌تر این کاربر..."
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  maxLength={500}
+                  rows={3}
+                  className="text-right"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="phoneNumber" className="flex items-center gap-2">
                   <Phone className="h-4 w-4" />
                   شماره موبایل
@@ -266,7 +286,7 @@ export default function SiteRegistrationModule() {
                 <Input
                   id="phoneNumber"
                   type="tel"
-                  placeholder="مثال: 09123456789"
+                  placeholder="مثال: 09100000000"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   dir="ltr"

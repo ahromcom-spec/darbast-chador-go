@@ -1211,7 +1211,7 @@ export function ModulesManagement() {
                 <div className="flex-1">
                   <Input
                     type="tel"
-                    placeholder="شماره موبایل (مثال: 09123456789)"
+                    placeholder="شماره موبایل (مثال: 09100000000)"
                     value={newPhoneNumber}
                     onChange={(e) => setNewPhoneNumber(e.target.value)}
                     dir="ltr"
