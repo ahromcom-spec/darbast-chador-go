@@ -1240,7 +1240,7 @@ export default function OrderDetail() {
             </Card>
           )}
 
-          <Collapsible open={isLocationSectionExpanded} onOpenChange={setLocationSectionExpanded}>
+          <Collapsible open={isLocationSectionExpanded} onOpenChange={setIsLocationSectionExpanded}>
             <Card>
               <CollapsibleTrigger asChild>
                 <CardHeader className="cursor-pointer hover:bg-muted/40 transition-colors rounded-t-lg">
@@ -1276,7 +1276,7 @@ export default function OrderDetail() {
             </Card>
           </Collapsible>
 
-          <Collapsible open={isDetailsSectionExpanded} onOpenChange={setDetailsSectionExpanded}>
+          <Collapsible open={isDetailsSectionExpanded} onOpenChange={setIsDetailsSectionExpanded}>
             <Card>
               <CollapsibleTrigger asChild>
                 <CardHeader className="cursor-pointer hover:bg-muted/40 transition-colors rounded-t-lg">
@@ -2359,7 +2359,7 @@ export default function OrderDetail() {
                   );
                 })()}
 
-              <Collapsible open={isRequestsSectionExpanded} onOpenChange={setRequestsSectionExpanded}>
+              <Collapsible open={isRequestsSectionExpanded} onOpenChange={setIsRequestsSectionExpanded}>
                 <Card>
                   <CollapsibleTrigger asChild>
                     <CardHeader className="cursor-pointer hover:bg-muted/40 transition-colors rounded-t-lg">
@@ -3085,7 +3085,7 @@ export default function OrderDetail() {
             onClose={() => setSelectedImage(null)}
           />
 
-          <Collapsible open={isOwnershipSectionExpanded} onOpenChange={setOwnershipSectionExpanded}>
+          <Collapsible open={isOwnershipSectionExpanded} onOpenChange={setIsOwnershipSectionExpanded}>
             <Card>
               <CollapsibleTrigger asChild>
                 <CardHeader className="cursor-pointer hover:bg-muted/40 transition-colors rounded-t-lg">
