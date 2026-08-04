@@ -158,6 +158,7 @@ interface ActivityLog {
   actor_name: string | null;
   actor_phone: string | null;
   actor_email: string | null;
+  ip_address: string | null;
   details: any;
   diff: any;
   occurred_at: string;
@@ -706,7 +707,11 @@ export default function ActivityLogsModule() {
                           <TableCell className="text-sm">
                             <div className="font-medium">{l.actor_name || '—'}</div>
                             <div className="text-xs text-muted-foreground">{l.actor_phone || l.actor_email || ''}</div>
+                            {l.ip_address && (
+                              <div className="text-[10px] text-muted-foreground" dir="ltr">IP: {l.ip_address}</div>
+                            )}
                           </TableCell>
+
                           <TableCell>
                             <Badge className={ACTION_COLORS[l.action] || 'bg-gray-100 text-gray-700'}>
                               {ACTION_LABELS[l.action] || l.action}

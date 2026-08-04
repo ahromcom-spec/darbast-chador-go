@@ -212,6 +212,23 @@ export function useSiteAnalytics() {
         visited_pages: [currentPage]
       });
 
+      // Log the visit in the CEO activity-log module (works for guests too)
+      if (!sessionStorage.getItem('visit_logged')) {
+        sessionStorage.setItem('visit_logged', '1');
+        supabase.functions.invoke('track-visit', {
+          body: {
+            page: currentPage,
+            pageTitle: document.title,
+            referrer: document.referrer || null,
+            sessionId: sessionId.current,
+            deviceType: getDeviceType(),
+            ip: ipAddress,
+            userAgent: navigator.userAgent,
+            userId: user?.id || null,
+          },
+        }).catch(() => { /* silent */ });
+      }
+
       console.debug('Session created immediately:', sessionId.current);
     } catch (error) {
       console.debug('Session creation error:', error);
