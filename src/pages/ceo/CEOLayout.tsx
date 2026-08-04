@@ -6,7 +6,6 @@ import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 import { 
   LayoutDashboard, 
   Users, 
-  ArrowLeftRight, 
   ClipboardCheck, 
   Play, 
   Loader, 
