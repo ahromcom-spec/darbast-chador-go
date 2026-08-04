@@ -19,7 +19,6 @@ import { formatPersianDate, formatPersianDateTime } from '@/lib/dateUtils';
 import { useToast } from '@/hooks/use-toast';
 import { parseOrderNotes } from './OrderDetailsView';
 import { parseLocalizedNumber } from '@/lib/numberParsing';
-import VoiceCall from './VoiceCall';
 import CallHistory from '@/components/calls/CallHistory';
 import OrderChat from './OrderChat';
 import { RepairRequestDialog } from './RepairRequestDialog';
@@ -1806,14 +1805,6 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         canUpload={true} 
         canDelete={true} 
         onMediaChange={onUpdate} 
-      />
-
-      {/* Voice Call for managers to call customers */}
-      <VoiceCall 
-        orderId={order.id}
-        managerId={order.executed_by || order.approved_by}
-        customerId={order.customer_id}
-        isManager={true}
       />
 
       {/* Call History */}
