@@ -51,6 +51,7 @@ import {
   Users,
   User,
   ChevronDown,
+  ClipboardList,
   ChevronUp,
   CalendarDays
 } from "lucide-react";
@@ -242,6 +243,10 @@ export default function OrderDetail() {
   const [approvedCollectionDate, setApprovedCollectionDate] = useState<string | null>(null);
   const [isOrderDetailsExpanded, setIsOrderDetailsExpanded] = useState(false);
   const [isPriceDetailsExpanded, setIsPriceDetailsExpanded] = useState(false);
+  const [isLocationSectionExpanded, setIsLocationSectionExpanded] = useState(false);
+  const [isDetailsSectionExpanded, setIsDetailsSectionExpanded] = useState(false);
+  const [isRequestsSectionExpanded, setIsRequestsSectionExpanded] = useState(false);
+  const [isOwnershipSectionExpanded, setIsOwnershipSectionExpanded] = useState(false);
   const [isConfirmingPrice, setIsConfirmingPrice] = useState(false);
   const [showAdvancePayment, setShowAdvancePayment] = useState(false);
   const [advancePaymentAmount, setAdvancePaymentAmount] = useState(0);
@@ -1015,82 +1020,6 @@ export default function OrderDetail() {
         </Button>
 
         <div className="space-y-6">
-          {/* Action Buttons - Above Card */}
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            {order.subcategory?.code === 'scaffolding_with_materials_and_transport' && 
-             (order.status === 'completed' || order.status === 'paid') && (
-              <Button
-                onClick={handleRenewOrder}
-                disabled={isRenewing}
-                variant="default"
-                size="sm"
-                className="gap-2"
-              >
-                <RefreshCw className={`h-4 w-4 ${isRenewing ? 'animate-spin' : ''}`} />
-                تمدید سفارش
-              </Button>
-            )}
-            {canEdit && (
-              <Button
-                onClick={() => {
-                  // اگر سفارش کارشناسی قیمت‌گذاری است، دیالوگ ویرایش کارشناسی را باز کن
-                  if (isExpertPricingRequest) {
-                    setShowEditExpertPricingDialog(true);
-                  } else {
-                    navigate(`/scaffolding/form?edit=${order.id}`);
-                  }
-                }}
-                size="sm"
-              >
-                <Edit className="h-4 w-4 ml-2" />
-                ویرایش سفارش
-              </Button>
-            )}
-            {order.status !== 'rejected' && order.status !== 'closed' && (
-              <Button
-                variant="outline"
-                onClick={() => setShowTransferDialog(true)}
-                size="sm"
-                className="gap-2"
-              >
-                <ArrowLeftRight className="h-4 w-4" />
-                انتقال سفارش
-              </Button>
-            )}
-            {order.status !== 'rejected' && order.status !== 'closed' && (
-              <Button
-                variant="outline"
-                onClick={() => setShowCollaboratorDialog(true)}
-                size="sm"
-                className="gap-2"
-              >
-                <Users className="h-4 w-4" />
-                افزودن همکار
-              </Button>
-            )}
-            {/* دکمه پرینت فاکتور - برای همه سفارشات */}
-            <ManagerOrderInvoice 
-              order={{
-                id: order.id,
-                code: order.code,
-                customer_name: order.customer_name || parsedNotes?.customerName,
-                customer_phone: order.customer_phone || parsedNotes?.phoneNumber,
-                address: order.address,
-                detailed_address: order.detailed_address,
-                created_at: order.created_at,
-                notes: order.notes,
-                payment_amount: order.payment_amount,
-                total_price: order.total_price,
-                total_paid: order.total_paid,
-                status: order.status,
-                customer_completion_date: order.customer_completion_date,
-                province_id: order.province_id,
-                subcategory_id: order.subcategory_id,
-                rental_start_date: order.rental_start_date
-              }}
-            />
-          </div>
-
           {/* Order Header */}
           <Card>
             <CardHeader>
@@ -1311,6 +1240,57 @@ export default function OrderDetail() {
             </Card>
           )}
 
+          <Collapsible open={isLocationSectionExpanded} onOpenChange={setIsLocationSectionExpanded}>
+            <Card>
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-muted/40 transition-colors rounded-t-lg">
+                  <div className="flex items-center justify-between gap-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <MapPin className="h-5 w-5 text-primary" />
+                      آدرس و لوکیشن محل سفارش
+                    </CardTitle>
+                    <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isLocationSectionExpanded ? "rotate-180" : ""}`} />
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="space-y-6">
+          {/* نقشه موقعیت پروژه */}
+          {order.location_lat && order.location_lng && (
+            <OrderLocationEditor
+              orderId={order.id}
+              hierarchyProjectId={order.hierarchy_project_id}
+              locationLat={order.location_lat}
+              locationLng={order.location_lng}
+              address={order.address}
+              detailedAddress={order.detailed_address}
+              orderStatus={order.status}
+              locationConfirmedByCustomer={order.location_confirmed_by_customer}
+              locationConfirmedAt={order.location_confirmed_at}
+              isManager={false}
+              onLocationUpdated={fetchOrderDetails}
+            />
+          )}
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
+          <Collapsible open={isDetailsSectionExpanded} onOpenChange={setIsDetailsSectionExpanded}>
+            <Card>
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-muted/40 transition-colors rounded-t-lg">
+                  <div className="flex items-center justify-between gap-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <ClipboardList className="h-5 w-5 text-primary" />
+                      جزئیات سفارش و مراحل سفارش
+                    </CardTitle>
+                    <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isDetailsSectionExpanded ? "rotate-180" : ""}`} />
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="space-y-6">
           {/* Order Details from Notes or Payment Amount */}
           {(parsedNotes || order.payment_amount || notesParseError) && (
             <Collapsible open={isOrderDetailsExpanded} onOpenChange={setIsOrderDetailsExpanded}>
@@ -1807,187 +1787,106 @@ export default function OrderDetail() {
             </Collapsible>
           )}
 
+          {/* Timeline */}
+          <OrderTimeline
+            orderStatus={order.status === 'paid' && remainingAmountForPayment > 0 ? 'awaiting_payment' : order.status}
+            createdAt={order.created_at}
+            approvedAt={order.approved_at}
+            executionStartDate={order.execution_start_date}
+            executionEndDate={order.execution_end_date}
+            customerCompletionDate={order.customer_completion_date}
+            rejectionReason={order.rejection_reason}
+            executionStage={order.execution_stage}
+            executionStageUpdatedAt={order.execution_stage_updated_at}
+            paymentConfirmedAt={isFullyPaidForPayment ? order.payment_confirmed_at : null}
+            approvedCollectionDate={approvedCollectionDate}
+            approvals={approvals}
+            totalPaid={order.total_paid}
+            totalPrice={order.total_price}
+          />
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
           {/* Repair and Collection Request Buttons - Outside the collapsible order details card */}
           {(parsedNotes || order.payment_amount || notesParseError) && (
             <>
-                {/* دکمه درخواست تعمیر - بعد از ثبت تاریخ شروع کرایه (نصب داربست) */}
-                {order.subcategory?.code === '10' &&
-                 !!order.rental_start_date &&
-                 ['in_progress', 'completed', 'paid', 'closed'].includes(order.status) && (
-                  <section className="rounded-2xl border-2 border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 p-4 space-y-3">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <div className="flex items-start gap-3">
-                        <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0">
-                          <Edit className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                {/* بلوک تاریخ‌های مهم - کادر جداگانه */}
+                {(parsedNotes?.installDate || parsedNotes?.dueDate || parsedNotes?.installationDateTime || parsedNotes?.rental_start_date || parsedNotes?.rental_end_date || order.rental_start_date || order.customer_completion_date) && (
+                  <section className="rounded-2xl border-2 border-blue-300 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20 p-4 space-y-3">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-blue-600" />
+                      تاریخ‌های مهم سفارش
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {/* تاریخ‌های داربست */}
+                      {parsedNotes?.installDate && (
+                        <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
+                          <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">تاریخ نصب پیشنهادی</span>
+                          <span className="font-bold text-base text-foreground">
+                            {parsedNotes.installDate.includes('T') || parsedNotes.installDate.includes('-')
+                              ? formatPersianDateTime(parsedNotes.installDate)
+                              : parsedNotes.installDate}
+                          </span>
                         </div>
-                        <div>
-                          <p className="font-medium text-amber-900 dark:text-amber-100 mb-1">
-                            آیا نیاز به تعمیر داربست دارید؟
-                          </p>
-                          <p className="text-sm text-amber-700 dark:text-amber-300">
-                            در صورت آسیب‌دیدگی یا نیاز به تعمیر داربست، درخواست خود را ثبت کنید.
-                          </p>
+                      )}
+                      {parsedNotes?.installationDateTime && (
+                        <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
+                          <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">زمان نصب درخواستی</span>
+                          <span className="font-bold text-base text-foreground">
+                            {parsedNotes.installationDateTime.includes('T') || parsedNotes.installationDateTime.includes('-')
+                              ? formatPersianDateTime(parsedNotes.installationDateTime)
+                              : parsedNotes.installationDateTime}
+                          </span>
                         </div>
-                      </div>
-                      <Button 
-                        onClick={() => setShowRepairDialog(true)}
-                        className="gap-2 bg-amber-600 hover:bg-amber-700 text-white whitespace-nowrap"
-                      >
-                        <Edit className="h-4 w-4" />
-                        نیاز به تعمیر سفارش انجام شده داریم
-                      </Button>
+                      )}
+                      {parsedNotes?.dueDate && (
+                        <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
+                          <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">سررسید قرارداد</span>
+                          <span className="font-bold text-base text-foreground">
+                            {parsedNotes.dueDate.includes('T') || parsedNotes.dueDate.includes('-')
+                              ? formatPersianDate(parsedNotes.dueDate)
+                              : parsedNotes.dueDate}
+                          </span>
+                        </div>
+                      )}
+                      {/* تاریخ شروع کرایه داربست - از دیتابیس (توسط مدیر ثبت شده) */}
+                      {order.rental_start_date && (
+                        <div className="p-4 bg-white dark:bg-green-900/30 rounded-xl border border-green-200 dark:border-green-700 shadow-sm">
+                          <span className="text-xs text-green-600 dark:text-green-400 block mb-1">تاریخ شروع کرایه داربست</span>
+                          <span className="font-bold text-base text-foreground">
+                            {formatPersianDate(order.rental_start_date)}
+                          </span>
+                        </div>
+                      )}
+                      {/* تاریخ جمع‌آوری - از دیتابیس */}
+                      {order.customer_completion_date && (
+                        <div className="p-4 bg-white dark:bg-amber-900/30 rounded-xl border border-amber-200 dark:border-amber-700 shadow-sm">
+                          <span className="text-xs text-amber-600 dark:text-amber-400 block mb-1">تاریخ جمع‌آوری داربست</span>
+                          <span className="font-bold text-base text-foreground">
+                            {formatPersianDate(order.customer_completion_date)}
+                          </span>
+                        </div>
+                      )}
+                      {/* تاریخ‌های کرایه از notes (فرم کرایه اجناس) */}
+                      {parsedNotes?.rental_start_date && !order.rental_start_date && (
+                        <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
+                          <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">تاریخ شروع اجاره</span>
+                          <span className="font-bold text-base text-foreground">
+                            {formatPersianDate(parsedNotes.rental_start_date)}
+                          </span>
+                        </div>
+                      )}
+                      {parsedNotes?.rental_end_date && (
+                        <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
+                          <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">تاریخ پایان اجاره</span>
+                          <span className="font-bold text-base text-foreground">
+                            {formatPersianDate(parsedNotes.rental_end_date)}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    {/* نمایش خلاصه درخواست‌های تعمیر */}
-                    {repairRequests.length > 0 && (
-                      <div className="border-t border-amber-200 dark:border-amber-700 pt-3 space-y-2">
-                        {repairRequests.map((req: any, idx: number) => (
-                          <div key={idx} className="flex items-center justify-between p-2 bg-amber-100/50 dark:bg-amber-900/30 rounded-lg text-sm">
-                            <div className="flex items-center gap-2">
-                              <CalendarDays className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                              <span className="text-amber-800 dark:text-amber-200">
-                                درخواست تعمیر {formatPersianDate(req.created_at)}
-                              </span>
-                            </div>
-                            <Badge variant="outline" className={
-                              req.status === 'approved' || req.status === 'completed' 
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-300' 
-                                : req.status === 'rejected'
-                                ? 'bg-red-100 text-red-700 border-red-300'
-                                : 'bg-amber-100 text-amber-700 border-amber-300'
-                            }>
-                              {req.status === 'approved' ? 'تایید شده' : req.status === 'completed' ? 'انجام شده' : req.status === 'rejected' ? 'رد شده' : 'در انتظار بررسی'}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </section>
-                )}
-
-                {/* دکمه درخواست جمع‌آوری - برای سفارش‌های در حال اجرا، اجرا شده و پرداخت شده خدمات اجرای داربست به همراه اجناس */}
-                {order.subcategory?.code === '10' && 
-                 ['in_progress', 'completed', 'paid'].includes(order.status) && (
-                  <section className="rounded-2xl border-2 border-teal-300 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20 p-4 space-y-3">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <div className="flex items-start gap-3">
-                        <div className="h-10 w-10 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center flex-shrink-0">
-                          <Calendar className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-teal-900 dark:text-teal-100 mb-1">
-                            درخواست جمع‌آوری داربست
-                          </p>
-                          <p className="text-sm text-teal-700 dark:text-teal-300">
-                            برای اعلام تاریخ جمع‌آوری داربست و هماهنگی با تیم اجرایی، درخواست خود را ثبت کنید.
-                          </p>
-                        </div>
-                      </div>
-                      <Button 
-                        onClick={() => setShowCollectionDialog(true)}
-                        className="gap-2 bg-teal-600 hover:bg-teal-700 text-white whitespace-nowrap"
-                      >
-                        <Calendar className="h-4 w-4" />
-                        درخواست جمع‌آوری
-                      </Button>
-                    </div>
-                    {/* نمایش تاریخ‌های جمع‌آوری */}
-                    {collectionRequestInfo && (collectionRequestInfo.requested_date || collectionRequestInfo.confirmed_date) && (
-                      <div className="border-t border-teal-200 dark:border-teal-700 pt-3 space-y-2">
-                        {/* تاریخ درخواست جمع‌آوری */}
-                        {collectionRequestInfo.requested_date && (
-                          <div className="flex items-center justify-between p-2 bg-teal-100/50 dark:bg-teal-900/30 rounded-lg text-sm">
-                            <div className="flex items-center gap-2">
-                              <CalendarDays className="h-4 w-4 text-teal-600 dark:text-teal-400" />
-                              <span className="text-teal-800 dark:text-teal-200">
-                                تاریخ درخواست جمع‌آوری: {formatPersianDate(collectionRequestInfo.requested_date)}
-                              </span>
-                            </div>
-                            <Badge variant="outline" className={
-                              collectionRequestInfo.status === 'approved'
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-300'
-                                : collectionRequestInfo.status === 'rejected'
-                                ? 'bg-red-100 text-red-700 border-red-300'
-                                : 'bg-teal-100 text-teal-700 border-teal-300'
-                            }>
-                              {collectionRequestInfo.status === 'approved' ? 'تایید شده' : collectionRequestInfo.status === 'rejected' ? 'رد شده' : 'در انتظار بررسی'}
-                            </Badge>
-                          </div>
-                        )}
-                        {/* تاریخ جمع‌آوری تثبیت شده */}
-                        {collectionRequestInfo.confirmed_date && (
-                          <div className="flex items-center gap-2 p-2 bg-green-100/50 dark:bg-green-900/30 rounded-lg text-sm">
-                            <CalendarDays className="h-4 w-4 text-green-600 dark:text-green-400" />
-                            <span className="text-green-800 dark:text-green-200 font-medium">
-                              تاریخ جمع‌آوری تثبیت شده: {formatPersianDate(collectionRequestInfo.confirmed_date)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </section>
-                )}
-
-                {/* دکمه تمدید سفارش - داربست به همراه اجناس (پس از ثبت تاریخ شروع کرایه) یا کارشناسی قیمت تایید شده */}
-                {((order.subcategory?.code === '10' &&
-                   !!order.rental_start_date &&
-                   ['in_progress', 'completed', 'paid', 'closed'].includes(order.status)) ||
-                 order.execution_stage === 'order_executed' || 
-                 (isExpertPricingRequest && customerHasConfirmedPrice && ['in_progress', 'completed', 'paid'].includes(order.status))) && (
-                  <section className="rounded-2xl border-2 border-primary/50 dark:border-primary/30 bg-primary/5 dark:bg-primary/10 p-4 space-y-3">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <div className="flex items-start gap-3">
-                        <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                          <RefreshCw className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-foreground mb-1">
-                            تمدید سفارش
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            برای تمدید کرایه داربست برای دوره بعدی، درخواست تمدید ثبت کنید.
-                          </p>
-                        </div>
-                      </div>
-                      <Button 
-                        onClick={() => setShowRenewalDialog(true)}
-                        className="gap-2 whitespace-nowrap"
-                      >
-                        <RefreshCw className="h-4 w-4" />
-                        درخواست تمدید
-                      </Button>
-                    </div>
-                    {/* نمایش خلاصه تمدیدها */}
-                    {approvedRenewals.length > 0 && (
-                      <div className="border-t border-primary/20 pt-3 space-y-2">
-                        {approvedRenewals.map((renewal: any) => (
-                          <div key={renewal.renewal_number} className="space-y-1">
-                            <div className="flex items-center justify-between p-2 bg-primary/10 rounded-lg text-sm">
-                              <div className="flex items-center gap-2">
-                                <RefreshCw className="h-4 w-4 text-primary" />
-                                <span className="text-foreground">
-                                  تمدید ماه {renewal.renewal_number + 1}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                {renewal.new_start_date && (
-                                  <span className="text-xs text-muted-foreground">
-                                    {formatPersianDate(renewal.new_start_date)} - {renewal.new_end_date ? formatPersianDate(renewal.new_end_date) : '...'}
-                                  </span>
-                                )}
-                                <span className="font-medium text-primary">
-                                  {(renewal.renewal_price || 0).toLocaleString('fa-IR')} تومان
-                                </span>
-                              </div>
-                            </div>
-                            {renewal.manager_notes && (
-                              <p className="text-[11px] text-muted-foreground italic px-3 leading-relaxed">
-                                شرح: {renewal.manager_notes}
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </section>
                 )}
 
@@ -2460,120 +2359,207 @@ export default function OrderDetail() {
                   );
                 })()}
 
-                {/* بلوک تاریخ‌های مهم - کادر جداگانه */}
-                {(parsedNotes?.installDate || parsedNotes?.dueDate || parsedNotes?.installationDateTime || parsedNotes?.rental_start_date || parsedNotes?.rental_end_date || order.rental_start_date || order.customer_completion_date) && (
-                  <section className="rounded-2xl border-2 border-blue-300 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20 p-4 space-y-3">
-                    <h3 className="font-semibold flex items-center gap-2">
-                      <Calendar className="h-5 w-5 text-blue-600" />
-                      تاریخ‌های مهم سفارش
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      {/* تاریخ‌های داربست */}
-                      {parsedNotes?.installDate && (
-                        <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
-                          <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">تاریخ نصب پیشنهادی</span>
-                          <span className="font-bold text-base text-foreground">
-                            {parsedNotes.installDate.includes('T') || parsedNotes.installDate.includes('-')
-                              ? formatPersianDateTime(parsedNotes.installDate)
-                              : parsedNotes.installDate}
-                          </span>
+              <Collapsible open={isRequestsSectionExpanded} onOpenChange={setIsRequestsSectionExpanded}>
+                <Card>
+                  <CollapsibleTrigger asChild>
+                    <CardHeader className="cursor-pointer hover:bg-muted/40 transition-colors rounded-t-lg">
+                      <div className="flex items-center justify-between gap-3">
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <RefreshCw className="h-5 w-5 text-primary" />
+                          درخواست جمع‌آوری، تعمیر و تمدید
+                        </CardTitle>
+                        <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isRequestsSectionExpanded ? "rotate-180" : ""}`} />
+                      </div>
+                    </CardHeader>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="space-y-6">
+                {/* دکمه درخواست تعمیر - بعد از ثبت تاریخ شروع کرایه (نصب داربست) */}
+                {order.subcategory?.code === '10' &&
+                 !!order.rental_start_date &&
+                 ['in_progress', 'completed', 'paid', 'closed'].includes(order.status) && (
+                  <section className="rounded-2xl border-2 border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 p-4 space-y-3">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0">
+                          <Edit className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                         </div>
-                      )}
-                      {parsedNotes?.installationDateTime && (
-                        <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
-                          <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">زمان نصب درخواستی</span>
-                          <span className="font-bold text-base text-foreground">
-                            {parsedNotes.installationDateTime.includes('T') || parsedNotes.installationDateTime.includes('-')
-                              ? formatPersianDateTime(parsedNotes.installationDateTime)
-                              : parsedNotes.installationDateTime}
-                          </span>
+                        <div>
+                          <p className="font-medium text-amber-900 dark:text-amber-100 mb-1">
+                            آیا نیاز به تعمیر داربست دارید؟
+                          </p>
+                          <p className="text-sm text-amber-700 dark:text-amber-300">
+                            در صورت آسیب‌دیدگی یا نیاز به تعمیر داربست، درخواست خود را ثبت کنید.
+                          </p>
                         </div>
-                      )}
-                      {parsedNotes?.dueDate && (
-                        <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
-                          <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">سررسید قرارداد</span>
-                          <span className="font-bold text-base text-foreground">
-                            {parsedNotes.dueDate.includes('T') || parsedNotes.dueDate.includes('-')
-                              ? formatPersianDate(parsedNotes.dueDate)
-                              : parsedNotes.dueDate}
-                          </span>
-                        </div>
-                      )}
-                      {/* تاریخ شروع کرایه داربست - از دیتابیس (توسط مدیر ثبت شده) */}
-                      {order.rental_start_date && (
-                        <div className="p-4 bg-white dark:bg-green-900/30 rounded-xl border border-green-200 dark:border-green-700 shadow-sm">
-                          <span className="text-xs text-green-600 dark:text-green-400 block mb-1">تاریخ شروع کرایه داربست</span>
-                          <span className="font-bold text-base text-foreground">
-                            {formatPersianDate(order.rental_start_date)}
-                          </span>
-                        </div>
-                      )}
-                      {/* تاریخ جمع‌آوری - از دیتابیس */}
-                      {order.customer_completion_date && (
-                        <div className="p-4 bg-white dark:bg-amber-900/30 rounded-xl border border-amber-200 dark:border-amber-700 shadow-sm">
-                          <span className="text-xs text-amber-600 dark:text-amber-400 block mb-1">تاریخ جمع‌آوری داربست</span>
-                          <span className="font-bold text-base text-foreground">
-                            {formatPersianDate(order.customer_completion_date)}
-                          </span>
-                        </div>
-                      )}
-                      {/* تاریخ‌های کرایه از notes (فرم کرایه اجناس) */}
-                      {parsedNotes?.rental_start_date && !order.rental_start_date && (
-                        <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
-                          <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">تاریخ شروع اجاره</span>
-                          <span className="font-bold text-base text-foreground">
-                            {formatPersianDate(parsedNotes.rental_start_date)}
-                          </span>
-                        </div>
-                      )}
-                      {parsedNotes?.rental_end_date && (
-                        <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
-                          <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">تاریخ پایان اجاره</span>
-                          <span className="font-bold text-base text-foreground">
-                            {formatPersianDate(parsedNotes.rental_end_date)}
-                          </span>
-                        </div>
-                      )}
+                      </div>
+                      <Button 
+                        onClick={() => setShowRepairDialog(true)}
+                        className="gap-2 bg-amber-600 hover:bg-amber-700 text-white whitespace-nowrap"
+                      >
+                        <Edit className="h-4 w-4" />
+                        نیاز به تعمیر سفارش انجام شده داریم
+                      </Button>
                     </div>
+                    {/* نمایش خلاصه درخواست‌های تعمیر */}
+                    {repairRequests.length > 0 && (
+                      <div className="border-t border-amber-200 dark:border-amber-700 pt-3 space-y-2">
+                        {repairRequests.map((req: any, idx: number) => (
+                          <div key={idx} className="flex items-center justify-between p-2 bg-amber-100/50 dark:bg-amber-900/30 rounded-lg text-sm">
+                            <div className="flex items-center gap-2">
+                              <CalendarDays className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                              <span className="text-amber-800 dark:text-amber-200">
+                                درخواست تعمیر {formatPersianDate(req.created_at)}
+                              </span>
+                            </div>
+                            <Badge variant="outline" className={
+                              req.status === 'approved' || req.status === 'completed' 
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-300' 
+                                : req.status === 'rejected'
+                                ? 'bg-red-100 text-red-700 border-red-300'
+                                : 'bg-amber-100 text-amber-700 border-amber-300'
+                            }>
+                              {req.status === 'approved' ? 'تایید شده' : req.status === 'completed' ? 'انجام شده' : req.status === 'rejected' ? 'رد شده' : 'در انتظار بررسی'}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </section>
                 )}
+
+                {/* دکمه درخواست جمع‌آوری - برای سفارش‌های در حال اجرا، اجرا شده و پرداخت شده خدمات اجرای داربست به همراه اجناس */}
+                {order.subcategory?.code === '10' && 
+                 ['in_progress', 'completed', 'paid'].includes(order.status) && (
+                  <section className="rounded-2xl border-2 border-teal-300 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20 p-4 space-y-3">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center flex-shrink-0">
+                          <Calendar className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-teal-900 dark:text-teal-100 mb-1">
+                            درخواست جمع‌آوری داربست
+                          </p>
+                          <p className="text-sm text-teal-700 dark:text-teal-300">
+                            برای اعلام تاریخ جمع‌آوری داربست و هماهنگی با تیم اجرایی، درخواست خود را ثبت کنید.
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        onClick={() => setShowCollectionDialog(true)}
+                        className="gap-2 bg-teal-600 hover:bg-teal-700 text-white whitespace-nowrap"
+                      >
+                        <Calendar className="h-4 w-4" />
+                        درخواست جمع‌آوری
+                      </Button>
+                    </div>
+                    {/* نمایش تاریخ‌های جمع‌آوری */}
+                    {collectionRequestInfo && (collectionRequestInfo.requested_date || collectionRequestInfo.confirmed_date) && (
+                      <div className="border-t border-teal-200 dark:border-teal-700 pt-3 space-y-2">
+                        {/* تاریخ درخواست جمع‌آوری */}
+                        {collectionRequestInfo.requested_date && (
+                          <div className="flex items-center justify-between p-2 bg-teal-100/50 dark:bg-teal-900/30 rounded-lg text-sm">
+                            <div className="flex items-center gap-2">
+                              <CalendarDays className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                              <span className="text-teal-800 dark:text-teal-200">
+                                تاریخ درخواست جمع‌آوری: {formatPersianDate(collectionRequestInfo.requested_date)}
+                              </span>
+                            </div>
+                            <Badge variant="outline" className={
+                              collectionRequestInfo.status === 'approved'
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-300'
+                                : collectionRequestInfo.status === 'rejected'
+                                ? 'bg-red-100 text-red-700 border-red-300'
+                                : 'bg-teal-100 text-teal-700 border-teal-300'
+                            }>
+                              {collectionRequestInfo.status === 'approved' ? 'تایید شده' : collectionRequestInfo.status === 'rejected' ? 'رد شده' : 'در انتظار بررسی'}
+                            </Badge>
+                          </div>
+                        )}
+                        {/* تاریخ جمع‌آوری تثبیت شده */}
+                        {collectionRequestInfo.confirmed_date && (
+                          <div className="flex items-center gap-2 p-2 bg-green-100/50 dark:bg-green-900/30 rounded-lg text-sm">
+                            <CalendarDays className="h-4 w-4 text-green-600 dark:text-green-400" />
+                            <span className="text-green-800 dark:text-green-200 font-medium">
+                              تاریخ جمع‌آوری تثبیت شده: {formatPersianDate(collectionRequestInfo.confirmed_date)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </section>
+                )}
+
+                {/* دکمه تمدید سفارش - داربست به همراه اجناس (پس از ثبت تاریخ شروع کرایه) یا کارشناسی قیمت تایید شده */}
+                {((order.subcategory?.code === '10' &&
+                   !!order.rental_start_date &&
+                   ['in_progress', 'completed', 'paid', 'closed'].includes(order.status)) ||
+                 order.execution_stage === 'order_executed' || 
+                 (isExpertPricingRequest && customerHasConfirmedPrice && ['in_progress', 'completed', 'paid'].includes(order.status))) && (
+                  <section className="rounded-2xl border-2 border-primary/50 dark:border-primary/30 bg-primary/5 dark:bg-primary/10 p-4 space-y-3">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                          <RefreshCw className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground mb-1">
+                            تمدید سفارش
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            برای تمدید کرایه داربست برای دوره بعدی، درخواست تمدید ثبت کنید.
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        onClick={() => setShowRenewalDialog(true)}
+                        className="gap-2 whitespace-nowrap"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        درخواست تمدید
+                      </Button>
+                    </div>
+                    {/* نمایش خلاصه تمدیدها */}
+                    {approvedRenewals.length > 0 && (
+                      <div className="border-t border-primary/20 pt-3 space-y-2">
+                        {approvedRenewals.map((renewal: any) => (
+                          <div key={renewal.renewal_number} className="space-y-1">
+                            <div className="flex items-center justify-between p-2 bg-primary/10 rounded-lg text-sm">
+                              <div className="flex items-center gap-2">
+                                <RefreshCw className="h-4 w-4 text-primary" />
+                                <span className="text-foreground">
+                                  تمدید ماه {renewal.renewal_number + 1}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                {renewal.new_start_date && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {formatPersianDate(renewal.new_start_date)} - {renewal.new_end_date ? formatPersianDate(renewal.new_end_date) : '...'}
+                                  </span>
+                                )}
+                                <span className="font-medium text-primary">
+                                  {(renewal.renewal_price || 0).toLocaleString('fa-IR')} تومان
+                                </span>
+                              </div>
+                            </div>
+                            {renewal.manager_notes && (
+                              <p className="text-[11px] text-muted-foreground italic px-3 leading-relaxed">
+                                شرح: {renewal.manager_notes}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                )}
+                    </CardContent>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
             </>
           )}
-
-          {/* نقشه موقعیت پروژه */}
-          {order.location_lat && order.location_lng && (
-            <OrderLocationEditor
-              orderId={order.id}
-              hierarchyProjectId={order.hierarchy_project_id}
-              locationLat={order.location_lat}
-              locationLng={order.location_lng}
-              address={order.address}
-              detailedAddress={order.detailed_address}
-              orderStatus={order.status}
-              locationConfirmedByCustomer={order.location_confirmed_by_customer}
-              locationConfirmedAt={order.location_confirmed_at}
-              isManager={false}
-              onLocationUpdated={fetchOrderDetails}
-            />
-          )}
-
-          {/* Timeline */}
-          <OrderTimeline
-            orderStatus={order.status === 'paid' && remainingAmountForPayment > 0 ? 'awaiting_payment' : order.status}
-            createdAt={order.created_at}
-            approvedAt={order.approved_at}
-            executionStartDate={order.execution_start_date}
-            executionEndDate={order.execution_end_date}
-            customerCompletionDate={order.customer_completion_date}
-            rejectionReason={order.rejection_reason}
-            executionStage={order.execution_stage}
-            executionStageUpdatedAt={order.execution_stage_updated_at}
-            paymentConfirmedAt={isFullyPaidForPayment ? order.payment_confirmed_at : null}
-            approvedCollectionDate={approvedCollectionDate}
-            approvals={approvals}
-            totalPaid={order.total_paid}
-            totalPrice={order.total_price}
-          />
 
           {/* گزارش‌های روزانه */}
           <OrderDailyLogs orderId={order.id} />
@@ -3099,7 +3085,21 @@ export default function OrderDetail() {
             onClose={() => setSelectedImage(null)}
           />
 
-
+          <Collapsible open={isOwnershipSectionExpanded} onOpenChange={setIsOwnershipSectionExpanded}>
+            <Card>
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-muted/40 transition-colors rounded-t-lg">
+                  <div className="flex items-center justify-between gap-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Users className="h-5 w-5 text-primary" />
+                      زنجیره مالکیت سفارش
+                    </CardTitle>
+                    <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isOwnershipSectionExpanded ? "rotate-180" : ""}`} />
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="space-y-6">
           {/* زنجیره مالکیت سفارش */}
           <OrderOwnershipChain
             orderId={order.id}
@@ -3119,12 +3119,93 @@ export default function OrderDetail() {
             ownerName={order.customer_name || ''} 
             ownerPhone={order.customer_phone || ''} 
           />
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
 
           {/* بخش چت و تعامل با مدیریت */}
           <OrderChat orderId={order.id} orderStatus={order.status} />
 
           {/* تاریخچه تماس‌ها */}
           <CallHistory orderId={order.id} />
+
+          {/* Action Buttons */}
+          {/* Action Buttons - Above Card */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            {order.subcategory?.code === 'scaffolding_with_materials_and_transport' && 
+             (order.status === 'completed' || order.status === 'paid') && (
+              <Button
+                onClick={handleRenewOrder}
+                disabled={isRenewing}
+                variant="default"
+                size="sm"
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRenewing ? 'animate-spin' : ''}`} />
+                تمدید سفارش
+              </Button>
+            )}
+            {canEdit && (
+              <Button
+                onClick={() => {
+                  // اگر سفارش کارشناسی قیمت‌گذاری است، دیالوگ ویرایش کارشناسی را باز کن
+                  if (isExpertPricingRequest) {
+                    setShowEditExpertPricingDialog(true);
+                  } else {
+                    navigate(`/scaffolding/form?edit=${order.id}`);
+                  }
+                }}
+                size="sm"
+              >
+                <Edit className="h-4 w-4 ml-2" />
+                ویرایش سفارش
+              </Button>
+            )}
+            {order.status !== 'rejected' && order.status !== 'closed' && (
+              <Button
+                variant="outline"
+                onClick={() => setShowTransferDialog(true)}
+                size="sm"
+                className="gap-2"
+              >
+                <ArrowLeftRight className="h-4 w-4" />
+                انتقال سفارش
+              </Button>
+            )}
+            {order.status !== 'rejected' && order.status !== 'closed' && (
+              <Button
+                variant="outline"
+                onClick={() => setShowCollaboratorDialog(true)}
+                size="sm"
+                className="gap-2"
+              >
+                <Users className="h-4 w-4" />
+                افزودن همکار
+              </Button>
+            )}
+            {/* دکمه پرینت فاکتور - برای همه سفارشات */}
+            <ManagerOrderInvoice 
+              order={{
+                id: order.id,
+                code: order.code,
+                customer_name: order.customer_name || parsedNotes?.customerName,
+                customer_phone: order.customer_phone || parsedNotes?.phoneNumber,
+                address: order.address,
+                detailed_address: order.detailed_address,
+                created_at: order.created_at,
+                notes: order.notes,
+                payment_amount: order.payment_amount,
+                total_price: order.total_price,
+                total_paid: order.total_paid,
+                status: order.status,
+                customer_completion_date: order.customer_completion_date,
+                province_id: order.province_id,
+                subcategory_id: order.subcategory_id,
+                rental_start_date: order.rental_start_date
+              }}
+            />
+          </div>
 
           {/* بخش امتیازدهی - فقط برای سفارشات تکمیل شده یا بسته شده */}
           {(order.status === 'completed' || order.status === 'paid' || order.status === 'closed') && (
