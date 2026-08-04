@@ -1004,20 +1004,46 @@ export default function OrderDetail() {
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <Button
-          variant="ghost"
-          onClick={() => {
-            if (returnTo) {
-              navigate(returnTo);
-            } else {
-              navigate(-1);
-            }
-          }}
-          className="mb-6 gap-2"
-        >
-          <ArrowRight className="h-4 w-4" />
-          بازگشت
-        </Button>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => {
+              if (returnTo) {
+                navigate(returnTo);
+              } else {
+                navigate(-1);
+              }
+            }}
+            className="gap-2"
+          >
+            <ArrowRight className="h-4 w-4" />
+            بازگشت
+          </Button>
+
+          {/* دکمه پرینت فاکتور - بالای فرم سفارش */}
+          <ManagerOrderInvoice
+            className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:text-blue-800"
+            order={{
+              id: order.id,
+              code: order.code,
+              customer_name: order.customer_name || parsedNotes?.customerName,
+              customer_phone: order.customer_phone || parsedNotes?.phoneNumber,
+              address: order.address,
+              detailed_address: order.detailed_address,
+              created_at: order.created_at,
+              notes: order.notes,
+              payment_amount: order.payment_amount,
+              total_price: order.total_price,
+              total_paid: order.total_paid,
+              status: order.status,
+              customer_completion_date: order.customer_completion_date,
+              province_id: order.province_id,
+              subcategory_id: order.subcategory_id,
+              rental_start_date: order.rental_start_date
+            }}
+          />
+        </div>
+
 
         <div className="space-y-6">
           {/* Order Header */}
@@ -3186,30 +3212,8 @@ export default function OrderDetail() {
               )}
             </div>
 
-            {/* دکمه پرینت فاکتور - برای همه سفارشات */}
-            <div className="flex flex-wrap items-center gap-2">
-              <ManagerOrderInvoice
-                className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:text-blue-800"
-                order={{
-                  id: order.id,
-                  code: order.code,
-                  customer_name: order.customer_name || parsedNotes?.customerName,
-                  customer_phone: order.customer_phone || parsedNotes?.phoneNumber,
-                  address: order.address,
-                  detailed_address: order.detailed_address,
-                  created_at: order.created_at,
-                  notes: order.notes,
-                  payment_amount: order.payment_amount,
-                  total_price: order.total_price,
-                  total_paid: order.total_paid,
-                  status: order.status,
-                  customer_completion_date: order.customer_completion_date,
-                  province_id: order.province_id,
-                  subcategory_id: order.subcategory_id,
-                  rental_start_date: order.rental_start_date
-                }}
-              />
-            </div>
+
+
           </div>
 
           {/* بخش امتیازدهی - فقط برای سفارشات تکمیل شده یا بسته شده */}
