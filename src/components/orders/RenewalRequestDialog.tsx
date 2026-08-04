@@ -75,7 +75,7 @@ export function RenewalRequestDialog({
   };
 
   const getNextRenewalNumber = () => {
-    const usedNumbers = new Set(renewals.filter(r => r.status !== 'rejected').map(r => r.renewal_number));
+    const usedNumbers = new Set(renewals.map(r => r.renewal_number));
     for (let number = 1; number <= 12; number += 1) {
       if (!usedNumbers.has(number)) return number;
     }
