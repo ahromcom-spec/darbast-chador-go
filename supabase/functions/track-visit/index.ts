@@ -115,6 +115,8 @@ Deno.serve(async (req) => {
     actor_phone: actorPhone,
     details: {
       session_id: sessionId,
+      device_id: deviceId,
+
       page,
       page_title: pageTitle,
       referrer,
