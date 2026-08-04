@@ -51,6 +51,7 @@ import {
   Users,
   User,
   ChevronDown,
+  ClipboardList,
   ChevronUp,
   CalendarDays
 } from "lucide-react";
