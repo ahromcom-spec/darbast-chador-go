@@ -126,7 +126,7 @@ const isInvoiceImage = (item: { file_path?: string | null; file_type?: string | 
   return /\.(jpe?g|png|gif|webp|bmp|svg|heic|heif)$/i.test(path);
 };
 
-export const ManagerOrderInvoice = ({ order, hidePrice = false }: ManagerOrderInvoiceProps) => {
+export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: ManagerOrderInvoiceProps) => {
   const [open, setOpen] = useState(false);
   const [media, setMedia] = useState<Array<{ id: string; file_path: string; file_type: string | null; mime_type?: string | null }>>([]);
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
