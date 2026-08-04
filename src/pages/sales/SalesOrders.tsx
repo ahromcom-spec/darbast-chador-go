@@ -639,7 +639,8 @@ export default function SalesOrders() {
                 <Button
                   variant="outline"
                   onClick={() => setTransferDialogOpen(true)}
-                  className="gap-2"
+                  size="sm"
+                  className="gap-2 bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:text-green-800"
                 >
                   <ArrowLeftRight className="h-4 w-4" />
                   انتقال سفارش
@@ -647,7 +648,8 @@ export default function SalesOrders() {
                 <Button
                   variant="outline"
                   onClick={() => setCollaboratorDialogOpen(true)}
-                  className="gap-2"
+                  size="sm"
+                  className="gap-2 bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 hover:text-amber-800"
                 >
                   <Users className="h-4 w-4" />
                   افزودن همکار
