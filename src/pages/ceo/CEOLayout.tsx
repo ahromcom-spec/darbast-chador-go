@@ -84,11 +84,6 @@ const mainNavItems = [
     icon: Users
   },
   {
-    title: 'انتقال و همکاری سفارش',
-    href: '/ceo/order-transfers',
-    icon: ArrowLeftRight
-  },
-  {
     title: 'ارجاع سفارش به پیمانکار',
     href: '/ceo/contractor-dispatch',
     icon: UserCheck
