@@ -89,6 +89,7 @@ interface ManagerOrderInvoiceProps {
     rental_start_date?: string | null;
   };
   hidePrice?: boolean; // Hide price/financial information in invoice
+  className?: string;
 }
 
 interface RepairRequest {
