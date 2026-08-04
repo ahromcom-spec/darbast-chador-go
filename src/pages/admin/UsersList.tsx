@@ -39,6 +39,7 @@ export default function UsersList() {
           user_id,
           full_name,
           phone_number,
+          bio,
           created_at,
           sms_notifications_enabled
         `)
@@ -173,8 +174,13 @@ export default function UsersList() {
                   const hasMore = orders.length > 1;
                   return (
                   <TableRow key={user.user_id}>
-                    <TableCell className="font-medium p-2 break-words">
-                      {user.full_name || 'نامشخص'}
+                    <TableCell className="font-medium p-2 break-words align-top">
+                      <div>{user.full_name || 'نامشخص'}</div>
+                      {(user as any).bio ? (
+                        <div className="mt-0.5 text-[10px] font-normal text-muted-foreground break-words whitespace-pre-wrap">
+                          {(user as any).bio}
+                        </div>
+                      ) : null}
                     </TableCell>
                     <TableCell dir="ltr" className="text-right p-2">
                       {user.phone_number || '-'}
