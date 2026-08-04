@@ -212,6 +212,14 @@ const AVAILABLE_MODULES: Module[] = [
     color: 'text-orange-600',
     bgColor: 'bg-orange-50',
   },
+  {
+    key: 'order_transfers_management',
+    name: 'ماژول انتقال و همکاری سفارش',
+    description: 'بررسی، تایید و رد درخواست‌های انتقال مالکیت سفارش و افزودن همکار به سفارش',
+    href: '/order-transfers-module',
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-50',
+  },
 ];
 
 // Convert modules to ModuleItem format

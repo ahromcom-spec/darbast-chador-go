@@ -48,6 +48,7 @@ const ContractorVerifications = lazy(() => import("@/pages/ceo/ContractorVerific
 const ContractorsModule = lazy(() => import("@/pages/ceo/ContractorsModule"));
 const ContractorOrderDispatch = lazy(() => import("@/pages/ceo/ContractorOrderDispatch"));
 const SmsManagementModule = lazy(() => import("@/pages/ceo/SmsManagementModule"));
+const OrderTransfersModule = lazy(() => import("@/pages/ceo/OrderTransfersModule"));
 
 const StaffVerifications = lazy(() => import("@/pages/ceo/StaffVerifications").then(m => ({ default: m.StaffVerifications })));
 const CEOOrders = lazy(() => import("@/pages/ceo/CEOOrders").then(m => ({ default: m.CEOOrders })));
@@ -375,12 +376,18 @@ const App = () => {
                 <Route path="stage-awaiting-payment" element={<ExecutiveStageAwaitingPayment />} />
                 <Route path="stage-awaiting-collection" element={<ExecutiveStageAwaitingCollection />} />
                 <Route path="completed" element={<ExecutiveCompleted />} />
-                <Route path="order-transfers" element={<OrderTransferManagement />} />
                 <Route path="archived" element={<ArchivedOrders />} />
                 <Route path="deep-archived" element={<DeepArchivedOrders />} />
                 <Route path="payments" element={<PaymentHistory />} />
                 <Route path="backup" element={<CEOBackupModule />} />
               </Route>
+
+              {/* مسیر مستقل برای ماژول انتقال و همکاری سفارش */}
+              <Route path="/order-transfers-module" element={
+                <ProtectedRoute>
+                  <OrderTransfersModule />
+                </ProtectedRoute>
+              } />
 
               {/* مسیر مستقل برای ماژول مدیریت پیامک‌ها */}
               <Route path="/sms-management" element={

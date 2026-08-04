@@ -6,7 +6,6 @@ import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 import { 
   LayoutDashboard, 
   Users, 
-  ArrowLeftRight, 
   ClipboardCheck, 
   Play, 
   Loader, 
@@ -82,11 +81,6 @@ const mainNavItems = [
     title: 'مشتریان',
     href: '/ceo/customers',
     icon: Users
-  },
-  {
-    title: 'انتقال و همکاری سفارش',
-    href: '/ceo/order-transfers',
-    icon: ArrowLeftRight
   },
   {
     title: 'ارجاع سفارش به پیمانکار',
