@@ -6202,6 +6202,10 @@ export type Database = {
         Args: { _statement_id: string }
         Returns: undefined
       }
+      recalc_location_active_for_hierarchy: {
+        Args: { _hierarchy_id: string }
+        Returns: undefined
+      }
       recalculate_all_bank_card_balances: { Args: never; Returns: undefined }
       recalculate_bank_card_balance: {
         Args: { p_card_id: string }
