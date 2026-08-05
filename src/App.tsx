@@ -390,6 +390,15 @@ const App = () => {
                 </ProtectedRoute>
               } />
 
+              {/* مسیر مستقل برای ماژول مدیریت امتیازدهی */}
+              <Route path="/ratings-module" element={
+                <ProtectedRoute>
+                  <RatingsModule />
+                </ProtectedRoute>
+              } />
+
+
+
               {/* مسیر مستقل برای ماژول مدیریت پیامک‌ها */}
               <Route path="/sms-management" element={
                 <ProtectedRoute>
