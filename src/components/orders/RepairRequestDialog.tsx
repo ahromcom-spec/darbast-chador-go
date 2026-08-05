@@ -29,7 +29,20 @@ import {
   User,
   ShieldCheck,
   Coins,
+  Trash2,
+  Pencil,
+  Save,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { formatPersianDateTime } from "@/lib/dateUtils";
 
 interface RepairRequest {
