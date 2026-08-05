@@ -1059,7 +1059,8 @@ export default function OrderDetail() {
             بازگشت
           </Button>
 
-          {/* دکمه پرینت فاکتور - بالای فرم سفارش */}
+          {/* دکمه پرینت فاکتور - بالای فرم سفارش (برای همکار بدون دسترسی مالی نمایش داده نمی‌شود) */}
+          {canViewFinancials && (
           <ManagerOrderInvoice
             className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:text-blue-800"
             order={{
