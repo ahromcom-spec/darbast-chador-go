@@ -220,7 +220,16 @@ const AVAILABLE_MODULES: Module[] = [
     color: 'text-cyan-600',
     bgColor: 'bg-cyan-50',
   },
+  {
+    key: 'ratings_management',
+    name: 'ماژول مدیریت امتیازدهی',
+    description: 'مشاهده و مدیریت امتیازهای مشتریان به عملکرد پیمانکار/اجرایی و مدیریت، پیگیری و زمان‌بندی سفارش‌ها',
+    href: '/ratings-module',
+    color: 'text-yellow-600',
+    bgColor: 'bg-yellow-50',
+  },
 ];
+
 
 // Convert modules to ModuleItem format
 const convertModulesToItems = (modules: Module[]): ModuleItem[] => {
