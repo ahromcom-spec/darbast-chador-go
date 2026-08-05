@@ -64,7 +64,7 @@ import { CollectionRequestDialog } from "@/components/orders/CollectionRequestDi
 import { RenewalRequestDialog } from "@/components/orders/RenewalRequestDialog";
 import { ManagerOrderInvoice } from "@/components/orders/ManagerOrderInvoice";
 import { OrderForOthersInfo } from "@/components/orders/OrderForOthersInfo";
-import { RatingForm } from "@/components/ratings/RatingForm";
+import OrderRatingSection from "@/components/orders/OrderRatingSection";
 import { useProjectRatings, RatingCriteria } from "@/hooks/useRatings";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
