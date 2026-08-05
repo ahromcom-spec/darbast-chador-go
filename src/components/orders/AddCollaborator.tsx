@@ -46,10 +46,13 @@ interface Collaborator {
   status: string;
   invited_at: string;
   responded_at: string | null;
+  can_view_financials?: boolean;
+  can_manage_order?: boolean;
   invitee_profile?: {
     full_name: string | null;
   };
 }
+
 
 const statusLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pending_manager: { label: 'در انتظار تایید مدیر', variant: 'secondary' },
