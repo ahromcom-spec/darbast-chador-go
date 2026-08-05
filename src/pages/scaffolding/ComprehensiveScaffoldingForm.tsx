@@ -148,6 +148,21 @@ export default function ComprehensiveScaffoldingForm({
   // Check if this is formwork scaffolding type (داربست حجمی کفراژ)
   const isFormworkScaffolding = scaffoldType === 'formwork' || activeService === 'formwork';
 
+  // حداقل ابعاد قابل محاسبه: اعداد کمتر از 3 متر در پشت پرده 3 متر در نظر گرفته می‌شوند
+  const MIN_DIMENSION = 3;
+  const clampMinDim = (v: string | number | undefined | null): number => {
+    const n = typeof v === 'number' ? v : parseFloat(String(v ?? ''));
+    if (isNaN(n) || n <= 0) return 0;
+    return Math.max(MIN_DIMENSION, n);
+  };
+  // ابعاد مؤثر برای محاسبه قیمت و ذخیره‌سازی (ورودی کاربر دست‌نخورده می‌ماند)
+  const effectiveDimensions = dimensions.map(d => ({
+    length: clampMinDim(d.length),
+    width: parseFloat(d.width) || 0,
+    height: clampMinDim(d.height),
+  }));
+  const effectiveColumnHeight = clampMinDim(columnHeight);
+
   // هشدار برای داربست حجمی کفراژ: ارتفاع بیشتر از 12 متر و بیشتر از مساحت زیرین
   const getFormworkWarning = () => {
     if (!isFormworkScaffolding) return null;
