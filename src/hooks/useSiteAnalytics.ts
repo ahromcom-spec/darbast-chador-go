@@ -245,8 +245,10 @@ export function useSiteAnalytics() {
       });
 
       // Log the visit in the CEO activity-log module (works for guests too)
-      if (!sessionStorage.getItem('visit_logged')) {
-        sessionStorage.setItem('visit_logged', '1');
+      // Log once per session per identity, so a customer signing in also gets logged
+      const visitKey = `visit_logged_${user?.id || 'guest'}`;
+      if (!sessionStorage.getItem(visitKey)) {
+        sessionStorage.setItem(visitKey, '1');
         supabase.functions.invoke('track-visit', {
           body: {
             page: currentPage,
