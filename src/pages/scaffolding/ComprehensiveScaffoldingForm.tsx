@@ -601,13 +601,11 @@ export default function ComprehensiveScaffoldingForm({
   };
 
   const calculateTotalArea = (): number => {
-    return dimensions.reduce((total, dim) => {
-      const length = parseFloat(dim.length) || 0;
-      const width = parseFloat(dim.width) || 0;
-      const height = parseFloat(dim.height) || 0;
-      return total + (length * width * height);
+    return effectiveDimensions.reduce((total, dim) => {
+      return total + (dim.length * dim.width * dim.height);
     }, 0);
   };
+
 
   // ====== رتبه همکاری و درصد تخفیف کاربر فعلی ======
   const { discountPercent: cooperationDiscountPct, rank: cooperationRank } = useCooperationDiscount();
