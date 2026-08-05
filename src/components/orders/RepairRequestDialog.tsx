@@ -622,7 +622,7 @@ export function RepairRequestDialog({
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {requests.map((r, idx) => {
-                    const cost = r.final_cost || r.estimated_cost;
+                    const cost = r.final_cost && r.final_cost > 0 ? r.final_cost : null;
                     const active = existingRequest.id === r.id;
                     return (
                       <button
