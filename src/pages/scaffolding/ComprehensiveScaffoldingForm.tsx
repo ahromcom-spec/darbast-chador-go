@@ -658,9 +658,9 @@ export default function ComprehensiveScaffoldingForm({
         return 0;
       };
 
-      const length = parseFloat(dimensions[0]?.length || '0');
-      const width = parseFloat(dimensions[0]?.width || '0');
-      const height = parseFloat(columnHeight || '0');
+      const length = effectiveDimensions[0]?.length || 0;
+      const width = effectiveDimensions[0]?.width || 0;
+      const height = effectiveColumnHeight;
       const floors = Math.ceil(height / 3.5);
 
       const lengthUnits = getLengthUnits(length);
