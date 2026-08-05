@@ -3227,7 +3227,7 @@ export default function OrderDetail() {
                   ویرایش سفارش
                 </Button>
               )}
-              {order.status !== 'rejected' && order.status !== 'closed' && (
+              {canManageOrder && order.status !== 'rejected' && order.status !== 'closed' && (
                 <Button
                   variant="outline"
                   onClick={() => setShowTransferDialog(true)}
@@ -3238,7 +3238,8 @@ export default function OrderDetail() {
                   انتقال سفارش
                 </Button>
               )}
-              {order.status !== 'rejected' && order.status !== 'closed' && (
+              {canManageOrder && order.status !== 'rejected' && order.status !== 'closed' && (
+
                 <Button
                   variant="outline"
                   onClick={() => setShowCollaboratorDialog(true)}
