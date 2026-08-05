@@ -1956,7 +1956,7 @@ export default function OrderDetail() {
                 )}
 
                 {/* بلوک ۳: قیمت و جدول زمان‌بندی */}
-                {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || approvedRepairCost > 0 || approvedRenewalCost > 0 || (isExpertPricingRequest && customerHasConfirmedPrice)) && (() => {
+                {canViewFinancials && ((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || approvedRepairCost > 0 || approvedRenewalCost > 0 || (isExpertPricingRequest && customerHasConfirmedPrice)) && (() => {
                   const basePrice = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || parsedNotes?.manager_set_price || 0;
                   const grandTotal = basePrice + approvedRepairCost + approvedRenewalCost;
                   const rawPaidAmount = totalPaid || order.total_paid || 0;
