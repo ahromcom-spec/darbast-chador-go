@@ -106,9 +106,7 @@ export default function OrderRatingSection({ orderId }: OrderRatingSectionProps)
         if (contractor) {
           setContractorTargetId((contractor as any).user_id ?? null);
           setContractorLabel(
-            (contractor as any).company_name ||
-              (contractor as any).full_name ||
-              AHROM_CONTRACTOR_LABEL
+            (contractor as any).company_name || AHROM_CONTRACTOR_LABEL
           );
           return;
         }
