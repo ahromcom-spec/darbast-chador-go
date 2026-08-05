@@ -294,15 +294,35 @@ const handler = async (req: Request): Promise<Response> => {
     const baseService = serviceType || "خدمات";
     const decoratedService = stageLabel ? `${baseService} (${stageLabel})` : baseService;
 
+    // حذف بخش‌های تکراری آدرس (مثلاً وقتی آدرس و آدرس دقیق یکی هستند)
+    const dedupeAddress = (input?: string) => {
+      const raw = (input || "").trim();
+      if (!raw) return "ثبت نشده";
+      const parts = raw.split(" - ").map((p) => p.trim()).filter(Boolean);
+      const norm = (s: string) => s.replace(/[\s،,.\-]+/g, "");
+      const kept: string[] = [];
+      for (const p of parts) {
+        const np = norm(p);
+        if (kept.some((k) => norm(k) === np || norm(k).includes(np))) continue;
+        // اگر بخش جدید شامل بخش قبلی است، بخش قبلی حذف شود
+        for (let i = kept.length - 1; i >= 0; i--) {
+          if (np.includes(norm(kept[i]))) kept.splice(i, 1);
+        }
+        kept.push(p);
+      }
+      return kept.join(" - ") || raw;
+    };
+
     // Replace placeholders in template
     let message = template
-      .replace("{code}", orderCode)
-      .replace("{serviceType}", decoratedService)
-      .replace("{address}", address || "ثبت نشده")
-      .replace("{dateTime}", persianDateTime)
-      .replace("{amount}", formattedAmount)
-      .replace("{orderLink}", orderLink)
-      .replace("{customerName}", customerName || "مشتری");
+      .replaceAll("{code}", orderCode)
+      .replaceAll("{serviceType}", decoratedService)
+      .replaceAll("{address}", dedupeAddress(address))
+      .replaceAll("{dateTime}", persianDateTime)
+      .replaceAll("{amount}", formattedAmount)
+      .replaceAll("{orderLink}", orderLink)
+      .replaceAll("{customerName}", customerName || "مشتری");
+
 
     // === سربرگ اجباری برند: همیشه در خط اول پیامک ===
     const BRAND_HEADER = "خدمات ساختمانی و منزل اهرم";
