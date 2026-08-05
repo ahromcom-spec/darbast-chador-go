@@ -148,6 +148,21 @@ export default function ComprehensiveScaffoldingForm({
   // Check if this is formwork scaffolding type (داربست حجمی کفراژ)
   const isFormworkScaffolding = scaffoldType === 'formwork' || activeService === 'formwork';
 
+  // حداقل ابعاد قابل محاسبه: اعداد کمتر از 3 متر در پشت پرده 3 متر در نظر گرفته می‌شوند
+  const MIN_DIMENSION = 3;
+  const clampMinDim = (v: string | number | undefined | null): number => {
+    const n = typeof v === 'number' ? v : parseFloat(String(v ?? ''));
+    if (isNaN(n) || n <= 0) return 0;
+    return Math.max(MIN_DIMENSION, n);
+  };
+  // ابعاد مؤثر برای محاسبه قیمت و ذخیره‌سازی (ورودی کاربر دست‌نخورده می‌ماند)
+  const effectiveDimensions = dimensions.map(d => ({
+    length: clampMinDim(d.length),
+    width: parseFloat(d.width) || 0,
+    height: clampMinDim(d.height),
+  }));
+  const effectiveColumnHeight = clampMinDim(columnHeight);
+
   // هشدار برای داربست حجمی کفراژ: ارتفاع بیشتر از 12 متر و بیشتر از مساحت زیرین
   const getFormworkWarning = () => {
     if (!isFormworkScaffolding) return null;
@@ -586,13 +601,11 @@ export default function ComprehensiveScaffoldingForm({
   };
 
   const calculateTotalArea = (): number => {
-    return dimensions.reduce((total, dim) => {
-      const length = parseFloat(dim.length) || 0;
-      const width = parseFloat(dim.width) || 0;
-      const height = parseFloat(dim.height) || 0;
-      return total + (length * width * height);
+    return effectiveDimensions.reduce((total, dim) => {
+      return total + (dim.length * dim.width * dim.height);
     }, 0);
   };
+
 
   // ====== رتبه همکاری و درصد تخفیف کاربر فعلی ======
   const { discountPercent: cooperationDiscountPct, rank: cooperationRank } = useCooperationDiscount();
@@ -645,9 +658,9 @@ export default function ComprehensiveScaffoldingForm({
         return 0;
       };
 
-      const length = parseFloat(dimensions[0]?.length || '0');
-      const width = parseFloat(dimensions[0]?.width || '0');
-      const height = parseFloat(columnHeight || '0');
+      const length = effectiveDimensions[0]?.length || 0;
+      const width = effectiveDimensions[0]?.width || 0;
+      const height = effectiveColumnHeight;
       const floors = Math.ceil(height / 3.5);
 
       const lengthUnits = getLengthUnits(length);
@@ -1157,21 +1170,21 @@ export default function ComprehensiveScaffoldingForm({
         return;
       }
 
-      // Validate using Zod schema - فقط ابعاد (برای داربست طول لوله مصرفی اعتبارسنجی ابعاد سه‌بعدی انجام نمی‌شود)
+      // Validate using Zod schema - با ابعاد مؤثر (کمتر از 3 متر در پشت پرده 3 متر محاسبه می‌شود)
       if (!isPipeLengthScaffolding) {
         try {
           scaffoldingFormSchema.parse({
             detailedAddress: finalAddress.trim(),
             dimensions: isColumnScaffolding
               ? [{
-                  length: parseFloat(dimensions[0]?.length || '0'),
-                  width: parseFloat(dimensions[0]?.width || '0'),
-                  height: parseFloat(columnHeight || '0'),
+                  length: effectiveDimensions[0]?.length || 0,
+                  width: effectiveDimensions[0]?.width || 0,
+                  height: effectiveColumnHeight,
                 }]
-              : dimensions.map(d => ({
-                  length: parseFloat(d.length),
-                  width: parseFloat(d.width),
-                  height: parseFloat(d.height)
+              : effectiveDimensions.map(d => ({
+                  length: d.length,
+                  width: d.width,
+                  height: d.height
                 }))
           });
         } catch (error) {
@@ -1182,31 +1195,6 @@ export default function ComprehensiveScaffoldingForm({
         }
       }
 
-      // Validate dimensions - check minimum 3 meters for length and height
-      if (isPipeLengthScaffolding) {
-        // بدون محدودیت ابعاد سه‌بعدی
-      } else if (isColumnScaffolding) {
-        const length = parseFloat(dimensions[0]?.length || '0');
-        const height = parseFloat(columnHeight || '0');
-        if (length < 3 || isNaN(length)) {
-          toast({ title: 'خطا در ابعاد', description: 'حداقل طول داربست باید 3 متر باشد', variant: 'destructive' });
-          return;
-        }
-        if (height < 3 || isNaN(height)) {
-          toast({ title: 'خطا در ابعاد', description: 'حداقل ارتفاع داربست باید 3 متر باشد', variant: 'destructive' });
-          return;
-        }
-      } else {
-        const invalidDimensions = dimensions.filter(dim => {
-          const length = parseFloat(dim.length);
-          const height = parseFloat(dim.height);
-          return length < 3 || height < 3 || isNaN(length) || isNaN(height);
-        });
-        if (invalidDimensions.length > 0) {
-          toast({ title: 'خطا در ابعاد', description: 'حداقل طول و ارتفاع داربست باید 3 متر باشد', variant: 'destructive' });
-          return;
-        }
-      }
     }
 
 
@@ -1395,12 +1383,10 @@ export default function ComprehensiveScaffoldingForm({
             payment_amount: finalPrice, // استفاده از قیمت نهایی (override یا محاسبه شده)
             notes: {
               service_type: activeService,
-              dimensions: dimensions.map(d => ({
-                length: parseFloat(d.length),
-                width: parseFloat(d.width),
-                height: parseFloat(d.height),
-              })),
-              columnHeight: isColumnScaffolding ? parseFloat(columnHeight) : undefined,
+              dimensions: (isPipeLengthScaffolding
+                ? dimensions.map(d => ({ length: parseFloat(d.length), width: parseFloat(d.width), height: parseFloat(d.height) }))
+                : effectiveDimensions.map(d => ({ length: d.length, width: d.width, height: d.height }))),
+              columnHeight: isColumnScaffolding ? effectiveColumnHeight : undefined,
               column_units: isColumnScaffolding ? (() => {
                 const getUnits = (dimension: number): number => {
                   if (dimension >= 0.20 && dimension <= 3.5) return 1;
@@ -1408,9 +1394,9 @@ export default function ComprehensiveScaffoldingForm({
                   if (dimension > 7 && dimension <= 10.5) return 3;
                   return 0;
                 };
-                const length = parseFloat(dimensions[0]?.length || '0');
-                const width = parseFloat(dimensions[0]?.width || '0');
-                const height = parseFloat(columnHeight || '0');
+                const length = effectiveDimensions[0]?.length || 0;
+                const width = effectiveDimensions[0]?.width || 0;
+                const height = effectiveColumnHeight;
                 const floors = Math.ceil(height / 3.5);
                 const lengthUnits = getUnits(length);
                 const widthUnits = getUnits(width);
@@ -1486,12 +1472,10 @@ export default function ComprehensiveScaffoldingForm({
           _detailed_address: sanitizedAddress,
           _notes: JSON.stringify({
             service_type: activeService,
-            dimensions: dimensions.map(d => ({
-              length: parseFloat(d.length),
-              width: parseFloat(d.width),
-              height: parseFloat(d.height),
-            })),
-            columnHeight: isColumnScaffolding ? parseFloat(columnHeight) : undefined,
+            dimensions: (isPipeLengthScaffolding
+              ? dimensions.map(d => ({ length: parseFloat(d.length), width: parseFloat(d.width), height: parseFloat(d.height) }))
+              : effectiveDimensions.map(d => ({ length: d.length, width: d.width, height: d.height }))),
+            columnHeight: isColumnScaffolding ? effectiveColumnHeight : undefined,
             column_units: isColumnScaffolding ? (() => {
               const getUnits = (dimension: number): number => {
                 if (dimension >= 0.20 && dimension <= 3.5) return 1;
@@ -1499,9 +1483,9 @@ export default function ComprehensiveScaffoldingForm({
                 if (dimension > 7 && dimension <= 10.5) return 3;
                 return 0;
               };
-              const length = parseFloat(dimensions[0]?.length || '0');
-              const width = parseFloat(dimensions[0]?.width || '0');
-              const height = parseFloat(columnHeight || '0');
+              const length = effectiveDimensions[0]?.length || 0;
+              const width = effectiveDimensions[0]?.width || 0;
+              const height = effectiveColumnHeight;
               const floors = Math.ceil(height / 3.5);
               const lengthUnits = getUnits(length);
               const widthUnits = getUnits(width);
