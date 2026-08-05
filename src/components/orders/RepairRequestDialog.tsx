@@ -622,7 +622,7 @@ export function RepairRequestDialog({
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {requests.map((r, idx) => {
-                    const cost = r.final_cost || r.estimated_cost;
+                    const cost = r.final_cost && r.final_cost > 0 ? r.final_cost : null;
                     const active = existingRequest.id === r.id;
                     return (
                       <button
@@ -637,7 +637,7 @@ export function RepairRequestDialog({
                       >
                         <span className="font-medium">#{(requests.length - idx).toLocaleString('fa-IR')}</span>
                         <span className="mx-1">·</span>
-                        <span>{cost.toLocaleString('fa-IR')} ت</span>
+                        <span>{cost ? `${cost.toLocaleString('fa-IR')} ت` : 'در انتظار قیمت'}</span>
                       </button>
                     );
                   })}
@@ -661,17 +661,27 @@ export function RepairRequestDialog({
 
             {/* Cost Info */}
             <div className="p-3 bg-primary/10 rounded-lg border border-primary/20 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">هزینه تعمیر:</span>
-                <span className="font-bold text-lg text-primary">
-                  {(existingRequest.final_cost || existingRequest.estimated_cost).toLocaleString('fa-IR')} تومان
-                </span>
-              </div>
-              {existingRequest.final_cost && existingRequest.final_cost !== existingRequest.estimated_cost && (
-                <p className="text-xs text-muted-foreground">
-                  هزینه اولیه: {existingRequest.estimated_cost.toLocaleString('fa-IR')} تومان
-                </p>
+              {existingRequest.final_cost && existingRequest.final_cost > 0 ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">هزینه تعمیر:</span>
+                    <span className="font-bold text-lg text-primary">
+                      {existingRequest.final_cost.toLocaleString('fa-IR')} تومان
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    هزینه نهایی تعیین‌شده توسط مدیریت است.
+                  </p>
+                </>
+              ) : (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-muted-foreground">هزینه تعمیر:</span>
+                  <span className="text-sm font-medium text-primary text-left">
+                    حداقل هزینه تعمیر {(1500000).toLocaleString('fa-IR')} تومان می‌باشد
+                  </span>
+                </div>
               )}
+
               
               {/* Manager can set/update cost */}
               {isManager && (
@@ -886,13 +896,8 @@ export function RepairRequestDialog({
               </p>
             </div>
 
-            {/* Payment Button for completed repairs */}
-            {existingRequest.status === 'completed' && !existingRequest.paid_at && (
-              <Button className="w-full gap-2" size="lg">
-                <CreditCard className="h-5 w-5" />
-                پرداخت هزینه تعمیر ({(existingRequest.final_cost || existingRequest.estimated_cost).toLocaleString('fa-IR')} تومان)
-              </Button>
-            )}
+            {/* پرداخت هزینه تعمیر از طریق بخش «هزینه قرارداد» در صفحه سفارش انجام می‌شود */}
+
 
             <p className="text-xs text-muted-foreground text-center">
               ثبت شده در: {formatPersianDateTime(existingRequest.created_at)}

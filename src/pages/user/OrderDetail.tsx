@@ -510,7 +510,7 @@ export default function OrderDetail() {
           : Promise.resolve({ data: null }),
         supabase.from('project_media').select('*').eq('project_id', id).order('created_at', { ascending: false }),
         supabase.from('order_approvals').select('approver_role, approved_at, approver_user_id').eq('order_id', id).order('created_at', { ascending: true }),
-        supabase.from('repair_requests').select('final_cost, status, created_at, description').eq('order_id', id),
+        supabase.from('repair_requests').select('id, final_cost, estimated_cost, status, created_at, description').eq('order_id', id).order('created_at', { ascending: true }),
         supabase.from('collection_requests').select('requested_date, confirmed_date, status').eq('order_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('order_renewals').select('renewal_price, renewal_number, new_start_date, new_end_date, status, manager_notes').eq('order_id', id).eq('status', 'approved').order('renewal_number', { ascending: true }),
         supabase.from('order_payments').select('*').eq('order_id', id).order('created_at', { ascending: false })
@@ -2019,15 +2019,27 @@ export default function OrderDetail() {
                               )}
                             </div>
                           ))}
-                          {approvedRepairCost > 0 && (
-                            <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-                              <div className="flex items-center gap-2">
-                                <Edit className="h-4 w-4 text-amber-600" />
-                                <span className="text-sm text-amber-700 dark:text-amber-300 font-medium">هزینه تعمیر:</span>
+                          {repairRequests
+                            .filter((req: any) => ['approved', 'completed'].includes(req.status) && (req.final_cost || 0) > 0)
+                            .map((req: any, idx: number) => (
+                            <div key={req.id || idx} className="space-y-1">
+                              <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  <Edit className="h-4 w-4 text-amber-600" />
+                                  <span className="text-sm text-amber-700 dark:text-amber-300 font-medium">
+                                    هزینه تعمیر {(idx + 1).toLocaleString('fa-IR')} ({formatPersianDate(req.created_at)}):
+                                  </span>
+                                </div>
+                                <span className="font-bold text-amber-700 dark:text-amber-300">{(req.final_cost || 0).toLocaleString('fa-IR')} تومان</span>
                               </div>
-                              <span className="font-bold text-amber-700 dark:text-amber-300">{approvedRepairCost.toLocaleString('fa-IR')} تومان</span>
+                              {req.description && (
+                                <p className="text-[11px] text-muted-foreground italic px-3 leading-relaxed">
+                                  شرح: {req.description}
+                                </p>
+                              )}
                             </div>
-                          )}
+                          ))}
+
                         </div>
                       )}
 
@@ -2472,24 +2484,40 @@ export default function OrderDetail() {
                     {repairRequests.length > 0 && (
                       <div className="border-t border-amber-200 dark:border-amber-700 pt-3 space-y-2">
                         {repairRequests.map((req: any, idx: number) => (
-                          <div key={idx} className="flex items-center justify-between p-2 bg-amber-100/50 dark:bg-amber-900/30 rounded-lg text-sm">
-                            <div className="flex items-center gap-2">
-                              <CalendarDays className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                              <span className="text-amber-800 dark:text-amber-200">
-                                درخواست تعمیر {formatPersianDate(req.created_at)}
+                          <div key={req.id || idx} className="p-2 bg-amber-100/50 dark:bg-amber-900/30 rounded-lg text-sm space-y-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <CalendarDays className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                <span className="text-amber-800 dark:text-amber-200">
+                                  تعمیر {(idx + 1).toLocaleString('fa-IR')} - {formatPersianDate(req.created_at)}
+                                </span>
+                              </div>
+                              <Badge variant="outline" className={
+                                req.status === 'approved' || req.status === 'completed' 
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-300' 
+                                  : req.status === 'rejected'
+                                  ? 'bg-red-100 text-red-700 border-red-300'
+                                  : 'bg-amber-100 text-amber-700 border-amber-300'
+                              }>
+                                {req.status === 'approved' ? 'تایید شده' : req.status === 'completed' ? 'انجام شده' : req.status === 'rejected' ? 'رد شده' : 'در انتظار بررسی'}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between gap-2 px-1">
+                              <span className="text-xs text-amber-700/80 dark:text-amber-300/80">هزینه:</span>
+                              <span className="text-xs font-bold text-amber-800 dark:text-amber-200">
+                                {(req.final_cost || 0) > 0
+                                  ? `${Number(req.final_cost).toLocaleString('fa-IR')} تومان`
+                                  : `حداقل ${(1500000).toLocaleString('fa-IR')} تومان (در انتظار تعیین قیمت)`}
                               </span>
                             </div>
-                            <Badge variant="outline" className={
-                              req.status === 'approved' || req.status === 'completed' 
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-300' 
-                                : req.status === 'rejected'
-                                ? 'bg-red-100 text-red-700 border-red-300'
-                                : 'bg-amber-100 text-amber-700 border-amber-300'
-                            }>
-                              {req.status === 'approved' ? 'تایید شده' : req.status === 'completed' ? 'انجام شده' : req.status === 'rejected' ? 'رد شده' : 'در انتظار بررسی'}
-                            </Badge>
+                            {req.description && (
+                              <p className="text-[11px] text-muted-foreground italic px-1 leading-relaxed line-clamp-2">
+                                شرح: {req.description}
+                              </p>
+                            )}
                           </div>
                         ))}
+
                       </div>
                     )}
                   </section>
