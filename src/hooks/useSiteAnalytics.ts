@@ -12,19 +12,30 @@ const getSessionId = (): string => {
   return sessionId;
 };
 
-// Persistent per-device identifier (survives sessions, one per phone/computer)
+// Persistent per-device identifier (survives sessions, one per phone/computer).
+// Stored in both localStorage and a long-lived cookie so clearing one keeps the other.
 const getDeviceId = (): string => {
-  try {
-    let id = localStorage.getItem('site_device_id');
-    if (!id) {
-      id = `dev-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-      localStorage.setItem('site_device_id', id);
-    }
-    return id;
-  } catch {
-    return 'dev-unknown';
-  }
+  const readCookie = (): string | null => {
+    try {
+      const m = document.cookie.match(/(?:^|;\s*)site_device_id=([^;]+)/);
+      return m ? decodeURIComponent(m[1]) : null;
+    } catch { return null; }
+  };
+  const writeCookie = (id: string) => {
+    try {
+      document.cookie = `site_device_id=${encodeURIComponent(id)}; path=/; max-age=${60 * 60 * 24 * 365 * 2}; SameSite=Lax`;
+    } catch { /* ignore */ }
+  };
+
+  let id: string | null = null;
+  try { id = localStorage.getItem('site_device_id'); } catch { /* ignore */ }
+  if (!id) id = readCookie();
+  if (!id) id = `dev-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+  try { localStorage.setItem('site_device_id', id); } catch { /* ignore */ }
+  writeCookie(id);
+  return id;
 };
+
 
 // Fetch IP address from external API (stable per device: first detected IP is reused)
 const getIPAddress = async (): Promise<string | null> => {
