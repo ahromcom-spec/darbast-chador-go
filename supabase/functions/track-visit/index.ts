@@ -31,8 +31,21 @@ Deno.serve(async (req) => {
     req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     req.headers.get('cf-connecting-ip') ||
     null
-  let ip = headerIp || clientIp
+  // Prefer the client's stable (device-cached) IP so proxies/CGNAT/Cloudflare WARP
+  // rotation does not create a new "identity" on every visit.
+  let ip = clientIp || headerIp
   const ua = req.headers.get('user-agent') || body.userAgent || null
+  const lang = req.headers.get('accept-language') || ''
+
+  // Server-side device fingerprint: stable even when localStorage is cleared or
+  // the visitor is in private mode. Uses UA + language + IP network (/16).
+  const ipNet = (ip || '').split('.').slice(0, 2).join('.')
+  const fpSource = `${ua || ''}|${lang}|${ipNet}`
+  let deviceFp = 'fp-unknown'
+  try {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(fpSource))
+    deviceFp = 'fp-' + Array.from(new Uint8Array(digest)).slice(0, 8).map((b) => b.toString(16).padStart(2, '0')).join('')
+  } catch { /* ignore */ }
 
   let actorName: string | null = null
   let actorPhone: string | null = null
@@ -49,34 +62,42 @@ Deno.serve(async (req) => {
   const isGuest = !userId
   const displayName = actorName || (isGuest ? 'بازدیدکننده مهمان (ثبت‌نام نشده)' : 'کاربر ناشناس')
 
-  // One IP per device: reuse the first IP ever recorded for this device, and
-  // avoid duplicate rows for the same device within the last 24 hours.
-  if (deviceId) {
+  // One IP per device: reuse the first IP recorded for this device fingerprint /
+  // device id, so the same phone always shows the same IP in the log.
+  const identityFilters: Array<Record<string, string>> = []
+  if (deviceId) identityFilters.push({ device_id: deviceId })
+  identityFilters.push({ device_fp: deviceFp })
+
+  for (const filter of identityFilters) {
     const { data: firstForDevice } = await supabase
       .from('activity_logs')
       .select('id, ip_address, occurred_at')
       .eq('event_type', 'site_visit')
-      .contains('details', { device_id: deviceId })
+      .contains('details', filter)
       .order('occurred_at', { ascending: true })
       .limit(1)
 
     if (firstForDevice && firstForDevice.length > 0) {
-      // Keep the device's canonical IP stable
       if (firstForDevice[0].ip_address) ip = firstForDevice[0].ip_address
 
-      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-      const { data: recent } = await supabase
-        .from('activity_logs')
-        .select('id')
-        .eq('event_type', 'site_visit')
-        .gte('occurred_at', since)
-        .contains('details', { device_id: deviceId })
-        .limit(1)
-      if (recent && recent.length > 0) {
-        return new Response(JSON.stringify({ ok: true, skipped: true, reason: 'device_recent' }), {
-          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
+      // Guests: collapse repeat visits from the same device within 6 hours.
+      // Logged-in users: always log the visit (the client already guards per session).
+      if (isGuest) {
+        const since = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
+        const { data: recent } = await supabase
+          .from('activity_logs')
+          .select('id')
+          .eq('event_type', 'site_visit')
+          .gte('occurred_at', since)
+          .contains('details', filter)
+          .limit(1)
+        if (recent && recent.length > 0) {
+          return new Response(JSON.stringify({ ok: true, skipped: true, reason: 'device_recent' }), {
+            status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          })
+        }
       }
+      break
     }
   }
 
@@ -116,6 +137,7 @@ Deno.serve(async (req) => {
     details: {
       session_id: sessionId,
       device_id: deviceId,
+      device_fp: deviceFp,
 
       page,
       page_title: pageTitle,
