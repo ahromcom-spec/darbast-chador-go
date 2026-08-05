@@ -1082,6 +1082,7 @@ export default function OrderDetail() {
               rental_start_date: order.rental_start_date
             }}
           />
+          )}
         </div>
 
 
