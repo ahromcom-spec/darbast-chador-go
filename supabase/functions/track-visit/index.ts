@@ -59,8 +59,8 @@ Deno.serve(async (req) => {
     actorPhone = prof?.phone_number || null
   }
 
-  const isGuest = !userId
-  const displayName = actorName || (isGuest ? 'بازدیدکننده مهمان (ثبت‌نام نشده)' : 'کاربر ناشناس')
+  let resolvedUserId = userId
+  let isGuest = !resolvedUserId
 
   // One IP per device: reuse the first IP recorded for this device fingerprint /
   // device id, so the same phone always shows the same IP in the log.
@@ -79,49 +79,50 @@ Deno.serve(async (req) => {
 
     if (firstForDevice && firstForDevice.length > 0) {
       if (firstForDevice[0].ip_address) ip = firstForDevice[0].ip_address
-
-      // Guests: collapse repeat visits from the same device within 6 hours.
-      // Logged-in users: always log the visit (the client already guards per session).
-      if (isGuest) {
-        const since = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
-        const { data: recent } = await supabase
-          .from('activity_logs')
-          .select('id')
-          .eq('event_type', 'site_visit')
-          .gte('occurred_at', since)
-          .contains('details', filter)
-          .limit(1)
-        if (recent && recent.length > 0) {
-          return new Response(JSON.stringify({ ok: true, skipped: true, reason: 'device_recent' }), {
-            status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          })
-        }
-      }
       break
     }
   }
 
-  // Avoid duplicate rows for the same session within the last 30 minutes
-  if (sessionId) {
-    const since = new Date(Date.now() - 30 * 60 * 1000).toISOString()
-    const { data: existing } = await supabase
-      .from('activity_logs')
-      .select('id')
-      .eq('event_type', 'site_visit')
-      .gte('occurred_at', since)
-      .contains('details', { session_id: sessionId })
-      .limit(1)
-    if (existing && existing.length > 0) {
-      return new Response(JSON.stringify({ ok: true, skipped: true }), {
-        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+  // If this device previously visited while signed in, keep showing that
+  // registered customer's name even when they are now browsing as a guest.
+  if (!resolvedUserId) {
+    for (const filter of identityFilters) {
+      const { data: known } = await supabase
+        .from('activity_logs')
+        .select('actor_user_id, actor_name, actor_phone, occurred_at')
+        .eq('event_type', 'site_visit')
+        .not('actor_user_id', 'is', null)
+        .contains('details', filter)
+        .order('occurred_at', { ascending: false })
+        .limit(1)
+
+      if (known && known.length > 0 && known[0].actor_user_id) {
+        resolvedUserId = known[0].actor_user_id as string
+        actorName = known[0].actor_name as string | null
+        actorPhone = known[0].actor_phone as string | null
+        isGuest = false
+        break
+      }
     }
   }
 
+  if (resolvedUserId && !actorName) {
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('full_name, phone_number')
+      .eq('user_id', resolvedUserId)
+      .maybeSingle()
+    actorName = prof?.full_name || actorName
+    actorPhone = prof?.phone_number || actorPhone
+  }
+
+  const displayName = actorName || (isGuest ? 'بازدیدکننده مهمان (ثبت‌نام نشده)' : 'کاربر ناشناس')
 
   const title = isGuest
     ? `بازدید مهمان از سایت${ip ? ` — IP: ${ip}` : ''}`
     : `بازدید ${displayName}${actorPhone ? ` (${actorPhone})` : ''} از سایت`
+
+
 
   const { data, error } = await supabase.from('activity_logs').insert({
     event_type: 'site_visit',
@@ -131,7 +132,7 @@ Deno.serve(async (req) => {
     entity_table: null,
     entity_id: null,
     title,
-    actor_user_id: userId,
+    actor_user_id: resolvedUserId,
     actor_name: displayName,
     actor_phone: actorPhone,
     details: {
