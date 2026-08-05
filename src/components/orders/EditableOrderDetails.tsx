@@ -96,6 +96,8 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   const [renewalDialogOpen, setRenewalDialogOpen] = useState(false);
   const [expertPricingEditOpen, setExpertPricingEditOpen] = useState(false);
   const [approvedRepairCost, setApprovedRepairCost] = useState(0);
+  const [approvedRepairs, setApprovedRepairs] = useState<any[]>([]);
+
   const [approvedRenewalCost, setApprovedRenewalCost] = useState(0);
   const [approvedRenewals, setApprovedRenewals] = useState<any[]>([]);
   const [orderApprovals, setOrderApprovals] = useState<Array<{ approver_role: string; approved_at: string | null; approver_user_id: string | null }>>([]);
