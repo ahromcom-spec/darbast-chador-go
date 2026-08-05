@@ -34,6 +34,7 @@ interface CollaborationInvite {
   payment_amount?: number;
   total_price?: number;
   total_paid?: number;
+  can_view_financials?: boolean;
   detailed_address?: string;
   province_name?: string;
   description?: string;
@@ -78,7 +79,8 @@ export function PendingCollaborationInvites() {
           order_id,
           inviter_user_id,
           status,
-          invited_at
+          invited_at,
+          can_view_financials
         `)
         .or(`invitee_user_id.eq.${user.id},invitee_phone_number.eq.${profile.phone_number}`)
         .in('status', ['pending', 'manager_approved', 'pending_registration'])
@@ -159,6 +161,7 @@ export function PendingCollaborationInvites() {
             location_lat: order?.location_lat || null,
             location_lng: order?.location_lng || null,
             order_notes: parsedNotes,
+            can_view_financials: (collab as any).can_view_financials !== false,
             payment_amount: order?.payment_amount || null,
             total_price: (order as any)?.total_price || null,
             total_paid: (order as any)?.total_paid || null,
@@ -531,7 +534,7 @@ export function PendingCollaborationInvites() {
                   )}
 
                   {/* Payment Amount */}
-                  {invite.payment_amount && invite.payment_amount > 0 && (
+                  {invite.can_view_financials && invite.payment_amount && invite.payment_amount > 0 && (
                     <div className="flex items-center gap-2 text-sm">
                       <Banknote className="h-4 w-4 text-green-600 flex-shrink-0" />
                       <span className="font-medium text-foreground">مبلغ سفارش: </span>
