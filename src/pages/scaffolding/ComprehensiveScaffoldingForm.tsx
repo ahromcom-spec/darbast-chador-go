@@ -1394,9 +1394,9 @@ export default function ComprehensiveScaffoldingForm({
                   if (dimension > 7 && dimension <= 10.5) return 3;
                   return 0;
                 };
-                const length = parseFloat(dimensions[0]?.length || '0');
-                const width = parseFloat(dimensions[0]?.width || '0');
-                const height = parseFloat(columnHeight || '0');
+                const length = effectiveDimensions[0]?.length || 0;
+                const width = effectiveDimensions[0]?.width || 0;
+                const height = effectiveColumnHeight;
                 const floors = Math.ceil(height / 3.5);
                 const lengthUnits = getUnits(length);
                 const widthUnits = getUnits(width);
