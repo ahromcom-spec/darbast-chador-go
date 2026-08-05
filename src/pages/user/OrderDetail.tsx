@@ -2484,24 +2484,40 @@ export default function OrderDetail() {
                     {repairRequests.length > 0 && (
                       <div className="border-t border-amber-200 dark:border-amber-700 pt-3 space-y-2">
                         {repairRequests.map((req: any, idx: number) => (
-                          <div key={idx} className="flex items-center justify-between p-2 bg-amber-100/50 dark:bg-amber-900/30 rounded-lg text-sm">
-                            <div className="flex items-center gap-2">
-                              <CalendarDays className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                              <span className="text-amber-800 dark:text-amber-200">
-                                درخواست تعمیر {formatPersianDate(req.created_at)}
+                          <div key={req.id || idx} className="p-2 bg-amber-100/50 dark:bg-amber-900/30 rounded-lg text-sm space-y-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <CalendarDays className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                <span className="text-amber-800 dark:text-amber-200">
+                                  تعمیر {(idx + 1).toLocaleString('fa-IR')} - {formatPersianDate(req.created_at)}
+                                </span>
+                              </div>
+                              <Badge variant="outline" className={
+                                req.status === 'approved' || req.status === 'completed' 
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-300' 
+                                  : req.status === 'rejected'
+                                  ? 'bg-red-100 text-red-700 border-red-300'
+                                  : 'bg-amber-100 text-amber-700 border-amber-300'
+                              }>
+                                {req.status === 'approved' ? 'تایید شده' : req.status === 'completed' ? 'انجام شده' : req.status === 'rejected' ? 'رد شده' : 'در انتظار بررسی'}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between gap-2 px-1">
+                              <span className="text-xs text-amber-700/80 dark:text-amber-300/80">هزینه:</span>
+                              <span className="text-xs font-bold text-amber-800 dark:text-amber-200">
+                                {(req.final_cost || 0) > 0
+                                  ? `${Number(req.final_cost).toLocaleString('fa-IR')} تومان`
+                                  : `حداقل ${(1500000).toLocaleString('fa-IR')} تومان (در انتظار تعیین قیمت)`}
                               </span>
                             </div>
-                            <Badge variant="outline" className={
-                              req.status === 'approved' || req.status === 'completed' 
-                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-300' 
-                                : req.status === 'rejected'
-                                ? 'bg-red-100 text-red-700 border-red-300'
-                                : 'bg-amber-100 text-amber-700 border-amber-300'
-                            }>
-                              {req.status === 'approved' ? 'تایید شده' : req.status === 'completed' ? 'انجام شده' : req.status === 'rejected' ? 'رد شده' : 'در انتظار بررسی'}
-                            </Badge>
+                            {req.description && (
+                              <p className="text-[11px] text-muted-foreground italic px-1 leading-relaxed line-clamp-2">
+                                شرح: {req.description}
+                              </p>
+                            )}
                           </div>
                         ))}
+
                       </div>
                     )}
                   </section>
