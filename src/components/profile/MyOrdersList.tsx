@@ -134,15 +134,20 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
         supabase.from('subcategories').select('id, name').in('id', subcategoryIds),
         supabase.from('provinces').select('id, name').in('id', provinceIds),
         supabase.from('order_collaborators')
-          .select('order_id')
+          .select('order_id, status, responded_at, manager_approved_at')
           .eq('invitee_user_id', userId)
-          .in('status', ['accepted', 'approved'])
           .in('order_id', orderIds)
       ]);
+
       
+      const INACTIVE_COLLAB_STATUSES = ['pending', 'manager_approved', 'pending_registration', 'rejected', 'cancelled', 'canceled', 'exited'];
       const subcategoryMap = new Map((subcatRes.data || []).map((s: any) => [s.id, s.name]));
       const provinceMap = new Map((provRes.data || []).map((p: any) => [p.id, p.name]));
-      const collaboratedOrderIds = new Set((collabRes.data || []).map((c: any) => c.order_id));
+      const collaboratedOrderIds = new Set(
+        (collabRes.data || [])
+          .filter((c: any) => !INACTIVE_COLLAB_STATUSES.includes(c.status))
+          .map((c: any) => c.order_id)
+      );
 
       const allOrders: Order[] = ordersData.map((order: any) => ({
         id: order.id,
