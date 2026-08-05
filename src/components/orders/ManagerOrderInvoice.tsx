@@ -1221,7 +1221,27 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
         ` : ''}
 
 
+        <!-- Bank Info -->
+        <div class="bank-section">
+          <div class="bank-title">💳 اطلاعات حساب برای واریز</div>
+          <table class="bank-info-table">
+            <tr>
+              <td class="label-cell">بانک:</td>
+              <td class="value-cell">ملت</td>
+              <td class="label-cell">به نام:</td>
+              <td class="value-cell">رضا محمدی</td>
+            </tr>
+            <tr>
+              <td class="label-cell">شماره کارت:</td>
+              <td class="value-cell" dir="ltr" style="font-family: monospace; font-weight: bold; letter-spacing: 1px;">6104 3386 2152 1349</td>
+              <td class="label-cell">شماره شبا:</td>
+              <td class="value-cell" dir="ltr" style="font-family: monospace; font-weight: bold;">IR280120000000009812328696</td>
+            </tr>
+          </table>
+        </div>
+
         <!-- Signatures -->
+
         <div class="signatures-section">
           <div class="signature-box">
             <div class="signature-label">امضای کارفرما:</div>
