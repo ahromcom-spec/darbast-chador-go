@@ -73,14 +73,16 @@ export const resolveOrderSmsDetails = async (orderId?: string | null): Promise<{
   customerName?: string;
   address?: string;
   serviceType?: string;
+  amount?: number;
 }> => {
   if (!orderId) return {};
 
   const { data: order } = await supabase
     .from('projects_v3')
-    .select('code, customer_id, customer_name, customer_phone, address, detailed_address, notes, subcategory_id')
+    .select('code, customer_id, customer_name, customer_phone, address, detailed_address, notes, subcategory_id, total_price')
     .eq('id', orderId)
     .maybeSingle();
+
 
   if (!order) return {};
 
@@ -130,8 +132,10 @@ export const resolveOrderSmsDetails = async (orderId?: string | null): Promise<{
     customerName,
     address: buildOrderSmsAddress((order as any).address, (order as any).detailed_address),
     serviceType: serviceType || 'خدمات',
+    amount: Number((order as any).total_price) > 0 ? Number((order as any).total_price) : undefined,
   };
 };
+
 
 export const sendOrderSms = async (
   phone: string,
@@ -149,7 +153,7 @@ export const sendOrderSms = async (
   let targetOrderCode = orderCode;
   let smsDetails: OrderSmsDetails = { ...(details || {}) };
 
-  if (details?.orderId && (!isValidIranMobile(targetPhone) || !targetOrderCode || !smsDetails.address || !smsDetails.serviceType || !smsDetails.customerName)) {
+  if (details?.orderId && (!isValidIranMobile(targetPhone) || !targetOrderCode || !smsDetails.address || !smsDetails.serviceType || !smsDetails.customerName || smsDetails.amount === undefined)) {
     try {
       const resolved = await resolveOrderSmsDetails(details.orderId);
       if (!isValidIranMobile(targetPhone) && resolved.phone) targetPhone = resolved.phone;
@@ -159,11 +163,13 @@ export const sendOrderSms = async (
         address: smsDetails.address || resolved.address,
         serviceType: smsDetails.serviceType || resolved.serviceType,
         customerName: smsDetails.customerName || resolved.customerName,
+        amount: smsDetails.amount ?? resolved.amount,
       };
     } catch (e) {
       console.warn('[sendOrderSms] Could not resolve order SMS details:', e);
     }
   }
+
 
   if (!isValidIranMobile(targetPhone)) {
     console.warn('[sendOrderSms] Skipped - no valid customer phone', { orderCode: targetOrderCode, orderId: details?.orderId });
@@ -236,9 +242,11 @@ export const sendOrderStageSms = async (
     address: resolved.address,
     serviceType: resolved.serviceType,
     customerName: resolved.customerName,
+    amount: resolved.amount,
     ...(details || {}),
   });
 };
+
 
 // ارسال پیامک به مدیرعامل
 export const sendCeoNotificationSms = async (
@@ -286,17 +294,26 @@ export const sendCeoNotificationSms = async (
 };
 
 
-// Helper to build a consistent address string for SMS
+// Helper to build a consistent address string for SMS (no duplicated parts)
 export const buildOrderSmsAddress = (
   address?: string | null,
   detailedAddress?: string | null
 ): string => {
+  const norm = (s: string) => s.replace(/[\s،,.\-]+/g, '').trim();
   const base = (address || '').trim();
   const detail = (detailedAddress || '').trim();
 
-  if (base && detail) return `${base} - ${detail}`;
+  if (base && detail) {
+    const nb = norm(base);
+    const nd = norm(detail);
+    // اگر یکی از آن‌ها شامل دیگری است، فقط طولانی‌تر را برگردان تا آدرس تکراری ارسال نشود
+    if (nb === nd || nd.includes(nb)) return detail;
+    if (nb.includes(nd)) return base;
+    return `${base} - ${detail}`;
+  }
   return base || detail || 'ثبت نشده';
 };
+
 
 // Helper to map execution stages to SMS status
 export const getSmStatusFromExecutionStage = (stage: string): SmsStatus | null => {

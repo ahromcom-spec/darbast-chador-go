@@ -103,11 +103,13 @@ const STAGE_LABELS: Record<string, string> = {
 
 // قالب تایید شده توسط پارس‌گرین برای شماره 90000319
 const APPROVED_TEMPLATE = "📋 سفارش جدید: کد {code} - {serviceType} - آدرس: {address} - مشتری: {customerName} - تاریخ: {dateTime}";
+// قالب همراه با مبلغ سفارش (ثبت و تایید سفارش)
+const APPROVED_TEMPLATE_WITH_AMOUNT = "📋 سفارش جدید: کد {code} - {serviceType} - آدرس: {address} - مشتری: {customerName} - مبلغ: {amount} تومان - تاریخ: {dateTime}";
 
 // SMS templates for each order status with placeholders
 const SMS_TEMPLATES: Record<string, string> = {
-  submitted: APPROVED_TEMPLATE,
-  approved: APPROVED_TEMPLATE,
+  submitted: APPROVED_TEMPLATE_WITH_AMOUNT,
+  approved: APPROVED_TEMPLATE_WITH_AMOUNT,
   in_progress: APPROVED_TEMPLATE,
   executed: APPROVED_TEMPLATE,
   awaiting_payment: APPROVED_TEMPLATE,
@@ -121,6 +123,7 @@ const SMS_TEMPLATES: Record<string, string> = {
   ceo_new_order: APPROVED_TEMPLATE,
   ceo_payment: APPROVED_TEMPLATE,
 };
+
 
 interface SmsRequest {
   phone: string;
@@ -291,15 +294,35 @@ const handler = async (req: Request): Promise<Response> => {
     const baseService = serviceType || "خدمات";
     const decoratedService = stageLabel ? `${baseService} (${stageLabel})` : baseService;
 
+    // حذف بخش‌های تکراری آدرس (مثلاً وقتی آدرس و آدرس دقیق یکی هستند)
+    const dedupeAddress = (input?: string) => {
+      const raw = (input || "").trim();
+      if (!raw) return "ثبت نشده";
+      const parts = raw.split(" - ").map((p) => p.trim()).filter(Boolean);
+      const norm = (s: string) => s.replace(/[\s،,.\-]+/g, "");
+      const kept: string[] = [];
+      for (const p of parts) {
+        const np = norm(p);
+        if (kept.some((k) => norm(k) === np || norm(k).includes(np))) continue;
+        // اگر بخش جدید شامل بخش قبلی است، بخش قبلی حذف شود
+        for (let i = kept.length - 1; i >= 0; i--) {
+          if (np.includes(norm(kept[i]))) kept.splice(i, 1);
+        }
+        kept.push(p);
+      }
+      return kept.join(" - ") || raw;
+    };
+
     // Replace placeholders in template
     let message = template
-      .replace("{code}", orderCode)
-      .replace("{serviceType}", decoratedService)
-      .replace("{address}", address || "ثبت نشده")
-      .replace("{dateTime}", persianDateTime)
-      .replace("{amount}", formattedAmount)
-      .replace("{orderLink}", orderLink)
-      .replace("{customerName}", customerName || "مشتری");
+      .replaceAll("{code}", orderCode)
+      .replaceAll("{serviceType}", decoratedService)
+      .replaceAll("{address}", dedupeAddress(address))
+      .replaceAll("{dateTime}", persianDateTime)
+      .replaceAll("{amount}", formattedAmount)
+      .replaceAll("{orderLink}", orderLink)
+      .replaceAll("{customerName}", customerName || "مشتری");
+
 
     // === سربرگ اجباری برند: همیشه در خط اول پیامک ===
     const BRAND_HEADER = "خدمات ساختمانی و منزل اهرم";
