@@ -755,6 +755,22 @@ export function RepairRequestDialog({
               {getStatusBadge(existingRequest.status)}
             </div>
 
+            {/* حذف / لغو درخواست */}
+            {canDeleteRequest && (
+              <div className="flex justify-end">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {isManager ? 'حذف این درخواست تعمیر' : 'لغو و حذف درخواست تعمیر'}
+                </Button>
+              </div>
+            )}
+
+
             {/* Cost Info */}
             <div className="p-3 bg-primary/10 rounded-lg border border-primary/20 space-y-3">
               {existingRequest.final_cost && existingRequest.final_cost > 0 ? (
