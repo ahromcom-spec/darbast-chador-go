@@ -637,7 +637,7 @@ export function RepairRequestDialog({
                       >
                         <span className="font-medium">#{(requests.length - idx).toLocaleString('fa-IR')}</span>
                         <span className="mx-1">·</span>
-                        <span>{cost.toLocaleString('fa-IR')} ت</span>
+                        <span>{cost ? `${cost.toLocaleString('fa-IR')} ت` : 'در انتظار قیمت'}</span>
                       </button>
                     );
                   })}
