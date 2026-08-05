@@ -510,7 +510,7 @@ export default function OrderDetail() {
           : Promise.resolve({ data: null }),
         supabase.from('project_media').select('*').eq('project_id', id).order('created_at', { ascending: false }),
         supabase.from('order_approvals').select('approver_role, approved_at, approver_user_id').eq('order_id', id).order('created_at', { ascending: true }),
-        supabase.from('repair_requests').select('final_cost, status, created_at, description').eq('order_id', id),
+        supabase.from('repair_requests').select('id, final_cost, estimated_cost, status, created_at, description').eq('order_id', id).order('created_at', { ascending: true }),
         supabase.from('collection_requests').select('requested_date, confirmed_date, status').eq('order_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('order_renewals').select('renewal_price, renewal_number, new_start_date, new_end_date, status, manager_notes').eq('order_id', id).eq('status', 'approved').order('renewal_number', { ascending: true }),
         supabase.from('order_payments').select('*').eq('order_id', id).order('created_at', { ascending: false })
