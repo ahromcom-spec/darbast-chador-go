@@ -143,7 +143,11 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
       const INACTIVE_COLLAB_STATUSES = ['pending', 'manager_approved', 'pending_registration', 'rejected', 'cancelled', 'canceled', 'exited'];
       const subcategoryMap = new Map((subcatRes.data || []).map((s: any) => [s.id, s.name]));
       const provinceMap = new Map((provRes.data || []).map((p: any) => [p.id, p.name]));
-      const collaboratedOrderIds = new Set((collabRes.data || []).map((c: any) => c.order_id));
+      const collaboratedOrderIds = new Set(
+        (collabRes.data || [])
+          .filter((c: any) => !INACTIVE_COLLAB_STATUSES.includes(c.status))
+          .map((c: any) => c.order_id)
+      );
 
       const allOrders: Order[] = ordersData.map((order: any) => ({
         id: order.id,
