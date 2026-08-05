@@ -1383,12 +1383,10 @@ export default function ComprehensiveScaffoldingForm({
             payment_amount: finalPrice, // استفاده از قیمت نهایی (override یا محاسبه شده)
             notes: {
               service_type: activeService,
-              dimensions: dimensions.map(d => ({
-                length: parseFloat(d.length),
-                width: parseFloat(d.width),
-                height: parseFloat(d.height),
-              })),
-              columnHeight: isColumnScaffolding ? parseFloat(columnHeight) : undefined,
+              dimensions: (isPipeLengthScaffolding
+                ? dimensions.map(d => ({ length: parseFloat(d.length), width: parseFloat(d.width), height: parseFloat(d.height) }))
+                : effectiveDimensions.map(d => ({ length: d.length, width: d.width, height: d.height }))),
+              columnHeight: isColumnScaffolding ? effectiveColumnHeight : undefined,
               column_units: isColumnScaffolding ? (() => {
                 const getUnits = (dimension: number): number => {
                   if (dimension >= 0.20 && dimension <= 3.5) return 1;
