@@ -59,24 +59,15 @@ installSyncListeners();
 })();
 
 
-// به‌روزرسانی چیدمان و تلاش برای آزاد کردن قفل چرخش (Android PWA/WebAPK)
+// به‌روزرسانی چیدمان پس از چرخش دستگاه (قفل/آزادسازی چرخش در useOrientationLock مدیریت می‌شود)
 (() => {
   try {
-    const unlock = () => {
-      const o = (screen as any)?.orientation;
-      if (o && typeof o.unlock === 'function') {
-        try { o.unlock(); } catch {}
-      }
-    };
-
-    unlock();
-
     const onOrientationChange = () => {
-      unlock();
       // بعضی WebView ها در چرخش، resize را درست ارسال نمی‌کنند
       setTimeout(() => window.dispatchEvent(new Event('resize')), 150);
       setTimeout(() => window.dispatchEvent(new Event('resize')), 500);
     };
+
 
     window.addEventListener('orientationchange', onOrientationChange);
     document.addEventListener('visibilitychange', () => {
