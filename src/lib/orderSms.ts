@@ -242,9 +242,11 @@ export const sendOrderStageSms = async (
     address: resolved.address,
     serviceType: resolved.serviceType,
     customerName: resolved.customerName,
+    amount: resolved.amount,
     ...(details || {}),
   });
 };
+
 
 // ارسال پیامک به مدیرعامل
 export const sendCeoNotificationSms = async (
