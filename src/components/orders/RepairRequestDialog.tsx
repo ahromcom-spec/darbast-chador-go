@@ -949,7 +949,7 @@ export function RepairRequestDialog({
                             <Film className="h-8 w-8 text-muted-foreground" />
                           </div>
                         )}
-                        {existingRequest.status === 'pending' && (
+                        {(isManager || existingRequest.status === 'pending') && (
                           <Button
                             variant="destructive"
                             size="icon"
@@ -1152,6 +1152,27 @@ export function RepairRequestDialog({
           </div>
         )}
       </DialogContent>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="z-[10000]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف درخواست تعمیر</AlertDialogTitle>
+            <AlertDialogDescription>
+              آیا از حذف این درخواست تعمیر مطمئن هستید؟ با حذف، هزینه این تعمیر از مبلغ کل سفارش کسر می‌شود و تصاویر و گفتگوهای مرتبط نیز حذف خواهند شد. این عمل قابل بازگشت نیست.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>انصراف</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleDeleteRequest(); }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'در حال حذف...' : 'حذف درخواست'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
