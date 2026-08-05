@@ -1140,7 +1140,14 @@ export default function ComprehensiveScaffoldingForm({
 
     if (!isMultiSubmit) {
       // فقط چک کردن ابعاد به‌عنوان فیلد ضروری
-      if (isColumnScaffolding || isPipeLengthScaffolding) {
+      if (isPipeLengthScaffolding) {
+        // این نوع داربست فقط یک فیلد دارد: طول مجموع لوله مصرفی
+        const pipeLen = parseFloat(dimensions[0]?.length || '0');
+        if (!dimensions[0]?.length || isNaN(pipeLen) || pipeLen <= 0) {
+          toast({ title: 'خطا', description: 'لطفاً طول مجموع لوله مصرفی را وارد کنید', variant: 'destructive' });
+          return;
+        }
+      } else if (isColumnScaffolding) {
         if (!dimensions[0]?.length || !dimensions[0]?.width || !columnHeight) {
           toast({ title: 'خطا', description: 'لطفاً تمام ابعاد را وارد کنید', variant: 'destructive' });
           return;
@@ -1150,25 +1157,35 @@ export default function ComprehensiveScaffoldingForm({
         return;
       }
 
-      // Validate using Zod schema - فقط ابعاد
-      try {
-        scaffoldingFormSchema.parse({
-          detailedAddress: finalAddress.trim(),
-          dimensions: dimensions.map(d => ({
-            length: parseFloat(d.length),
-            width: parseFloat(d.width),
-            height: parseFloat(d.height)
-          }))
-        });
-      } catch (error) {
-        if (error instanceof z.ZodError) {
-          toast({ title: 'خطای اعتبارسنجی', description: error.errors[0].message, variant: 'destructive' });
-          return;
+      // Validate using Zod schema - فقط ابعاد (برای داربست طول لوله مصرفی اعتبارسنجی ابعاد سه‌بعدی انجام نمی‌شود)
+      if (!isPipeLengthScaffolding) {
+        try {
+          scaffoldingFormSchema.parse({
+            detailedAddress: finalAddress.trim(),
+            dimensions: isColumnScaffolding
+              ? [{
+                  length: parseFloat(dimensions[0]?.length || '0'),
+                  width: parseFloat(dimensions[0]?.width || '0'),
+                  height: parseFloat(columnHeight || '0'),
+                }]
+              : dimensions.map(d => ({
+                  length: parseFloat(d.length),
+                  width: parseFloat(d.width),
+                  height: parseFloat(d.height)
+                }))
+          });
+        } catch (error) {
+          if (error instanceof z.ZodError) {
+            toast({ title: 'خطای اعتبارسنجی', description: error.errors[0].message, variant: 'destructive' });
+            return;
+          }
         }
       }
 
       // Validate dimensions - check minimum 3 meters for length and height
-      if (isColumnScaffolding || isPipeLengthScaffolding) {
+      if (isPipeLengthScaffolding) {
+        // بدون محدودیت ابعاد سه‌بعدی
+      } else if (isColumnScaffolding) {
         const length = parseFloat(dimensions[0]?.length || '0');
         const height = parseFloat(columnHeight || '0');
         if (length < 3 || isNaN(length)) {
@@ -1191,6 +1208,7 @@ export default function ComprehensiveScaffoldingForm({
         }
       }
     }
+
 
 
     // Sanitize address - استفاده از آدرس بازخوانی شده از بالای فرم
