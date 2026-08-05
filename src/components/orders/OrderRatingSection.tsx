@@ -336,6 +336,7 @@ export default function OrderRatingSection({ orderId }: OrderRatingSectionProps)
                     setContractorComment(existing.contractor_comment || '');
                     setManagementScore(existing.management_score || 0);
                     setManagementComment(existing.management_comment || '');
+                    setIsAnonymous(!!existing.is_anonymous);
                     setEditing(false);
                   }}
                   disabled={saving}
