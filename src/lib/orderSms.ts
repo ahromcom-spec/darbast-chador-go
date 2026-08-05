@@ -153,7 +153,7 @@ export const sendOrderSms = async (
   let targetOrderCode = orderCode;
   let smsDetails: OrderSmsDetails = { ...(details || {}) };
 
-  if (details?.orderId && (!isValidIranMobile(targetPhone) || !targetOrderCode || !smsDetails.address || !smsDetails.serviceType || !smsDetails.customerName)) {
+  if (details?.orderId && (!isValidIranMobile(targetPhone) || !targetOrderCode || !smsDetails.address || !smsDetails.serviceType || !smsDetails.customerName || smsDetails.amount === undefined)) {
     try {
       const resolved = await resolveOrderSmsDetails(details.orderId);
       if (!isValidIranMobile(targetPhone) && resolved.phone) targetPhone = resolved.phone;
@@ -163,11 +163,13 @@ export const sendOrderSms = async (
         address: smsDetails.address || resolved.address,
         serviceType: smsDetails.serviceType || resolved.serviceType,
         customerName: smsDetails.customerName || resolved.customerName,
+        amount: smsDetails.amount ?? resolved.amount,
       };
     } catch (e) {
       console.warn('[sendOrderSms] Could not resolve order SMS details:', e);
     }
   }
+
 
   if (!isValidIranMobile(targetPhone)) {
     console.warn('[sendOrderSms] Skipped - no valid customer phone', { orderCode: targetOrderCode, orderId: details?.orderId });
