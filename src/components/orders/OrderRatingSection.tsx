@@ -287,6 +287,34 @@ export default function OrderRatingSection({ orderId }: OrderRatingSectionProps)
           )}
         </div>
 
+        {/* امتیازدهی ناشناس */}
+        {editing ? (
+          <div className="flex items-start gap-2 p-3 rounded-lg border border-dashed bg-muted/20">
+            <Checkbox
+              id="rating-anonymous"
+              checked={isAnonymous}
+              onCheckedChange={(v) => setIsAnonymous(v === true)}
+              className="mt-0.5"
+            />
+            <div className="space-y-1">
+              <Label htmlFor="rating-anonymous" className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
+                <UserX className="h-4 w-4 text-muted-foreground" />
+                امتیازدهی به صورت ناشناس
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                با فعال کردن این گزینه، نام شما در امتیاز ثبت‌شده برای پیمانکار و پرسنل نمایش داده نمی‌شود.
+              </p>
+            </div>
+          </div>
+        ) : (
+          isAnonymous && (
+            <Badge variant="outline" className="gap-1 text-xs">
+              <UserX className="h-3.5 w-3.5" />
+              این امتیاز به صورت ناشناس ثبت شده است
+            </Badge>
+          )
+        )}
+
         {existing && !editing && (
           <p className="text-xs text-muted-foreground">
             آخرین ویرایش: {formatPersianDate(existing.updated_at, { showDayOfWeek: true })}
