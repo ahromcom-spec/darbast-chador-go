@@ -98,7 +98,7 @@ export default function OrderRatingSection({ orderId }: OrderRatingSectionProps)
       if (orderData?.contractor_id) {
         const { data: contractor } = await supabase
           .from('contractors')
-          .select('user_id, company_name, full_name')
+          .select('user_id, company_name')
           .eq('id', orderData.contractor_id)
           .maybeSingle();
 
