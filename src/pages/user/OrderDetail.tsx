@@ -252,6 +252,9 @@ export default function OrderDetail() {
   const [advancePaymentAmount, setAdvancePaymentAmount] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
   const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+  // اگر کاربر فعلی «همکار» این سفارش باشد، سطح دسترسی او اینجا نگه‌داری می‌شود
+  const [myCollabPerms, setMyCollabPerms] = useState<{ can_view_financials: boolean; can_manage_order: boolean } | null>(null);
+
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
