@@ -380,11 +380,15 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
             </div>
           ) : collaborators.length > 0 ? (
             <div className="space-y-2">
-              {collaborators.map((collab) => (
+              {collaborators.map((collab) => {
+                const isInviter = collab.inviter_user_id === user?.id;
+                const isActive = !INACTIVE_STATUSES.includes(collab.status);
+                return (
                 <div
                   key={collab.id}
-                  className="flex items-center justify-between p-2 bg-background rounded-md border border-border/30"
+                  className="p-2 bg-background rounded-md border border-border/30 space-y-2"
                 >
+                  <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <span className="text-xs font-medium text-primary">
@@ -409,13 +413,14 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
                       {collab.status === 'accepted' && <CheckCircle className="h-3 w-3 mr-1" />}
                       {statusLabels[collab.status]?.label || collab.status}
                     </Badge>
-                    {(collab.status === 'pending' || collab.status === 'pending_manager') && collab.inviter_user_id === user?.id && (
+                    {isInviter && (
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
                         onClick={() => deleteCollaborator(collab.id)}
                         disabled={deletingId === collab.id}
+                        title="حذف دسترسی همکار"
                       >
                         {deletingId === collab.id ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -425,8 +430,36 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
                       </Button>
                     )}
                   </div>
+                  </div>
+
+                  {isInviter && isActive && (
+                    <div className="space-y-2 rounded-md bg-muted/40 p-2 border border-border/30">
+                      <p className="text-xs font-medium text-muted-foreground">سطح دسترسی همکار</p>
+                      <label className="flex items-center gap-2 text-xs cursor-pointer">
+                        <Checkbox
+                          checked={collab.can_view_financials !== false}
+                          disabled={updatingPermId === collab.id}
+                          onCheckedChange={(v) => updatePermission(collab.id, { can_view_financials: v === true })}
+                        />
+                        <span>دسترسی به مبالغ و پرداخت‌ها</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-xs cursor-pointer">
+                        <Checkbox
+                          checked={collab.can_manage_order === true}
+                          disabled={updatingPermId === collab.id}
+                          onCheckedChange={(v) => updatePermission(collab.id, { can_manage_order: v === true })}
+                        />
+                        <span>امکان انتقال سفارش و افزودن همکار جدید</span>
+                      </label>
+                      {collab.can_view_financials !== false && collab.can_manage_order === true && (
+                        <p className="text-xs text-green-600">دسترسی کامل به همه بخش‌های سفارش</p>
+                      )}
+                    </div>
+                  )}
                 </div>
-              ))}
+                );
+              })}
+
             </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-2">
