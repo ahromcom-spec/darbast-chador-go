@@ -2573,6 +2573,62 @@ export type Database = {
           },
         ]
       }
+      order_ratings: {
+        Row: {
+          contractor_comment: string | null
+          contractor_score: number | null
+          contractor_target_id: string | null
+          contractor_target_label: string
+          created_at: string
+          id: string
+          management_comment: string | null
+          management_score: number | null
+          management_target_id: string | null
+          management_target_label: string
+          order_id: string
+          rater_id: string
+          updated_at: string
+        }
+        Insert: {
+          contractor_comment?: string | null
+          contractor_score?: number | null
+          contractor_target_id?: string | null
+          contractor_target_label?: string
+          created_at?: string
+          id?: string
+          management_comment?: string | null
+          management_score?: number | null
+          management_target_id?: string | null
+          management_target_label?: string
+          order_id: string
+          rater_id: string
+          updated_at?: string
+        }
+        Update: {
+          contractor_comment?: string | null
+          contractor_score?: number | null
+          contractor_target_id?: string | null
+          contractor_target_label?: string
+          created_at?: string
+          id?: string
+          management_comment?: string | null
+          management_score?: number | null
+          management_target_id?: string | null
+          management_target_label?: string
+          order_id?: string
+          rater_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_ratings_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_renewals: {
         Row: {
           approved_at: string | null
