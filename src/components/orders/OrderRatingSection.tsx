@@ -82,6 +82,7 @@ export default function OrderRatingSection({ orderId }: OrderRatingSectionProps)
   const [contractorComment, setContractorComment] = useState('');
   const [managementScore, setManagementScore] = useState(0);
   const [managementComment, setManagementComment] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
   const [contractorLabel, setContractorLabel] = useState(AHROM_CONTRACTOR_LABEL);
   const [contractorTargetId, setContractorTargetId] = useState<string | null>(null);
