@@ -103,11 +103,13 @@ const STAGE_LABELS: Record<string, string> = {
 
 // قالب تایید شده توسط پارس‌گرین برای شماره 90000319
 const APPROVED_TEMPLATE = "📋 سفارش جدید: کد {code} - {serviceType} - آدرس: {address} - مشتری: {customerName} - تاریخ: {dateTime}";
+// قالب همراه با مبلغ سفارش (ثبت و تایید سفارش)
+const APPROVED_TEMPLATE_WITH_AMOUNT = "📋 سفارش جدید: کد {code} - {serviceType} - آدرس: {address} - مشتری: {customerName} - مبلغ: {amount} تومان - تاریخ: {dateTime}";
 
 // SMS templates for each order status with placeholders
 const SMS_TEMPLATES: Record<string, string> = {
-  submitted: APPROVED_TEMPLATE,
-  approved: APPROVED_TEMPLATE,
+  submitted: APPROVED_TEMPLATE_WITH_AMOUNT,
+  approved: APPROVED_TEMPLATE_WITH_AMOUNT,
   in_progress: APPROVED_TEMPLATE,
   executed: APPROVED_TEMPLATE,
   awaiting_payment: APPROVED_TEMPLATE,
@@ -121,6 +123,7 @@ const SMS_TEMPLATES: Record<string, string> = {
   ceo_new_order: APPROVED_TEMPLATE,
   ceo_payment: APPROVED_TEMPLATE,
 };
+
 
 interface SmsRequest {
   phone: string;
