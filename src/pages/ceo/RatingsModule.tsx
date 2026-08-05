@@ -17,6 +17,7 @@ interface RatingRow {
   management_score: number | null;
   management_comment: string | null;
   management_target_label: string;
+  is_anonymous?: boolean | null;
   created_at: string;
   updated_at: string;
   order_code?: string | null;
@@ -167,7 +168,9 @@ export default function RatingsModule() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base flex flex-wrap items-center gap-2">
                     <span>سفارش {r.order_code || '—'}</span>
-                    <Badge variant="outline">{r.customer_name || 'مشتری'}</Badge>
+                    <Badge variant="outline">
+                      {r.is_anonymous ? 'ناشناس' : r.customer_name || 'مشتری'}
+                    </Badge>
                     <span className="text-xs text-muted-foreground">
                       {formatPersianDate(r.updated_at, { showDayOfWeek: true })}
                     </span>

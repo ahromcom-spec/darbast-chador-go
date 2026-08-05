@@ -2581,6 +2581,7 @@ export type Database = {
           contractor_target_label: string
           created_at: string
           id: string
+          is_anonymous: boolean
           management_comment: string | null
           management_score: number | null
           management_target_id: string | null
@@ -2596,6 +2597,7 @@ export type Database = {
           contractor_target_label?: string
           created_at?: string
           id?: string
+          is_anonymous?: boolean
           management_comment?: string | null
           management_score?: number | null
           management_target_id?: string | null
@@ -2611,6 +2613,7 @@ export type Database = {
           contractor_target_label?: string
           created_at?: string
           id?: string
+          is_anonymous?: boolean
           management_comment?: string | null
           management_score?: number | null
           management_target_id?: string | null

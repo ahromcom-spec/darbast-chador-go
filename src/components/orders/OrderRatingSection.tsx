@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Star, Loader2, CheckCircle2, Pencil } from 'lucide-react';
+import { Star, Loader2, CheckCircle2, Pencil, UserX } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -24,6 +26,7 @@ interface RatingRow {
   management_score: number | null;
   management_comment: string | null;
   management_target_label: string;
+  is_anonymous: boolean | null;
   updated_at: string;
 }
 
@@ -79,6 +82,7 @@ export default function OrderRatingSection({ orderId }: OrderRatingSectionProps)
   const [contractorComment, setContractorComment] = useState('');
   const [managementScore, setManagementScore] = useState(0);
   const [managementComment, setManagementComment] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
   const [contractorLabel, setContractorLabel] = useState(AHROM_CONTRACTOR_LABEL);
   const [contractorTargetId, setContractorTargetId] = useState<string | null>(null);
@@ -136,6 +140,7 @@ export default function OrderRatingSection({ orderId }: OrderRatingSectionProps)
       setContractorComment(row.contractor_comment || '');
       setManagementScore(row.management_score || 0);
       setManagementComment(row.management_comment || '');
+      setIsAnonymous(!!row.is_anonymous);
       setEditing(false);
     } else {
       setEditing(true);
@@ -171,6 +176,7 @@ export default function OrderRatingSection({ orderId }: OrderRatingSectionProps)
       management_comment: managementComment.trim() || null,
       management_target_id: null,
       management_target_label: AHROM_MANAGEMENT_LABEL,
+      is_anonymous: isAnonymous,
     };
 
     const { error } = await supabase
@@ -281,6 +287,34 @@ export default function OrderRatingSection({ orderId }: OrderRatingSectionProps)
           )}
         </div>
 
+        {/* امتیازدهی ناشناس */}
+        {editing ? (
+          <div className="flex items-start gap-2 p-3 rounded-lg border border-dashed bg-muted/20">
+            <Checkbox
+              id="rating-anonymous"
+              checked={isAnonymous}
+              onCheckedChange={(v) => setIsAnonymous(v === true)}
+              className="mt-0.5"
+            />
+            <div className="space-y-1">
+              <Label htmlFor="rating-anonymous" className="flex items-center gap-1.5 cursor-pointer text-sm font-medium">
+                <UserX className="h-4 w-4 text-muted-foreground" />
+                امتیازدهی به صورت ناشناس
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                با فعال کردن این گزینه، نام شما در امتیاز ثبت‌شده برای پیمانکار و پرسنل نمایش داده نمی‌شود.
+              </p>
+            </div>
+          </div>
+        ) : (
+          isAnonymous && (
+            <Badge variant="outline" className="gap-1 text-xs">
+              <UserX className="h-3.5 w-3.5" />
+              این امتیاز به صورت ناشناس ثبت شده است
+            </Badge>
+          )
+        )}
+
         {existing && !editing && (
           <p className="text-xs text-muted-foreground">
             آخرین ویرایش: {formatPersianDate(existing.updated_at, { showDayOfWeek: true })}
@@ -302,6 +336,7 @@ export default function OrderRatingSection({ orderId }: OrderRatingSectionProps)
                     setContractorComment(existing.contractor_comment || '');
                     setManagementScore(existing.management_score || 0);
                     setManagementComment(existing.management_comment || '');
+                    setIsAnonymous(!!existing.is_anonymous);
                     setEditing(false);
                   }}
                   disabled={saving}
