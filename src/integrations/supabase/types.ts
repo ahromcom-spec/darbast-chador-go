@@ -2374,6 +2374,8 @@ export type Database = {
       }
       order_collaborators: {
         Row: {
+          can_manage_order: boolean
+          can_view_financials: boolean
           created_at: string
           id: string
           invited_at: string
@@ -2389,6 +2391,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          can_manage_order?: boolean
+          can_view_financials?: boolean
           created_at?: string
           id?: string
           invited_at?: string
@@ -2404,6 +2408,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          can_manage_order?: boolean
+          can_view_financials?: boolean
           created_at?: string
           id?: string
           invited_at?: string

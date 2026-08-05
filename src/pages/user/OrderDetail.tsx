@@ -252,6 +252,9 @@ export default function OrderDetail() {
   const [advancePaymentAmount, setAdvancePaymentAmount] = useState(0);
   const [totalPaid, setTotalPaid] = useState(0);
   const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+  // اگر کاربر فعلی «همکار» این سفارش باشد، سطح دسترسی او اینجا نگه‌داری می‌شود
+  const [myCollabPerms, setMyCollabPerms] = useState<{ can_view_financials: boolean; can_manage_order: boolean } | null>(null);
+
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
@@ -260,6 +263,42 @@ export default function OrderDetail() {
   // Get return path from URL params
   const returnTo = searchParams.get('returnTo');
   const mediaUpload = searchParams.get('mediaUpload');
+
+  // خواندن سطح دسترسی کاربر فعلی در صورتی که همکار سفارش باشد
+  useEffect(() => {
+    if (!id || !user?.id) {
+      setMyCollabPerms(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('order_collaborators')
+        .select('can_view_financials, can_manage_order, status')
+        .eq('order_id', id)
+        .eq('invitee_user_id', user.id)
+        .order('invited_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (cancelled) return;
+      const row = data as any;
+      if (row && !['rejected', 'manager_rejected', 'recipient_rejected'].includes(row.status)) {
+        setMyCollabPerms({
+          can_view_financials: row.can_view_financials !== false,
+          can_manage_order: row.can_manage_order === true,
+        });
+      } else {
+        setMyCollabPerms(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id, user?.id]);
+
+  // مالک سفارش همه دسترسی‌ها را دارد؛ همکار طبق اختیارات تعیین‌شده
+  const canViewFinancials = !myCollabPerms || myCollabPerms.can_view_financials;
+  const canManageOrder = !myCollabPerms || myCollabPerms.can_manage_order;
+
    
   // معیارهای ثابت امتیازدهی - بدون نیاز به کوئری دیتابیس
   const staffCriteria: RatingCriteria[] = [
@@ -1020,7 +1059,8 @@ export default function OrderDetail() {
             بازگشت
           </Button>
 
-          {/* دکمه پرینت فاکتور - بالای فرم سفارش */}
+          {/* دکمه پرینت فاکتور - بالای فرم سفارش (برای همکار بدون دسترسی مالی نمایش داده نمی‌شود) */}
+          {canViewFinancials && (
           <ManagerOrderInvoice
             className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:text-blue-800"
             order={{
@@ -1042,6 +1082,7 @@ export default function OrderDetail() {
               rental_start_date: order.rental_start_date
             }}
           />
+          )}
         </div>
 
 
@@ -1917,7 +1958,7 @@ export default function OrderDetail() {
                 )}
 
                 {/* بلوک ۳: قیمت و جدول زمان‌بندی */}
-                {((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || approvedRepairCost > 0 || approvedRenewalCost > 0 || (isExpertPricingRequest && customerHasConfirmedPrice)) && (() => {
+                {canViewFinancials && ((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || approvedRepairCost > 0 || approvedRenewalCost > 0 || (isExpertPricingRequest && customerHasConfirmedPrice)) && (() => {
                   const basePrice = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || parsedNotes?.manager_set_price || 0;
                   const grandTotal = basePrice + approvedRepairCost + approvedRenewalCost;
                   const rawPaidAmount = totalPaid || order.total_paid || 0;
@@ -3188,7 +3229,7 @@ export default function OrderDetail() {
                   ویرایش سفارش
                 </Button>
               )}
-              {order.status !== 'rejected' && order.status !== 'closed' && (
+              {canManageOrder && order.status !== 'rejected' && order.status !== 'closed' && (
                 <Button
                   variant="outline"
                   onClick={() => setShowTransferDialog(true)}
@@ -3199,7 +3240,8 @@ export default function OrderDetail() {
                   انتقال سفارش
                 </Button>
               )}
-              {order.status !== 'rejected' && order.status !== 'closed' && (
+              {canManageOrder && order.status !== 'rejected' && order.status !== 'closed' && (
+
                 <Button
                   variant="outline"
                   onClick={() => setShowCollaboratorDialog(true)}

@@ -13,6 +13,8 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Users, 
@@ -46,10 +48,13 @@ interface Collaborator {
   status: string;
   invited_at: string;
   responded_at: string | null;
+  can_view_financials?: boolean;
+  can_manage_order?: boolean;
   invitee_profile?: {
     full_name: string | null;
   };
 }
+
 
 const statusLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pending_manager: { label: 'در انتظار تایید مدیر', variant: 'secondary' },
@@ -72,6 +77,10 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [loadingCollaborators, setLoadingCollaborators] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [newCanViewFinancials, setNewCanViewFinancials] = useState(true);
+  const [newCanManageOrder, setNewCanManageOrder] = useState(false);
+  const [updatingPermId, setUpdatingPermId] = useState<string | null>(null);
+
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -242,7 +251,10 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
           invitee_user_id: targetUser?.id || null,
           invitee_phone_number: targetUser?.phone || formattedPhone,
           status: 'pending_manager',
-        });
+          can_view_financials: newCanViewFinancials,
+          can_manage_order: newCanManageOrder,
+        } as any);
+
 
       if (error) throw error;
 
@@ -266,6 +278,31 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
       setSubmitting(false);
     }
   };
+
+  const updatePermission = async (
+    collaboratorId: string,
+    patch: { can_view_financials?: boolean; can_manage_order?: boolean }
+  ) => {
+    setUpdatingPermId(collaboratorId);
+    try {
+      const { error } = await supabase
+        .from('order_collaborators')
+        .update(patch as any)
+        .eq('id', collaboratorId);
+
+      if (error) throw error;
+
+      setCollaborators(prev => prev.map(c => (c.id === collaboratorId ? { ...c, ...patch } : c)));
+      toast({ title: '✓ ذخیره شد', description: 'سطح دسترسی همکار به‌روزرسانی شد.' });
+      onCollaboratorAdded?.();
+    } catch (error: any) {
+      console.error('Error updating collaborator permission:', error);
+      toast({ title: 'خطا', description: 'خطا در ذخیره سطح دسترسی', variant: 'destructive' });
+    } finally {
+      setUpdatingPermId(null);
+    }
+  };
+
 
   const deleteCollaborator = async (collaboratorId: string) => {
     setDeletingId(collaboratorId);
@@ -345,11 +382,15 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
             </div>
           ) : collaborators.length > 0 ? (
             <div className="space-y-2">
-              {collaborators.map((collab) => (
+              {collaborators.map((collab) => {
+                const isInviter = collab.inviter_user_id === user?.id;
+                const isActive = !INACTIVE_STATUSES.includes(collab.status);
+                return (
                 <div
                   key={collab.id}
-                  className="flex items-center justify-between p-2 bg-background rounded-md border border-border/30"
+                  className="p-2 bg-background rounded-md border border-border/30 space-y-2"
                 >
+                  <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <span className="text-xs font-medium text-primary">
@@ -374,13 +415,14 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
                       {collab.status === 'accepted' && <CheckCircle className="h-3 w-3 mr-1" />}
                       {statusLabels[collab.status]?.label || collab.status}
                     </Badge>
-                    {(collab.status === 'pending' || collab.status === 'pending_manager') && collab.inviter_user_id === user?.id && (
+                    {isInviter && (
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
                         onClick={() => deleteCollaborator(collab.id)}
                         disabled={deletingId === collab.id}
+                        title="حذف دسترسی همکار"
                       >
                         {deletingId === collab.id ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -390,8 +432,36 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
                       </Button>
                     )}
                   </div>
+                  </div>
+
+                  {isInviter && isActive && (
+                    <div className="space-y-2 rounded-md bg-muted/40 p-2 border border-border/30">
+                      <p className="text-xs font-medium text-muted-foreground">سطح دسترسی همکار</p>
+                      <label className="flex items-center gap-2 text-xs cursor-pointer">
+                        <Checkbox
+                          checked={collab.can_view_financials !== false}
+                          disabled={updatingPermId === collab.id}
+                          onCheckedChange={(v) => updatePermission(collab.id, { can_view_financials: v === true })}
+                        />
+                        <span>دسترسی به مبالغ و پرداخت‌ها</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-xs cursor-pointer">
+                        <Checkbox
+                          checked={collab.can_manage_order === true}
+                          disabled={updatingPermId === collab.id}
+                          onCheckedChange={(v) => updatePermission(collab.id, { can_manage_order: v === true })}
+                        />
+                        <span>امکان انتقال سفارش و افزودن همکار جدید</span>
+                      </label>
+                      {collab.can_view_financials !== false && collab.can_manage_order === true && (
+                        <p className="text-xs text-green-600">دسترسی کامل به همه بخش‌های سفارش</p>
+                      )}
+                    </div>
+                  )}
                 </div>
-              ))}
+                );
+              })}
+
             </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-2">
@@ -431,6 +501,40 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
               <p className="text-xs text-muted-foreground">شماره باید ۱۱ رقم باشد (مثال: 09100000000)</p>
             )}
           </div>
+
+          {/* Permissions for the new collaborator */}
+          <div className="space-y-2 rounded-lg border border-border/50 bg-muted/30 p-3">
+            <p className="text-sm font-medium">اختیارات همکار جدید</p>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={newCanViewFinancials && newCanManageOrder}
+                onCheckedChange={(v) => {
+                  const on = v === true;
+                  setNewCanViewFinancials(on);
+                  setNewCanManageOrder(on);
+                }}
+              />
+              <span>دسترسی کامل به همه بخش‌های سفارش</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={newCanViewFinancials}
+                onCheckedChange={(v) => setNewCanViewFinancials(v === true)}
+              />
+              <span>دسترسی به مبالغ و پرداخت‌ها</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={newCanManageOrder}
+                onCheckedChange={(v) => setNewCanManageOrder(v === true)}
+              />
+              <span>امکان انتقال سفارش و افزودن همکار جدید</span>
+            </label>
+            <p className="text-xs text-muted-foreground">
+              تیک‌نزدن هر گزینه یعنی همکار به آن بخش دسترسی ندارد. بعداً هم می‌توانید تغییر دهید.
+            </p>
+          </div>
+
 
           {userNotFound && (
             <div className="flex items-center gap-2 p-3 bg-muted text-muted-foreground rounded-lg text-sm">
