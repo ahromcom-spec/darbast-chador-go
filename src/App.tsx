@@ -16,7 +16,6 @@ import { NajvaSubscriber } from "@/components/common/NajvaSubscriber";
 // import { PageLoadProgress } from "@/components/common/PageLoadProgress";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { GlobalKeyboardShortcuts } from "@/components/common/GlobalKeyboardShortcuts";
-import { RotationLockToggle } from "@/components/common/RotationLockToggle";
 import { IncomingCallProvider } from "@/contexts/IncomingCallContext";
 import GlobalIncomingCallPopup from "@/components/calls/GlobalIncomingCallPopup";
 import { ZoomProvider } from "@/contexts/ZoomContext";
@@ -608,7 +607,6 @@ const App = () => {
                 </Routes>
               </div>
               <AssistantAvatarGate />
-              <RotationLockToggle />
               </AnalyticsTracker>
             </Suspense>
               </IncomingCallProvider>
