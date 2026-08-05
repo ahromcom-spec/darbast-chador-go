@@ -106,6 +106,11 @@ export function RepairRequestDialog({
   const [updatingCost, setUpdatingCost] = useState(false);
   const [approvingRepair, setApprovingRepair] = useState(false);
   const [completingRepair, setCompletingRepair] = useState(false);
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [descriptionDraft, setDescriptionDraft] = useState("");
+  const [savingDescription, setSavingDescription] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   
   // New form state for single-step submission
   const [pendingMediaFiles, setPendingMediaFiles] = useState<File[]>([]);
