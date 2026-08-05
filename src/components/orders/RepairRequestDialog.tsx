@@ -661,17 +661,27 @@ export function RepairRequestDialog({
 
             {/* Cost Info */}
             <div className="p-3 bg-primary/10 rounded-lg border border-primary/20 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">هزینه تعمیر:</span>
-                <span className="font-bold text-lg text-primary">
-                  {(existingRequest.final_cost || existingRequest.estimated_cost).toLocaleString('fa-IR')} تومان
-                </span>
-              </div>
-              {existingRequest.final_cost && existingRequest.final_cost !== existingRequest.estimated_cost && (
-                <p className="text-xs text-muted-foreground">
-                  هزینه اولیه: {existingRequest.estimated_cost.toLocaleString('fa-IR')} تومان
-                </p>
+              {existingRequest.final_cost && existingRequest.final_cost > 0 ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">هزینه تعمیر:</span>
+                    <span className="font-bold text-lg text-primary">
+                      {existingRequest.final_cost.toLocaleString('fa-IR')} تومان
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    هزینه نهایی تعیین‌شده توسط مدیریت است.
+                  </p>
+                </>
+              ) : (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-muted-foreground">هزینه تعمیر:</span>
+                  <span className="text-sm font-medium text-primary text-left">
+                    حداقل هزینه تعمیر {(1500000).toLocaleString('fa-IR')} تومان می‌باشد
+                  </span>
+                </div>
               )}
+
               
               {/* Manager can set/update cost */}
               {isManager && (
