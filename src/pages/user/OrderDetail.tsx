@@ -2019,15 +2019,27 @@ export default function OrderDetail() {
                               )}
                             </div>
                           ))}
-                          {approvedRepairCost > 0 && (
-                            <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-                              <div className="flex items-center gap-2">
-                                <Edit className="h-4 w-4 text-amber-600" />
-                                <span className="text-sm text-amber-700 dark:text-amber-300 font-medium">هزینه تعمیر:</span>
+                          {repairRequests
+                            .filter((req: any) => ['approved', 'completed'].includes(req.status) && (req.final_cost || 0) > 0)
+                            .map((req: any, idx: number) => (
+                            <div key={req.id || idx} className="space-y-1">
+                              <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  <Edit className="h-4 w-4 text-amber-600" />
+                                  <span className="text-sm text-amber-700 dark:text-amber-300 font-medium">
+                                    هزینه تعمیر {(idx + 1).toLocaleString('fa-IR')} ({formatPersianDate(req.created_at)}):
+                                  </span>
+                                </div>
+                                <span className="font-bold text-amber-700 dark:text-amber-300">{(req.final_cost || 0).toLocaleString('fa-IR')} تومان</span>
                               </div>
-                              <span className="font-bold text-amber-700 dark:text-amber-300">{approvedRepairCost.toLocaleString('fa-IR')} تومان</span>
+                              {req.description && (
+                                <p className="text-[11px] text-muted-foreground italic px-3 leading-relaxed">
+                                  شرح: {req.description}
+                                </p>
+                              )}
                             </div>
-                          )}
+                          ))}
+
                         </div>
                       )}
 
