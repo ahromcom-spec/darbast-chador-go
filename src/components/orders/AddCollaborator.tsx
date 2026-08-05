@@ -277,6 +277,31 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
     }
   };
 
+  const updatePermission = async (
+    collaboratorId: string,
+    patch: { can_view_financials?: boolean; can_manage_order?: boolean }
+  ) => {
+    setUpdatingPermId(collaboratorId);
+    try {
+      const { error } = await supabase
+        .from('order_collaborators')
+        .update(patch as any)
+        .eq('id', collaboratorId);
+
+      if (error) throw error;
+
+      setCollaborators(prev => prev.map(c => (c.id === collaboratorId ? { ...c, ...patch } : c)));
+      toast({ title: '✓ ذخیره شد', description: 'سطح دسترسی همکار به‌روزرسانی شد.' });
+      onCollaboratorAdded?.();
+    } catch (error: any) {
+      console.error('Error updating collaborator permission:', error);
+      toast({ title: 'خطا', description: 'خطا در ذخیره سطح دسترسی', variant: 'destructive' });
+    } finally {
+      setUpdatingPermId(null);
+    }
+  };
+
+
   const deleteCollaborator = async (collaboratorId: string) => {
     setDeletingId(collaboratorId);
     try {
