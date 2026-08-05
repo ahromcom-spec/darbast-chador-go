@@ -29,7 +29,20 @@ import {
   User,
   ShieldCheck,
   Coins,
+  Trash2,
+  Pencil,
+  Save,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { formatPersianDateTime } from "@/lib/dateUtils";
 
 interface RepairRequest {
@@ -93,6 +106,11 @@ export function RepairRequestDialog({
   const [updatingCost, setUpdatingCost] = useState(false);
   const [approvingRepair, setApprovingRepair] = useState(false);
   const [completingRepair, setCompletingRepair] = useState(false);
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [descriptionDraft, setDescriptionDraft] = useState("");
+  const [savingDescription, setSavingDescription] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   
   // New form state for single-step submission
   const [pendingMediaFiles, setPendingMediaFiles] = useState<File[]>([]);
@@ -571,6 +589,84 @@ export function RepairRequestDialog({
     }
   };
 
+  // ویرایش توضیحات درخواست تعمیر (مدیر همیشه، مشتری تا زمان تایید)
+  const canEditRequest = !!existingRequest && (isManager || existingRequest.status === 'pending');
+  // حذف درخواست: مدیر همیشه، مشتری فقط تا زمانی که تایید نشده باشد
+  const canDeleteRequest = !!existingRequest && (isManager || existingRequest.status === 'pending');
+
+  const startEditDescription = () => {
+    setDescriptionDraft(existingRequest?.description || '');
+    setEditingDescription(true);
+  };
+
+  const handleSaveDescription = async () => {
+    if (!existingRequest) return;
+    setSavingDescription(true);
+    try {
+      const { error } = await supabase
+        .from('repair_requests')
+        .update({ description: descriptionDraft.trim() || null })
+        .eq('id', existingRequest.id);
+
+      if (error) throw error;
+
+      setExistingRequest({ ...existingRequest, description: descriptionDraft.trim() });
+      setRequests(requests.map(r => r.id === existingRequest.id ? { ...r, description: descriptionDraft.trim() } : r));
+      setEditingDescription(false);
+      toast({ title: '✓ موفق', description: 'توضیحات درخواست تعمیر ویرایش شد' });
+    } catch (error: any) {
+      console.error('Error updating repair description:', error);
+      toast({ title: 'خطا', description: 'خطا در ویرایش توضیحات', variant: 'destructive' });
+    } finally {
+      setSavingDescription(false);
+    }
+  };
+
+  const handleDeleteRequest = async () => {
+    if (!existingRequest) return;
+    setDeleting(true);
+    try {
+      // حذف فایل‌های ذخیره‌شده در استوریج
+      const { data: mediaRows } = await supabase
+        .from('repair_request_media')
+        .select('file_path')
+        .eq('repair_request_id', existingRequest.id);
+
+      const paths = (mediaRows || []).map((m: any) => m.file_path).filter(Boolean);
+      if (paths.length > 0) {
+        await supabase.storage.from('project-media').remove(paths);
+      }
+
+      const { error } = await supabase
+        .from('repair_requests')
+        .delete()
+        .eq('id', existingRequest.id);
+
+      if (error) throw error;
+
+      toast({
+        title: '✓ حذف شد',
+        description: 'درخواست تعمیر حذف شد و مبلغ آن از هزینه سفارش کسر گردید',
+      });
+
+      setDeleteDialogOpen(false);
+      setExistingRequest(null);
+      onRepairCostChange?.(0);
+      await fetchRepairRequest();
+    } catch (error: any) {
+      console.error('Error deleting repair request:', error);
+      toast({
+        title: 'خطا',
+        description: error?.message || 'خطا در حذف درخواست تعمیر',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -658,6 +754,22 @@ export function RepairRequestDialog({
               <span className="text-sm text-muted-foreground">وضعیت درخواست:</span>
               {getStatusBadge(existingRequest.status)}
             </div>
+
+            {/* حذف / لغو درخواست */}
+            {canDeleteRequest && (
+              <div className="flex justify-end">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {isManager ? 'حذف این درخواست تعمیر' : 'لغو و حذف درخواست تعمیر'}
+                </Button>
+              </div>
+            )}
+
 
             {/* Cost Info */}
             <div className="p-3 bg-primary/10 rounded-lg border border-primary/20 space-y-3">
@@ -758,9 +870,38 @@ export function RepairRequestDialog({
 
             {/* Description */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">توضیحات تعمیر:</label>
-              <p className="text-sm p-3 bg-muted/30 rounded-lg">{existingRequest.description || 'بدون توضیحات'}</p>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">توضیحات تعمیر:</label>
+                {canEditRequest && !editingDescription && (
+                  <Button variant="outline" size="sm" className="gap-1" onClick={startEditDescription}>
+                    <Pencil className="h-3.5 w-3.5" />
+                    ویرایش
+                  </Button>
+                )}
+              </div>
+              {editingDescription ? (
+                <div className="space-y-2">
+                  <Textarea
+                    value={descriptionDraft}
+                    onChange={(e) => setDescriptionDraft(e.target.value)}
+                    className="resize-none h-24"
+                    placeholder="توضیحات تعمیر..."
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="ghost" size="sm" onClick={() => setEditingDescription(false)}>
+                      انصراف
+                    </Button>
+                    <Button size="sm" className="gap-1" onClick={handleSaveDescription} disabled={savingDescription}>
+                      {savingDescription ? <Clock className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                      ذخیره
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm p-3 bg-muted/30 rounded-lg whitespace-pre-wrap">{existingRequest.description || 'بدون توضیحات'}</p>
+              )}
             </div>
+
 
             <Separator />
 
@@ -808,7 +949,7 @@ export function RepairRequestDialog({
                             <Film className="h-8 w-8 text-muted-foreground" />
                           </div>
                         )}
-                        {existingRequest.status === 'pending' && (
+                        {(isManager || existingRequest.status === 'pending') && (
                           <Button
                             variant="destructive"
                             size="icon"
@@ -1011,6 +1152,27 @@ export function RepairRequestDialog({
           </div>
         )}
       </DialogContent>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="z-[10000]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف درخواست تعمیر</AlertDialogTitle>
+            <AlertDialogDescription>
+              آیا از حذف این درخواست تعمیر مطمئن هستید؟ با حذف، هزینه این تعمیر از مبلغ کل سفارش کسر می‌شود و تصاویر و گفتگوهای مرتبط نیز حذف خواهند شد. این عمل قابل بازگشت نیست.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>انصراف</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleDeleteRequest(); }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'در حال حذف...' : 'حذف درخواست'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
