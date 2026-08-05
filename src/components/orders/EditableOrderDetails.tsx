@@ -113,9 +113,10 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
       const [repairRes, renewalsRes, approvalsRes, collectionRes] = await Promise.all([
         supabase
           .from('repair_requests')
-          .select('final_cost, status')
+          .select('id, final_cost, status, created_at, description')
           .eq('order_id', order.id)
-          .in('status', ['approved', 'completed']),
+          .in('status', ['approved', 'completed'])
+          .order('created_at', { ascending: true }),
         supabase
           .from('order_renewals')
           .select('renewal_price, renewal_number, new_start_date, new_end_date, status, manager_notes')
@@ -137,8 +138,9 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
       ]);
 
       if (repairRes.data) {
-        const totalRepairCost = repairRes.data.reduce((sum, r) => sum + (r.final_cost || 0), 0);
+        const totalRepairCost = repairRes.data.reduce((sum: number, r: any) => sum + (r.final_cost || 0), 0);
         setApprovedRepairCost(totalRepairCost);
+        setApprovedRepairs((repairRes.data as any[]).filter((r: any) => (r.final_cost || 0) > 0));
       }
 
       if (renewalsRes.data) {
@@ -647,15 +649,22 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                 </div>
               ))}
 
-              {approvedRepairCost > 0 && (
-                <div className="flex justify-between text-sm p-2 bg-orange-50 dark:bg-orange-950/30 rounded border border-orange-200 dark:border-orange-800">
-                  <span className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
-                    <Wrench className="h-3 w-3" />
-                    هزینه تعمیرات:
-                  </span>
-                  <span className="font-bold text-orange-700 dark:text-orange-300">{approvedRepairCost.toLocaleString('fa-IR')} تومان</span>
+              {approvedRepairs.map((repair: any, idx: number) => (
+                <div key={repair.id || idx} className="space-y-1">
+                  <div className="flex justify-between text-sm p-2 bg-orange-50 dark:bg-orange-950/30 rounded border border-orange-200 dark:border-orange-800">
+                    <span className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
+                      <Wrench className="h-3 w-3" />
+                      هزینه تعمیر {(idx + 1).toLocaleString('fa-IR')}{repair.created_at ? ` (${formatPersianDate(repair.created_at)})` : ''}:
+                    </span>
+                    <span className="font-bold text-orange-700 dark:text-orange-300">{Number(repair.final_cost || 0).toLocaleString('fa-IR')} تومان</span>
+                  </div>
+                  {repair.description && (
+                    <p className="text-[11px] text-muted-foreground italic px-2 leading-relaxed">
+                      شرح: {repair.description}
+                    </p>
+                  )}
                 </div>
-              )}
+              ))}
             </div>
           )}
 
@@ -1120,15 +1129,15 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                       )}
                     </div>
                   ))}
-                  {approvedRepairCost > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      هزینه تعمیرات:{' '}
+                  {approvedRepairs.map((repair: any, idx: number) => (
+                    <p key={repair.id || idx} className="text-xs text-muted-foreground">
+                      هزینه تعمیر {(idx + 1).toLocaleString('fa-IR')}:{' '}
                       <span className="font-medium" dir="ltr">
-                        {Number(approvedRepairCost).toLocaleString('fa-IR')}
+                        {Number(repair.final_cost || 0).toLocaleString('fa-IR')}
                       </span>{' '}
                       تومان
                     </p>
-                  )}
+                  ))}
                   <p className="text-base font-extrabold text-green-700 dark:text-green-300">
                     مبلغ کل سفارش: {Number(displayTotalOrderAmount).toLocaleString('fa-IR')} تومان
                   </p>
@@ -1733,15 +1742,15 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                       <span>هزینه قرارداد:</span>
                       <span>{Number(order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price).toLocaleString('fa-IR')} تومان</span>
                     </div>
-                    {approvedRepairCost > 0 && (
-                      <div className="flex justify-between text-orange-600 dark:text-orange-400">
+                    {approvedRepairs.map((repair: any, idx: number) => (
+                      <div key={repair.id || idx} className="flex justify-between text-orange-600 dark:text-orange-400">
                         <span className="flex items-center gap-1">
                           <Wrench className="h-3 w-3" />
-                          هزینه تعمیر:
+                          هزینه تعمیر {(idx + 1).toLocaleString('fa-IR')}:
                         </span>
-                        <span>{approvedRepairCost.toLocaleString('fa-IR')} تومان</span>
+                        <span>{Number(repair.final_cost || 0).toLocaleString('fa-IR')} تومان</span>
                       </div>
-                    )}
+                    ))}
                   </div>
                 </>
               )}
