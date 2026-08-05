@@ -134,11 +134,11 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
         supabase.from('subcategories').select('id, name').in('id', subcategoryIds),
         supabase.from('provinces').select('id, name').in('id', provinceIds),
         supabase.from('order_collaborators')
-          .select('order_id')
+          .select('order_id, status, responded_at, manager_approved_at')
           .eq('invitee_user_id', userId)
-          .in('status', ['accepted', 'approved'])
           .in('order_id', orderIds)
       ]);
+
       
       const subcategoryMap = new Map((subcatRes.data || []).map((s: any) => [s.id, s.name]));
       const provinceMap = new Map((provRes.data || []).map((p: any) => [p.id, p.name]));
