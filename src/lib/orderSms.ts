@@ -286,17 +286,26 @@ export const sendCeoNotificationSms = async (
 };
 
 
-// Helper to build a consistent address string for SMS
+// Helper to build a consistent address string for SMS (no duplicated parts)
 export const buildOrderSmsAddress = (
   address?: string | null,
   detailedAddress?: string | null
 ): string => {
+  const norm = (s: string) => s.replace(/[\s،,.\-]+/g, '').trim();
   const base = (address || '').trim();
   const detail = (detailedAddress || '').trim();
 
-  if (base && detail) return `${base} - ${detail}`;
+  if (base && detail) {
+    const nb = norm(base);
+    const nd = norm(detail);
+    // اگر یکی از آن‌ها شامل دیگری است، فقط طولانی‌تر را برگردان تا آدرس تکراری ارسال نشود
+    if (nb === nd || nd.includes(nb)) return detail;
+    if (nb.includes(nd)) return base;
+    return `${base} - ${detail}`;
+  }
   return base || detail || 'ثبت نشده';
 };
+
 
 // Helper to map execution stages to SMS status
 export const getSmStatusFromExecutionStage = (stage: string): SmsStatus | null => {
