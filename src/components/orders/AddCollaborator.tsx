@@ -75,6 +75,10 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [loadingCollaborators, setLoadingCollaborators] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [newCanViewFinancials, setNewCanViewFinancials] = useState(true);
+  const [newCanManageOrder, setNewCanManageOrder] = useState(false);
+  const [updatingPermId, setUpdatingPermId] = useState<string | null>(null);
+
   const { toast } = useToast();
   const { user } = useAuth();
 
