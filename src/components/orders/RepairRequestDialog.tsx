@@ -886,13 +886,8 @@ export function RepairRequestDialog({
               </p>
             </div>
 
-            {/* Payment Button for completed repairs */}
-            {existingRequest.status === 'completed' && !existingRequest.paid_at && (
-              <Button className="w-full gap-2" size="lg">
-                <CreditCard className="h-5 w-5" />
-                پرداخت هزینه تعمیر ({(existingRequest.final_cost || existingRequest.estimated_cost).toLocaleString('fa-IR')} تومان)
-              </Button>
-            )}
+            {/* پرداخت هزینه تعمیر از طریق بخش «هزینه قرارداد» در صفحه سفارش انجام می‌شود */}
+
 
             <p className="text-xs text-muted-foreground text-center">
               ثبت شده در: {formatPersianDateTime(existingRequest.created_at)}
