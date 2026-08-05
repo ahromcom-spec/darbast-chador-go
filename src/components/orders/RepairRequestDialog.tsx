@@ -870,9 +870,38 @@ export function RepairRequestDialog({
 
             {/* Description */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">توضیحات تعمیر:</label>
-              <p className="text-sm p-3 bg-muted/30 rounded-lg">{existingRequest.description || 'بدون توضیحات'}</p>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">توضیحات تعمیر:</label>
+                {canEditRequest && !editingDescription && (
+                  <Button variant="outline" size="sm" className="gap-1" onClick={startEditDescription}>
+                    <Pencil className="h-3.5 w-3.5" />
+                    ویرایش
+                  </Button>
+                )}
+              </div>
+              {editingDescription ? (
+                <div className="space-y-2">
+                  <Textarea
+                    value={descriptionDraft}
+                    onChange={(e) => setDescriptionDraft(e.target.value)}
+                    className="resize-none h-24"
+                    placeholder="توضیحات تعمیر..."
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="ghost" size="sm" onClick={() => setEditingDescription(false)}>
+                      انصراف
+                    </Button>
+                    <Button size="sm" className="gap-1" onClick={handleSaveDescription} disabled={savingDescription}>
+                      {savingDescription ? <Clock className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                      ذخیره
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm p-3 bg-muted/30 rounded-lg whitespace-pre-wrap">{existingRequest.description || 'بدون توضیحات'}</p>
+              )}
             </div>
+
 
             <Separator />
 
