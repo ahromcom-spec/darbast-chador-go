@@ -502,6 +502,40 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
             )}
           </div>
 
+          {/* Permissions for the new collaborator */}
+          <div className="space-y-2 rounded-lg border border-border/50 bg-muted/30 p-3">
+            <p className="text-sm font-medium">اختیارات همکار جدید</p>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={newCanViewFinancials && newCanManageOrder}
+                onCheckedChange={(v) => {
+                  const on = v === true;
+                  setNewCanViewFinancials(on);
+                  setNewCanManageOrder(on);
+                }}
+              />
+              <span>دسترسی کامل به همه بخش‌های سفارش</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={newCanViewFinancials}
+                onCheckedChange={(v) => setNewCanViewFinancials(v === true)}
+              />
+              <span>دسترسی به مبالغ و پرداخت‌ها</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={newCanManageOrder}
+                onCheckedChange={(v) => setNewCanManageOrder(v === true)}
+              />
+              <span>امکان انتقال سفارش و افزودن همکار جدید</span>
+            </label>
+            <p className="text-xs text-muted-foreground">
+              تیک‌نزدن هر گزینه یعنی همکار به آن بخش دسترسی ندارد. بعداً هم می‌توانید تغییر دهید.
+            </p>
+          </div>
+
+
           {userNotFound && (
             <div className="flex items-center gap-2 p-3 bg-muted text-muted-foreground rounded-lg text-sm">
               <Clock className="h-4 w-4 flex-shrink-0" />
