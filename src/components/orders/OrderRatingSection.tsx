@@ -26,6 +26,7 @@ interface RatingRow {
   management_score: number | null;
   management_comment: string | null;
   management_target_label: string;
+  is_anonymous: boolean | null;
   updated_at: string;
 }
 
