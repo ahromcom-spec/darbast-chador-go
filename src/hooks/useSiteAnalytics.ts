@@ -253,6 +253,12 @@ export function useSiteAnalytics() {
           referrer: document.referrer || null,
           sessionId: sessionId.current,
           deviceId: getDeviceId(),
+          impersonatorUserId: (() => {
+            try {
+              const raw = localStorage.getItem('original_admin_session');
+              return raw ? (JSON.parse(raw)?.user_id ?? null) : null;
+            } catch { return null; }
+          })(),
 
           deviceType: getDeviceType(),
           ip: ipAddress,

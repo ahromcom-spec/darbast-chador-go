@@ -26,6 +26,7 @@ Deno.serve(async (req) => {
   const deviceType: string | null = body.deviceType || null
   const clientIp: string | null = body.ip || null
   const userId: string | null = body.userId || null
+  const impersonatorUserId: string | null = body.impersonatorUserId || body.impersonator_user_id || null
 
   const headerIp =
     req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
@@ -118,22 +119,40 @@ Deno.serve(async (req) => {
 
   const displayName = actorName || (isGuest ? 'بازدیدکننده مهمان (ثبت‌نام نشده)' : 'کاربر ناشناس')
 
-  const title = isGuest
+  // Admin impersonation: make it explicit which manager entered which account,
+  // so the log is never mistaken for a real login by the customer.
+  let impersonatorName: string | null = null
+  let impersonatorPhone: string | null = null
+  if (impersonatorUserId) {
+    const { data: adminProf } = await supabase
+      .from('profiles')
+      .select('full_name, phone_number')
+      .eq('user_id', impersonatorUserId)
+      .maybeSingle()
+    impersonatorName = adminProf?.full_name || 'مدیر'
+    impersonatorPhone = adminProf?.phone_number || null
+  }
+
+  const title = impersonatorUserId
+    ? `ورود مدیر ${impersonatorName}${impersonatorPhone ? ` (${impersonatorPhone})` : ''} به حساب ${displayName}${actorPhone ? ` (${actorPhone})` : ''} از ماژول ورود به حساب کاربران`
+    : isGuest
     ? `بازدید مهمان از سایت${ip ? ` — IP: ${ip}` : ''}`
     : `بازدید ${displayName}${actorPhone ? ` (${actorPhone})` : ''} از سایت`
 
 
 
   const { data, error } = await supabase.from('activity_logs').insert({
-    event_type: 'site_visit',
-    event_category: 'visitor',
-    action: 'view',
-    module_name: 'بازدید سایت',
+    event_type: impersonatorUserId ? 'admin_impersonation_visit' : 'site_visit',
+    event_category: impersonatorUserId ? 'security' : 'visitor',
+    action: impersonatorUserId ? 'impersonate' : 'view',
+    module_name: impersonatorUserId ? 'ورود به حساب کاربران (نمایندگی مدیر)' : 'بازدید سایت',
     entity_table: null,
     entity_id: null,
     title,
     actor_user_id: resolvedUserId,
-    actor_name: displayName,
+    actor_name: impersonatorUserId
+      ? `${impersonatorName} (نمایندگی حساب ${displayName})`
+      : displayName,
     actor_phone: actorPhone,
     details: {
       session_id: sessionId,
@@ -146,6 +165,13 @@ Deno.serve(async (req) => {
       device_type: deviceType,
       ip,
       is_guest: isGuest,
+      is_impersonation: !!impersonatorUserId,
+      impersonator_user_id: impersonatorUserId,
+      impersonator_name: impersonatorName,
+      impersonator_phone: impersonatorPhone,
+      impersonated_user_id: resolvedUserId,
+      impersonated_name: impersonatorUserId ? displayName : null,
+      impersonated_phone: impersonatorUserId ? actorPhone : null,
     },
     user_agent: ua,
     ip_address: ip,
