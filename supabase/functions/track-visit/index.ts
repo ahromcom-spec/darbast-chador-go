@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
     entity_table: null,
     entity_id: null,
     title,
-    actor_user_id: userId,
+    actor_user_id: resolvedUserId,
     actor_name: displayName,
     actor_phone: actorPhone,
     details: {
