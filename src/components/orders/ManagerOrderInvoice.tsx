@@ -468,6 +468,21 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
         font-size: 14.5px;
         border: 1.2px solid #1e3a5f !important;
       }
+
+      /* Payments history table */
+      .payments-table { table-layout: fixed; width: 100%; }
+      .payments-table th, .payments-table td {
+        white-space: normal !important;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+      }
+      .payments-table th.col-row, .payments-table td.col-row { width: 34px; }
+      .payments-table th.col-date, .payments-table td.col-date { width: 108px; }
+      .payments-table th.col-amount, .payments-table td.col-amount { width: 92px; }
+      .payments-table th.col-receipt, .payments-table td.col-receipt { width: 96px; }
+      .payments-table td.col-date, .payments-table td.col-receipt { font-size: 11.5px; line-height: 1.45; }
+      
+
       
       /* Bank Info */
       .bank-section {
