@@ -249,7 +249,10 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
           invitee_user_id: targetUser?.id || null,
           invitee_phone_number: targetUser?.phone || formattedPhone,
           status: 'pending_manager',
-        });
+          can_view_financials: newCanViewFinancials,
+          can_manage_order: newCanManageOrder,
+        } as any);
+
 
       if (error) throw error;
 
