@@ -928,3 +928,23 @@ html[style*="zoom"] .absolute[role="listbox"] {
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background-color: hsl(var(--muted-foreground) / 0.6);
 }
+
+/* ===== قفل چرخش صفحه (موبایل/تبلت) =====
+   وقتی کلید چرخش غیرفعال باشد، حتی اگر گوشی افقی شود، محتوای سایت
+   عمودی باقی می‌ماند (چرخش معکوس ۹۰ درجه روی body تا پورتال‌ها هم بچرخند). */
+@media (max-width: 1024px) and (orientation: landscape) {
+  html[data-orientation-lock="portrait"] {
+    overflow: hidden;
+  }
+  html[data-orientation-lock="portrait"] body {
+    width: 100vh;
+    height: 100vw;
+    overflow-x: hidden;
+    overflow-y: auto;
+    transform-origin: top left;
+    transform: rotate(90deg) translateY(-100%);
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+}
