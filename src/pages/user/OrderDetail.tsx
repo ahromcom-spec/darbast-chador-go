@@ -263,6 +263,42 @@ export default function OrderDetail() {
   // Get return path from URL params
   const returnTo = searchParams.get('returnTo');
   const mediaUpload = searchParams.get('mediaUpload');
+
+  // خواندن سطح دسترسی کاربر فعلی در صورتی که همکار سفارش باشد
+  useEffect(() => {
+    if (!id || !user?.id) {
+      setMyCollabPerms(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('order_collaborators')
+        .select('can_view_financials, can_manage_order, status')
+        .eq('order_id', id)
+        .eq('invitee_user_id', user.id)
+        .order('invited_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (cancelled) return;
+      const row = data as any;
+      if (row && !['rejected', 'manager_rejected', 'recipient_rejected'].includes(row.status)) {
+        setMyCollabPerms({
+          can_view_financials: row.can_view_financials !== false,
+          can_manage_order: row.can_manage_order === true,
+        });
+      } else {
+        setMyCollabPerms(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id, user?.id]);
+
+  // مالک سفارش همه دسترسی‌ها را دارد؛ همکار طبق اختیارات تعیین‌شده
+  const canViewFinancials = !myCollabPerms || myCollabPerms.can_view_financials;
+  const canManageOrder = !myCollabPerms || myCollabPerms.can_manage_order;
+
    
   // معیارهای ثابت امتیازدهی - بدون نیاز به کوئری دیتابیس
   const staffCriteria: RatingCriteria[] = [
