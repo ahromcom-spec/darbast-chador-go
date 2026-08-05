@@ -176,6 +176,7 @@ export default function OrderRatingSection({ orderId }: OrderRatingSectionProps)
       management_comment: managementComment.trim() || null,
       management_target_id: null,
       management_target_label: AHROM_MANAGEMENT_LABEL,
+      is_anonymous: isAnonymous,
     };
 
     const { error } = await supabase
