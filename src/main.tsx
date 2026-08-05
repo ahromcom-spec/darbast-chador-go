@@ -59,24 +59,6 @@ installSyncListeners();
 })();
 
 
-// به‌روزرسانی چیدمان پس از چرخش دستگاه (قفل/آزادسازی چرخش در useOrientationLock مدیریت می‌شود)
-(() => {
-  try {
-    const onOrientationChange = () => {
-      // بعضی WebView ها در چرخش، resize را درست ارسال نمی‌کنند
-      setTimeout(() => window.dispatchEvent(new Event('resize')), 150);
-      setTimeout(() => window.dispatchEvent(new Event('resize')), 500);
-    };
-
-
-    window.addEventListener('orientationchange', onOrientationChange);
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) onOrientationChange();
-    });
-  } catch {
-    // no-op
-  }
-})();
 
 // ثبت Service Worker — فقط در production و خارج از iframe/preview تا با Lovable preview تداخل نداشته باشد
 (() => {
