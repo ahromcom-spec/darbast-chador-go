@@ -132,8 +132,10 @@ export const resolveOrderSmsDetails = async (orderId?: string | null): Promise<{
     customerName,
     address: buildOrderSmsAddress((order as any).address, (order as any).detailed_address),
     serviceType: serviceType || 'خدمات',
+    amount: Number((order as any).total_price) > 0 ? Number((order as any).total_price) : undefined,
   };
 };
+
 
 export const sendOrderSms = async (
   phone: string,
