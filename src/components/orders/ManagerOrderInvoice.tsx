@@ -468,6 +468,21 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
         font-size: 14.5px;
         border: 1.2px solid #1e3a5f !important;
       }
+
+      /* Payments history table */
+      .payments-table { table-layout: fixed; width: 100%; }
+      .payments-table th, .payments-table td {
+        white-space: normal !important;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+      }
+      .payments-table th.col-row, .payments-table td.col-row { width: 34px; }
+      .payments-table th.col-date, .payments-table td.col-date { width: 108px; }
+      .payments-table th.col-amount, .payments-table td.col-amount { width: 92px; }
+      .payments-table th.col-receipt, .payments-table td.col-receipt { width: 96px; }
+      .payments-table td.col-date, .payments-table td.col-receipt { font-size: 11.5px; line-height: 1.45; }
+      
+
       
       /* Bank Info */
       .bank-section {
@@ -1024,31 +1039,32 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
 
         ${payments.length > 0 ? `
         <div style="page-break-inside: avoid; break-inside: avoid;">
-        <table class="order-details-table" style="margin-top: 8px;">
+        <table class="order-details-table payments-table" style="margin-top: 8px;">
           <thead>
             <tr>
               <th colspan="5" style="text-align:center; font-size:14px;">🧾 تاریخچه پرداخت‌ها (${payments.length.toLocaleString('fa-IR')})</th>
             </tr>
             <tr>
-              <th>ردیف</th>
-              <th>تاریخ و ساعت پرداخت</th>
-              <th>مبلغ (تومان)</th>
-              <th>شماره رسید</th>
+              <th class="col-row">ردیف</th>
+              <th class="col-date">تاریخ و ساعت پرداخت</th>
+              <th class="col-amount">مبلغ (تومان)</th>
+              <th class="col-receipt">شماره رسید</th>
               <th>توضیحات</th>
             </tr>
           </thead>
           <tbody>
             ${payments.map((p, idx) => `
               <tr>
-                <td>${(idx + 1).toLocaleString('fa-IR')}</td>
-                <td>${formatPersianDateTime(p.payment_date || p.created_at)}</td>
-                <td style="color:#16a34a; font-weight:bold;">${Number(p.amount || 0).toLocaleString('fa-IR')}</td>
-                <td>${p.receipt_number ? escapeHtml(p.receipt_number) : '-'}</td>
+                <td class="col-row">${(idx + 1).toLocaleString('fa-IR')}</td>
+                <td class="col-date">${formatPersianDateTime(p.payment_date || p.created_at)}</td>
+                <td class="col-amount" style="color:#16a34a; font-weight:bold;">${Number(p.amount || 0).toLocaleString('fa-IR')}</td>
+                <td class="col-receipt">${p.receipt_number ? escapeHtml(p.receipt_number) : '-'}</td>
                 <td style="text-align:right;">${p.notes ? escapeHtml(p.notes) : '-'}</td>
               </tr>
             `).join('')}
           </tbody>
         </table>
+
         </div>
         ` : ''}
         ` : `
@@ -1205,7 +1221,27 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
         ` : ''}
 
 
+        <!-- Bank Info -->
+        <div class="bank-section">
+          <div class="bank-title">💳 اطلاعات حساب برای واریز</div>
+          <table class="bank-info-table">
+            <tr>
+              <td class="label-cell">بانک:</td>
+              <td class="value-cell">ملت</td>
+              <td class="label-cell">به نام:</td>
+              <td class="value-cell">رضا محمدی</td>
+            </tr>
+            <tr>
+              <td class="label-cell">شماره کارت:</td>
+              <td class="value-cell" dir="ltr" style="font-family: monospace; font-weight: bold; letter-spacing: 1px;">6104 3386 2152 1349</td>
+              <td class="label-cell">شماره شبا:</td>
+              <td class="value-cell" dir="ltr" style="font-family: monospace; font-weight: bold;">IR280120000000009812328696</td>
+            </tr>
+          </table>
+        </div>
+
         <!-- Signatures -->
+
         <div class="signatures-section">
           <div class="signature-box">
             <div class="signature-label">امضای کارفرما:</div>

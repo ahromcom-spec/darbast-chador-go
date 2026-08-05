@@ -227,7 +227,26 @@ export const StatementInvoiceDialog = (props: Props) => {
         </tr>
       </table>
 
+      <table class="info-table">
+        <tr>
+          <td class="label-cell" colspan="4" style="text-align:center; font-size:14px;">💳 اطلاعات حساب برای واریز</td>
+        </tr>
+        <tr>
+          <td class="label-cell">بانک:</td>
+          <td class="value-cell">ملت</td>
+          <td class="label-cell">به نام:</td>
+          <td class="value-cell">رضا محمدی</td>
+        </tr>
+        <tr>
+          <td class="label-cell">شماره کارت:</td>
+          <td class="value-cell" dir="ltr" style="font-family: monospace; font-weight: bold; letter-spacing: 1px;">6104 3386 2152 1349</td>
+          <td class="label-cell">شماره شبا:</td>
+          <td class="value-cell" dir="ltr" style="font-family: monospace; font-weight: bold;">IR280120000000009812328696</td>
+        </tr>
+      </table>
+
       <div class="signatures-section">
+
         <div class="signature-box">
           <div class="signature-label">امضای مشتری:</div>
           <div class="signature-line"></div>
