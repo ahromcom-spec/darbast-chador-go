@@ -1039,31 +1039,32 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
 
         ${payments.length > 0 ? `
         <div style="page-break-inside: avoid; break-inside: avoid;">
-        <table class="order-details-table" style="margin-top: 8px;">
+        <table class="order-details-table payments-table" style="margin-top: 8px;">
           <thead>
             <tr>
               <th colspan="5" style="text-align:center; font-size:14px;">🧾 تاریخچه پرداخت‌ها (${payments.length.toLocaleString('fa-IR')})</th>
             </tr>
             <tr>
-              <th>ردیف</th>
-              <th>تاریخ و ساعت پرداخت</th>
-              <th>مبلغ (تومان)</th>
-              <th>شماره رسید</th>
+              <th class="col-row">ردیف</th>
+              <th class="col-date">تاریخ و ساعت پرداخت</th>
+              <th class="col-amount">مبلغ (تومان)</th>
+              <th class="col-receipt">شماره رسید</th>
               <th>توضیحات</th>
             </tr>
           </thead>
           <tbody>
             ${payments.map((p, idx) => `
               <tr>
-                <td>${(idx + 1).toLocaleString('fa-IR')}</td>
-                <td>${formatPersianDateTime(p.payment_date || p.created_at)}</td>
-                <td style="color:#16a34a; font-weight:bold;">${Number(p.amount || 0).toLocaleString('fa-IR')}</td>
-                <td>${p.receipt_number ? escapeHtml(p.receipt_number) : '-'}</td>
+                <td class="col-row">${(idx + 1).toLocaleString('fa-IR')}</td>
+                <td class="col-date">${formatPersianDateTime(p.payment_date || p.created_at)}</td>
+                <td class="col-amount" style="color:#16a34a; font-weight:bold;">${Number(p.amount || 0).toLocaleString('fa-IR')}</td>
+                <td class="col-receipt">${p.receipt_number ? escapeHtml(p.receipt_number) : '-'}</td>
                 <td style="text-align:right;">${p.notes ? escapeHtml(p.notes) : '-'}</td>
               </tr>
             `).join('')}
           </tbody>
         </table>
+
         </div>
         ` : ''}
         ` : `
