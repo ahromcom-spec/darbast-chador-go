@@ -589,6 +589,84 @@ export function RepairRequestDialog({
     }
   };
 
+  // ویرایش توضیحات درخواست تعمیر (مدیر همیشه، مشتری تا زمان تایید)
+  const canEditRequest = !!existingRequest && (isManager || existingRequest.status === 'pending');
+  // حذف درخواست: مدیر همیشه، مشتری فقط تا زمانی که تایید نشده باشد
+  const canDeleteRequest = !!existingRequest && (isManager || existingRequest.status === 'pending');
+
+  const startEditDescription = () => {
+    setDescriptionDraft(existingRequest?.description || '');
+    setEditingDescription(true);
+  };
+
+  const handleSaveDescription = async () => {
+    if (!existingRequest) return;
+    setSavingDescription(true);
+    try {
+      const { error } = await supabase
+        .from('repair_requests')
+        .update({ description: descriptionDraft.trim() || null })
+        .eq('id', existingRequest.id);
+
+      if (error) throw error;
+
+      setExistingRequest({ ...existingRequest, description: descriptionDraft.trim() });
+      setRequests(requests.map(r => r.id === existingRequest.id ? { ...r, description: descriptionDraft.trim() } : r));
+      setEditingDescription(false);
+      toast({ title: '✓ موفق', description: 'توضیحات درخواست تعمیر ویرایش شد' });
+    } catch (error: any) {
+      console.error('Error updating repair description:', error);
+      toast({ title: 'خطا', description: 'خطا در ویرایش توضیحات', variant: 'destructive' });
+    } finally {
+      setSavingDescription(false);
+    }
+  };
+
+  const handleDeleteRequest = async () => {
+    if (!existingRequest) return;
+    setDeleting(true);
+    try {
+      // حذف فایل‌های ذخیره‌شده در استوریج
+      const { data: mediaRows } = await supabase
+        .from('repair_request_media')
+        .select('file_path')
+        .eq('repair_request_id', existingRequest.id);
+
+      const paths = (mediaRows || []).map((m: any) => m.file_path).filter(Boolean);
+      if (paths.length > 0) {
+        await supabase.storage.from('project-media').remove(paths);
+      }
+
+      const { error } = await supabase
+        .from('repair_requests')
+        .delete()
+        .eq('id', existingRequest.id);
+
+      if (error) throw error;
+
+      toast({
+        title: '✓ حذف شد',
+        description: 'درخواست تعمیر حذف شد و مبلغ آن از هزینه سفارش کسر گردید',
+      });
+
+      setDeleteDialogOpen(false);
+      setExistingRequest(null);
+      onRepairCostChange?.(0);
+      await fetchRepairRequest();
+    } catch (error: any) {
+      console.error('Error deleting repair request:', error);
+      toast({
+        title: 'خطا',
+        description: error?.message || 'خطا در حذف درخواست تعمیر',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
