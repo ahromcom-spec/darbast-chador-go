@@ -427,8 +427,8 @@ export function PendingCollaborationInvites() {
                     </span>
                   </div>
 
-                  {/* مبلغ سفارش - همیشه قابل مشاهده قبل از پذیرش/رد */}
-                  {(invite.total_price && invite.total_price > 0) || (invite.payment_amount && invite.payment_amount > 0) ? (
+                  {/* مبلغ سفارش - فقط اگر همکار دسترسی مالی داشته باشد */}
+                  {invite.can_view_financials && ((invite.total_price && invite.total_price > 0) || (invite.payment_amount && invite.payment_amount > 0)) ? (
                     <div className="flex items-center gap-2 text-sm bg-green-500/10 p-2 rounded-md border border-green-500/30">
                       <Banknote className="h-4 w-4 text-green-600 flex-shrink-0" />
                       <span className="font-medium">مبلغ سفارش:</span>
@@ -442,6 +442,7 @@ export function PendingCollaborationInvites() {
                       )}
                     </div>
                   ) : null}
+
 
                   {/* توضیحات سفارش - همیشه قابل مشاهده قبل از پذیرش/رد */}
                   {invite.description && (
