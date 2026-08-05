@@ -244,26 +244,23 @@ export function useSiteAnalytics() {
         visited_pages: [currentPage]
       });
 
-      // Log the visit in the CEO activity-log module (works for guests too)
-      // Log once per session per identity, so a customer signing in also gets logged
-      const visitKey = `visit_logged_${user?.id || 'guest'}`;
-      if (!sessionStorage.getItem(visitKey)) {
-        sessionStorage.setItem(visitKey, '1');
-        supabase.functions.invoke('track-visit', {
-          body: {
-            page: currentPage,
-            pageTitle: document.title,
-            referrer: document.referrer || null,
-            sessionId: sessionId.current,
-            deviceId: getDeviceId(),
+      // Log every visit in the CEO activity-log module (works for guests too),
+      // including page refreshes — no per-session suppression.
+      supabase.functions.invoke('track-visit', {
+        body: {
+          page: currentPage,
+          pageTitle: document.title,
+          referrer: document.referrer || null,
+          sessionId: sessionId.current,
+          deviceId: getDeviceId(),
 
-            deviceType: getDeviceType(),
-            ip: ipAddress,
-            userAgent: navigator.userAgent,
-            userId: user?.id || null,
-          },
-        }).catch(() => { /* silent */ });
-      }
+          deviceType: getDeviceType(),
+          ip: ipAddress,
+          userAgent: navigator.userAgent,
+          userId: user?.id || null,
+        },
+      }).catch(() => { /* silent */ });
+
 
       console.debug('Session created immediately:', sessionId.current);
     } catch (error) {
