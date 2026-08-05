@@ -7,14 +7,16 @@ import { GeneralManagerSidebar } from '@/components/GeneralManagerSidebar';
 export default function AdminLayout() {
   const location = useLocation();
   const isGeneralManager = location.pathname.startsWith('/general-manager');
-  
+  const moduleKey = new URLSearchParams(location.search).get('moduleKey');
+  const hideSidebar = moduleKey === 'user_impersonation';
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
-        {isGeneralManager ? <GeneralManagerSidebar /> : <AdminSidebar />}
-        <div className="flex-1">
+        {!hideSidebar && (isGeneralManager ? <GeneralManagerSidebar /> : <AdminSidebar />)}
+        <div className={hideSidebar ? 'w-full' : 'flex-1'}>
           <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4">
-            <SidebarTrigger />
+            {!hideSidebar && <SidebarTrigger />}
             <h1 className="text-lg font-semibold">
               {isGeneralManager ? 'پنل مدیریت کل احرم' : 'پنل مدیریت احرم'}
             </h1>
@@ -28,3 +30,4 @@ export default function AdminLayout() {
     </SidebarProvider>
   );
 }
+
