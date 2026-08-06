@@ -845,8 +845,9 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
         <!-- Scaffolding Details Section -->
         <table class="main-info-table">
           <tr>
-            <td class="label-cell">نوع داربست:</td>
-            <td class="value-cell">${scaffoldTypeName}</td>
+            <td class="label-cell">${isCustomService ? 'نوع خدمات:' : 'نوع داربست:'}</td>
+            <td class="value-cell">${escapeHtml(scaffoldTypeName)}</td>
+
             <td class="label-cell">زیرنوع:</td>
             <td class="value-cell">${subtypeName}</td>
           </tr>
