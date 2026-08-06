@@ -6,6 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Upload, Film, Clock, X, Play, Download, AlertCircle, RefreshCw, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { formatPersianDate } from '@/lib/dateUtils';
+import { compressImages } from '@/lib/imageOptimizer';
+
 
 interface MediaFile {
   id: string;
