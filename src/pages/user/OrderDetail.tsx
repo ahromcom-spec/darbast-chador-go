@@ -833,10 +833,12 @@ export default function OrderDetail() {
       return;
     }
     
-    // بررسی حجم فایل‌ها
+    // عکس‌ها قبل از آپلود به‌صورت خودکار بهینه و فشرده می‌شوند،
+    // بنابراین فقط فایل‌های بسیار بزرگ (بیش از ۴۰ مگابایت) رد می‌شوند
+    const RAW_IMAGE_LIMIT = 40 * 1024 * 1024;
     const oversizedFiles: string[] = [];
     for (let i = 0; i < files.length; i++) {
-      if (files[i].size > MAX_IMAGE_SIZE_BYTES) {
+      if (files[i].size > RAW_IMAGE_LIMIT) {
         oversizedFiles.push(`${files[i].name} (${(files[i].size / 1024 / 1024).toFixed(1)} مگابایت)`);
       }
     }
@@ -844,12 +846,13 @@ export default function OrderDetail() {
     if (oversizedFiles.length > 0) {
       toast({
         title: 'حجم بیش از حد مجاز',
-        description: `حداکثر حجم هر عکس ${MAX_IMAGE_SIZE_MB} مگابایت است. فایل‌های زیر بیش از حد مجاز هستند: ${oversizedFiles.join('، ')}`,
+        description: `حداکثر حجم هر عکس ۴۰ مگابایت است. فایل‌های زیر بیش از حد مجاز هستند: ${oversizedFiles.join('، ')}`,
         variant: 'destructive'
       });
       e.target.value = '';
       return;
     }
+
     
     await imageUpload.uploadFiles(files, 'image', order.id, user.id);
     e.target.value = '';
