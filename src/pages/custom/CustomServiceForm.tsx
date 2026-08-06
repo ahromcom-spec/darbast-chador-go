@@ -360,21 +360,25 @@ export default function CustomServiceForm() {
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label>نوع خدمات (دستی) *</Label>
+              <Label>نوع خدمات (دستی)</Label>
               <Input
                 value={serviceTypeManual}
                 onChange={(e) => setServiceTypeManual(e.target.value)}
-                placeholder="مثلاً: نصب سازه فلزی سبک"
+                placeholder={state.serviceName || 'مثلاً: نصب سازه فلزی سبک'}
               />
+              <p className="text-xs text-muted-foreground">
+                در صورت خالی بودن، «{state.serviceName || 'خدمات سفارشی'}» از لیست انتخابی صفحه نخست ثبت می‌شود.
+              </p>
             </div>
             <div className="space-y-1">
               <Label>زیرشاخه خدمات (دستی)</Label>
               <Input
                 value={subcategoryManual}
                 onChange={(e) => setSubcategoryManual(e.target.value)}
-                placeholder="مثلاً: اجرا به همراه اجناس"
+                placeholder={state.subcategoryName || 'مثلاً: اجرا به همراه اجناس'}
               />
             </div>
+
           </CardContent>
         </Card>
 
