@@ -237,8 +237,10 @@ export function OrderMediaSection({
       }
 
       const user = session.user;
-      const fileArray = Array.from(files);
+      // بهینه‌سازی خودکار عکس‌ها قبل از آپلود
+      const fileArray = await compressImages(Array.from(files));
       const totalSize = fileArray.reduce((sum, f) => sum + f.size, 0);
+
       const progressMap: Record<number, number> = {};
       
       // آپلود موازی حداکثر 3 فایل همزمان
