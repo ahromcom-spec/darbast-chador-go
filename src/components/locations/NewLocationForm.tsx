@@ -122,15 +122,8 @@ export const NewLocationForm = ({ onSuccess, initialData, serviceTypeName }: New
       return;
     }
 
-    // بررسی انتخاب موقعیت روی نقشه
-    if (!hasMapPin) {
-      toast({
-        title: 'موقعیت الزامی است',
-        description: 'لطفاً موقعیت آدرس را روی نقشه مشخص کنید',
-        variant: 'destructive'
-      });
-      return;
-    }
+    // انتخاب موقعیت روی نقشه اختیاری است (کاربر می‌تواند بعداً آن را ثبت کند)
+
 
     setIsSubmitting(true);
 
@@ -260,10 +253,11 @@ export const NewLocationForm = ({ onSuccess, initialData, serviceTypeName }: New
         <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900 py-2">
           <MapPin className="h-4 w-4 text-amber-600 dark:text-amber-400" />
           <AlertDescription className="text-amber-800 dark:text-amber-300 text-xs sm:text-sm">
-            لطفاً موقعیت آدرس را روی نقشه مشخص کنید
+            انتخاب موقعیت روی نقشه اختیاری است؛ می‌توانید بعداً موقعیت پروژه را ثبت کنید تا سفارش روی نقشه کره زمین نمایش داده شود.
           </AlertDescription>
         </Alert>
       )}
+
 
       <div className="space-y-1">
         <Label htmlFor="title" className="text-xs sm:text-sm">عنوان آدرس (اختیاری)</Label>
@@ -328,7 +322,7 @@ export const NewLocationForm = ({ onSuccess, initialData, serviceTypeName }: New
 
       <div className="space-y-1">
         <div className="flex items-center justify-between">
-          <Label className="text-xs sm:text-sm">انتخاب موقعیت روی نقشه</Label>
+          <Label className="text-xs sm:text-sm">انتخاب موقعیت روی نقشه (اختیاری)</Label>
           {hasMapPin && (
             <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
               <MapPin className="w-3 h-3" />
@@ -337,7 +331,7 @@ export const NewLocationForm = ({ onSuccess, initialData, serviceTypeName }: New
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          روی نقشه کلیک کنید یا نشانگر را بکشید تا موقعیت دقیق را انتخاب کنید
+          در صورت تمایل روی نقشه کلیک کنید یا نشانگر را بکشید تا موقعیت دقیق ثبت شود (اختیاری)
         </p>
         <div className="[&_.h-\[500px\]]:h-[280px] sm:[&_.h-\[500px\]]:h-[320px]">
           <InteractiveLocationMap
@@ -350,7 +344,8 @@ export const NewLocationForm = ({ onSuccess, initialData, serviceTypeName }: New
         </div>
       </div>
 
-      <Button type="submit" className="w-full h-10 text-sm" disabled={!isQomSelected || !hasMapPin || isSubmitting}>
+      <Button type="submit" className="w-full h-10 text-sm" disabled={!isQomSelected || isSubmitting}>
+
         {isSubmitting ? (
           <>
             <Loader2 className="w-4 h-4 ml-2 animate-spin" />

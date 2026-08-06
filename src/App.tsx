@@ -90,6 +90,8 @@ const NewServiceRequestForm = lazy(() => import("./pages/scaffolding/NewServiceR
 const ComprehensiveScaffoldingForm = lazy(() => import("./pages/scaffolding/ComprehensiveScaffoldingForm"));
 const ScaffoldingFacadeForm = lazy(() => import("./pages/scaffolding/ScaffoldingFacadeForm"));
 const CarpetCleaningForm = lazy(() => import("./pages/carpet-cleaning/CarpetCleaningForm"));
+const CustomServiceForm = lazy(() => import("./pages/custom/CustomServiceForm"));
+
 const TicketList = lazy(() => import("./pages/tickets/TicketList"));
 const FormNotAvailable = lazy(() => import("./pages/user/FormNotAvailable"));
 const NewTicket = lazy(() => import("./pages/tickets/NewTicket"));
@@ -239,6 +241,12 @@ const App = () => {
 
               <Route path="/scaffolding/form" element={<ScaffoldingForm />} />
               <Route path="/scaffolding/rental-form" element={<ScaffoldingRentalForm />} />
+              <Route path="/custom-service/form" element={
+                <ProtectedRoute>
+                  <CustomServiceForm />
+                </ProtectedRoute>
+              } />
+
 
               {/* سازگاری با مسیرهای قدیمی/کوتاه */}
               <Route path="/rental-form" element={

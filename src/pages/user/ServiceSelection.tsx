@@ -117,9 +117,12 @@ export default function ServiceSelection() {
 
   const CARPET_CLEANING_SUBCATEGORY_ID = 'da5fb7be-e703-4dc1-87e8-2386eb1697b9';
 
-  const getFormPath = (subcategoryCode: string, isServiceActive?: boolean, subcategoryIdArg?: string, serviceTypeName?: string) => {
+  const getFormPath = (subcategoryCode: string, isServiceActive?: boolean, subcategoryIdArg?: string, serviceTypeName?: string, formPath?: string | null) => {
     // اگر مدیر ارشد این خدمت را غیرفعال کرده، مستقیماً به «فرم جایگزاری نشده» می‌رویم
     if (isServiceActive === false) return '/form-not-available';
+
+    // مسیر اختصاصی ثبت‌شده روی زیرشاخه (مثلاً خدمات سفارشی)
+    if (formPath && formPath.startsWith('/')) return formPath;
 
     // مسیر ویژه قالی شویی (تشخیص با شناسه یا نام سرویس اصلی)
     if (subcategoryIdArg === CARPET_CLEANING_SUBCATEGORY_ID || serviceTypeName?.includes('قالی')) {
@@ -135,6 +138,7 @@ export default function ServiceSelection() {
 
     return formMap[subcategoryCode] || '/form-not-available';
   };
+
 
   const handleContinue = async () => {
     if (!selectedServiceType || !selectedSubcategory) {
@@ -183,7 +187,7 @@ export default function ServiceSelection() {
         );
       }
 
-      const formPath = getFormPath(selectedSubcategoryData.code, (selectedSubcategoryData as any).is_service_active, selectedSubcategoryData.id, selectedServiceTypeObj.name);
+      const formPath = getFormPath(selectedSubcategoryData.code, (selectedSubcategoryData as any).is_service_active, selectedSubcategoryData.id, selectedServiceTypeObj.name, (selectedSubcategoryData as any).form_path);
 
       // Navigate to the appropriate form with all necessary data including hierarchyProjectId
       navigate(formPath, {

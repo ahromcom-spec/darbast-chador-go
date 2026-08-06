@@ -51,6 +51,19 @@ export default function SelectLocation() {
   }, [user, serviceSelection]);
 
 
+  const resolveFormPath = async (): Promise<string> => {
+    const { data: sub } = await supabase
+      .from('subcategories')
+      .select('is_service_active, form_path')
+      .eq('id', serviceSelection.subcategoryId)
+      .maybeSingle();
+
+    if ((sub as any)?.is_service_active === false) return '/form-not-available';
+    const custom = (sub as any)?.form_path as string | null | undefined;
+    if (custom && custom.startsWith('/')) return custom;
+    return getFormPath(serviceSelection.subcategoryCode);
+  };
+
   const handleLocationSelected = async (locationId: string) => {
     // حالت مهمان: بدون ساخت پروژه در دیتابیس مستقیم به فرم سفارش می‌رویم
     if (!user) {
@@ -64,7 +77,8 @@ export default function SelectLocation() {
         return;
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      const formPath = getFormPath(serviceSelection.subcategoryCode);
+      const formPath = await resolveFormPath();
+
       navigate(formPath, {
         state: {
           hierarchyProjectId: null,
@@ -125,17 +139,9 @@ export default function SelectLocation() {
         serviceSelection.subcategoryId
       );
 
-      // بررسی وضعیت فعال بودن این زیرشاخه (کنترل توسط CEO)
-      const { data: subStatus } = await supabase
-        .from('subcategories')
-        .select('is_service_active')
-        .eq('id', serviceSelection.subcategoryId)
-        .maybeSingle();
+      // بررسی وضعیت فعال بودن و مسیر فرم اختصاصی این زیرشاخه
+      const formPath = await resolveFormPath();
 
-      const isServiceActive = (subStatus as any)?.is_service_active !== false;
-
-      // Navigate to appropriate service form with all needed data
-      const formPath = isServiceActive ? getFormPath(serviceSelection.subcategoryCode) : '/form-not-available';
       navigate(formPath, { 
         state: { 
           hierarchyProjectId: projectId, // شناسه پروژه در hierarchy برای لینک کردن سفارش
