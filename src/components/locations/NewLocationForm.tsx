@@ -322,7 +322,7 @@ export const NewLocationForm = ({ onSuccess, initialData, serviceTypeName }: New
 
       <div className="space-y-1">
         <div className="flex items-center justify-between">
-          <Label className="text-xs sm:text-sm">انتخاب موقعیت روی نقشه</Label>
+          <Label className="text-xs sm:text-sm">انتخاب موقعیت روی نقشه (اختیاری)</Label>
           {hasMapPin && (
             <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
               <MapPin className="w-3 h-3" />
@@ -331,7 +331,7 @@ export const NewLocationForm = ({ onSuccess, initialData, serviceTypeName }: New
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          روی نقشه کلیک کنید یا نشانگر را بکشید تا موقعیت دقیق را انتخاب کنید
+          در صورت تمایل روی نقشه کلیک کنید یا نشانگر را بکشید تا موقعیت دقیق ثبت شود (اختیاری)
         </p>
         <div className="[&_.h-\[500px\]]:h-[280px] sm:[&_.h-\[500px\]]:h-[320px]">
           <InteractiveLocationMap
@@ -344,7 +344,8 @@ export const NewLocationForm = ({ onSuccess, initialData, serviceTypeName }: New
         </div>
       </div>
 
-      <Button type="submit" className="w-full h-10 text-sm" disabled={!isQomSelected || !hasMapPin || isSubmitting}>
+      <Button type="submit" className="w-full h-10 text-sm" disabled={!isQomSelected || isSubmitting}>
+
         {isSubmitting ? (
           <>
             <Loader2 className="w-4 h-4 ml-2 animate-spin" />
