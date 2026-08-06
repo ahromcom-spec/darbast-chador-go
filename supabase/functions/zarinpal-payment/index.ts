@@ -189,6 +189,8 @@ serve(async (req) => {
 
     const callbackQuery = new URLSearchParams({ order_id: order_id! });
     if (statement_id) callbackQuery.set('statement_id', statement_id);
+    if (pay_all) callbackQuery.set('pay_all', '1');
+
 
     // Add timeout + retry to avoid hanging when ZarinPal API is slow/unreachable
     const callZarinpal = async (apiUrl: string, timeoutMs: number) => {
