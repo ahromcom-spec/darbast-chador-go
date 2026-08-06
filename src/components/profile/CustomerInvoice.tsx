@@ -531,17 +531,22 @@ export const CustomerInvoice = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-emerald-600" />
-              پرداخت آنلاین صورتحساب
+              {payDialog.payAll ? 'پرداخت کلی همه صورتحساب‌ها' : 'پرداخت آنلاین صورتحساب'}
             </DialogTitle>
             <DialogDescription>
-              {payDialog.statement && (
+              {payDialog.payAll ? (
+                <>
+                  مانده کل بدهی: <span className="font-bold text-red-600">{formatPrice(summary.remaining)}</span>
+                </>
+              ) : payDialog.statement ? (
                 <>
                   صورتحساب شماره {new Intl.NumberFormat('fa-IR').format(payDialog.statement.statement_number)} — مانده فعلی:
                   {' '}
                   <span className="font-bold text-red-600">{formatPrice(payDialog.statement.total_remaining)}</span>
                 </>
-              )}
+              ) : null}
             </DialogDescription>
+
           </DialogHeader>
           <div className="space-y-3 py-2">
             <Label htmlFor="pay-amount">مبلغ پرداخت (تومان)</Label>
