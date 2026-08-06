@@ -51,6 +51,19 @@ export default function SelectLocation() {
   }, [user, serviceSelection]);
 
 
+  const resolveFormPath = async (): Promise<string> => {
+    const { data: sub } = await supabase
+      .from('subcategories')
+      .select('is_service_active, form_path')
+      .eq('id', serviceSelection.subcategoryId)
+      .maybeSingle();
+
+    if ((sub as any)?.is_service_active === false) return '/form-not-available';
+    const custom = (sub as any)?.form_path as string | null | undefined;
+    if (custom && custom.startsWith('/')) return custom;
+    return getFormPath(serviceSelection.subcategoryCode);
+  };
+
   const handleLocationSelected = async (locationId: string) => {
     // حالت مهمان: بدون ساخت پروژه در دیتابیس مستقیم به فرم سفارش می‌رویم
     if (!user) {
@@ -64,7 +77,8 @@ export default function SelectLocation() {
         return;
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      const formPath = getFormPath(serviceSelection.subcategoryCode);
+      const formPath = await resolveFormPath();
+
       navigate(formPath, {
         state: {
           hierarchyProjectId: null,
