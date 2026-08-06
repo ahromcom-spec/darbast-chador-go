@@ -241,6 +241,12 @@ const App = () => {
 
               <Route path="/scaffolding/form" element={<ScaffoldingForm />} />
               <Route path="/scaffolding/rental-form" element={<ScaffoldingRentalForm />} />
+              <Route path="/custom-service/form" element={
+                <ProtectedRoute>
+                  <CustomServiceForm />
+                </ProtectedRoute>
+              } />
+
 
               {/* سازگاری با مسیرهای قدیمی/کوتاه */}
               <Route path="/rental-form" element={
