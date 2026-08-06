@@ -1009,10 +1009,11 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
               return `
             <tr>
               <td>۱</td>
-              <td style="text-align:right;">${description ? escapeHtml(description) : `کرایه ماه اول - ${scaffoldTypeName} - ${subtypeName}`}</td>
+              <td style="text-align:right;">${isCustomService ? customServiceCell : (description ? escapeHtml(description) : `کرایه ماه اول - ${scaffoldTypeName} - ${subtypeName}`)}</td>
               <td>${order.rental_start_date ? formatPersianDate(order.rental_start_date) : '-'}</td>
               <td>${order.rental_start_date ? formatPersianDate(new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()) : '-'}</td>
-              <td>${areaCell}</td>
+              <td>${isCustomService ? customMeasureCell : areaCell}</td>
+
               <td>${priceCell}</td>
             </tr>
               `;
