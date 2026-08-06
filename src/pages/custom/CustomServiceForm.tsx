@@ -363,6 +363,14 @@ export default function CustomServiceForm() {
         </Card>
 
         <Card className="shadow-lg border-2">
+          <CardContent className="pt-5">
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <OrderForOthers onRecipientSelected={setRecipientData} disabled={loading} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-lg border-2">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Package className="w-5 h-5 text-primary" />
@@ -485,13 +493,6 @@ export default function CustomServiceForm() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-lg border-2">
-          <CardContent className="pt-5">
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <OrderForOthers onRecipientSelected={setRecipientData} disabled={loading} />
-            </div>
-          </CardContent>
-        </Card>
 
         <MediaUploader
           onFilesChange={setMediaFiles}
