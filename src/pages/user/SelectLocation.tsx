@@ -139,17 +139,9 @@ export default function SelectLocation() {
         serviceSelection.subcategoryId
       );
 
-      // بررسی وضعیت فعال بودن این زیرشاخه (کنترل توسط CEO)
-      const { data: subStatus } = await supabase
-        .from('subcategories')
-        .select('is_service_active')
-        .eq('id', serviceSelection.subcategoryId)
-        .maybeSingle();
+      // بررسی وضعیت فعال بودن و مسیر فرم اختصاصی این زیرشاخه
+      const formPath = await resolveFormPath();
 
-      const isServiceActive = (subStatus as any)?.is_service_active !== false;
-
-      // Navigate to appropriate service form with all needed data
-      const formPath = isServiceActive ? getFormPath(serviceSelection.subcategoryCode) : '/form-not-available';
       navigate(formPath, { 
         state: { 
           hierarchyProjectId: projectId, // شناسه پروژه در hierarchy برای لینک کردن سفارش
