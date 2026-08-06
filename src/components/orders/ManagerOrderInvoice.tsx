@@ -710,8 +710,51 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
       return (!isNaN(w) && w > 0) ? 'متر مکعب' : 'متر مربع';
     };
 
-    const scaffoldTypeName = scaffoldingTypeLabels[scaffoldingType] || scaffoldingType || subcategoryName || '-';
-    const subtypeName = ceilingSubtype ? ceilingSubtypeLabels[ceilingSubtype] || ceilingSubtype : (subcategoryName || scaffoldTypeName);
+    // ===== خدمات سفارشی: اطلاعات دستی ثبت‌شده در فرم =====
+    const isCustomService = Boolean(parsedNotes?.is_custom_service);
+    const customServiceType = (parsedNotes?.custom_service_type || '').toString().trim();
+    const customSubcategory = (parsedNotes?.custom_subcategory || '').toString().trim();
+    const customActivity = (parsedNotes?.activity_description || '').toString().trim();
+    const customSite = (parsedNotes?.site_description || '').toString().trim();
+    const customMaterials = (parsedNotes?.materials || '').toString().trim();
+    const customQuantity = Number(parsedNotes?.quantity) || 0;
+    const customWeight = Number(parsedNotes?.weight) || 0;
+
+    const scaffoldTypeName = isCustomService
+      ? (customServiceType || subcategoryName || 'خدمات سفارشی')
+      : (scaffoldingTypeLabels[scaffoldingType] || scaffoldingType || subcategoryName || '-');
+    const subtypeName = isCustomService
+      ? (customSubcategory || subcategoryName || scaffoldTypeName)
+      : (ceilingSubtype ? ceilingSubtypeLabels[ceilingSubtype] || ceilingSubtype : (subcategoryName || scaffoldTypeName));
+
+    // شرح خدمات کامل برای خدمات سفارشی
+    const customServiceCell = (() => {
+      const parts: string[] = [];
+      parts.push(`<strong>${escapeHtml(scaffoldTypeName)}${customSubcategory ? ` - ${escapeHtml(customSubcategory)}` : ''}</strong>`);
+      if (customActivity) parts.push(`<div style="font-size:11.5px;color:#334155;margin-top:2px;">شرح خدمات: ${escapeHtml(customActivity)}</div>`);
+      if (customSite) parts.push(`<div style="font-size:11.5px;color:#475569;margin-top:2px;">محل خدمات: ${escapeHtml(customSite)}</div>`);
+      if (customMaterials) parts.push(`<div style="font-size:11.5px;color:#475569;margin-top:2px;">مصالح/ابزار: ${escapeHtml(customMaterials)}</div>`);
+      return parts.join('');
+    })();
+
+    // ستون متراژ/تعداد برای خدمات سفارشی (همه ابعاد + تعداد + وزن)
+    const customMeasureCell = (() => {
+      const rows = Array.isArray(dimensions) ? dimensions : (dimensions ? [dimensions] : []);
+      const lines: string[] = [];
+      rows.forEach((d: any) => {
+        const l = Number(d?.length) || 0, w = Number(d?.width) || 0, h = Number(d?.height) || 0;
+        const nums = [l, w, h].filter((n) => n > 0);
+        if (nums.length === 0) return;
+        const expr = nums.map((n) => n.toLocaleString('fa-IR')).join(' × ');
+        const product = nums.reduce((a, b) => a * b, 1);
+        const unit = nums.length >= 3 ? 'متر مکعب' : nums.length === 2 ? 'متر مربع' : 'متر';
+        lines.push(`<div style="font-size:11.5px;color:#475569;">${expr}${nums.length > 1 ? ` = ${parseFloat(product.toFixed(2)).toLocaleString('fa-IR')} ${unit}` : ` ${unit}`}</div>`);
+      });
+      if (customQuantity > 0) lines.push(`<strong style="font-size:12px;">تعداد: ${customQuantity.toLocaleString('fa-IR')}</strong>`);
+      if (customWeight > 0) lines.push(`<div style="font-size:11.5px;color:#475569;">وزن: ${customWeight.toLocaleString('fa-IR')} کیلوگرم</div>`);
+      return lines.length > 0 ? lines.join('') : '-';
+    })();
+
 
     return `
       <div class="invoice-container">
