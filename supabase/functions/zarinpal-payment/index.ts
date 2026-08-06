@@ -262,7 +262,7 @@ serve(async (req) => {
         entity_id: order_id,
         action: 'payment_requested',
         actor_user_id: user.id,
-        meta: { authority, amount, statement_id: statement_id || null },
+        meta: { authority, amount, statement_id: statement_id || null, pay_all },
       });
 
       return new Response(
