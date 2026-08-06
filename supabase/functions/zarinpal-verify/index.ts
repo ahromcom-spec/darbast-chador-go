@@ -246,6 +246,8 @@ serve(async (req) => {
           amount: paidAmount,
           statement_id: sid,
           distribution,
+          pay_all,
+
         },
       });
 
