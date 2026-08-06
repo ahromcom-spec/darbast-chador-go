@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { compressImages } from '@/lib/imageOptimizer';
+
 
 interface UploadProgress {
   loaded: number;
@@ -95,11 +97,17 @@ export function useFileUpload({ bucket, onComplete }: UseFileUploadOptions) {
 
     let successCount = 0;
     let errorCount = 0;
-    const fileArray = Array.from(files);
-    
+    let fileArray = Array.from(files);
+
+    // بهینه‌سازی تصاویر قبل از آپلود (حجم کمتر، آپلود سریع‌تر)
+    if (fileType === 'image') {
+      fileArray = await compressImages(fileArray);
+    }
+
     // محاسبه کل حجم فایل‌ها
     const totalSize = fileArray.reduce((sum, file) => sum + file.size, 0);
     let uploadedSize = 0;
+
 
     for (let i = 0; i < fileArray.length; i++) {
       if (cancelledRef.current) {
