@@ -106,7 +106,9 @@ serve(async (req) => {
     if (auditRow?.meta) {
       requestedAmount = Number((auditRow.meta as any).amount) || 0;
       if (!statement_id) statement_id = (auditRow.meta as any).statement_id || null;
+      if (!pay_all) pay_all = (auditRow.meta as any).pay_all === true;
     }
+
 
     const ZARINPAL_MERCHANT_ID = '93f06023-423a-44d6-ac08-8ee0aa9ed257';
     const ZARINPAL_VERIFY_URL = 'https://api.zarinpal.com/pg/v4/payment/verify.json';
