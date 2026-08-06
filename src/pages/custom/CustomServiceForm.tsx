@@ -288,7 +288,7 @@ export default function CustomServiceForm() {
         customer_name: user?.user_metadata?.full_name || '',
         customer_phone: user?.user_metadata?.phone_number || user?.phone || '',
         customer_user_id: user?.id,
-        service_type: `خدمات سفارشی - ${serviceTypeManual}`,
+        service_type: `خدمات سفارشی - ${effectiveServiceType}`,
       }).catch((err) => console.error('Notify managers error:', err));
 
       reportActivity({
