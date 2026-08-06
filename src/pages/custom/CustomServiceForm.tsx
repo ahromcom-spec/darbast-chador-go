@@ -19,6 +19,8 @@ import { sanitizeHtml } from '@/lib/security';
 import { notifyManagers, sendPushNotification } from '@/lib/notifications';
 import { reportActivity } from '@/lib/activityReporter';
 import { parseLocalizedNumber } from '@/lib/numberParsing';
+import { compressImages, isImageFile } from '@/lib/imageOptimizer';
+
 import { ArrowRight, Plus, Trash2, MapPin, Package, ClipboardList, Info } from 'lucide-react';
 
 interface DimensionRow {
