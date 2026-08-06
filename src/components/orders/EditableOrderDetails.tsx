@@ -184,8 +184,64 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   const [savedUnitPrice, setSavedUnitPrice] = useState(parsedNotes?.unit_price?.toString() || '');
   const isUnitPriceChanged = unitPrice !== savedUnitPrice;
 
+  // ===== خدمات سفارشی: قیمت‌گذاری بر پایه تعداد / متراژ / حجم / وزن =====
+  const isCustomService = Boolean(parsedNotes?.is_custom_service);
+  const customQuantity = parseLocalizedNumber(parsedNotes?.quantity) || 0;
+  const customWeight = parseLocalizedNumber(parsedNotes?.weight) || 0;
+  const customDims: any[] = Array.isArray(parsedNotes?.dimensions) ? parsedNotes.dimensions : [];
+  const customArea = customDims.reduce((sum, d) => {
+    const l = parseLocalizedNumber(d?.length);
+    const w = parseLocalizedNumber(d?.width);
+    const h = parseLocalizedNumber(d?.height);
+    const second = w > 0 ? w : h;
+    return l > 0 && second > 0 ? sum + l * second : sum;
+  }, 0);
+  const customVolume = customDims.reduce((sum, d) => {
+    const l = parseLocalizedNumber(d?.length);
+    const w = parseLocalizedNumber(d?.width);
+    const h = parseLocalizedNumber(d?.height);
+    return l > 0 && w > 0 && h > 0 ? sum + l * w * h : sum;
+  }, 0);
+  const customLength = customDims.reduce((sum, d) => sum + (parseLocalizedNumber(d?.length) || 0), 0);
+
+  type CustomBasis = 'fixed' | 'quantity' | 'area' | 'volume' | 'weight' | 'length';
+  const defaultCustomBasis: CustomBasis =
+    (parsedNotes?.custom_pricing_basis as CustomBasis) ||
+    (customQuantity > 0 ? 'quantity' : customVolume > 0 ? 'volume' : customArea > 0 ? 'area' : customWeight > 0 ? 'weight' : customLength > 0 ? 'length' : 'fixed');
+  const [customBasis, setCustomBasis] = useState<CustomBasis>(defaultCustomBasis);
+  const [customUnitPrice, setCustomUnitPrice] = useState(parsedNotes?.custom_unit_price?.toString() || '');
+  const [savedCustomPricing, setSavedCustomPricing] = useState({
+    basis: defaultCustomBasis as string,
+    unitPrice: parsedNotes?.custom_unit_price?.toString() || '',
+  });
+
+  const customBasisOptions: Array<{ value: CustomBasis; label: string; measure: number; unit: string }> = [
+    { value: 'quantity', label: 'بر اساس تعداد', measure: customQuantity, unit: 'عدد' },
+    { value: 'area', label: 'بر اساس متراژ', measure: customArea, unit: 'متر مربع' },
+    { value: 'volume', label: 'بر اساس حجم', measure: customVolume, unit: 'متر مکعب' },
+    { value: 'weight', label: 'بر اساس وزن', measure: customWeight, unit: 'کیلوگرم' },
+    { value: 'length', label: 'بر اساس طول', measure: customLength, unit: 'متر' },
+    { value: 'fixed', label: 'مبلغ مقطوع (بدون فی)', measure: 0, unit: '' },
+  ];
+  const activeCustomBasis = customBasisOptions.find(o => o.value === customBasis) || customBasisOptions[5];
+  const customComputedTotal =
+    customBasis !== 'fixed' && customUnitPrice && activeCustomBasis.measure > 0
+      ? Math.round(parseLocalizedNumber(customUnitPrice) * activeCustomBasis.measure)
+      : 0;
+
+  // محاسبه خودکار مبلغ کل از فی × مقدار پایه انتخاب‌شده
+  useEffect(() => {
+    if (isCustomService && customComputedTotal > 0) {
+      setPaymentAmount(customComputedTotal.toString());
+    }
+  }, [isCustomService, customComputedTotal]);
+
+  const isCustomPricingChanged =
+    customBasis !== savedCustomPricing.basis || customUnitPrice !== savedCustomPricing.unitPrice;
+
   // Check if this is an expert pricing request
   const isExpertPricingRequest = parsedNotes?.is_expert_pricing_request === true;
+
 
   // Calculate total measure (m² or m³) from dimensions for expert pricing
   const calculateExpertPricingTotalMeasure = () => {
