@@ -178,13 +178,27 @@ export default function CustomServiceForm() {
         .map((d) => ({ length: toNumber(d.length), width: toNumber(d.width), height: toNumber(d.height) }))
         .filter((d) => d.length !== null || d.width !== null || d.height !== null);
 
+      // نوع خدمات: اگر کاربر دستی وارد نکرده باشد، از لیست کشویی صفحه نخست استفاده می‌شود
+      const effectiveServiceType = serviceTypeManual.trim() || (state.serviceName || '').trim();
+      const effectiveSubcategory = subcategoryManual.trim() || (state.subcategoryName || '').trim();
+
+      const detailLines = [
+        activityDescription.trim() ? `شرح خدمات: ${activityDescription.trim()}` : '',
+        siteDescription.trim() ? `محل خدمات: ${siteDescription.trim()}` : '',
+        materials.trim() ? `مصالح، ابزار و اجناس: ${materials.trim()}` : '',
+        quantity.trim() ? `تعداد: ${quantity.trim()}` : '',
+        weight.trim() ? `وزن: ${weight.trim()} کیلوگرم` : '',
+      ].filter(Boolean).join('\n');
+
       const notes = {
         service_type: 'custom',
         is_custom_service: true,
-        custom_service_type: sanitizeHtml(serviceTypeManual),
-        custom_subcategory: sanitizeHtml(subcategoryManual),
+        custom_service_type: sanitizeHtml(effectiveServiceType),
+        custom_subcategory: sanitizeHtml(effectiveSubcategory),
         activity_description: sanitizeHtml(activityDescription),
         site_description: sanitizeHtml(siteDescription),
+        description: sanitizeHtml(activityDescription),
+        service_details: sanitizeHtml(detailLines),
         dimensions: dimensionRows,
         quantity: toNumber(quantity),
         weight: toNumber(weight),
@@ -194,6 +208,7 @@ export default function CustomServiceForm() {
         customerName: user?.user_metadata?.full_name || '',
         phoneNumber: user?.user_metadata?.phone_number || user?.phone || '',
       };
+
 
       const validated = createProjectV3Schema.parse({
         _customer_id: customerId,
