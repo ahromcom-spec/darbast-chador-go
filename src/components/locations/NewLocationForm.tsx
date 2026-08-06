@@ -122,15 +122,8 @@ export const NewLocationForm = ({ onSuccess, initialData, serviceTypeName }: New
       return;
     }
 
-    // بررسی انتخاب موقعیت روی نقشه
-    if (!hasMapPin) {
-      toast({
-        title: 'موقعیت الزامی است',
-        description: 'لطفاً موقعیت آدرس را روی نقشه مشخص کنید',
-        variant: 'destructive'
-      });
-      return;
-    }
+    // انتخاب موقعیت روی نقشه اختیاری است (کاربر می‌تواند بعداً آن را ثبت کند)
+
 
     setIsSubmitting(true);
 
