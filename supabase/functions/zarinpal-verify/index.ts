@@ -42,6 +42,7 @@ serve(async (req) => {
     let status: string | null = null;
     let order_id: string | null = null;
     let statement_id: string | null = null;
+    let pay_all = false;
 
     if (req.method === 'POST') {
       try {
@@ -50,6 +51,7 @@ serve(async (req) => {
         status = body.Status ?? body.status ?? null;
         order_id = body.order_id ?? null;
         statement_id = body.statement_id ?? null;
+        pay_all = body.pay_all === true || body.pay_all === '1';
       } catch (parseError) {
         console.error('Error parsing JSON body:', parseError);
       }
@@ -61,8 +63,10 @@ serve(async (req) => {
       order_id = order_id ?? url.searchParams.get('order_id');
       statement_id = statement_id ?? url.searchParams.get('statement_id');
     }
+    if (!pay_all) pay_all = url.searchParams.get('pay_all') === '1';
 
-    console.log('Verify callback:', { authority, status, order_id, statement_id });
+    console.log('Verify callback:', { authority, status, order_id, statement_id, pay_all });
+
 
     if (!authority || !order_id) {
       throw new Error('Missing required parameters');
