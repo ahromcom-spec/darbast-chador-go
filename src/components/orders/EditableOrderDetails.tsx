@@ -545,6 +545,21 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         });
       }
 
+      // خدمات سفارشی: ذخیره مبنای قیمت‌گذاری و قیمت فی
+      if (isCustomService) {
+        updatedNotes.custom_pricing_basis = customBasis;
+        updatedNotes.custom_pricing_basis_label = activeCustomBasis.label;
+        updatedNotes.custom_pricing_measure = activeCustomBasis.measure || null;
+        updatedNotes.custom_pricing_measure_unit = activeCustomBasis.unit || null;
+        updatedNotes.custom_unit_price = customUnitPrice ? parseLocalizedNumber(customUnitPrice) : null;
+        if (paymentAmount && parseFloat(paymentAmount) > 0) {
+          updatedNotes.awaiting_manual_pricing = false;
+          updatedNotes.price_set_by_manager = true;
+          updatedNotes.manager_set_price = parseFloat(paymentAmount);
+          updatedNotes.pricing_date = new Date().toISOString();
+        }
+      }
+
 
       const updatePayload: any = {
         address,
