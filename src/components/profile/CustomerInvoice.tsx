@@ -350,6 +350,30 @@ export const CustomerInvoice = () => {
         </Card>
       </div>
 
+      {/* پرداخت کلی همه صورتحساب‌ها (آبشاری از پایین‌ترین شماره صورتحساب) */}
+      {summary.remaining > 0 && (
+        <Card className="border-emerald-300 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5">
+          <CardContent className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <p className="font-bold flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-emerald-600" />
+                پرداخت کلی همه صورتحساب‌ها
+              </p>
+              <p className="text-xs text-muted-foreground">
+                مبلغ پرداختی به‌صورت آبشاری از پایین‌ترین شماره صورتحساب و قدیمی‌ترین فاکتور تخصیص داده می‌شود و در همان صورتحساب‌ها و فاکتورها ثبت می‌گردد.
+              </p>
+              <p className="text-sm font-bold text-red-600">مانده کل: {formatPrice(summary.remaining)}</p>
+            </div>
+            <Button onClick={openPayAllDialog} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
+              <CreditCard className="h-4 w-4" />
+              پرداخت کل بدهی
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+
+
       {/* لیست صورتحساب‌ها */}
       {statements.length === 0 ? (
         <Card>
