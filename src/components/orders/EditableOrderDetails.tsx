@@ -584,6 +584,10 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
       // بعد از ذخیره موفق، مقدار ذخیره شده قیمت را آپدیت کن تا دکمه غیرفعال شود
       setSavedPaymentAmount(paymentAmount);
       setSavedUnitPrice(unitPrice);
+      if (isCustomService) {
+        setSavedCustomPricing({ basis: customBasis, unitPrice: customUnitPrice });
+      }
+
       if (isRentalExpertPricing) {
         setSavedRentalPrices({
           item1Unit: rentalItem1UnitPrice,
