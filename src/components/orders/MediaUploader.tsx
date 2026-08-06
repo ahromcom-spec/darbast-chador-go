@@ -342,7 +342,7 @@ export function MediaUploader({
     const newMedia: MediaFile[] = [];
 
     for (let i = 0; i < selectedFiles.length; i++) {
-      const file = selectedFiles[i];
+      let file = selectedFiles[i];
 
       // Count limits
       if (type === 'image' && currentImages + newMedia.filter(m => m.type === 'image').length >= maxImages) {
@@ -354,9 +354,15 @@ export function MediaUploader({
         break;
       }
 
+      // بهینه‌سازی خودکار عکس‌ها (کاهش حجم و آپلود سریع‌تر)
+      if (type === 'image') {
+        file = await compressImage(file);
+      }
+
       // Validate size only
       const isValid = type === 'image' ? validateImage(file) : validateVideo(file);
       if (!isValid) continue;
+
 
       const preview = URL.createObjectURL(file);
       const mediaItem: MediaFile = {
