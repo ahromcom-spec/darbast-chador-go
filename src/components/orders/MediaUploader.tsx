@@ -7,6 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { CentralizedVideoPlayer } from '@/components/media/CentralizedVideoPlayer';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { compressImage } from '@/lib/imageOptimizer';
+
 
 // NOTE: فایل‌های سفارش در bucket 'project-media' ذخیره می‌شوند
 // توضیح: تمام مدیا‌ی سفارشات در این bucket آپلود می‌شود
