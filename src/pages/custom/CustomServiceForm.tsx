@@ -583,7 +583,7 @@ export default function CustomServiceForm() {
           disabled={loading}
           className={`w-full h-12 text-base ${recipientData ? 'bg-green-600 hover:bg-green-700' : ''}`}
         >
-          {loading ? 'در حال ثبت سفارش...' : 'ثبت سفارش خدمات سفارشی'}
+          {loading ? (uploadStatus || 'در حال ثبت سفارش...') : 'ثبت سفارش خدمات سفارشی'}
         </Button>
       </form>
     </div>
