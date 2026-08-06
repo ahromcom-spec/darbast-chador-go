@@ -25,13 +25,15 @@ const ZarinpalCallback = () => {
       const status = params.get("Status");
       const orderId = params.get("order_id");
       const statementId = params.get("statement_id");
+      const payAll = params.get("pay_all") === "1";
 
-      const successRedirect = statementId
+      const successRedirect = (statementId || payAll)
         ? `/my-invoice?payment=success`
         : `/user/orders/${orderId}?payment=success`;
-      const failureRedirect = statementId
+      const failureRedirect = (statementId || payAll)
         ? `/my-invoice?payment=failed`
         : `/user/orders/${orderId}?payment=failed`;
+
 
       if (!authority || !orderId) {
         toast({
@@ -50,7 +52,9 @@ const ZarinpalCallback = () => {
             Status: status,
             order_id: orderId,
             statement_id: statementId,
+            pay_all: payAll,
           },
+
         });
 
         if (error) {

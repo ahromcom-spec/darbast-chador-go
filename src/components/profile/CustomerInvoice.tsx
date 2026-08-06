@@ -83,7 +83,7 @@ export const CustomerInvoice = () => {
   const [statements, setStatements] = useState<StatementGroup[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [profile, setProfile] = useState<{ full_name: string | null; phone_number: string | null; customer_code: string | null }>({ full_name: null, phone_number: null, customer_code: null });
-  const [payDialog, setPayDialog] = useState<{ open: boolean; statement: StatementGroup | null }>({ open: false, statement: null });
+  const [payDialog, setPayDialog] = useState<{ open: boolean; statement: StatementGroup | null; payAll?: boolean }>({ open: false, statement: null });
   const [payAmountInput, setPayAmountInput] = useState('');
   const [paying, setPaying] = useState(false);
 
@@ -93,11 +93,17 @@ export const CustomerInvoice = () => {
 
   const openPayDialog = (s: StatementGroup) => {
     setPayAmountInput(String(Math.round(s.total_remaining || 0)));
-    setPayDialog({ open: true, statement: s });
+    setPayDialog({ open: true, statement: s, payAll: false });
   };
 
+  const openPayAllDialog = () => {
+    setPayAmountInput(String(Math.round(summary.remaining || 0)));
+    setPayDialog({ open: true, statement: null, payAll: true });
+  };
+
+
   const handleStatementPay = async () => {
-    if (!payDialog.statement) return;
+    if (!payDialog.statement && !payDialog.payAll) return;
     const amount = Math.round(parseLocalizedNumber(payAmountInput));
     if (!amount || amount <= 0) {
       toast({ title: 'مبلغ نامعتبر', description: 'لطفاً مبلغ معتبری وارد کنید', variant: 'destructive' });
@@ -107,8 +113,11 @@ export const CustomerInvoice = () => {
       setPaying(true);
       toast({ title: 'در حال اتصال به درگاه پرداخت', description: 'لطفاً صبر کنید...' });
       const { data, error } = await supabase.functions.invoke('zarinpal-payment', {
-        body: { statement_id: payDialog.statement.id, amount },
+        body: payDialog.payAll
+          ? { pay_all: true, amount }
+          : { statement_id: payDialog.statement!.id, amount },
       });
+
       if (error) throw error;
       if (data?.payment_url) {
         window.location.href = data.payment_url;
@@ -341,6 +350,30 @@ export const CustomerInvoice = () => {
         </Card>
       </div>
 
+      {/* پرداخت کلی همه صورتحساب‌ها (آبشاری از پایین‌ترین شماره صورتحساب) */}
+      {summary.remaining > 0 && (
+        <Card className="border-emerald-300 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5">
+          <CardContent className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <p className="font-bold flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-emerald-600" />
+                پرداخت کلی همه صورتحساب‌ها
+              </p>
+              <p className="text-xs text-muted-foreground">
+                مبلغ پرداختی به‌صورت آبشاری از پایین‌ترین شماره صورتحساب و قدیمی‌ترین فاکتور تخصیص داده می‌شود و در همان صورتحساب‌ها و فاکتورها ثبت می‌گردد.
+              </p>
+              <p className="text-sm font-bold text-red-600">مانده کل: {formatPrice(summary.remaining)}</p>
+            </div>
+            <Button onClick={openPayAllDialog} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
+              <CreditCard className="h-4 w-4" />
+              پرداخت کل بدهی
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+
+
       {/* لیست صورتحساب‌ها */}
       {statements.length === 0 ? (
         <Card>
@@ -498,17 +531,22 @@ export const CustomerInvoice = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-emerald-600" />
-              پرداخت آنلاین صورتحساب
+              {payDialog.payAll ? 'پرداخت کلی همه صورتحساب‌ها' : 'پرداخت آنلاین صورتحساب'}
             </DialogTitle>
             <DialogDescription>
-              {payDialog.statement && (
+              {payDialog.payAll ? (
+                <>
+                  مانده کل بدهی: <span className="font-bold text-red-600">{formatPrice(summary.remaining)}</span>
+                </>
+              ) : payDialog.statement ? (
                 <>
                   صورتحساب شماره {new Intl.NumberFormat('fa-IR').format(payDialog.statement.statement_number)} — مانده فعلی:
                   {' '}
                   <span className="font-bold text-red-600">{formatPrice(payDialog.statement.total_remaining)}</span>
                 </>
-              )}
+              ) : null}
             </DialogDescription>
+
           </DialogHeader>
           <div className="space-y-3 py-2">
             <Label htmlFor="pay-amount">مبلغ پرداخت (تومان)</Label>
@@ -528,8 +566,11 @@ export const CustomerInvoice = () => {
               placeholder="مبلغ مورد نظر را وارد کنید"
             />
             <p className="text-xs text-muted-foreground leading-6">
-              می‌توانید مبلغی بیشتر از مانده صورتحساب نیز پرداخت کنید. مبلغ پرداختی به‌ترتیب از اولین سفارش تا آخرین سفارش این صورتحساب تخصیص می‌یابد و باقیمانده روی آخرین سفارش ثبت می‌شود.
+              {payDialog.payAll
+                ? 'مبلغ پرداختی به‌صورت آبشاری از پایین‌ترین شماره صورتحساب و قدیمی‌ترین فاکتور تخصیص می‌یابد؛ هر فاکتور تا سقف مانده‌اش تسویه و باقیمانده به فاکتور بعدی منتقل می‌شود.'
+                : 'می‌توانید مبلغی بیشتر از مانده صورتحساب نیز پرداخت کنید. مبلغ پرداختی به‌ترتیب از اولین سفارش تا آخرین سفارش این صورتحساب تخصیص می‌یابد و باقیمانده روی آخرین سفارش ثبت می‌شود.'}
             </p>
+
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setPayDialog({ open: false, statement: null })} disabled={paying}>

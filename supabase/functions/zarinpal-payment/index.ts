@@ -41,11 +41,12 @@ serve(async (req) => {
     const { amount, description } = body;
     let { order_id } = body;
     const statement_id: string | undefined = body.statement_id;
+    const pay_all: boolean = body.pay_all === true;
 
     if (!amount || amount <= 0) {
       throw new Error('Missing required field: amount');
     }
-    if (!order_id && !statement_id) {
+    if (!order_id && !statement_id && !pay_all) {
       throw new Error('Missing required field: order_id or statement_id');
     }
 
@@ -58,7 +59,40 @@ serve(async (req) => {
 
     if (!customer) throw new Error('Customer not found');
 
+    const payableStatuses = ['pending', 'pending_execution', 'approved', 'completed', 'in_progress', 'paid'];
+
+    // --- Global payment across ALL statements: pick the oldest unsettled order
+    // of the lowest statement number (waterfall entry point) ---
+    if (pay_all && !order_id) {
+      const { data: allOrders, error: allErr } = await supabaseClient
+        .from('projects_v3')
+        .select('id, status, total_price, payment_amount, total_paid, created_at, statement_id, customer_statements(statement_number)')
+        .eq('customer_id', customer.id)
+        .neq('status', 'rejected')
+        .or('is_archived.is.null,is_archived.eq.false')
+        .or('is_deep_archived.is.null,is_deep_archived.eq.false');
+      if (allErr) throw allErr;
+
+      const sorted = (allOrders || [])
+        .filter((o: any) => payableStatuses.includes(o.status))
+        .sort((a: any, b: any) => {
+          const sa = Number(a.customer_statements?.statement_number ?? Number.MAX_SAFE_INTEGER);
+          const sb = Number(b.customer_statements?.statement_number ?? Number.MAX_SAFE_INTEGER);
+          if (sa !== sb) return sa - sb;
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        });
+
+      const target = sorted.find((o: any) => {
+        const total = Number(o.total_price ?? o.payment_amount ?? 0);
+        return total - Number(o.total_paid ?? 0) > 0;
+      }) || sorted[0];
+
+      if (!target) throw new Error('No payable order found');
+      order_id = target.id;
+    }
+
     // --- Statement-level payment: pick oldest unsettled order in the statement ---
+
     if (statement_id) {
       // Verify statement belongs to customer
       const { data: stmt, error: stmtErr } = await supabaseClient
@@ -116,7 +150,7 @@ serve(async (req) => {
 
     // For statement payments we explicitly allow over-payment of the single order
     // (overflow waterfalls to the next orders in the statement during verify).
-    if (!statement_id) {
+    if (!statement_id && !pay_all) {
       let estimatedPrice = 0;
       try {
         const notesObj = typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
@@ -139,9 +173,12 @@ serve(async (req) => {
     const orderCode = order.code || order_id!.substring(0, 8);
 
     const paymentDescription = description
-      || (statement_id
+      || (pay_all
+        ? `پرداخت کل صورتحساب‌ها - ${customerName}${customerPhone ? ` - ${customerPhone}` : ''}`
+        : statement_id
         ? `پرداخت صورتحساب - ${customerName}${customerPhone ? ` - ${customerPhone}` : ''}`
         : `سفارش ${orderCode} - ${customerName}${customerPhone ? ` - ${customerPhone}` : ''}`);
+
 
     const ZARINPAL_MERCHANT_ID = '93f06023-423a-44d6-ac08-8ee0aa9ed257';
     const ZARINPAL_API_URLS = [
@@ -152,6 +189,8 @@ serve(async (req) => {
 
     const callbackQuery = new URLSearchParams({ order_id: order_id! });
     if (statement_id) callbackQuery.set('statement_id', statement_id);
+    if (pay_all) callbackQuery.set('pay_all', '1');
+
 
     // Add timeout + retry to avoid hanging when ZarinPal API is slow/unreachable
     const callZarinpal = async (apiUrl: string, timeoutMs: number) => {
@@ -223,7 +262,7 @@ serve(async (req) => {
         entity_id: order_id,
         action: 'payment_requested',
         actor_user_id: user.id,
-        meta: { authority, amount, statement_id: statement_id || null },
+        meta: { authority, amount, statement_id: statement_id || null, pay_all },
       });
 
       return new Response(
