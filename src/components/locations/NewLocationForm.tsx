@@ -253,10 +253,11 @@ export const NewLocationForm = ({ onSuccess, initialData, serviceTypeName }: New
         <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900 py-2">
           <MapPin className="h-4 w-4 text-amber-600 dark:text-amber-400" />
           <AlertDescription className="text-amber-800 dark:text-amber-300 text-xs sm:text-sm">
-            لطفاً موقعیت آدرس را روی نقشه مشخص کنید
+            انتخاب موقعیت روی نقشه اختیاری است؛ می‌توانید بعداً موقعیت پروژه را ثبت کنید تا سفارش روی نقشه کره زمین نمایش داده شود.
           </AlertDescription>
         </Alert>
       )}
+
 
       <div className="space-y-1">
         <Label htmlFor="title" className="text-xs sm:text-sm">عنوان آدرس (اختیاری)</Label>
