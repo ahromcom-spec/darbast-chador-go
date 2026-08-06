@@ -52,7 +52,9 @@ const ZarinpalCallback = () => {
             Status: status,
             order_id: orderId,
             statement_id: statementId,
+            pay_all: payAll,
           },
+
         });
 
         if (error) {
