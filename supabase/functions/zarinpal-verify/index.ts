@@ -133,11 +133,52 @@ serve(async (req) => {
       const refID = verifyData.data.ref_id;
       const paidAmount = Math.round(verifyData.data.amount / 10);
 
-      // --- Waterfall distribution across the statement's orders (oldest first) ---
+      // --- Waterfall distribution ---
+      // pay_all: across ALL statements of the customer (lowest statement number first)
+      // otherwise: across the statement's orders (oldest first)
       const sid = statement_id || order.statement_id;
       let distribution: { order_id: string; amount: number }[] = [];
 
-      if (sid) {
+      const allocate = (list: any[]) => {
+        let remainingToAllocate = paidAmount;
+        const result: { order_id: string; amount: number }[] = [];
+        for (const o of list) {
+          if (remainingToAllocate <= 0) break;
+          const total = Number(o.total_price ?? o.payment_amount ?? 0);
+          const paid = Number(o.total_paid ?? 0);
+          const need = Math.max(total - paid, 0);
+          const isLast = o.id === list[list.length - 1].id;
+          if (need <= 0 && !isLast) continue;
+          const give = isLast ? remainingToAllocate : Math.min(need, remainingToAllocate);
+          if (give > 0) {
+            result.push({ order_id: o.id, amount: give });
+            remainingToAllocate -= give;
+          }
+        }
+        return result;
+      };
+
+      if (pay_all) {
+        const { data: allOrders } = await supabaseClient
+          .from('projects_v3')
+          .select('id, total_price, payment_amount, total_paid, created_at, statement_id, customer_statements(statement_number)')
+          .eq('customer_id', order.customer_id)
+          .neq('status', 'rejected')
+          .or('is_archived.is.null,is_archived.eq.false')
+          .or('is_deep_archived.is.null,is_deep_archived.eq.false');
+
+        const ordered = (allOrders || []).sort((a: any, b: any) => {
+          const sa = Number(a.customer_statements?.statement_number ?? Number.MAX_SAFE_INTEGER);
+          const sb = Number(b.customer_statements?.statement_number ?? Number.MAX_SAFE_INTEGER);
+          if (sa !== sb) return sa - sb;
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        });
+
+        distribution = ordered.length > 0 ? allocate(ordered) : [];
+        if (distribution.length === 0) {
+          distribution.push({ order_id: order_id!, amount: paidAmount });
+        }
+      } else if (sid) {
         const { data: stmtOrders } = await supabaseClient
           .from('projects_v3')
           .select('id, total_price, payment_amount, total_paid, created_at')
@@ -145,32 +186,7 @@ serve(async (req) => {
           .neq('status', 'rejected')
           .order('created_at', { ascending: true });
 
-        let remainingToAllocate = paidAmount;
-        const list = stmtOrders || [];
-        // Start with the primary order so its row is created first
-        const primaryIdx = list.findIndex((o: any) => o.id === order_id);
-        const ordered = primaryIdx >= 0
-          ? [list[primaryIdx], ...list.slice(0, primaryIdx), ...list.slice(primaryIdx + 1)]
-              .sort((a: any, b: any) => {
-                // Keep oldest first, but ensure primary not double-counted
-                return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-              })
-          : list;
-
-        for (const o of ordered) {
-          if (remainingToAllocate <= 0) break;
-          const total = Number(o.total_price ?? o.payment_amount ?? 0);
-          const paid = Number(o.total_paid ?? 0);
-          const need = Math.max(total - paid, 0);
-          if (need <= 0 && o.id !== ordered[ordered.length - 1].id) continue;
-          const give = (o.id === ordered[ordered.length - 1].id)
-            ? remainingToAllocate  // dump any surplus on the last order
-            : Math.min(need, remainingToAllocate);
-          if (give > 0) {
-            distribution.push({ order_id: o.id, amount: give });
-            remainingToAllocate -= give;
-          }
-        }
+        distribution = allocate(stmtOrders || []);
 
         // Safety: if nothing was distributed, put everything on the primary order
         if (distribution.length === 0) {
@@ -179,6 +195,7 @@ serve(async (req) => {
       } else {
         distribution.push({ order_id: order_id!, amount: paidAmount });
       }
+
 
       // Insert order_payments rows
       for (const d of distribution) {
