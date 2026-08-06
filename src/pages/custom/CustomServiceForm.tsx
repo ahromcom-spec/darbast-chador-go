@@ -326,11 +326,15 @@ export default function CustomServiceForm() {
         description: `سفارش خدمات سفارشی با کد ${createdProject.code} ثبت شد و در انتظار قیمت‌گذاری و تایید مدیریت است.`,
       });
 
+      // آپلود عکس‌ها و ویدیوها قبل از انتقال به صفحه سفارش انجام می‌شود
+      // (در غیر این صورت با ترک صفحه، آپلود ناتمام می‌ماند و روی سفارش ثبت نمی‌شود)
       if (mediaFiles.length > 0) {
-        uploadMediaFiles(createdProject.id, mediaFiles).catch((err) =>
-          console.error('Background upload error:', err)
-        );
+        const uploaded = await uploadMediaFiles(createdProject.id, mediaFiles);
+        if (uploaded > 0) {
+          toast({ title: '✓ رسانه‌ها ثبت شد', description: `${uploaded} فایل روی سفارش ثبت شد` });
+        }
       }
+
 
       notifyManagers({
         order_code: createdProject.code,
