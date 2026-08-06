@@ -74,6 +74,8 @@ export default function CustomServiceForm() {
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [recipientData, setRecipientData] = useState<RecipientData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState('');
+
 
   const addRow = () => setDimensions((prev) => [...prev, newRow()]);
   const removeRow = (id: string) =>
