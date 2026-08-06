@@ -161,14 +161,15 @@ export default function CustomServiceForm() {
       return;
     }
 
-    if (!serviceTypeManual.trim() || !activityDescription.trim()) {
+    if (!activityDescription.trim()) {
       toast({
         title: 'تکمیل فرم',
-        description: 'نوع خدمات و شرح فعالیت خدمات را وارد کنید',
+        description: 'شرح فعالیت خدمات را وارد کنید',
         variant: 'destructive',
       });
       return;
     }
+
 
     setLoading(true);
     try {
