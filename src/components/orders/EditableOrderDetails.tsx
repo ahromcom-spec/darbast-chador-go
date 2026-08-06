@@ -184,8 +184,64 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   const [savedUnitPrice, setSavedUnitPrice] = useState(parsedNotes?.unit_price?.toString() || '');
   const isUnitPriceChanged = unitPrice !== savedUnitPrice;
 
+  // ===== خدمات سفارشی: قیمت‌گذاری بر پایه تعداد / متراژ / حجم / وزن =====
+  const isCustomService = Boolean(parsedNotes?.is_custom_service);
+  const customQuantity = parseLocalizedNumber(parsedNotes?.quantity) || 0;
+  const customWeight = parseLocalizedNumber(parsedNotes?.weight) || 0;
+  const customDims: any[] = Array.isArray(parsedNotes?.dimensions) ? parsedNotes.dimensions : [];
+  const customArea = customDims.reduce((sum, d) => {
+    const l = parseLocalizedNumber(d?.length);
+    const w = parseLocalizedNumber(d?.width);
+    const h = parseLocalizedNumber(d?.height);
+    const second = w > 0 ? w : h;
+    return l > 0 && second > 0 ? sum + l * second : sum;
+  }, 0);
+  const customVolume = customDims.reduce((sum, d) => {
+    const l = parseLocalizedNumber(d?.length);
+    const w = parseLocalizedNumber(d?.width);
+    const h = parseLocalizedNumber(d?.height);
+    return l > 0 && w > 0 && h > 0 ? sum + l * w * h : sum;
+  }, 0);
+  const customLength = customDims.reduce((sum, d) => sum + (parseLocalizedNumber(d?.length) || 0), 0);
+
+  type CustomBasis = 'fixed' | 'quantity' | 'area' | 'volume' | 'weight' | 'length';
+  const defaultCustomBasis: CustomBasis =
+    (parsedNotes?.custom_pricing_basis as CustomBasis) ||
+    (customQuantity > 0 ? 'quantity' : customVolume > 0 ? 'volume' : customArea > 0 ? 'area' : customWeight > 0 ? 'weight' : customLength > 0 ? 'length' : 'fixed');
+  const [customBasis, setCustomBasis] = useState<CustomBasis>(defaultCustomBasis);
+  const [customUnitPrice, setCustomUnitPrice] = useState(parsedNotes?.custom_unit_price?.toString() || '');
+  const [savedCustomPricing, setSavedCustomPricing] = useState({
+    basis: defaultCustomBasis as string,
+    unitPrice: parsedNotes?.custom_unit_price?.toString() || '',
+  });
+
+  const customBasisOptions: Array<{ value: CustomBasis; label: string; measure: number; unit: string }> = [
+    { value: 'quantity', label: 'بر اساس تعداد', measure: customQuantity, unit: 'عدد' },
+    { value: 'area', label: 'بر اساس متراژ', measure: customArea, unit: 'متر مربع' },
+    { value: 'volume', label: 'بر اساس حجم', measure: customVolume, unit: 'متر مکعب' },
+    { value: 'weight', label: 'بر اساس وزن', measure: customWeight, unit: 'کیلوگرم' },
+    { value: 'length', label: 'بر اساس طول', measure: customLength, unit: 'متر' },
+    { value: 'fixed', label: 'مبلغ مقطوع (بدون فی)', measure: 0, unit: '' },
+  ];
+  const activeCustomBasis = customBasisOptions.find(o => o.value === customBasis) || customBasisOptions[5];
+  const customComputedTotal =
+    customBasis !== 'fixed' && customUnitPrice && activeCustomBasis.measure > 0
+      ? Math.round(parseLocalizedNumber(customUnitPrice) * activeCustomBasis.measure)
+      : 0;
+
+  // محاسبه خودکار مبلغ کل از فی × مقدار پایه انتخاب‌شده
+  useEffect(() => {
+    if (isCustomService && customComputedTotal > 0) {
+      setPaymentAmount(customComputedTotal.toString());
+    }
+  }, [isCustomService, customComputedTotal]);
+
+  const isCustomPricingChanged =
+    customBasis !== savedCustomPricing.basis || customUnitPrice !== savedCustomPricing.unitPrice;
+
   // Check if this is an expert pricing request
   const isExpertPricingRequest = parsedNotes?.is_expert_pricing_request === true;
+
 
   // Calculate total measure (m² or m³) from dimensions for expert pricing
   const calculateExpertPricingTotalMeasure = () => {
@@ -489,6 +545,21 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         });
       }
 
+      // خدمات سفارشی: ذخیره مبنای قیمت‌گذاری و قیمت فی
+      if (isCustomService) {
+        updatedNotes.custom_pricing_basis = customBasis;
+        updatedNotes.custom_pricing_basis_label = activeCustomBasis.label;
+        updatedNotes.custom_pricing_measure = activeCustomBasis.measure || null;
+        updatedNotes.custom_pricing_measure_unit = activeCustomBasis.unit || null;
+        updatedNotes.custom_unit_price = customUnitPrice ? parseLocalizedNumber(customUnitPrice) : null;
+        if (paymentAmount && parseFloat(paymentAmount) > 0) {
+          updatedNotes.awaiting_manual_pricing = false;
+          updatedNotes.price_set_by_manager = true;
+          updatedNotes.manager_set_price = parseFloat(paymentAmount);
+          updatedNotes.pricing_date = new Date().toISOString();
+        }
+      }
+
 
       const updatePayload: any = {
         address,
@@ -513,6 +584,10 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
       // بعد از ذخیره موفق، مقدار ذخیره شده قیمت را آپدیت کن تا دکمه غیرفعال شود
       setSavedPaymentAmount(paymentAmount);
       setSavedUnitPrice(unitPrice);
+      if (isCustomService) {
+        setSavedCustomPricing({ basis: customBasis, unitPrice: customUnitPrice });
+      }
+
       if (isRentalExpertPricing) {
         setSavedRentalPrices({
           item1Unit: rentalItem1UnitPrice,
@@ -1713,7 +1788,108 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
 
       {/* Price - Only show for non-expert pricing requests, as expert pricing has input at top */}
       {/* Also hide if hidePrice is true (for executive managers in scaffold with materials module) */}
-      {!isExpertPricingRequest && !hidePrice && (
+      {/* ===== قیمت‌گذاری خدمات سفارشی (تعداد / متراژ / حجم / وزن / طول) ===== */}
+      {isCustomService && !hidePrice && (
+        <div className="p-4 rounded-lg border-2 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 space-y-4">
+          <div className="flex items-center gap-2">
+            <Banknote className="h-4 w-4 text-amber-600" />
+            <Label className="text-sm font-bold text-amber-800 dark:text-amber-200">قیمت‌گذاری خدمات سفارشی</Label>
+          </div>
+
+          {/* مقادیر ثبت‌شده توسط مشتری */}
+          <div className="flex flex-wrap gap-2">
+            {customBasisOptions
+              .filter(o => o.value !== 'fixed' && o.measure > 0)
+              .map(o => (
+                <Badge key={o.value} variant="outline">
+                  {o.label.replace('بر اساس ', '')}: {o.measure.toLocaleString('fa-IR', { maximumFractionDigits: 2 })} {o.unit}
+                </Badge>
+              ))}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 block">مبنای قیمت‌گذاری</Label>
+              <select
+                value={customBasis}
+                onChange={(e) => setCustomBasis(e.target.value as CustomBasis)}
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                {customBasisOptions.map(o => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}{o.value !== 'fixed' && o.measure > 0 ? ` (${o.measure.toLocaleString('fa-IR', { maximumFractionDigits: 2 })} ${o.unit})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {customBasis !== 'fixed' && (
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">
+                  قیمت فی (تومان به ازای هر {activeCustomBasis.unit})
+                </Label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  value={customUnitPrice ? Number(customUnitPrice).toLocaleString('fa-IR') : ''}
+                  onChange={(e) => {
+                    const rawValue = e.target.value
+                      .replace(/[^\d۰-۹]/g, '')
+                      .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+                    setCustomUnitPrice(rawValue);
+                  }}
+                  placeholder="قیمت فی"
+                  dir="ltr"
+                />
+              </div>
+            )}
+          </div>
+
+          {customBasis !== 'fixed' && activeCustomBasis.measure <= 0 && (
+            <p className="text-xs text-orange-600 dark:text-orange-400">
+              مقدار «{activeCustomBasis.label.replace('بر اساس ', '')}» در سفارش ثبت نشده است؛ مبلغ کل را دستی وارد کنید یا مبلغ مقطوع را انتخاب کنید.
+            </p>
+          )}
+
+          {customComputedTotal > 0 && (
+            <p className="text-xs text-muted-foreground">
+              محاسبه: {parseLocalizedNumber(customUnitPrice).toLocaleString('fa-IR')} × {activeCustomBasis.measure.toLocaleString('fa-IR', { maximumFractionDigits: 2 })} {activeCustomBasis.unit} = {customComputedTotal.toLocaleString('fa-IR')} تومان
+            </p>
+          )}
+
+          <div className="border-t pt-3">
+            <Label className="text-sm font-bold text-amber-800 dark:text-amber-200 mb-2 block">مبلغ کل سفارش (تومان)</Label>
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={paymentAmount ? Number(paymentAmount).toLocaleString('fa-IR') : ''}
+                onChange={(e) => {
+                  const rawValue = e.target.value
+                    .replace(/[^\d۰-۹]/g, '')
+                    .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+                  setPaymentAmount(rawValue);
+                }}
+                placeholder="مبلغ کل را وارد کنید"
+                className="flex-1 text-lg font-bold"
+                dir="ltr"
+                readOnly={customComputedTotal > 0}
+              />
+              <Button
+                onClick={handleSave}
+                disabled={saving || !paymentAmount || (!isPriceChanged && !isCustomPricingChanged)}
+                className={`bg-amber-600 hover:bg-amber-700 text-white px-6 ${(!isPriceChanged && !isCustomPricingChanged) ? 'opacity-50 cursor-not-allowed hover:bg-amber-600' : ''}`}
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 ml-1" />}
+                {(!isPriceChanged && !isCustomPricingChanged) ? 'ذخیره شده ✓' : 'ذخیره قیمت'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!isExpertPricingRequest && !isCustomService && !hidePrice && (
+
         <div className="p-4 rounded-lg border bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
           <div className="flex items-center gap-2 mb-2">
             <Banknote className="h-4 w-4 text-green-600" />
