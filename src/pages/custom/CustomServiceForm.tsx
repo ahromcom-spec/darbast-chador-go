@@ -279,8 +279,9 @@ export default function CustomServiceForm() {
         eventType: 'order_created',
         entityTable: 'projects_v3',
         entityId: createdProject.id,
-        description: `ثبت سفارش خدمات سفارشی با کد ${createdProject.code}`,
+        title: `ثبت سفارش خدمات سفارشی با کد ${createdProject.code}`,
       }).catch(() => {});
+
 
       const mediaUploadQuery = mediaFiles.length > 0 ? '?mediaUpload=1' : '';
       navigate(`/user/orders/${createdProject.id}${mediaUploadQuery}`);
