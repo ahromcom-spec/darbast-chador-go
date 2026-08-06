@@ -103,45 +103,91 @@ export default function CustomServiceForm() {
       video.src = URL.createObjectURL(file);
     });
 
-  const uploadMediaFiles = async (projectId: string, files: File[]) => {
-    if (!user) return;
-    await Promise.allSettled(
-      files.map(async (file) => {
-        const isVideo = file.type?.startsWith('video/') || /\.(mp4|mov|webm|mkv|avi)$/i.test(file.name);
-        const fileExt = file.name.split('.').pop();
-        const filePath = `${user.id}/${projectId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+  const uploadMediaFiles = async (projectId: string, files: File[]): Promise<number> => {
+    if (!user) return 0;
 
-        const { error: uploadError } = await supabase.storage
-          .from('project-media')
-          .upload(filePath, file, { cacheControl: '3600', upsert: false, contentType: file.type || undefined });
-        if (uploadError) throw uploadError;
+    // فشرده‌سازی تصاویر قبل از آپلود (آپلود بسیار سریع‌تر و مطمئن‌تر)
+    const images = files.filter((f) => isImageFile(f));
+    const others = files.filter((f) => !isImageFile(f));
+    setUploadStatus(images.length > 0 ? 'در حال بهینه‌سازی عکس‌ها...' : 'در حال آپلود فایل‌ها...');
+    const optimizedImages = await compressImages(images);
+    const allFiles = [...optimizedImages, ...others];
 
-        let thumbnailPath: string | null = null;
-        if (isVideo) {
-          try {
-            const blob = await extractVideoThumbnail(file);
-            const thumbPath = `${user.id}/${projectId}/${Date.now()}-${Math.random().toString(36).slice(2)}_thumb.jpg`;
-            const { error: thumbErr } = await supabase.storage
-              .from('project-media')
-              .upload(thumbPath, blob, { cacheControl: '3600', upsert: false, contentType: 'image/jpeg' });
-            if (!thumbErr) thumbnailPath = thumbPath;
-          } catch {
-            /* ignore thumbnail failures */
-          }
+    let done = 0;
+    const total = allFiles.length;
+    setUploadStatus(`در حال آپلود ${total} فایل...`);
+
+    const uploadOne = async (file: File) => {
+      const isVideo = file.type?.startsWith('video/') || /\.(mp4|mov|webm|mkv|avi)$/i.test(file.name);
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}/${projectId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('project-media')
+        .upload(filePath, file, { cacheControl: '3600', upsert: true, contentType: file.type || undefined });
+      if (uploadError) throw uploadError;
+
+      let thumbnailPath: string | null = null;
+      if (isVideo) {
+        try {
+          const blob = await extractVideoThumbnail(file);
+          const thumbPath = `${user.id}/${projectId}/${Date.now()}-${Math.random().toString(36).slice(2)}_thumb.jpg`;
+          const { error: thumbErr } = await supabase.storage
+            .from('project-media')
+            .upload(thumbPath, blob, { cacheControl: '3600', upsert: true, contentType: 'image/jpeg' });
+          if (!thumbErr) thumbnailPath = thumbPath;
+        } catch {
+          /* ignore thumbnail failures */
         }
+      }
 
-        await supabase.from('project_media').insert({
-          project_id: projectId,
-          user_id: user.id,
-          file_path: filePath,
-          file_type: isVideo ? 'video' : 'image',
-          file_size: file.size,
-          mime_type: file.type,
-          thumbnail_path: thumbnailPath,
-        });
-      })
-    );
+      const { error: dbError } = await supabase.from('project_media').insert({
+        project_id: projectId,
+        user_id: user.id,
+        file_path: filePath,
+        file_type: isVideo ? 'video' : 'image',
+        file_size: file.size,
+        mime_type: file.type,
+        thumbnail_path: thumbnailPath,
+      });
+      if (dbError) throw dbError;
+    };
+
+    // آپلود موازی با حداکثر ۳ فایل همزمان
+    const CONCURRENCY = 3;
+    let index = 0;
+    let success = 0;
+    const failures: string[] = [];
+
+    const worker = async () => {
+      while (index < allFiles.length) {
+        const current = allFiles[index++];
+        try {
+          await uploadOne(current);
+          success++;
+        } catch (err: any) {
+          console.error('Media upload failed:', current.name, err);
+          failures.push(err?.message || current.name);
+        }
+        done++;
+        setUploadStatus(`در حال آپلود فایل ${done} از ${total}...`);
+      }
+    };
+
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, allFiles.length) }, worker));
+    setUploadStatus('');
+
+    if (failures.length > 0) {
+      toast({
+        title: 'برخی فایل‌ها آپلود نشد',
+        description: `${failures.length} فایل آپلود نشد. می‌توانید از داخل سفارش دوباره آپلود کنید.`,
+        variant: 'destructive',
+      });
+    }
+
+    return success;
   };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
