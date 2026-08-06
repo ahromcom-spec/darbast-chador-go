@@ -1788,7 +1788,108 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
 
       {/* Price - Only show for non-expert pricing requests, as expert pricing has input at top */}
       {/* Also hide if hidePrice is true (for executive managers in scaffold with materials module) */}
-      {!isExpertPricingRequest && !hidePrice && (
+      {/* ===== قیمت‌گذاری خدمات سفارشی (تعداد / متراژ / حجم / وزن / طول) ===== */}
+      {isCustomService && !hidePrice && (
+        <div className="p-4 rounded-lg border-2 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 space-y-4">
+          <div className="flex items-center gap-2">
+            <Banknote className="h-4 w-4 text-amber-600" />
+            <Label className="text-sm font-bold text-amber-800 dark:text-amber-200">قیمت‌گذاری خدمات سفارشی</Label>
+          </div>
+
+          {/* مقادیر ثبت‌شده توسط مشتری */}
+          <div className="flex flex-wrap gap-2">
+            {customBasisOptions
+              .filter(o => o.value !== 'fixed' && o.measure > 0)
+              .map(o => (
+                <Badge key={o.value} variant="outline">
+                  {o.label.replace('بر اساس ', '')}: {o.measure.toLocaleString('fa-IR', { maximumFractionDigits: 2 })} {o.unit}
+                </Badge>
+              ))}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 block">مبنای قیمت‌گذاری</Label>
+              <select
+                value={customBasis}
+                onChange={(e) => setCustomBasis(e.target.value as CustomBasis)}
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                {customBasisOptions.map(o => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}{o.value !== 'fixed' && o.measure > 0 ? ` (${o.measure.toLocaleString('fa-IR', { maximumFractionDigits: 2 })} ${o.unit})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {customBasis !== 'fixed' && (
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">
+                  قیمت فی (تومان به ازای هر {activeCustomBasis.unit})
+                </Label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  value={customUnitPrice ? Number(customUnitPrice).toLocaleString('fa-IR') : ''}
+                  onChange={(e) => {
+                    const rawValue = e.target.value
+                      .replace(/[^\d۰-۹]/g, '')
+                      .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+                    setCustomUnitPrice(rawValue);
+                  }}
+                  placeholder="قیمت فی"
+                  dir="ltr"
+                />
+              </div>
+            )}
+          </div>
+
+          {customBasis !== 'fixed' && activeCustomBasis.measure <= 0 && (
+            <p className="text-xs text-orange-600 dark:text-orange-400">
+              مقدار «{activeCustomBasis.label.replace('بر اساس ', '')}» در سفارش ثبت نشده است؛ مبلغ کل را دستی وارد کنید یا مبلغ مقطوع را انتخاب کنید.
+            </p>
+          )}
+
+          {customComputedTotal > 0 && (
+            <p className="text-xs text-muted-foreground">
+              محاسبه: {parseLocalizedNumber(customUnitPrice).toLocaleString('fa-IR')} × {activeCustomBasis.measure.toLocaleString('fa-IR', { maximumFractionDigits: 2 })} {activeCustomBasis.unit} = {customComputedTotal.toLocaleString('fa-IR')} تومان
+            </p>
+          )}
+
+          <div className="border-t pt-3">
+            <Label className="text-sm font-bold text-amber-800 dark:text-amber-200 mb-2 block">مبلغ کل سفارش (تومان)</Label>
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                inputMode="numeric"
+                value={paymentAmount ? Number(paymentAmount).toLocaleString('fa-IR') : ''}
+                onChange={(e) => {
+                  const rawValue = e.target.value
+                    .replace(/[^\d۰-۹]/g, '')
+                    .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+                  setPaymentAmount(rawValue);
+                }}
+                placeholder="مبلغ کل را وارد کنید"
+                className="flex-1 text-lg font-bold"
+                dir="ltr"
+                readOnly={customComputedTotal > 0}
+              />
+              <Button
+                onClick={handleSave}
+                disabled={saving || !paymentAmount || (!isPriceChanged && !isCustomPricingChanged)}
+                className={`bg-amber-600 hover:bg-amber-700 text-white px-6 ${(!isPriceChanged && !isCustomPricingChanged) ? 'opacity-50 cursor-not-allowed hover:bg-amber-600' : ''}`}
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 ml-1" />}
+                {(!isPriceChanged && !isCustomPricingChanged) ? 'ذخیره شده ✓' : 'ذخیره قیمت'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!isExpertPricingRequest && !isCustomService && !hidePrice && (
+
         <div className="p-4 rounded-lg border bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
           <div className="flex items-center gap-2 mb-2">
             <Banknote className="h-4 w-4 text-green-600" />
