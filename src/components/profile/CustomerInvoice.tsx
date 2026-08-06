@@ -83,7 +83,7 @@ export const CustomerInvoice = () => {
   const [statements, setStatements] = useState<StatementGroup[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [profile, setProfile] = useState<{ full_name: string | null; phone_number: string | null; customer_code: string | null }>({ full_name: null, phone_number: null, customer_code: null });
-  const [payDialog, setPayDialog] = useState<{ open: boolean; statement: StatementGroup | null }>({ open: false, statement: null });
+  const [payDialog, setPayDialog] = useState<{ open: boolean; statement: StatementGroup | null; payAll?: boolean }>({ open: false, statement: null });
   const [payAmountInput, setPayAmountInput] = useState('');
   const [paying, setPaying] = useState(false);
 
@@ -93,8 +93,14 @@ export const CustomerInvoice = () => {
 
   const openPayDialog = (s: StatementGroup) => {
     setPayAmountInput(String(Math.round(s.total_remaining || 0)));
-    setPayDialog({ open: true, statement: s });
+    setPayDialog({ open: true, statement: s, payAll: false });
   };
+
+  const openPayAllDialog = () => {
+    setPayAmountInput(String(Math.round(summary.remaining || 0)));
+    setPayDialog({ open: true, statement: null, payAll: true });
+  };
+
 
   const handleStatementPay = async () => {
     if (!payDialog.statement) return;
