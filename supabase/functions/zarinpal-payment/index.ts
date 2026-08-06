@@ -150,7 +150,7 @@ serve(async (req) => {
 
     // For statement payments we explicitly allow over-payment of the single order
     // (overflow waterfalls to the next orders in the statement during verify).
-    if (!statement_id) {
+    if (!statement_id && !pay_all) {
       let estimatedPrice = 0;
       try {
         const notesObj = typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
@@ -173,9 +173,12 @@ serve(async (req) => {
     const orderCode = order.code || order_id!.substring(0, 8);
 
     const paymentDescription = description
-      || (statement_id
+      || (pay_all
+        ? `پرداخت کل صورتحساب‌ها - ${customerName}${customerPhone ? ` - ${customerPhone}` : ''}`
+        : statement_id
         ? `پرداخت صورتحساب - ${customerName}${customerPhone ? ` - ${customerPhone}` : ''}`
         : `سفارش ${orderCode} - ${customerName}${customerPhone ? ` - ${customerPhone}` : ''}`);
+
 
     const ZARINPAL_MERCHANT_ID = '93f06023-423a-44d6-ac08-8ee0aa9ed257';
     const ZARINPAL_API_URLS = [
