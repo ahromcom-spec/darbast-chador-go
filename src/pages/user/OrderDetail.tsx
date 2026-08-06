@@ -1369,8 +1369,54 @@ export default function OrderDetail() {
                   {/* Summary View - Always Visible */}
                   {parsedNotes && (
                     <div className="space-y-3">
+                      {/* خدمات سفارشی: نمایش کامل اطلاعات ثبت‌شده در فرم */}
+                      {parsedNotes.is_custom_service && (
+                        <div className="space-y-2">
+                          <div className="p-3 bg-primary/10 rounded-lg flex items-center justify-between">
+                            <span className="text-sm text-muted-foreground">نوع خدمات</span>
+                            <span className="font-semibold">{parsedNotes.custom_service_type || 'خدمات سفارشی'}</span>
+                          </div>
+                          {parsedNotes.custom_subcategory && (
+                            <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">زیرشاخه خدمات</span>
+                              <span className="font-semibold">{parsedNotes.custom_subcategory}</span>
+                            </div>
+                          )}
+                          {parsedNotes.activity_description && (
+                            <div className="p-3 bg-muted/40 rounded-lg space-y-1">
+                              <span className="text-sm text-muted-foreground">شرح خدمات</span>
+                              <p className="text-sm whitespace-pre-line">{parsedNotes.activity_description}</p>
+                            </div>
+                          )}
+                          {parsedNotes.site_description && (
+                            <div className="p-3 bg-muted/40 rounded-lg space-y-1">
+                              <span className="text-sm text-muted-foreground">محل خدمات</span>
+                              <p className="text-sm whitespace-pre-line">{parsedNotes.site_description}</p>
+                            </div>
+                          )}
+                          {parsedNotes.materials && (
+                            <div className="p-3 bg-muted/40 rounded-lg space-y-1">
+                              <span className="text-sm text-muted-foreground">مصالح، ابزار و اجناس</span>
+                              <p className="text-sm whitespace-pre-line">{parsedNotes.materials}</p>
+                            </div>
+                          )}
+                          {Number(parsedNotes.quantity) > 0 && (
+                            <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">تعداد</span>
+                              <span className="font-bold">{Number(parsedNotes.quantity).toLocaleString('fa-IR')}</span>
+                            </div>
+                          )}
+                          {Number(parsedNotes.weight) > 0 && (
+                            <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">وزن</span>
+                              <span className="font-bold">{Number(parsedNotes.weight).toLocaleString('fa-IR')} کیلوگرم</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {/* نوع داربست یا کرایه اجناس (به جز قالی‌شویی) */}
-                      {parsedNotes.service_type && parsedNotes.service_type !== 'carpet_cleaning' && (
+                      {!parsedNotes.is_custom_service && parsedNotes.service_type && parsedNotes.service_type !== 'carpet_cleaning' && (
                         <div className="p-3 bg-primary/10 rounded-lg flex items-center justify-between">
                           <span className="text-sm text-muted-foreground">نوع داربست</span>
                           <span className="font-semibold">
@@ -1384,6 +1430,7 @@ export default function OrderDetail() {
                           </span>
                         </div>
                       )}
+
 
                       {/* خلاصه قالی‌شویی */}
                       {parsedNotes.service_type === 'carpet_cleaning' && Array.isArray(parsedNotes.items) && (

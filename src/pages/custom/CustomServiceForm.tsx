@@ -161,14 +161,15 @@ export default function CustomServiceForm() {
       return;
     }
 
-    if (!serviceTypeManual.trim() || !activityDescription.trim()) {
+    if (!activityDescription.trim()) {
       toast({
         title: 'تکمیل فرم',
-        description: 'نوع خدمات و شرح فعالیت خدمات را وارد کنید',
+        description: 'شرح فعالیت خدمات را وارد کنید',
         variant: 'destructive',
       });
       return;
     }
+
 
     setLoading(true);
     try {
@@ -177,13 +178,27 @@ export default function CustomServiceForm() {
         .map((d) => ({ length: toNumber(d.length), width: toNumber(d.width), height: toNumber(d.height) }))
         .filter((d) => d.length !== null || d.width !== null || d.height !== null);
 
+      // نوع خدمات: اگر کاربر دستی وارد نکرده باشد، از لیست کشویی صفحه نخست استفاده می‌شود
+      const effectiveServiceType = serviceTypeManual.trim() || (state.serviceName || '').trim();
+      const effectiveSubcategory = subcategoryManual.trim() || (state.subcategoryName || '').trim();
+
+      const detailLines = [
+        activityDescription.trim() ? `شرح خدمات: ${activityDescription.trim()}` : '',
+        siteDescription.trim() ? `محل خدمات: ${siteDescription.trim()}` : '',
+        materials.trim() ? `مصالح، ابزار و اجناس: ${materials.trim()}` : '',
+        quantity.trim() ? `تعداد: ${quantity.trim()}` : '',
+        weight.trim() ? `وزن: ${weight.trim()} کیلوگرم` : '',
+      ].filter(Boolean).join('\n');
+
       const notes = {
         service_type: 'custom',
         is_custom_service: true,
-        custom_service_type: sanitizeHtml(serviceTypeManual),
-        custom_subcategory: sanitizeHtml(subcategoryManual),
+        custom_service_type: sanitizeHtml(effectiveServiceType),
+        custom_subcategory: sanitizeHtml(effectiveSubcategory),
         activity_description: sanitizeHtml(activityDescription),
         site_description: sanitizeHtml(siteDescription),
+        description: sanitizeHtml(activityDescription),
+        service_details: sanitizeHtml(detailLines),
         dimensions: dimensionRows,
         quantity: toNumber(quantity),
         weight: toNumber(weight),
@@ -193,6 +208,7 @@ export default function CustomServiceForm() {
         customerName: user?.user_metadata?.full_name || '',
         phoneNumber: user?.user_metadata?.phone_number || user?.phone || '',
       };
+
 
       const validated = createProjectV3Schema.parse({
         _customer_id: customerId,
@@ -272,7 +288,7 @@ export default function CustomServiceForm() {
         customer_name: user?.user_metadata?.full_name || '',
         customer_phone: user?.user_metadata?.phone_number || user?.phone || '',
         customer_user_id: user?.id,
-        service_type: `خدمات سفارشی - ${serviceTypeManual}`,
+        service_type: `خدمات سفارشی - ${effectiveServiceType}`,
       }).catch((err) => console.error('Notify managers error:', err));
 
       reportActivity({
@@ -344,21 +360,25 @@ export default function CustomServiceForm() {
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label>نوع خدمات (دستی) *</Label>
+              <Label>نوع خدمات (دستی)</Label>
               <Input
                 value={serviceTypeManual}
                 onChange={(e) => setServiceTypeManual(e.target.value)}
-                placeholder="مثلاً: نصب سازه فلزی سبک"
+                placeholder={state.serviceName || 'مثلاً: نصب سازه فلزی سبک'}
               />
+              <p className="text-xs text-muted-foreground">
+                در صورت خالی بودن، «{state.serviceName || 'خدمات سفارشی'}» از لیست انتخابی صفحه نخست ثبت می‌شود.
+              </p>
             </div>
             <div className="space-y-1">
               <Label>زیرشاخه خدمات (دستی)</Label>
               <Input
                 value={subcategoryManual}
                 onChange={(e) => setSubcategoryManual(e.target.value)}
-                placeholder="مثلاً: اجرا به همراه اجناس"
+                placeholder={state.subcategoryName || 'مثلاً: اجرا به همراه اجناس'}
               />
             </div>
+
           </CardContent>
         </Card>
 
