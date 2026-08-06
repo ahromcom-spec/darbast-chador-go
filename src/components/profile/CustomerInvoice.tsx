@@ -103,7 +103,7 @@ export const CustomerInvoice = () => {
 
 
   const handleStatementPay = async () => {
-    if (!payDialog.statement) return;
+    if (!payDialog.statement && !payDialog.payAll) return;
     const amount = Math.round(parseLocalizedNumber(payAmountInput));
     if (!amount || amount <= 0) {
       toast({ title: 'مبلغ نامعتبر', description: 'لطفاً مبلغ معتبری وارد کنید', variant: 'destructive' });
@@ -113,8 +113,11 @@ export const CustomerInvoice = () => {
       setPaying(true);
       toast({ title: 'در حال اتصال به درگاه پرداخت', description: 'لطفاً صبر کنید...' });
       const { data, error } = await supabase.functions.invoke('zarinpal-payment', {
-        body: { statement_id: payDialog.statement.id, amount },
+        body: payDialog.payAll
+          ? { pay_all: true, amount }
+          : { statement_id: payDialog.statement!.id, amount },
       });
+
       if (error) throw error;
       if (data?.payment_url) {
         window.location.href = data.payment_url;
