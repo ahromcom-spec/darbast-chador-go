@@ -187,7 +187,7 @@ export default function ServiceSelection() {
         );
       }
 
-      const formPath = getFormPath(selectedSubcategoryData.code, (selectedSubcategoryData as any).is_service_active, selectedSubcategoryData.id, selectedServiceTypeObj.name);
+      const formPath = getFormPath(selectedSubcategoryData.code, (selectedSubcategoryData as any).is_service_active, selectedSubcategoryData.id, selectedServiceTypeObj.name, (selectedSubcategoryData as any).form_path);
 
       // Navigate to the appropriate form with all necessary data including hierarchyProjectId
       navigate(formPath, {
