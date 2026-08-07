@@ -938,13 +938,12 @@ html[style*="zoom"] .absolute[role="listbox"] {
   }
   body {
     position: fixed;
-    top: 0;
+    top: 100vh;
     left: 0;
     width: 100vh;      /* عرض = ارتفاع صفحه‌نمایش */
     height: 100vw;     /* ارتفاع = عرض صفحه‌نمایش */
     transform: rotate(-90deg);
     transform-origin: left top;
-    translate: 0 100vw;
     overflow-x: hidden !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
