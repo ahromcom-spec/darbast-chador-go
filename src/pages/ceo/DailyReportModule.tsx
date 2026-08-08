@@ -4680,6 +4680,10 @@ export default function DailyReportModule() {
                 <FileText className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                 <span>ثبت گزارش</span>
               </TabsTrigger>
+              <TabsTrigger value="execution-location" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
+                <MapPin className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                <span>لوکیشن اجرایی پروژه</span>
+              </TabsTrigger>
               <TabsTrigger value="saved-reports" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
                 <History className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                 <span>گزارشات ذخیره شده</span>
@@ -4696,10 +4700,7 @@ export default function DailyReportModule() {
                 <Settings className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                 <span>تنظیمات حقوق</span>
               </TabsTrigger>
-              <TabsTrigger value="execution-location" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
-                <MapPin className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                <span>لوکیشن اجرایی پروژه</span>
-              </TabsTrigger>
+
             </TabsList>
           </div>
 
@@ -5930,7 +5931,7 @@ export default function DailyReportModule() {
           {/* Execution Location (Globe) Tab */}
           <TabsContent value="execution-location" className="mt-6">
             {activeTab === 'execution-location' && (
-              <HybridGlobe activeExecutionOnly onClose={() => setActiveTab('new-report')} />
+              <HybridGlobe activeExecutionOnly embedded onClose={() => setActiveTab('new-report')} />
             )}
           </TabsContent>
         </Tabs>

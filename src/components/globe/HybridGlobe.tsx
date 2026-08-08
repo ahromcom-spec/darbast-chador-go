@@ -66,9 +66,21 @@ interface HybridGlobeProps {
   onClose: () => void;
   /** فقط سفارش‌های در انتظار اجرا، در حال اجرا، در انتظار جمع‌آوری و در حال جمع‌آوری نمایش داده شوند */
   activeExecutionOnly?: boolean;
+  /** نمایش نقشه به صورت جاسازی‌شده داخل صفحه (بدون پوشش تمام‌صفحه) */
+  embedded?: boolean;
 }
 
-export default function HybridGlobe({ onClose, activeExecutionOnly = false }: HybridGlobeProps) {
+/** آیا سفارش در یکی از چهار وضعیت اجرایی است؟ */
+const isActiveExecutionOrder = (o: any) => {
+  if (!o || o.status === 'rejected') return false;
+  if (o.is_archived || o.is_deep_archived) return false;
+  if (o.execution_stage) {
+    return o.execution_stage === 'awaiting_collection' || o.execution_stage === 'in_collection';
+  }
+  return ['approved', 'pending_execution', 'scheduled', 'in_progress'].includes(o.status);
+};
+
+export default function HybridGlobe({ onClose, activeExecutionOnly = false, embedded = false }: HybridGlobeProps) {
   const isImpersonating = useIsImpersonating();
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -131,8 +143,98 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false }: Hy
     return R * c;
   };
 
+  // حالت اجرایی: همه سفارش‌های شرکت (نه فقط سفارش‌های کاربر جاری)
+  const [companyProjects, setCompanyProjects] = useState<ProjectHierarchy[]>([]);
+  const [companyOrders, setCompanyOrders] = useState<any[]>([]);
+
+  const fetchCompanyExecutionData = useCallback(async () => {
+    try {
+      const { data: ordersData, error } = await supabase
+        .from('projects_v3')
+        .select('id, code, status, execution_stage, address, created_at, approved_at, hierarchy_project_id, subcategory_id, location_lat, location_lng, is_archived, is_deep_archived')
+        .order('created_at', { ascending: false })
+        .limit(3000);
+
+      if (error) throw error;
+
+      const orders = (ordersData || []).filter(isActiveExecutionOrder).map((o: any) => ({
+        ...o,
+        hierarchy_project_id: o.hierarchy_project_id || `order:${o.id}`,
+      }));
+
+      const realHierarchyIds = [...new Set(
+        orders
+          .filter((o: any) => !String(o.hierarchy_project_id).startsWith('order:'))
+          .map((o: any) => o.hierarchy_project_id as string)
+      )];
+
+      let hierarchyRows: any[] = [];
+      if (realHierarchyIds.length > 0) {
+        const { data: hData } = await supabase
+          .from('projects_hierarchy')
+          .select(`
+            *,
+            locations (
+              title, address_line, lat, lng, province_id, district_id, is_active,
+              provinces (id, name),
+              districts (id, name)
+            ),
+            service_types_v3 (name, code),
+            subcategories (name, code)
+          `)
+          .in('id', realHierarchyIds);
+        hierarchyRows = hData || [];
+      }
+
+      const hierarchyMap = new Map(hierarchyRows.map((h: any) => [h.id, h]));
+      const built = new Map<string, ProjectHierarchy>();
+
+      orders.forEach((o: any) => {
+        const pid = o.hierarchy_project_id as string;
+        if (built.has(pid)) return;
+        const h = hierarchyMap.get(pid);
+        const lat = h?.locations?.lat ?? o.location_lat;
+        const lng = h?.locations?.lng ?? o.location_lng;
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+        built.set(pid, {
+          ...(h || {}),
+          id: pid,
+          user_id: h?.user_id || '',
+          location_id: h?.location_id || '',
+          service_type_id: h?.service_type_id || '',
+          subcategory_id: h?.subcategory_id || o.subcategory_id || '',
+          title: h?.title || o.code || 'سفارش',
+          status: h?.status || 'active',
+          created_at: h?.created_at || o.created_at || new Date().toISOString(),
+          locations: {
+            title: h?.locations?.title || undefined,
+            address_line: h?.locations?.address_line || o.address || 'بدون آدرس',
+            lat,
+            lng,
+            province_id: h?.locations?.province_id ?? null,
+            district_id: h?.locations?.district_id ?? null,
+            is_active: true,
+            provinces: h?.locations?.provinces,
+            districts: h?.locations?.districts,
+          },
+        } as ProjectHierarchy);
+      });
+
+      setCompanyOrders(orders);
+      setCompanyProjects(Array.from(built.values()));
+    } catch (e) {
+      console.error('[HybridGlobe] خطا در دریافت سفارش‌های اجرایی شرکت:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!activeExecutionOnly) return;
+    fetchCompanyExecutionData();
+  }, [activeExecutionOnly, fetchCompanyExecutionData]);
+
   // فیلتر کردن پروژه‌هایی که آدرسشان فعال است و در محدوده مجاز قرار دارند
-  const projects = useMemo(() => {
+  const userProjects = useMemo(() => {
     const activeProjects = allProjects.filter(project => 
       project.locations && 
       (project.locations as any).is_active !== false
@@ -192,6 +294,9 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false }: Hy
       return false;
     });
   }, [allProjects]);
+
+  const projects = activeExecutionOnly ? companyProjects : userProjects;
+
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -718,28 +823,29 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false }: Hy
     
     try {
       const projectIds = projects.map(p => p.id);
-      
-      // دریافت سفارشات با استفاده از تابع امنیتی تا RLS جلوی نمایش را نگیرد
-      const { data: v3RpcDataFirst, error: v3ErrFirst } = await supabase
-        .rpc('get_my_projects_v3');
-      
-      if (v3ErrFirst) {
-        console.error('[HybridGlobe] Error fetching orders via RPC:', v3ErrFirst);
-      }
 
-      // همه سفارش‌های کاربر
-      const v3OrdersAll = (v3RpcDataFirst as any[] | null) ?? [];
+      let v3OrdersAll: any[] = [];
+      if (activeExecutionOnly) {
+        // همه سفارش‌های اجرایی شرکت
+        v3OrdersAll = companyOrders;
+      } else {
+        // دریافت سفارشات با استفاده از تابع امنیتی تا RLS جلوی نمایش را نگیرد
+        const { data: v3RpcDataFirst, error: v3ErrFirst } = await supabase
+          .rpc('get_my_projects_v3');
+
+        if (v3ErrFirst) {
+          console.error('[HybridGlobe] Error fetching orders via RPC:', v3ErrFirst);
+        }
+        v3OrdersAll = (v3RpcDataFirst as any[] | null) ?? [];
+      }
 
       // فقط سفارش‌هایی که به پروژه‌های فعلی روی نقشه تعلق دارند
       const v3OrdersFiltered = v3OrdersAll.filter(o => {
         if (!o.hierarchy_project_id || !projectIds.includes(o.hierarchy_project_id) || o.status === 'rejected') return false;
         if (!activeExecutionOnly) return true;
-        // فقط چهار وضعیت اجرایی: در انتظار اجرا، در حال اجرا، در انتظار جمع‌آوری، در حال جمع‌آوری
-        if (o.execution_stage) {
-          return o.execution_stage === 'awaiting_collection' || o.execution_stage === 'in_collection';
-        }
-        return ['approved', 'pending_execution', 'in_progress'].includes(o.status);
+        return isActiveExecutionOrder(o);
       });
+
 
       const projectIdsWithActiveOrders = new Set(
         v3OrdersFiltered.map((o: any) => o.hierarchy_project_id).filter(Boolean)
@@ -928,7 +1034,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false }: Hy
       console.error('خطا در دریافت عکس‌های پروژه:', error);
       setProjectsWithMedia(projects.map(p => ({ ...p, media: [], orders: [] })));
     }
-  }, [projects, activeExecutionOnly]);
+  }, [projects, activeExecutionOnly, companyOrders]);
 
   // آدرس‌های بدون پروژه دیگر روی نقشه نمایش داده نمی‌شوند - این قسمت حذف شده است
 
@@ -2957,8 +3063,23 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false }: Hy
     console.log('[Map] Switched to', mapStyle, 'view');
   }, [mapStyle, mapReady]);
 
+  // اطمینان از اندازه صحیح نقشه در حالت جاسازی‌شده
+  useEffect(() => {
+    if (!mapReady || !mapContainer.current) return;
+    const fix = () => mapRef.current?.invalidateSize();
+    const t = window.setTimeout(fix, 300);
+    const ro = new ResizeObserver(fix);
+    ro.observe(mapContainer.current);
+    return () => {
+      clearTimeout(t);
+      ro.disconnect();
+    };
+  }, [mapReady]);
+
+
+
   return (
-    <div className="fixed inset-0 z-50 bg-background">
+    <div className={embedded ? 'relative w-full h-[75vh] min-h-[420px] rounded-xl overflow-hidden border bg-background' : 'fixed inset-0 z-50 bg-background'}>
       {/* لایه‌ی روی نقشه برای کنترل‌ها */}
       <div className="absolute inset-0 z-[2000] pointer-events-none">
         {/* دکمه بازگشت - گوشه راست بالا */}
