@@ -64,9 +64,11 @@ const getMarkerLocationTitle = (project: ProjectWithMedia): string => {
 
 interface HybridGlobeProps {
   onClose: () => void;
+  /** فقط سفارش‌های در انتظار اجرا، در حال اجرا، در انتظار جمع‌آوری و در حال جمع‌آوری نمایش داده شوند */
+  activeExecutionOnly?: boolean;
 }
 
-export default function HybridGlobe({ onClose }: HybridGlobeProps) {
+export default function HybridGlobe({ onClose, activeExecutionOnly = false }: HybridGlobeProps) {
   const isImpersonating = useIsImpersonating();
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
