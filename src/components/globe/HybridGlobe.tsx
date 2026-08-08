@@ -928,7 +928,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false }: Hy
       console.error('خطا در دریافت عکس‌های پروژه:', error);
       setProjectsWithMedia(projects.map(p => ({ ...p, media: [], orders: [] })));
     }
-  }, [projects]);
+  }, [projects, activeExecutionOnly]);
 
   // آدرس‌های بدون پروژه دیگر روی نقشه نمایش داده نمی‌شوند - این قسمت حذف شده است
 
