@@ -46,6 +46,7 @@ import { MediaGallery, MediaItem } from '@/components/media/MediaGallery';
 import StaticLocationMap from '@/components/locations/StaticLocationMap';
 import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
 import { OrderRowMediaUpload } from '@/components/daily-report/OrderRowMediaUpload';
+import HybridGlobe from '@/components/globe/HybridGlobe';
 
 const TIME_HOURS = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, '0'));
 const TIME_MINUTES = Array.from({ length: 60 }, (_, minute) => String(minute).padStart(2, '0'));
@@ -4674,7 +4675,7 @@ export default function DailyReportModule() {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="overflow-x-auto -mx-4 px-4 pb-2">
-            <TabsList className="inline-flex w-max min-w-full sm:grid sm:w-full sm:max-w-3xl sm:grid-cols-5 gap-1">
+            <TabsList className="inline-flex w-max min-w-full sm:grid sm:w-full sm:max-w-4xl sm:grid-cols-6 gap-1">
               <TabsTrigger value="new-report" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
                 <FileText className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                 <span>ثبت گزارش</span>
@@ -4694,6 +4695,10 @@ export default function DailyReportModule() {
               <TabsTrigger value="salary-settings" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
                 <Settings className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                 <span>تنظیمات حقوق</span>
+              </TabsTrigger>
+              <TabsTrigger value="execution-location" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
+                <MapPin className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                <span>لوکیشن اجرایی پروژه</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -5920,6 +5925,13 @@ export default function DailyReportModule() {
           {/* Salary Settings Tab */}
           <TabsContent value="salary-settings" className="mt-6">
             <StaffSalarySettingsTab />
+          </TabsContent>
+
+          {/* Execution Location (Globe) Tab */}
+          <TabsContent value="execution-location" className="mt-6">
+            {activeTab === 'execution-location' && (
+              <HybridGlobe activeExecutionOnly onClose={() => setActiveTab('new-report')} />
+            )}
           </TabsContent>
         </Tabs>
 

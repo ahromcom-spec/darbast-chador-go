@@ -64,9 +64,11 @@ const getMarkerLocationTitle = (project: ProjectWithMedia): string => {
 
 interface HybridGlobeProps {
   onClose: () => void;
+  /** فقط سفارش‌های در انتظار اجرا، در حال اجرا، در انتظار جمع‌آوری و در حال جمع‌آوری نمایش داده شوند */
+  activeExecutionOnly?: boolean;
 }
 
-export default function HybridGlobe({ onClose }: HybridGlobeProps) {
+export default function HybridGlobe({ onClose, activeExecutionOnly = false }: HybridGlobeProps) {
   const isImpersonating = useIsImpersonating();
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -729,9 +731,15 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       const v3OrdersAll = (v3RpcDataFirst as any[] | null) ?? [];
 
       // فقط سفارش‌هایی که به پروژه‌های فعلی روی نقشه تعلق دارند
-      const v3OrdersFiltered = v3OrdersAll.filter(o =>
-        o.hierarchy_project_id && projectIds.includes(o.hierarchy_project_id) && o.status !== 'rejected'
-      );
+      const v3OrdersFiltered = v3OrdersAll.filter(o => {
+        if (!o.hierarchy_project_id || !projectIds.includes(o.hierarchy_project_id) || o.status === 'rejected') return false;
+        if (!activeExecutionOnly) return true;
+        // فقط چهار وضعیت اجرایی: در انتظار اجرا، در حال اجرا، در انتظار جمع‌آوری، در حال جمع‌آوری
+        if (o.execution_stage) {
+          return o.execution_stage === 'awaiting_collection' || o.execution_stage === 'in_collection';
+        }
+        return ['approved', 'pending_execution', 'in_progress'].includes(o.status);
+      });
 
       const projectIdsWithActiveOrders = new Set(
         v3OrdersFiltered.map((o: any) => o.hierarchy_project_id).filter(Boolean)
@@ -920,7 +928,7 @@ export default function HybridGlobe({ onClose }: HybridGlobeProps) {
       console.error('خطا در دریافت عکس‌های پروژه:', error);
       setProjectsWithMedia(projects.map(p => ({ ...p, media: [], orders: [] })));
     }
-  }, [projects]);
+  }, [projects, activeExecutionOnly]);
 
   // آدرس‌های بدون پروژه دیگر روی نقشه نمایش داده نمی‌شوند - این قسمت حذف شده است
 
