@@ -4695,6 +4695,10 @@ export default function DailyReportModule() {
                 <Settings className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                 <span>تنظیمات حقوق</span>
               </TabsTrigger>
+              <TabsTrigger value="execution-location" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
+                <MapPin className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                <span>لوکیشن اجرایی پروژه</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
