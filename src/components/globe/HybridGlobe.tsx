@@ -294,6 +294,9 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
       return false;
     });
   }, [allProjects]);
+
+  const projects = activeExecutionOnly ? companyProjects : userProjects;
+
   const { toast } = useToast();
   const navigate = useNavigate();
 
