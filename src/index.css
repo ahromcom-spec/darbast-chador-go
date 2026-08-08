@@ -929,26 +929,3 @@ html[style*="zoom"] .absolute[role="listbox"] {
   background-color: hsl(var(--muted-foreground) / 0.6);
 }
 
-
-/* ===== قفل حالت عمودی (Portrait) روی موبایل =====
-   با چرخاندن گوشی، محتوای سایت نمی‌چرخد و همان نمای عمودی باقی می‌ماند. */
-/* در حالت افقی گوشی، صفحه چرخانده نمی‌شود؛ فقط محتوا در یک ستون
-   عمودی (مثل نمای پرتره) وسط‌چین و کاملاً در دسترس باقی می‌ماند. */
-@media screen and (orientation: landscape) and (max-height: 500px) {
-  html,
-  body {
-    position: static;
-    width: 100%;
-    height: auto;
-    min-height: 100%;
-    transform: none;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch;
-  }
-  #root {
-    max-width: 100vh;
-    margin-inline: auto;
-  }
-}
-

@@ -58,16 +58,6 @@ installSyncListeners();
   }
 })();
 
-// قفل نمای عمودی (در PWA نصب‌شده پشتیبانی می‌شود؛ در مرورگر با CSS جبران می‌گردد)
-(() => {
-  try {
-    const so: any = (screen as any)?.orientation;
-    so?.lock?.('portrait-primary')?.catch?.(() => {});
-  } catch {
-    // no-op
-  }
-})();
-
 
 
 // ثبت Service Worker — فقط در production و خارج از iframe/preview تا با Lovable preview تداخل نداشته باشد
