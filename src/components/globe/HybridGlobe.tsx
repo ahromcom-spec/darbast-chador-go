@@ -3064,7 +3064,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
   }, [mapStyle, mapReady]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-background">
+    <div className={embedded ? 'relative w-full h-[75vh] min-h-[420px] rounded-xl overflow-hidden border bg-background' : 'fixed inset-0 z-50 bg-background'}>
       {/* لایه‌ی روی نقشه برای کنترل‌ها */}
       <div className="absolute inset-0 z-[2000] pointer-events-none">
         {/* دکمه بازگشت - گوشه راست بالا */}
