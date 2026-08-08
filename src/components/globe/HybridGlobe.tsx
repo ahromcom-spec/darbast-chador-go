@@ -66,9 +66,21 @@ interface HybridGlobeProps {
   onClose: () => void;
   /** فقط سفارش‌های در انتظار اجرا، در حال اجرا، در انتظار جمع‌آوری و در حال جمع‌آوری نمایش داده شوند */
   activeExecutionOnly?: boolean;
+  /** نمایش نقشه به صورت جاسازی‌شده داخل صفحه (بدون پوشش تمام‌صفحه) */
+  embedded?: boolean;
 }
 
-export default function HybridGlobe({ onClose, activeExecutionOnly = false }: HybridGlobeProps) {
+/** آیا سفارش در یکی از چهار وضعیت اجرایی است؟ */
+const isActiveExecutionOrder = (o: any) => {
+  if (!o || o.status === 'rejected') return false;
+  if (o.is_archived || o.is_deep_archived) return false;
+  if (o.execution_stage) {
+    return o.execution_stage === 'awaiting_collection' || o.execution_stage === 'in_collection';
+  }
+  return ['approved', 'pending_execution', 'scheduled', 'in_progress'].includes(o.status);
+};
+
+export default function HybridGlobe({ onClose, activeExecutionOnly = false, embedded = false }: HybridGlobeProps) {
   const isImpersonating = useIsImpersonating();
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
