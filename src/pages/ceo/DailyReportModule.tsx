@@ -4674,7 +4674,7 @@ export default function DailyReportModule() {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="overflow-x-auto -mx-4 px-4 pb-2">
-            <TabsList className="inline-flex w-max min-w-full sm:grid sm:w-full sm:max-w-3xl sm:grid-cols-5 gap-1">
+            <TabsList className="inline-flex w-max min-w-full sm:grid sm:w-full sm:max-w-4xl sm:grid-cols-6 gap-1">
               <TabsTrigger value="new-report" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
                 <FileText className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                 <span>ثبت گزارش</span>
