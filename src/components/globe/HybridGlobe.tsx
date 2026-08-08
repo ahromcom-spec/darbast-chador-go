@@ -823,28 +823,29 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
     
     try {
       const projectIds = projects.map(p => p.id);
-      
-      // دریافت سفارشات با استفاده از تابع امنیتی تا RLS جلوی نمایش را نگیرد
-      const { data: v3RpcDataFirst, error: v3ErrFirst } = await supabase
-        .rpc('get_my_projects_v3');
-      
-      if (v3ErrFirst) {
-        console.error('[HybridGlobe] Error fetching orders via RPC:', v3ErrFirst);
-      }
 
-      // همه سفارش‌های کاربر
-      const v3OrdersAll = (v3RpcDataFirst as any[] | null) ?? [];
+      let v3OrdersAll: any[] = [];
+      if (activeExecutionOnly) {
+        // همه سفارش‌های اجرایی شرکت
+        v3OrdersAll = companyOrders;
+      } else {
+        // دریافت سفارشات با استفاده از تابع امنیتی تا RLS جلوی نمایش را نگیرد
+        const { data: v3RpcDataFirst, error: v3ErrFirst } = await supabase
+          .rpc('get_my_projects_v3');
+
+        if (v3ErrFirst) {
+          console.error('[HybridGlobe] Error fetching orders via RPC:', v3ErrFirst);
+        }
+        v3OrdersAll = (v3RpcDataFirst as any[] | null) ?? [];
+      }
 
       // فقط سفارش‌هایی که به پروژه‌های فعلی روی نقشه تعلق دارند
       const v3OrdersFiltered = v3OrdersAll.filter(o => {
         if (!o.hierarchy_project_id || !projectIds.includes(o.hierarchy_project_id) || o.status === 'rejected') return false;
         if (!activeExecutionOnly) return true;
-        // فقط چهار وضعیت اجرایی: در انتظار اجرا، در حال اجرا، در انتظار جمع‌آوری، در حال جمع‌آوری
-        if (o.execution_stage) {
-          return o.execution_stage === 'awaiting_collection' || o.execution_stage === 'in_collection';
-        }
-        return ['approved', 'pending_execution', 'in_progress'].includes(o.status);
+        return isActiveExecutionOrder(o);
       });
+
 
       const projectIdsWithActiveOrders = new Set(
         v3OrdersFiltered.map((o: any) => o.hierarchy_project_id).filter(Boolean)
