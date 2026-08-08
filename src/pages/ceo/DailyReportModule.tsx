@@ -5925,6 +5925,13 @@ export default function DailyReportModule() {
           <TabsContent value="salary-settings" className="mt-6">
             <StaffSalarySettingsTab />
           </TabsContent>
+
+          {/* Execution Location (Globe) Tab */}
+          <TabsContent value="execution-location" className="mt-6">
+            {activeTab === 'execution-location' && (
+              <HybridGlobe activeExecutionOnly onClose={() => setActiveTab('new-report')} />
+            )}
+          </TabsContent>
         </Tabs>
 
         {/* Order Details Dialog */}
