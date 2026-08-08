@@ -731,9 +731,15 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false }: Hy
       const v3OrdersAll = (v3RpcDataFirst as any[] | null) ?? [];
 
       // فقط سفارش‌هایی که به پروژه‌های فعلی روی نقشه تعلق دارند
-      const v3OrdersFiltered = v3OrdersAll.filter(o =>
-        o.hierarchy_project_id && projectIds.includes(o.hierarchy_project_id) && o.status !== 'rejected'
-      );
+      const v3OrdersFiltered = v3OrdersAll.filter(o => {
+        if (!o.hierarchy_project_id || !projectIds.includes(o.hierarchy_project_id) || o.status === 'rejected') return false;
+        if (!activeExecutionOnly) return true;
+        // فقط چهار وضعیت اجرایی: در انتظار اجرا، در حال اجرا، در انتظار جمع‌آوری، در حال جمع‌آوری
+        if (o.execution_stage) {
+          return o.execution_stage === 'awaiting_collection' || o.execution_stage === 'in_collection';
+        }
+        return ['approved', 'pending_execution', 'in_progress'].includes(o.status);
+      });
 
       const projectIdsWithActiveOrders = new Set(
         v3OrdersFiltered.map((o: any) => o.hierarchy_project_id).filter(Boolean)
