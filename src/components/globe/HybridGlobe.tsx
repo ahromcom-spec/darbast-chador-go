@@ -3063,6 +3063,21 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
     console.log('[Map] Switched to', mapStyle, 'view');
   }, [mapStyle, mapReady]);
 
+  // اطمینان از اندازه صحیح نقشه در حالت جاسازی‌شده
+  useEffect(() => {
+    if (!mapReady || !mapContainer.current) return;
+    const fix = () => mapRef.current?.invalidateSize();
+    const t = window.setTimeout(fix, 300);
+    const ro = new ResizeObserver(fix);
+    ro.observe(mapContainer.current);
+    return () => {
+      clearTimeout(t);
+      ro.disconnect();
+    };
+  }, [mapReady]);
+
+
+
   return (
     <div className={embedded ? 'relative w-full h-[75vh] min-h-[420px] rounded-xl overflow-hidden border bg-background' : 'fixed inset-0 z-50 bg-background'}>
       {/* لایه‌ی روی نقشه برای کنترل‌ها */}
