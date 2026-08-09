@@ -69,7 +69,10 @@ interface PaymentGroup {
   cardTxId: string | null;
   isLegacy: boolean;
   cheque: ChequeInfo | null;
+  /** payment registered directly on a single order (order panel / ZarinPal), not via statement */
+  isOrderLevel?: boolean;
 }
+
 
 const fmt = (n: number) => new Intl.NumberFormat('fa-IR').format(Math.round(n || 0)) + ' تومان';
 const GRP_RE = /\[STMT-GRP:([0-9a-fA-F-]{8,})\]/;
