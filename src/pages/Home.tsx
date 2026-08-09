@@ -224,41 +224,15 @@ const Home = () => {
         </script>
       </div>
 
-      <div className="min-h-[120vh] md:min-h-screen flex flex-col relative" style={{ backgroundColor: '#1a1a2e' }}>
-        {/* Background Image - Full screen coverage */}
-        <div 
-          className="fixed inset-0 z-0" 
-          style={{
-            backgroundImage: 'url(/hero-background.webp)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center center',
-            backgroundRepeat: 'no-repeat',
-            minHeight: '100vh',
-            minWidth: '100vw'
-          }} 
-          role="presentation" 
-          aria-hidden="true" 
-        >
-          {/* Mobile-specific background adjustment */}
-          <style dangerouslySetInnerHTML={{ __html: `
-            @media (max-width: 768px) {
-              .fixed.inset-0.z-0 {
-                /* Show more buildings by positioning toward the sea/buildings side */
-                background-size: cover !important;
-                background-position: 80% center !important;
-              }
-            }
-          `}} />
-        </div>
-        <div className="fixed inset-0 bg-black/10 z-0" aria-hidden="true" />
+      <div className="min-h-[120vh] md:min-h-screen flex flex-col relative bg-background">
 
 
         {/* Main Content */}
         <main className="flex-1 flex items-start md:items-center justify-center py-4 sm:py-6 md:py-8 px-4 sm:px-6 relative z-10" role="main">
           <article className="w-full max-w-2xl mt-2 sm:mt-4 md:mt-0">
             {/* Service Selection Card */}
-            <Card className="shadow-xl md:shadow-2xl bg-card/20 backdrop-blur-xl border-2" data-tour="create-project">
-              <CardHeader className="text-center pb-2 sm:pb-3 md:pb-4 px-4 sm:px-6 bg-card/20 backdrop-blur-lg rounded-t-lg">
+            <Card className="shadow-xl md:shadow-2xl bg-card backdrop-blur-none border-2" data-tour="create-project">
+              <CardHeader className="text-center pb-2 sm:pb-3 md:pb-4 px-4 sm:px-6 bg-card rounded-t-lg">
                 <h2 className="text-lg sm:text-2xl md:text-3xl font-bold leading-tight tracking-tight primary-gradient bg-clip-text text-transparent mb-2">
                   خدمات ساختمانی و منزل خود را انتخاب کنید
                 </h2>

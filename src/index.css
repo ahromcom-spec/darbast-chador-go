@@ -150,7 +150,7 @@ html, body {
   min-height: 100vh;
   min-height: 100dvh; /* Dynamic viewport height for mobile */
   /* Prevent white space when zoomed out */
-  background-color: #ffffff;
+  background-color: hsl(var(--background));
 }
 
 /* #root should grow with content, not be limited */
@@ -179,7 +179,7 @@ body {
 @layer base {
   :root {
     /* Core colors inspired by Persian architecture */
-    --background: 0 0% 100%;
+    --background: 220 14% 93%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;

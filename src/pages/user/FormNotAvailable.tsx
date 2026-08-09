@@ -30,21 +30,13 @@ export default function FormNotAvailable() {
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
       {/* Hero Background Image */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ 
-          backgroundImage: 'url(/hero-background.webp)',
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
-      </div>
 
       {/* Content */}
       <div className="relative z-10 container mx-auto py-6 px-4 max-w-4xl">
         <Button
           variant="ghost"
           onClick={() => navigate('/')}
-          className="mb-4 text-white hover:bg-white/10"
+          className="mb-4"
         >
           <ArrowRight className="w-4 h-4 ml-2" />
           بازگشت به صفحه اصلی

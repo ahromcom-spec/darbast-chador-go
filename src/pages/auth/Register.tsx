@@ -234,15 +234,6 @@ export default function Register() {
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
       {/* Hero Background Image */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ 
-          backgroundImage: 'url(/hero-background.webp)',
-        }}
-      >
-        {/* Overlay gradient for better readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
-      </div>
 
       {/* Content - Full screen on mobile */}
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
