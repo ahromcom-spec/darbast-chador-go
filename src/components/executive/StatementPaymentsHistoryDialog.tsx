@@ -580,10 +580,12 @@ export function StatementPaymentsHistoryDialog({
           const orderCodes = allocations.map(a => a.code).join('، ');
           const description = isCheque
             ? `${chequeStatus === 'cleared' ? '🟢 چک وصول شده است' : '🟠 چک وصول نشده است'} — سریال ${editChequeSerial} — صورتحساب ${statementNumber} - ${customerName || ''} - سفارش‌های: ${orderCodes}${chequeTag}${groupTag}`
-            : `واریز صورتحساب ${statementNumber} - ${customerName || ''} - سفارش‌های: ${orderCodes}${groupTag}`;
+            : (g.isOrderLevel
+                ? `پرداخت سفارش ${orderCodes} - ${customerName || ''}`
+                : `واریز صورتحساب ${statementNumber} - ${customerName || ''} - سفارش‌های: ${orderCodes}${groupTag}`);
           const referenceType = isCheque
             ? (chequeStatus === 'cleared' ? 'cheque_cleared' : 'cheque_pending')
-            : 'statement_payment';
+            : (g.isOrderLevel ? 'order_payment' : 'statement_payment');
           const { data: txIns } = await supabase.from('bank_card_transactions').insert({
             bank_card_id: editCardId,
             transaction_type: 'deposit',
@@ -591,7 +593,8 @@ export function StatementPaymentsHistoryDialog({
             balance_after: newBal,
             description,
             reference_type: referenceType,
-            reference_id: newGroupId,
+            reference_id: (g.isOrderLevel ? insertedIds[0] : newGroupId),
+
             created_by: user.id,
             report_date: appliedReportDate,
             created_at: appliedPaymentDate,
