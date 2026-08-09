@@ -682,7 +682,11 @@ export function StatementPaymentsHistoryDialog({
                                 <CreditCard className="h-3 w-3" /> کارت بانکی
                               </span>
                             ) : (
-                              <span className="text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded">نقدی</span>
+                             <span className="text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded">نقدی</span>
+                            )}
+                            {g.isOrderLevel && (
+                              <span className="text-[11px] bg-violet-50 text-violet-700 px-2 py-0.5 rounded">پرداخت مستقیم سفارش</span>
+
                             )}
                           </div>
                           <div className="flex items-center gap-1">
