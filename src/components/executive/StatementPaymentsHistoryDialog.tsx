@@ -191,7 +191,8 @@ export function StatementPaymentsHistoryDialog({
         rows.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
         const first = rows[0];
         const totalAmount = rows.reduce((a, r) => a + Number(r.amount || 0), 0);
-        const isLegacy = gid.startsWith('legacy::');
+        const isOrderLevel = gid.startsWith('order::');
+        const isLegacy = gid.startsWith('legacy::') || isOrderLevel;
         // Match cheque via any order_payment row id in the group
         let cheque: ChequeInfo | null = null;
         for (const r of rows) {
@@ -209,7 +210,9 @@ export function StatementPaymentsHistoryDialog({
           cardTxId: isLegacy ? null : (cardTxByGroup.get(gid) || null),
           isLegacy,
           cheque,
+          isOrderLevel,
         });
+
       }
       arr.sort((a, b) => (b.rows[0]?.created_at || '').localeCompare(a.rows[0]?.created_at || ''));
       setGroups(arr);
