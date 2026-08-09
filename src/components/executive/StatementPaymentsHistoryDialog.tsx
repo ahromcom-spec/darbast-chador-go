@@ -492,7 +492,9 @@ export function StatementPaymentsHistoryDialog({
       for (const oid of affectedOrderIds) await resyncOrder(oid);
 
       // 3) Re-fetch fresh orders state for waterfall
-      const orderIds = orders.map(o => o.id);
+      // Order-level payments stay bound to their own order; statement payments waterfall.
+      const orderIds = g.isOrderLevel ? [g.rows[0].order_id] : orders.map(o => o.id);
+
       const { data: fresh } = await supabase
         .from('projects_v3')
         .select('id, code, total_price, payment_amount, total_paid, created_at')
