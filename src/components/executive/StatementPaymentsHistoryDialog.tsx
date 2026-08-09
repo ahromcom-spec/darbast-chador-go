@@ -533,13 +533,16 @@ export function StatementPaymentsHistoryDialog({
       const newGroupId = g.isLegacy
         ? ((crypto as any).randomUUID ? (crypto as any).randomUUID() : `grp-${Date.now()}`)
         : g.groupId;
-      const groupTag = ` [STMT-GRP:${newGroupId}]`;
+      const groupTag = g.isOrderLevel ? '' : ` [STMT-GRP:${newGroupId}]`;
       const chequeTag = isCheque ? ` [CHEQUE:${editChequeSerial}]` : '';
       const chequeStatus = isCheque ? (g.cheque!.status) : null;
       const chequeStatusFa = chequeStatus === 'cleared' ? 'وصول شده' : 'وصول نشده';
       const baseNote = isCheque
         ? `چک شماره ${editChequeSerial} — سررسید ${formatPersianDate(editChequeDue, { dateFormat: 'yyyy/MM/dd' })} (${chequeStatusFa}) — صورتحساب`
-        : (editNotes || (editCardId ? 'واریز به کارت بانکی (صورتحساب)' : 'پرداخت نقدی / علی‌الحساب (صورتحساب)'));
+        : (editNotes || (g.isOrderLevel
+            ? (g.baseNote || (editCardId ? 'واریز به کارت بانکی' : 'پرداخت نقدی / علی‌الحساب'))
+            : (editCardId ? 'واریز به کارت بانکی (صورتحساب)' : 'پرداخت نقدی / علی‌الحساب (صورتحساب)')));
+      const noteSuffix = g.isOrderLevel ? '' : ` — صورتحساب ${statementNumber}`;
       const insertedIds: string[] = [];
 
       for (const a of allocations) {
@@ -550,7 +553,8 @@ export function StatementPaymentsHistoryDialog({
             amount: a.portion,
             payment_method: paymentMethod,
             receipt_number: editReceipt || (isCheque ? editChequeSerial : null),
-            notes: `${baseNote} — صورتحساب ${statementNumber}${groupTag}${chequeTag}`,
+            notes: `${baseNote}${noteSuffix}${groupTag}${chequeTag}`,
+
             paid_by: user.id,
             bank_card_id: null,
             payment_date: appliedPaymentDate,
