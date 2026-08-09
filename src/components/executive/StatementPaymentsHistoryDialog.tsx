@@ -158,7 +158,7 @@ export function StatementPaymentsHistoryDialog({
 
 
       // Fetch related card transactions in one go
-      const taggedGroupIds = Array.from(byGrp.keys()).filter(k => !k.startsWith('legacy::'));
+      const taggedGroupIds = Array.from(byGrp.keys()).filter(k => !k.startsWith('legacy::') && !k.startsWith('order::'));
       let cardTxByGroup = new Map<string, string>();
       if (taggedGroupIds.length > 0) {
         const { data: txs } = await supabase
