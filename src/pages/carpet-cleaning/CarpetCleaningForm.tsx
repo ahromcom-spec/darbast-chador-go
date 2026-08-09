@@ -299,7 +299,7 @@ export default function CarpetCleaningForm() {
 
       <div className="relative z-10 container mx-auto px-4 max-w-7xl py-8">
         <div className="space-y-6">
-          <Button variant="ghost" onClick={() => navigate('/')} className="gap-2 text-white hover:bg-white/10">
+          <Button variant="ghost" onClick={() => navigate('/')} className="gap-2">
             <ArrowRight className="h-4 w-4" /> بازگشت
           </Button>
 

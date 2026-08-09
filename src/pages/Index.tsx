@@ -20,10 +20,10 @@ const Index = () => {
       {/* Content */}
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
         <div className="text-center space-y-8">
-          <h1 className="mb-4 text-5xl font-bold text-white drop-shadow-lg md:text-6xl">
+          <h1 className="mb-4 text-5xl font-bold text-foreground md:text-6xl">
             به سیستم مدیریت اهرم خوش آمدید
           </h1>
-          <p className="text-xl text-white/90 drop-shadow-md md:text-2xl">
+          <p className="text-xl text-muted-foreground md:text-2xl">
             مدیریت هوشمند پروژه‌های ساختمانی و داربست
           </p>
           

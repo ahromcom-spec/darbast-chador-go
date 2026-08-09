@@ -485,7 +485,7 @@ export default function ScaffoldingRentalForm() {
           <Button
             variant="ghost"
             onClick={() => navigate('/')}
-            className="gap-2 text-white hover:bg-white/10"
+            className="gap-2"
           >
             <ArrowRight className="h-4 w-4" />
             بازگشت

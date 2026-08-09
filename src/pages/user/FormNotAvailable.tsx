@@ -36,7 +36,7 @@ export default function FormNotAvailable() {
         <Button
           variant="ghost"
           onClick={() => navigate('/')}
-          className="mb-4 text-white hover:bg-white/10"
+          className="mb-4"
         >
           <ArrowRight className="w-4 h-4 ml-2" />
           بازگشت به صفحه اصلی
