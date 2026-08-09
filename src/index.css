@@ -150,7 +150,7 @@ html, body {
   min-height: 100vh;
   min-height: 100dvh; /* Dynamic viewport height for mobile */
   /* Prevent white space when zoomed out */
-  background-color: #ffffff;
+  background-color: hsl(var(--background));
 }
 
 /* #root should grow with content, not be limited */
