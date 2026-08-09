@@ -137,6 +137,10 @@ export function StatementPaymentsHistoryDialog({
         } else if (stmtNoteRe.test(String(p.notes || ''))) {
           // Legacy statement payment (pre-grouping era)
           legacyCandidates.push(p as PaymentRow);
+        } else {
+          // Payment registered directly on the order (order panel, ZarinPal, ...)
+          // It still belongs to this statement's balance, so surface it here.
+          byGrp.set(`order::${p.id}`, [p as PaymentRow]);
         }
       }
 
@@ -151,6 +155,7 @@ export function StatementPaymentsHistoryDialog({
       for (const [key, rows] of legacyGroups.entries()) {
         byGrp.set(key, rows);
       }
+
 
       // Fetch related card transactions in one go
       const taggedGroupIds = Array.from(byGrp.keys()).filter(k => !k.startsWith('legacy::'));
