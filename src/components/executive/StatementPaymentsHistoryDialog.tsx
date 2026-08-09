@@ -69,7 +69,10 @@ interface PaymentGroup {
   cardTxId: string | null;
   isLegacy: boolean;
   cheque: ChequeInfo | null;
+  /** payment registered directly on a single order (order panel / ZarinPal), not via statement */
+  isOrderLevel?: boolean;
 }
+
 
 const fmt = (n: number) => new Intl.NumberFormat('fa-IR').format(Math.round(n || 0)) + ' تومان';
 const GRP_RE = /\[STMT-GRP:([0-9a-fA-F-]{8,})\]/;
@@ -134,6 +137,10 @@ export function StatementPaymentsHistoryDialog({
         } else if (stmtNoteRe.test(String(p.notes || ''))) {
           // Legacy statement payment (pre-grouping era)
           legacyCandidates.push(p as PaymentRow);
+        } else {
+          // Payment registered directly on the order (order panel, ZarinPal, ...)
+          // It still belongs to this statement's balance, so surface it here.
+          byGrp.set(`order::${p.id}`, [p as PaymentRow]);
         }
       }
 
@@ -149,8 +156,9 @@ export function StatementPaymentsHistoryDialog({
         byGrp.set(key, rows);
       }
 
+
       // Fetch related card transactions in one go
-      const taggedGroupIds = Array.from(byGrp.keys()).filter(k => !k.startsWith('legacy::'));
+      const taggedGroupIds = Array.from(byGrp.keys()).filter(k => !k.startsWith('legacy::') && !k.startsWith('order::'));
       let cardTxByGroup = new Map<string, string>();
       if (taggedGroupIds.length > 0) {
         const { data: txs } = await supabase
@@ -183,7 +191,8 @@ export function StatementPaymentsHistoryDialog({
         rows.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
         const first = rows[0];
         const totalAmount = rows.reduce((a, r) => a + Number(r.amount || 0), 0);
-        const isLegacy = gid.startsWith('legacy::');
+        const isOrderLevel = gid.startsWith('order::');
+        const isLegacy = gid.startsWith('legacy::') || isOrderLevel;
         // Match cheque via any order_payment row id in the group
         let cheque: ChequeInfo | null = null;
         for (const r of rows) {
@@ -201,7 +210,9 @@ export function StatementPaymentsHistoryDialog({
           cardTxId: isLegacy ? null : (cardTxByGroup.get(gid) || null),
           isLegacy,
           cheque,
+          isOrderLevel,
         });
+
       }
       arr.sort((a, b) => (b.rows[0]?.created_at || '').localeCompare(a.rows[0]?.created_at || ''));
       setGroups(arr);
@@ -481,7 +492,9 @@ export function StatementPaymentsHistoryDialog({
       for (const oid of affectedOrderIds) await resyncOrder(oid);
 
       // 3) Re-fetch fresh orders state for waterfall
-      const orderIds = orders.map(o => o.id);
+      // Order-level payments stay bound to their own order; statement payments waterfall.
+      const orderIds = g.isOrderLevel ? [g.rows[0].order_id] : orders.map(o => o.id);
+
       const { data: fresh } = await supabase
         .from('projects_v3')
         .select('id, code, total_price, payment_amount, total_paid, created_at')
@@ -520,13 +533,16 @@ export function StatementPaymentsHistoryDialog({
       const newGroupId = g.isLegacy
         ? ((crypto as any).randomUUID ? (crypto as any).randomUUID() : `grp-${Date.now()}`)
         : g.groupId;
-      const groupTag = ` [STMT-GRP:${newGroupId}]`;
+      const groupTag = g.isOrderLevel ? '' : ` [STMT-GRP:${newGroupId}]`;
       const chequeTag = isCheque ? ` [CHEQUE:${editChequeSerial}]` : '';
       const chequeStatus = isCheque ? (g.cheque!.status) : null;
       const chequeStatusFa = chequeStatus === 'cleared' ? 'وصول شده' : 'وصول نشده';
       const baseNote = isCheque
         ? `چک شماره ${editChequeSerial} — سررسید ${formatPersianDate(editChequeDue, { dateFormat: 'yyyy/MM/dd' })} (${chequeStatusFa}) — صورتحساب`
-        : (editNotes || (editCardId ? 'واریز به کارت بانکی (صورتحساب)' : 'پرداخت نقدی / علی‌الحساب (صورتحساب)'));
+        : (editNotes || (g.isOrderLevel
+            ? (g.baseNote || (editCardId ? 'واریز به کارت بانکی' : 'پرداخت نقدی / علی‌الحساب'))
+            : (editCardId ? 'واریز به کارت بانکی (صورتحساب)' : 'پرداخت نقدی / علی‌الحساب (صورتحساب)')));
+      const noteSuffix = g.isOrderLevel ? '' : ` — صورتحساب ${statementNumber}`;
       const insertedIds: string[] = [];
 
       for (const a of allocations) {
@@ -537,7 +553,8 @@ export function StatementPaymentsHistoryDialog({
             amount: a.portion,
             payment_method: paymentMethod,
             receipt_number: editReceipt || (isCheque ? editChequeSerial : null),
-            notes: `${baseNote} — صورتحساب ${statementNumber}${groupTag}${chequeTag}`,
+            notes: `${baseNote}${noteSuffix}${groupTag}${chequeTag}`,
+
             paid_by: user.id,
             bank_card_id: null,
             payment_date: appliedPaymentDate,
@@ -563,10 +580,12 @@ export function StatementPaymentsHistoryDialog({
           const orderCodes = allocations.map(a => a.code).join('، ');
           const description = isCheque
             ? `${chequeStatus === 'cleared' ? '🟢 چک وصول شده است' : '🟠 چک وصول نشده است'} — سریال ${editChequeSerial} — صورتحساب ${statementNumber} - ${customerName || ''} - سفارش‌های: ${orderCodes}${chequeTag}${groupTag}`
-            : `واریز صورتحساب ${statementNumber} - ${customerName || ''} - سفارش‌های: ${orderCodes}${groupTag}`;
+            : (g.isOrderLevel
+                ? `پرداخت سفارش ${orderCodes} - ${customerName || ''}`
+                : `واریز صورتحساب ${statementNumber} - ${customerName || ''} - سفارش‌های: ${orderCodes}${groupTag}`);
           const referenceType = isCheque
             ? (chequeStatus === 'cleared' ? 'cheque_cleared' : 'cheque_pending')
-            : 'statement_payment';
+            : (g.isOrderLevel ? 'order_payment' : 'statement_payment');
           const { data: txIns } = await supabase.from('bank_card_transactions').insert({
             bank_card_id: editCardId,
             transaction_type: 'deposit',
@@ -574,7 +593,8 @@ export function StatementPaymentsHistoryDialog({
             balance_after: newBal,
             description,
             reference_type: referenceType,
-            reference_id: newGroupId,
+            reference_id: (g.isOrderLevel ? insertedIds[0] : newGroupId),
+
             created_by: user.id,
             report_date: appliedReportDate,
             created_at: appliedPaymentDate,
@@ -662,7 +682,11 @@ export function StatementPaymentsHistoryDialog({
                                 <CreditCard className="h-3 w-3" /> کارت بانکی
                               </span>
                             ) : (
-                              <span className="text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded">نقدی</span>
+                             <span className="text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded">نقدی</span>
+                            )}
+                            {g.isOrderLevel && (
+                              <span className="text-[11px] bg-violet-50 text-violet-700 px-2 py-0.5 rounded">پرداخت مستقیم سفارش</span>
+
                             )}
                           </div>
                           <div className="flex items-center gap-1">
