@@ -296,12 +296,6 @@ export default function CarpetCleaningForm() {
 
   return (
     <div className="relative min-h-screen w-full" dir="rtl">
-      <div
-        className="fixed inset-0 bg-cover bg-center bg-no-repeat -z-10"
-        style={{ backgroundImage: 'url(/hero-background.webp)' }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
-      </div>
 
       <div className="relative z-10 container mx-auto px-4 max-w-7xl py-8">
         <div className="space-y-6">

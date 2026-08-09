@@ -179,7 +179,7 @@ body {
 @layer base {
   :root {
     /* Core colors inspired by Persian architecture */
-    --background: 0 0% 100%;
+    --background: 220 14% 93%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;

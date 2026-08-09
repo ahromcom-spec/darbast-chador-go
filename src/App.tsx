@@ -181,12 +181,6 @@ const PageLoader = () => {
       style={{ height: '100dvh', zoom: 1 } as React.CSSProperties}
     >
       {/* Hero Background Image - covers entire screen on all devices */}
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: 'url(/hero-background.webp)' }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
-      </div>
 
       {/* Loading Content */}
       <div className="relative z-10 flex w-full h-full items-center justify-center">
