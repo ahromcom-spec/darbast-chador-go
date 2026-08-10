@@ -43,7 +43,7 @@ function groupIdOf(tx: StatementTxLike): string | null {
 export async function resyncOrderPaidState(orderId: string, actorId?: string | null) {
   const { data: cur } = await supabase
     .from('projects_v3')
-    .select('total_price, payment_amount, status, payment_confirmed_at')
+    .select('total_price, payment_amount, payment_confirmed_at')
     .eq('id', orderId)
     .maybeSingle();
   if (!cur) return;
@@ -60,11 +60,9 @@ export async function resyncOrderPaidState(orderId: string, actorId?: string | n
       upd.payment_confirmed_at = new Date().toISOString();
       upd.payment_confirmed_by = actorId || null;
     }
-    if ((cur as any).status !== 'closed' && (cur as any).status !== 'paid') upd.status = 'paid';
   } else {
     upd.payment_confirmed_at = null;
     upd.payment_confirmed_by = null;
-    if ((cur as any).status === 'paid') upd.status = 'pending_collection';
   }
   await supabase.from('projects_v3').update(upd).eq('id', orderId);
 }

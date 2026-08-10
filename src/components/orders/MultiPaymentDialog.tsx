@@ -149,12 +149,9 @@ export function MultiPaymentDialog({
       updatePayload.payment_confirmed_by = user?.id;
       const { data: currentOrder } = await supabase
         .from('projects_v3')
-        .select('execution_stage, status')
+        .select('execution_stage')
         .eq('id', orderId)
         .maybeSingle();
-      if (currentOrder?.status !== 'closed') {
-        updatePayload.status = 'paid';
-      }
       if (currentOrder?.execution_stage === 'awaiting_payment') {
         updatePayload.execution_stage = 'awaiting_collection';
         updatePayload.execution_stage_updated_at = nowIso;
@@ -164,12 +161,9 @@ export function MultiPaymentDialog({
       updatePayload.payment_confirmed_by = null;
       const { data: currentOrder } = await supabase
         .from('projects_v3')
-        .select('status, execution_stage')
+        .select('execution_stage')
         .eq('id', orderId)
         .maybeSingle();
-      if (currentOrder?.status === 'paid') {
-        updatePayload.status = 'active';
-      }
       if (currentOrder?.execution_stage === 'awaiting_collection') {
         updatePayload.execution_stage = 'awaiting_payment';
         updatePayload.execution_stage_updated_at = nowIso;

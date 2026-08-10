@@ -254,7 +254,7 @@ export function StatementPaymentsHistoryDialog({
     const o = orderById.get(orderId);
     const { data: cur } = await supabase
       .from('projects_v3')
-      .select('total_price, payment_amount, status, execution_stage, payment_confirmed_at, payment_confirmed_by')
+      .select('total_price, payment_amount, payment_confirmed_at, payment_confirmed_by')
       .eq('id', orderId)
       .maybeSingle();
     if (!cur) return;
@@ -274,11 +274,9 @@ export function StatementPaymentsHistoryDialog({
         upd.payment_confirmed_at = new Date().toISOString();
         upd.payment_confirmed_by = user?.id || null;
       }
-      if ((cur as any).status !== 'closed' && (cur as any).status !== 'paid') upd.status = 'paid';
     } else {
       upd.payment_confirmed_at = null;
       upd.payment_confirmed_by = null;
-      if ((cur as any).status === 'paid') upd.status = 'pending_collection';
     }
     await supabase.from('projects_v3').update(upd).eq('id', orderId);
   };

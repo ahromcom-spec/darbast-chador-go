@@ -373,9 +373,9 @@ export default function ExecutiveOrders() {
             )
           )
         `)
-        .in('status', ['pending', 'approved', 'pending_execution', 'in_progress', 'completed', 'paid', 'closed', 'rejected'])
         // فقط سفارشات غیر بایگانی را نمایش بده
         .or('is_archived.is.null,is_archived.eq.false')
+        .or('is_deep_archived.is.null,is_deep_archived.eq.false')
         .order('code', { ascending: false });
 
       if (error) throw error;
