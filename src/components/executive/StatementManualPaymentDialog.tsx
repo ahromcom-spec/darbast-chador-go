@@ -237,10 +237,9 @@ export function StatementManualPaymentDialog({
           updatePayload.payment_confirmed_by = user.id;
           const { data: cur } = await supabase
             .from('projects_v3')
-            .select('status, execution_stage')
+            .select('execution_stage')
             .eq('id', order.id)
             .maybeSingle();
-          if (cur?.status !== 'closed') updatePayload.status = 'paid';
           if (cur?.execution_stage === 'awaiting_payment') {
             updatePayload.execution_stage = 'awaiting_collection';
             updatePayload.execution_stage_updated_at = nowIso;
