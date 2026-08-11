@@ -3084,18 +3084,19 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
     <div className={embedded ? 'relative w-full h-[75vh] min-h-[420px] rounded-xl overflow-hidden border bg-background' : 'fixed inset-0 z-50 bg-background'}>
       {/* لایه‌ی روی نقشه برای کنترل‌ها */}
       <div className="absolute inset-0 z-[2000] pointer-events-none">
-        {/* دکمه بازگشت - گوشه راست بالا */}
+        {/* دکمه بازگشت - گوشه راست بالا (پایین‌تر از هدر سایت تا همیشه قابل مشاهده باشد) */}
         <Button
           variant="default"
           size="sm"
           onClick={onClose}
-          className={`pointer-events-auto absolute right-2 shadow-lg border border-primary/20 text-[10px] px-2 py-0.5 h-6 rounded-md bg-primary/60 hover:bg-primary/75 backdrop-blur-md ${
-            isImpersonating ? 'top-14' : 'top-2'
+          className={`pointer-events-auto absolute right-3 z-[2100] shadow-xl border border-primary-foreground/20 text-xs px-3 py-1.5 h-9 rounded-lg bg-primary hover:bg-primary/90 ${
+            isImpersonating ? 'top-28' : 'top-16'
           }`}
         >
-          <ArrowRight className="h-2.5 w-2.5 ml-1" />
-          <span className="font-semibold text-[10px]">بازگشت</span>
+          <ArrowRight className="h-4 w-4 ml-1" />
+          <span className="font-bold text-xs">بازگشت</span>
         </Button>
+
 
         {/* دکمه تغییر نمای نقشه (استاندارد/ماهواره‌ای) - بالا سمت چپ */}
         <Button
@@ -3370,6 +3371,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           project={mobileSelectedProject}
           allProjectsAtLocation={mobileSelectedLocationProjects}
           hideFinancials={activeExecutionOnly}
+          managerView={activeExecutionOnly}
           onClose={() => {
             setMobileSelectedProject(null);
             setMobileSelectedLocationProjects([]);

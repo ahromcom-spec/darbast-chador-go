@@ -93,7 +93,10 @@ interface MobileProjectPanelProps {
   onViewVideo: (url: string) => void;
   /** مخفی‌کردن مبالغ و اطلاعات مالی (برای مدیران و سرپرستان اجرایی) */
   hideFinancials?: boolean;
+  /** نمای مدیریتی: جزئیات سفارش از مسیر مدیریت باز شود نه پنل مشتری */
+  managerView?: boolean;
 }
+
 
 type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 
@@ -239,6 +242,7 @@ export function MobileProjectPanel({
   onViewImage,
   onViewVideo,
   hideFinancials = false,
+  managerView = false,
 }: MobileProjectPanelProps) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -279,6 +283,11 @@ export function MobileProjectPanel({
   };
 
   const handleViewOrderDetail = (orderId: string) => {
+    if (managerView) {
+      // مدیران به جزئیات سفارش در ماژول مدیریت سفارشات هدایت می‌شوند
+      navigate(`/executive/all-orders?orderId=${orderId}`);
+      return;
+    }
     navigate(`/orders/${orderId}`);
   };
 
