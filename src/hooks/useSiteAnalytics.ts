@@ -228,6 +228,8 @@ export function useSiteAnalytics() {
   const lastEventTime = useRef(Date.now());
   const isTrackingEnabled = useRef(true);
   const sessionCreated = useRef(false);
+  const lastPageRef = useRef<{ path: string; title: string; at: number } | null>(null);
+
 
   // Create session immediately on first load
   const createSessionImmediately = useCallback(async () => {
