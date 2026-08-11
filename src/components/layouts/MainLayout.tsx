@@ -1,13 +1,9 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { AppSidebar } from '@/components/navigation/AppSidebar';
-import { LogOut, Menu, PanelLeft } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { useMediaQuery } from '@/hooks/useResponsive';
 
 
 interface MainLayoutProps {
@@ -19,8 +15,6 @@ export function MainLayout({ children, showSidebar = true }: MainLayoutProps) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isMobile = useMediaQuery('(max-width: 768px)');
 
   const handleSignOut = async () => {
     try {
