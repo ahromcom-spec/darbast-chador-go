@@ -132,8 +132,8 @@ export function buildOrderSheetHtml(order: any, logs: DailyLogEntry[] = [], note
       <div><b>مشتری</b>${esc(customer)}</div>
       <div><b>شماره تماس</b>${esc(phone)}</div>
       <div style="grid-column:1/-1"><b>آدرس</b>${esc(address)}</div>
-      <div><b>مبلغ کل</b>${esc(money(order?.total_price))}</div>
-      <div><b>مبلغ پرداخت‌شده</b>${esc(money(order?.total_paid))}</div>
+      ${hidePrices ? '' : `<div><b>مبلغ کل</b>${esc(money(order?.total_price))}</div>
+      <div><b>مبلغ پرداخت‌شده</b>${esc(money(order?.total_paid))}</div>`}
     </div>
   </section>
 
