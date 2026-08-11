@@ -285,7 +285,7 @@ const Home = () => {
                       استعلام قیمت و ثبت سفارش
                     </div>
                   </div>
-                  <span className="flex items-center justify-center w-28 h-28 sm:w-30 sm:h-30 shrink-0 overflow-hidden">
+                  <span className="flex items-center justify-center w-[120px] h-[120px] shrink-0 overflow-hidden">
                     <img src={scaffoldingIcon.url} alt="داربست فلزی" className="w-full h-full object-contain" loading="lazy" />
                   </span>
                 </div>
