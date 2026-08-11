@@ -69,6 +69,8 @@ interface HybridGlobeProps {
   activeExecutionOnly?: boolean;
   /** نمایش نقشه به صورت جاسازی‌شده داخل صفحه (بدون پوشش تمام‌صفحه) */
   embedded?: boolean;
+  /** باز کردن جزئیات سفارش در نمای امن گزارش روزانه */
+  onViewOrderDetails?: (orderId: string) => void;
 }
 
 /** آیا سفارش در یکی از چهار وضعیت اجرایی است؟ */
@@ -81,7 +83,7 @@ const isActiveExecutionOrder = (o: any) => {
   return ['approved', 'pending_execution', 'in_progress'].includes(o.status);
 };
 
-export default function HybridGlobe({ onClose, activeExecutionOnly = false, embedded = false }: HybridGlobeProps) {
+export default function HybridGlobe({ onClose, activeExecutionOnly = false, embedded = false, onViewOrderDetails }: HybridGlobeProps) {
   const isImpersonating = useIsImpersonating();
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -3372,6 +3374,12 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           allProjectsAtLocation={mobileSelectedLocationProjects}
           hideFinancials={activeExecutionOnly}
           managerView={activeExecutionOnly}
+          onViewOrderDetails={(orderId) => {
+            setMobileSelectedProject(null);
+            setMobileSelectedLocationProjects([]);
+            setSelectedProject(null);
+            onViewOrderDetails?.(orderId);
+          }}
           onClose={() => {
             setMobileSelectedProject(null);
             setMobileSelectedLocationProjects([]);

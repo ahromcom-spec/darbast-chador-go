@@ -5956,7 +5956,11 @@ export default function DailyReportModule() {
           {/* Execution Location (Globe) Tab */}
           <TabsContent value="execution-location" className="mt-6">
             {activeTab === 'execution-location' && (
-              <HybridGlobe activeExecutionOnly onClose={closeExecutionMap} />
+              <HybridGlobe
+                activeExecutionOnly
+                onClose={closeExecutionMap}
+                onViewOrderDetails={(orderId) => fetchOrderDetails(orderId)}
+              />
             )}
           </TabsContent>
         </Tabs>
