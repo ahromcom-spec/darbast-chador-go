@@ -6,6 +6,7 @@ import { useServiceTypesWithSubcategories, Subcategory } from '@/hooks/useServic
 import { Layers, Loader2, ChevronDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ServiceTypeSelectionDialogProps {
   open: boolean;
@@ -34,6 +35,26 @@ export function ServiceTypeSelectionDialog({
   const [isNavigating, setIsNavigating] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
   const [openLevel, setOpenLevel] = useState<number | null>(null);
+  const [locationInfo, setLocationInfo] = useState<any>(null);
+
+  // بارگذاری اطلاعات آدرس لوکیشن برای پیش‌پر کردن فرم
+  useEffect(() => {
+    if (!open || !locationId) {
+      setLocationInfo(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('locations')
+        .select('id, address_line, lat, lng, province_id, district_id, provinces(name), districts(name)')
+        .eq('id', locationId)
+        .maybeSingle();
+      if (!cancelled) setLocationInfo(data || null);
+    })();
+    return () => { cancelled = true; };
+  }, [open, locationId]);
+
 
   useEffect(() => {
     if (open) {
@@ -93,9 +114,17 @@ export function ServiceTypeSelectionDialog({
         subcategoryId: leaf.id,
         subcategoryCode: leaf.code || '',
         returnToMap: true,
+        locationAddress: locationInfo?.address_line || '',
+        lat: locationInfo?.lat ?? null,
+        lng: locationInfo?.lng ?? null,
+        provinceId: locationInfo?.province_id ?? null,
+        districtId: locationInfo?.district_id ?? null,
+        provinceName: locationInfo?.provinces?.name || '',
+        districtName: locationInfo?.districts?.name || '',
       },
     });
-  }, [isNavigating, navigate, onOpenChange, locationId, selectedServiceType]);
+  }, [isNavigating, navigate, onOpenChange, locationId, selectedServiceType, locationInfo]);
+
 
   const handleSelectServiceType = useCallback((typeId: string) => {
     setSelectedServiceType(typeId);
