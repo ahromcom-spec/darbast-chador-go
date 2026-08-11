@@ -283,6 +283,11 @@ export function MobileProjectPanel({
   };
 
   const handleViewOrderDetail = (orderId: string) => {
+    // ورود از نقشه لوکیشن اجرایی (گزارش روزانه): فرم سفارش مشابه دید مشتری، بدون مبالغ
+    if (hideFinancials) {
+      navigate(`/user/orders/${orderId}?hideAmounts=1`);
+      return;
+    }
     if (managerView) {
       // مدیران به جزئیات سفارش در ماژول مدیریت سفارشات هدایت می‌شوند
       navigate(`/executive/all-orders?orderId=${orderId}`);
