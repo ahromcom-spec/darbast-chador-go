@@ -268,13 +268,13 @@ const Home = () => {
                   setSelectedServiceType('37726fa7-7679-42f0-b893-4893b654e694');
                   setSelectedSubcategory('10');
                 }}
-                className="group relative w-full mt-3 overflow-hidden rounded-xl border-2 border-amber-500 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-400 px-4 py-3 sm:py-4 shadow-lg hover:shadow-2xl hover:border-amber-600 transition-all duration-300 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-amber-400/60"
+                className="group relative w-full overflow-hidden rounded-xl border-2 border-amber-500 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-400 px-4 py-2 sm:py-3 shadow-lg hover:shadow-2xl hover:border-amber-600 transition-all duration-300 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-amber-400/60"
                 aria-label="استعلام قیمت و ثبت سفارش خدمات اجرای داربست با اجناس"
                 data-tour="quick-scaffolding-order"
               >
                 <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                 <div className="relative flex items-center justify-between gap-3">
-                  <span className="flex items-center justify-center w-[120px] h-[120px] shrink-0 overflow-hidden">
+                  <span className="flex items-center justify-center w-[72px] h-[72px] sm:w-[80px] sm:h-[80px] shrink-0 overflow-hidden">
                     <img src={scaffoldingIcon.url} alt="داربست فلزی" className="w-full h-full object-contain" loading="lazy" />
                   </span>
                   <div className="flex-1 text-center">
