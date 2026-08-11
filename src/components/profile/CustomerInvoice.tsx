@@ -366,7 +366,7 @@ export const CustomerInvoice = () => {
             </div>
             <Button onClick={openPayAllDialog} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
               <CreditCard className="h-4 w-4" />
-              پرداخت کل بدهی
+              پرداخت از صورتحساب کلی
             </Button>
           </CardContent>
         </Card>
