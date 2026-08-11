@@ -51,7 +51,12 @@ export function buildOrderStages(order: any): StageRow[] {
   ];
 }
 
-export function buildOrderSheetHtml(order: any, logs: DailyLogEntry[] = [], notes?: any): string {
+export interface OrderSheetOptions {
+  hidePrices?: boolean;
+}
+
+export function buildOrderSheetHtml(order: any, logs: DailyLogEntry[] = [], notes?: any, options: OrderSheetOptions = {}): string {
+  const hidePrices = !!options.hidePrices;
   const dims: any[] = Array.isArray(notes?.dimensions) ? notes.dimensions : [];
   const calc = calculateTotalFromDimensions(dims, notes?.columnHeight);
   const stages = buildOrderStages(order);
