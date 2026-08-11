@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { calculateTotalFromDimensions } from '@/lib/dimensionCalculations';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard, RotateCcw, AlertTriangle, Clock, Lock, Unlock } from 'lucide-react';
+import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard, RotateCcw, AlertTriangle, Clock, Lock, Unlock, Printer } from 'lucide-react';
+import { openOrderSheet } from '@/lib/orderExecutionSheet';
+
 import { useDateFinalizationLock } from '@/hooks/useDateFinalizationLock';
 import { useDailyReportBulkDelete } from '@/hooks/useDailyReportBulkDelete';
 import { useDailyReportDateCache } from '@/hooks/useDailyReportDateCache';
@@ -5976,21 +5978,34 @@ export default function DailyReportModule() {
               </div>
               <div className="flex items-center gap-2">
                 {selectedOrderDetails && (
-                  <Button 
+                  <Button
                     variant="default"
                     size="sm"
-                    onClick={() => {
-                      setOrderDetailsDialogOpen(false);
-                      // Navigate to order detail with properly encoded return path including report date
-                      const returnPath = encodeURIComponent(`/daily-report?date=${reportDate}`);
-                      navigate(`/orders/${selectedOrderDetails.id}?returnTo=${returnPath}`);
+                    onClick={async () => {
+                      try {
+                        const { data: logs } = await supabase
+                          .from('order_daily_logs')
+                          .select('report_date, activity_description, team_name')
+                          .eq('order_id', selectedOrderDetails.id)
+                          .order('report_date', { ascending: true });
+                        const ok = openOrderSheet(
+                          selectedOrderDetails,
+                          logs || [],
+                          parseOrderNotes(selectedOrderDetails.notes)
+                        );
+                        if (!ok) toast.error('اجازه باز کردن پنجره جدید داده نشد');
+                      } catch (e) {
+                        console.error(e);
+                        toast.error('خطا در تهیه فاکتور');
+                      }
                     }}
-                    className="gap-2"
+                    className="gap-2 bg-blue-600 hover:bg-blue-700"
                   >
-                    <ExternalLink className="h-4 w-4" />
-                    مشاهده و ویرایش کامل
+                    <Printer className="h-4 w-4" />
+                    فاکتور پرینت و اشتراک‌گذاری
                   </Button>
                 )}
+
                 <Button
                   variant="destructive"
                   size="default"
