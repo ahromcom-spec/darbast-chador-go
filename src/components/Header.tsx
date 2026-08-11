@@ -475,7 +475,7 @@ const Header = memo(() => {
                       className="cursor-pointer gap-2 py-2 px-3 text-sm text-red-600 focus:text-red-600"
                     >
                       <LogOut className="h-4 w-4" />
-                      <span>خروج</span>
+                      <span>خروج از حساب</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -593,7 +593,7 @@ const Header = memo(() => {
                       className="cursor-pointer gap-2 py-2 px-3 text-sm text-red-600 focus:text-red-600"
                     >
                       <LogOut className="h-4 w-4" />
-                      <span>خروج</span>
+                      <span>خروج از حساب</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
