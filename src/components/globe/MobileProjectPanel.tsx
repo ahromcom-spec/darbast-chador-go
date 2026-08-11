@@ -95,6 +95,8 @@ interface MobileProjectPanelProps {
   hideFinancials?: boolean;
   /** نمای مدیریتی: جزئیات سفارش از مسیر مدیریت باز شود نه پنل مشتری */
   managerView?: boolean;
+  /** نمایش جزئیات سفارش در همان نمای گزارش روزانه، بدون خروج از نقشه */
+  onViewOrderDetails?: (orderId: string) => void;
 }
 
 
@@ -243,6 +245,7 @@ export function MobileProjectPanel({
   onViewVideo,
   hideFinancials = false,
   managerView = false,
+  onViewOrderDetails,
 }: MobileProjectPanelProps) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -283,9 +286,10 @@ export function MobileProjectPanel({
   };
 
   const handleViewOrderDetail = (orderId: string) => {
-    // ورود از نقشه لوکیشن اجرایی (گزارش روزانه): فرم سفارش مشابه دید مشتری، بدون مبالغ
-    if (hideFinancials) {
-      navigate(`/user/orders/${orderId}?hideAmounts=1`);
+    // ورود از نقشه گزارش روزانه: همان پنجره جزئیات گزارش باز می‌شود تا
+    // مدیر اجرایی بدون نیاز به مالکیت مشتری، اطلاعات غیرمالی سفارش را ببیند.
+    if (hideFinancials && onViewOrderDetails) {
+      onViewOrderDetails(orderId);
       return;
     }
     if (managerView) {
