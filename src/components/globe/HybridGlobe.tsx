@@ -4,17 +4,6 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ArrowRight, MapPin, X, Plus, Camera, Video, Search, Satellite, Map as MapIcon } from 'lucide-react';
 import { MapSearchBox } from '@/components/locations/MapSearchBox';
-// بررسی وجود بنر impersonation برای تنظیم موقعیت دکمه بازگشت
-const useIsImpersonating = () => {
-  const [isImpersonating, setIsImpersonating] = useState(false);
-  useEffect(() => {
-    const check = () => setIsImpersonating(!!localStorage.getItem('original_admin_session'));
-    check();
-    window.addEventListener('storage', check);
-    return () => window.removeEventListener('storage', check);
-  }, []);
-  return isImpersonating;
-};
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
