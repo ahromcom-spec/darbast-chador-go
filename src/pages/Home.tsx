@@ -282,7 +282,7 @@ const Home = () => {
                       خدمات اجرای داربست با اجناس
                     </div>
                     <div className="text-[11px] sm:text-xs text-amber-900 mt-0.5">
-                      استعلام قیمت و ثبت سفارش
+                      استعلام قیمت و ثبت سفارش کنید
                     </div>
                   </div>
                   <span className="text-amber-950 text-lg sm:text-xl shrink-0 group-hover:-translate-x-1 transition-transform">
