@@ -301,16 +301,21 @@ export const RecentActivities: React.FC = () => {
                 {isVideoFile(item) ? (
                   <div className="w-full h-full bg-muted relative">
                     <video
-                      src={getMediaUrl(item.file_path) + '#t=0.5'}
+                      src={getMediaUrl(item.file_path)}
                       className="w-full h-full object-cover"
                       muted
+                      autoPlay
+                      loop
                       playsInline
                       preload="metadata"
+                      disableRemotePlayback
                       onLoadedData={(e) => {
                         const video = e.target as HTMLVideoElement;
-                        video.currentTime = 0.5;
+                        video.muted = true;
+                        video.play().catch(() => {});
                       }}
                     />
+
                     <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-blue-500/80 flex items-center justify-center">
                       <Play className="h-2 w-2 text-white fill-white" />
                     </div>
