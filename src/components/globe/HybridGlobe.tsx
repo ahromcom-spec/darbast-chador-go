@@ -84,7 +84,7 @@ const isActiveExecutionOrder = (o: any) => {
 };
 
 export default function HybridGlobe({ onClose, activeExecutionOnly = false, embedded = false, onViewOrderDetails }: HybridGlobeProps) {
-  const isImpersonating = useIsImpersonating();
+  
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
