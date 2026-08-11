@@ -9,6 +9,7 @@ import usePWAInstall from '@/hooks/usePWAInstall';
 import { useServiceTypesWithSubcategories } from '@/hooks/useServiceTypesWithSubcategories';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
+import scaffoldingIcon from '@/assets/scaffolding-icon.png.asset.json';
 
 import { RecentActivities } from '@/components/home/RecentActivities';
 import { ModuleShortcuts } from '@/components/home/ModuleShortcuts';
@@ -273,8 +274,8 @@ const Home = () => {
               >
                 <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                 <div className="relative flex items-center justify-between gap-3">
-                  <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/80 border border-amber-600 text-amber-900 text-xl shrink-0">
-                    🏗️
+                  <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/80 border border-amber-600 shrink-0 overflow-hidden">
+                    <img src={scaffoldingIcon.url} alt="داربست فلزی" className="w-full h-full object-contain p-0.5" loading="lazy" />
                   </span>
                   <div className="flex-1 text-center">
                     <div className="text-sm sm:text-base font-bold text-amber-950 leading-tight">
