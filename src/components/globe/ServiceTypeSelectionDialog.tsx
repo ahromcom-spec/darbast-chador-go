@@ -6,6 +6,7 @@ import { useServiceTypesWithSubcategories, Subcategory } from '@/hooks/useServic
 import { Layers, Loader2, ChevronDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ServiceTypeSelectionDialogProps {
   open: boolean;
