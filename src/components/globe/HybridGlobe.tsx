@@ -43,6 +43,7 @@ interface ProjectOrder {
   id: string;
   code: string;
   status: string;
+  execution_stage?: string | null;
   address: string;
   created_at: string;
   approved_at?: string | null;
