@@ -755,6 +755,31 @@ export default function DailyReportModule() {
     localStorage.setItem('dailyReportActiveTab', activeTab);
   }, [activeTab]);
 
+  // بستن نقشه تمام‌صفحه لوکیشن اجرایی و بازگشت به ماژول
+  const closeExecutionMap = useCallback(() => {
+    if ((window.history.state as any)?.execMap) {
+      window.history.back();
+    } else {
+      setActiveTab('new-report');
+    }
+  }, []);
+
+  // نقشه تمام‌صفحه: با کلید بازگشت گوشی/مرورگر یک مرحله به ماژول برگردیم
+  useEffect(() => {
+    if (activeTab !== 'execution-location') return;
+    if (!(window.history.state as any)?.execMap) {
+      window.history.pushState({ execMap: true }, '');
+    }
+    const onPop = () => setActiveTab('new-report');
+    window.addEventListener('popstate', onPop);
+    return () => {
+      window.removeEventListener('popstate', onPop);
+      if ((window.history.state as any)?.execMap) {
+        window.history.back();
+      }
+    };
+  }, [activeTab]);
+
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isInitialLoadRef = useRef(true);
   // جلوگیری از اجرای هم‌زمان auto-save (علت اصلی تکثیر ردیف‌ها بعد از رفرش/بستن)
@@ -5931,7 +5956,7 @@ export default function DailyReportModule() {
           {/* Execution Location (Globe) Tab */}
           <TabsContent value="execution-location" className="mt-6">
             {activeTab === 'execution-location' && (
-              <HybridGlobe activeExecutionOnly embedded onClose={() => setActiveTab('new-report')} />
+              <HybridGlobe activeExecutionOnly onClose={closeExecutionMap} />
             )}
           </TabsContent>
         </Tabs>
