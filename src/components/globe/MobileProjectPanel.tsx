@@ -93,7 +93,10 @@ interface MobileProjectPanelProps {
   onViewVideo: (url: string) => void;
   /** مخفی‌کردن مبالغ و اطلاعات مالی (برای مدیران و سرپرستان اجرایی) */
   hideFinancials?: boolean;
+  /** نمای مدیریتی: جزئیات سفارش از مسیر مدیریت باز شود نه پنل مشتری */
+  managerView?: boolean;
 }
+
 
 type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 
