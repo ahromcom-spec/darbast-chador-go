@@ -361,6 +361,9 @@ export function useSiteAnalytics() {
         user_agent: navigator.userAgent,
         ip_address: ipAddress,
         phone_number: phoneNumber,
+        is_impersonation: !!getImpersonatorId(),
+        impersonator_user_id: getImpersonatorId(),
+
         ...additionalData
       };
 
