@@ -225,7 +225,8 @@ const Header = memo(() => {
                   className="h-10 sm:h-11 w-auto object-contain"
                   loading="eager"
                 />
-              </div>
+              </Link>
+
 
               {/* Company Name - Center */}
               <div className="flex justify-center">
