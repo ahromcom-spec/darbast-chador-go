@@ -268,7 +268,7 @@ const Home = () => {
                   setSelectedSubcategory('10');
                 }}
                 className="group relative w-full mt-3 overflow-hidden rounded-xl border-2 border-amber-500 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-400 px-4 py-3 sm:py-3.5 shadow-lg hover:shadow-2xl hover:border-amber-600 transition-all duration-300 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-amber-400/60"
-                aria-label="استعلام قیمت و ثبت سفارش خدمات اجرای داربست به همراه اجناس"
+                aria-label="استعلام قیمت و ثبت سفارش خدمات اجرای داربست با اجناس"
                 data-tour="quick-scaffolding-order"
               >
                 <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
@@ -278,7 +278,7 @@ const Home = () => {
                   </span>
                   <div className="flex-1 text-center">
                     <div className="text-sm sm:text-base font-bold text-amber-950 leading-tight">
-                      خدمات اجرای داربست به همراه اجناس
+                      خدمات اجرای داربست با اجناس
                     </div>
                     <div className="text-[11px] sm:text-xs text-amber-900 mt-0.5">
                       استعلام قیمت و ثبت سفارش
