@@ -9,6 +9,7 @@ import usePWAInstall from '@/hooks/usePWAInstall';
 import { useServiceTypesWithSubcategories } from '@/hooks/useServiceTypesWithSubcategories';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useAuth } from '@/contexts/AuthContext';
+import scaffoldingIcon from '@/assets/scaffolding-icon.png.asset.json';
 
 import { RecentActivities } from '@/components/home/RecentActivities';
 import { ModuleShortcuts } from '@/components/home/ModuleShortcuts';
