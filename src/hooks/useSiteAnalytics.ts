@@ -398,11 +398,83 @@ export function useSiteAnalytics() {
     createSessionImmediately();
   }, [createSessionImmediately]);
 
-  // Track page views on route change
+  // Track page views on route change + how long the previous page was open
   useEffect(() => {
     pageViewCount.current += 1;
-    trackEvent('page_view');
+    const prev = lastPageRef.current;
+    const now = Date.now();
+    if (prev && prev.path !== location.pathname) {
+      trackEvent('page_leave', {
+        details: {
+          page: prev.path,
+          page_title: prev.title,
+          seconds_on_page: Math.max(1, Math.round((now - prev.at) / 1000)),
+          next_page: location.pathname,
+        },
+      });
+    }
+    lastPageRef.current = { path: location.pathname, title: document.title, at: now };
+    trackEvent('page_view', { details: { page: location.pathname, page_title: document.title } });
   }, [location.pathname, trackEvent]);
+
+  // Track clicks (which buttons/links were pressed) and typed text (non-sensitive fields)
+  useEffect(() => {
+    let lastClick = 0;
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      const el = target?.closest('button, a, [role="button"], [role="tab"]') as HTMLElement | null;
+      if (!el) return;
+      const now = Date.now();
+      if (now - lastClick < 400) return;
+      lastClick = now;
+      const label =
+        (el.getAttribute('aria-label') || el.textContent || el.getAttribute('title') || '')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 80) || el.tagName.toLowerCase();
+      trackEvent('click', {
+        details: {
+          label,
+          element: el.tagName.toLowerCase(),
+          href: (el as HTMLAnchorElement).href || null,
+          page: window.location.pathname,
+        },
+      });
+    };
+
+    const timers = new Map<Element, number>();
+    const onInput = (e: Event) => {
+      const el = e.target as HTMLInputElement | HTMLTextAreaElement | null;
+      if (!el || !('value' in el)) return;
+      const tag = el.tagName.toLowerCase();
+      if (tag !== 'input' && tag !== 'textarea') return;
+      if (isSensitiveField(el)) return;
+      const existing = timers.get(el);
+      if (existing) window.clearTimeout(existing);
+      const t = window.setTimeout(() => {
+        timers.delete(el);
+        const value = String(el.value || '').trim();
+        if (!value) return;
+        trackEvent('input_typed', {
+          details: {
+            field: fieldLabel(el),
+            value: value.slice(0, 200),
+            page: window.location.pathname,
+          },
+        });
+      }, 1500);
+      timers.set(el, t);
+    };
+
+    document.addEventListener('click', onClick, true);
+    document.addEventListener('input', onInput, true);
+    return () => {
+      document.removeEventListener('click', onClick, true);
+      document.removeEventListener('input', onInput, true);
+      timers.forEach((t) => window.clearTimeout(t));
+    };
+  }, [trackEvent]);
+
 
   // Track login/logout events
   useEffect(() => {
