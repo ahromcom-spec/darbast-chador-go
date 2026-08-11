@@ -5976,21 +5976,34 @@ export default function DailyReportModule() {
               </div>
               <div className="flex items-center gap-2">
                 {selectedOrderDetails && (
-                  <Button 
+                  <Button
                     variant="default"
                     size="sm"
-                    onClick={() => {
-                      setOrderDetailsDialogOpen(false);
-                      // Navigate to order detail with properly encoded return path including report date
-                      const returnPath = encodeURIComponent(`/daily-report?date=${reportDate}`);
-                      navigate(`/orders/${selectedOrderDetails.id}?returnTo=${returnPath}`);
+                    onClick={async () => {
+                      try {
+                        const { data: logs } = await supabase
+                          .from('order_daily_logs')
+                          .select('report_date, activity_description, team_name')
+                          .eq('order_id', selectedOrderDetails.id)
+                          .order('report_date', { ascending: true });
+                        const ok = openOrderSheet(
+                          selectedOrderDetails,
+                          logs || [],
+                          parseOrderNotes(selectedOrderDetails.notes)
+                        );
+                        if (!ok) toast.error('اجازه باز کردن پنجره جدید داده نشد');
+                      } catch (e) {
+                        console.error(e);
+                        toast.error('خطا در تهیه فاکتور');
+                      }
                     }}
-                    className="gap-2"
+                    className="gap-2 bg-blue-600 hover:bg-blue-700"
                   >
-                    <ExternalLink className="h-4 w-4" />
-                    مشاهده و ویرایش کامل
+                    <Printer className="h-4 w-4" />
+                    فاکتور پرینت و اشتراک‌گذاری
                   </Button>
                 )}
+
                 <Button
                   variant="destructive"
                   size="default"
