@@ -1000,6 +1000,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             id: order.id,
             code: order.code,
             status: order.status,
+            execution_stage: order.execution_stage ?? null,
             address: order.address,
             created_at: order.created_at,
             approved_at: order.approved_at || null,
@@ -3368,6 +3369,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
         <MobileProjectPanel
           project={mobileSelectedProject}
           allProjectsAtLocation={mobileSelectedLocationProjects}
+          hideFinancials={activeExecutionOnly}
           onClose={() => {
             setMobileSelectedProject(null);
             setMobileSelectedLocationProjects([]);
