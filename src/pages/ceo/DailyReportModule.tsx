@@ -752,7 +752,7 @@ export default function DailyReportModule() {
 
   // Persist active tab to localStorage
   useEffect(() => {
-    localStorage.setItem('dailyReportActiveTab', activeTab);
+    if (activeTab !== 'execution-location') localStorage.setItem('dailyReportActiveTab', activeTab);
   }, [activeTab]);
 
   // بستن نقشه تمام‌صفحه لوکیشن اجرایی و بازگشت به ماژول
