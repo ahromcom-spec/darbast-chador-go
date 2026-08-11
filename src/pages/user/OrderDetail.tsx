@@ -263,6 +263,8 @@ export default function OrderDetail() {
   // Get return path from URL params
   const returnTo = searchParams.get('returnTo');
   const mediaUpload = searchParams.get('mediaUpload');
+  // مشاهده بدون مبالغ (مثلاً ورود از نقشه لوکیشن اجرایی در ماژول گزارش روزانه)
+  const hideAmounts = searchParams.get('hideAmounts') === '1';
 
   // خواندن سطح دسترسی کاربر فعلی در صورتی که همکار سفارش باشد
   useEffect(() => {
@@ -296,7 +298,7 @@ export default function OrderDetail() {
   }, [id, user?.id]);
 
   // مالک سفارش همه دسترسی‌ها را دارد؛ همکار طبق اختیارات تعیین‌شده
-  const canViewFinancials = !myCollabPerms || myCollabPerms.can_view_financials;
+  const canViewFinancials = !hideAmounts && (!myCollabPerms || myCollabPerms.can_view_financials);
   const canManageOrder = !myCollabPerms || myCollabPerms.can_manage_order;
 
    
@@ -1446,7 +1448,7 @@ export default function OrderDetail() {
                             <span className="text-sm text-muted-foreground">تعداد آیتم‌ها</span>
                             <span className="font-bold">{Number(parsedNotes.items.length).toLocaleString('fa-IR')} مورد</span>
                           </div>
-                          {parsedNotes.estimated_price ? (
+                          {canViewFinancials && parsedNotes.estimated_price ? (
                             <div className="p-3 bg-emerald-500/10 rounded-lg flex items-center justify-between">
                               <span className="text-sm text-muted-foreground">برآورد هزینه</span>
                               <span className="font-bold text-emerald-700">
@@ -1609,16 +1611,18 @@ export default function OrderDetail() {
                                   <span className="text-xs text-muted-foreground">متراژ کل</span>
                                   <span className="font-bold">{area} <span className="text-xs font-normal">{unit}</span></span>
                                 </div>
+                                {canViewFinancials && (
                                 <div className="space-y-1 text-xs border-t pt-2">
                                   <div className="flex justify-between"><span className="text-muted-foreground">قیمت اجرا:</span><span>{Number(item.baseNoDistance || 0).toLocaleString('fa-IR')} تومان</span></div>
                                   <div className="flex justify-between"><span className="text-muted-foreground">سهم حمل و نقل:</span><span>{Number(item.transportShare || 0).toLocaleString('fa-IR')} تومان</span></div>
                                   <div className="flex justify-between font-bold text-sm pt-1 border-t"><span>جمع این داربست:</span><span className="text-primary">{Number(item.finalPrice || 0).toLocaleString('fa-IR')} تومان</span></div>
                                 </div>
+                                )}
                               </section>
                             );
                           })}
                         </div>
-                        {parsedNotes.multi_summary && (
+                        {canViewFinancials && parsedNotes.multi_summary && (
                           <div className="p-4 rounded-xl bg-gradient-to-l from-primary/10 to-primary/5 border-2 border-primary/30 space-y-2">
                             <div className="flex justify-between text-sm"><span className="text-muted-foreground">جمع اجرا (بدون حمل):</span><span className="font-medium">{Number(parsedNotes.multi_summary.baseSum || 0).toLocaleString('fa-IR')} تومان</span></div>
                             <div className="flex justify-between text-sm"><span className="text-muted-foreground">هزینه حمل و نقل مشترک ({parsedNotes.multi_summary.distancePct}%):</span><span className="font-medium">{Number(parsedNotes.multi_summary.sharedTransport || 0).toLocaleString('fa-IR')} تومان</span></div>
@@ -1649,6 +1653,7 @@ export default function OrderDetail() {
                                   {it.area_m2 ? <span>مساحت: {Number(it.area_m2).toLocaleString('fa-IR')} م²</span> : null}
                                 </div>
                               )}
+                              {canViewFinancials && (
                               <div className="flex items-center justify-between text-xs">
                                 {it.unit_price ? (
                                   <span className="text-muted-foreground">قیمت واحد: {Number(it.unit_price).toLocaleString('fa-IR')} تومان</span>
@@ -1657,6 +1662,7 @@ export default function OrderDetail() {
                                   <span className="font-semibold">{Number(it.total_price).toLocaleString('fa-IR')} تومان</span>
                                 ) : null}
                               </div>
+                              )}
                             </div>
                           ))}
                         </div>
