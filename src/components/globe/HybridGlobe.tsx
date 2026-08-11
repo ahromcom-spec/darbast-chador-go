@@ -78,7 +78,7 @@ const isActiveExecutionOrder = (o: any) => {
   if (o.execution_stage) {
     return o.execution_stage === 'awaiting_collection' || o.execution_stage === 'in_collection';
   }
-  return ['approved', 'pending_execution', 'scheduled', 'in_progress'].includes(o.status);
+  return ['approved', 'pending_execution', 'in_progress'].includes(o.status);
 };
 
 export default function HybridGlobe({ onClose, activeExecutionOnly = false, embedded = false }: HybridGlobeProps) {
