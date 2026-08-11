@@ -171,8 +171,8 @@ export function buildOrderSheetHtml(order: any, logs: DailyLogEntry[] = [], note
 </body></html>`;
 }
 
-export function openOrderSheet(order: any, logs: DailyLogEntry[] = [], notes?: any) {
-  const html = buildOrderSheetHtml(order, logs, notes);
+export function openOrderSheet(order: any, logs: DailyLogEntry[] = [], notes?: any, options: OrderSheetOptions = {}) {
+  const html = buildOrderSheetHtml(order, logs, notes, options);
   const win = window.open('', '_blank');
   if (!win) return false;
   win.document.open();
