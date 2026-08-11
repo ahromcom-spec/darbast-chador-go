@@ -34,6 +34,7 @@ interface ProjectOrder {
   id: string;
   code: string;
   status: string;
+  execution_stage?: string | null;
   address: string;
   created_at: string;
   approved_at?: string | null;
@@ -90,6 +91,8 @@ interface MobileProjectPanelProps {
   onAddMedia: (orderId: string) => void;
   onViewImage: (images: string[], index: number) => void;
   onViewVideo: (url: string) => void;
+  /** مخفی‌کردن مبالغ و اطلاعات مالی (برای مدیران و سرپرستان اجرایی) */
+  hideFinancials?: boolean;
 }
 
 type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
@@ -171,10 +174,26 @@ const clampPanelRect = (rect: PanelRect): PanelRect => {
   };
 };
 
+/** مرحله‌ای که سفارش در آن قرار دارد (اولویت با مرحله اجرایی) */
+const getEffectiveStage = (order: { status: string; execution_stage?: string | null }): string => {
+  const stage = order.execution_stage;
+  if (stage && ['awaiting_payment', 'awaiting_collection', 'in_collection', 'collected', 'order_executed'].includes(stage)) {
+    return stage;
+  }
+  return order.status;
+};
+
 const getStatusLabel = (status: string): string => {
   const statusMap: Record<string, string> = {
     pending: 'در انتظار تایید',
-    approved: 'تایید شده',
+    approved: 'در انتظار اجرای سفارش',
+    pending_execution: 'در انتظار اجرای سفارش',
+    scheduled: 'زمان‌بندی شده',
+    paid: 'پرداخت شده',
+    active: 'در جریان',
+    closed: 'بسته شده',
+    rejected: 'رد شده',
+    draft: 'پیش‌نویس',
     in_progress: 'در حال اجرا',
     completed: 'تکمیل شده',
     cancelled: 'لغو شده',
@@ -190,7 +209,14 @@ const getStatusLabel = (status: string): string => {
 const getStatusColor = (status: string): string => {
   const colorMap: Record<string, string> = {
     pending: 'bg-yellow-100 text-yellow-800',
-    approved: 'bg-green-100 text-green-800',
+    approved: 'bg-sky-100 text-sky-800',
+    pending_execution: 'bg-sky-100 text-sky-800',
+    scheduled: 'bg-indigo-100 text-indigo-800',
+    paid: 'bg-green-100 text-green-800',
+    active: 'bg-blue-100 text-blue-800',
+    closed: 'bg-gray-100 text-gray-800',
+    rejected: 'bg-red-100 text-red-800',
+    draft: 'bg-gray-100 text-gray-800',
     in_progress: 'bg-blue-100 text-blue-800',
     completed: 'bg-emerald-100 text-emerald-800',
     cancelled: 'bg-red-100 text-red-800',
@@ -212,6 +238,7 @@ export function MobileProjectPanel({
   onAddMedia,
   onViewImage,
   onViewVideo,
+  hideFinancials = false,
 }: MobileProjectPanelProps) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -613,8 +640,8 @@ export function MobileProjectPanel({
                             <span className="text-xs font-mono text-muted-foreground">
                               #{order.code}
                             </span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(order.status)}`}>
-                              {getStatusLabel(order.status)}
+                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${getStatusColor(getEffectiveStage(order))}`}>
+                              مرحله: {getStatusLabel(getEffectiveStage(order))}
                             </span>
                           </div>
                         </div>
