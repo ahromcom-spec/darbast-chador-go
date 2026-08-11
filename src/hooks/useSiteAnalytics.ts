@@ -275,7 +275,9 @@ export function useSiteAnalytics() {
         user_agent: navigator.userAgent,
         ip_address: ipAddress,
         phone_number: phoneNumber,
-        visited_pages: [currentPage]
+        visited_pages: [currentPage],
+        is_impersonation: !!getImpersonatorId(),
+        impersonator_user_id: getImpersonatorId(),
       });
 
       // Log every visit in the CEO activity-log module (works for guests too),
@@ -287,12 +289,8 @@ export function useSiteAnalytics() {
           referrer: document.referrer || null,
           sessionId: sessionId.current,
           deviceId: getDeviceId(),
-          impersonatorUserId: (() => {
-            try {
-              const raw = localStorage.getItem('original_admin_session');
-              return raw ? (JSON.parse(raw)?.user_id ?? null) : null;
-            } catch { return null; }
-          })(),
+          impersonatorUserId: getImpersonatorId(),
+
 
           deviceType: getDeviceType(),
           ip: ipAddress,
