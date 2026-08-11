@@ -34,6 +34,26 @@ export function ServiceTypeSelectionDialog({
   const [isNavigating, setIsNavigating] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
   const [openLevel, setOpenLevel] = useState<number | null>(null);
+  const [locationInfo, setLocationInfo] = useState<any>(null);
+
+  // بارگذاری اطلاعات آدرس لوکیشن برای پیش‌پر کردن فرم
+  useEffect(() => {
+    if (!open || !locationId) {
+      setLocationInfo(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('locations')
+        .select('id, address_line, lat, lng, province_id, district_id, provinces(name), districts(name)')
+        .eq('id', locationId)
+        .maybeSingle();
+      if (!cancelled) setLocationInfo(data || null);
+    })();
+    return () => { cancelled = true; };
+  }, [open, locationId]);
+
 
   useEffect(() => {
     if (open) {
