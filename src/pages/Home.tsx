@@ -330,7 +330,15 @@ const Home = () => {
             <Suspense fallback={null}>
               <PWAInstallBanner />
             </Suspense>
+
+            {/* فاصله انتهایی برای جلوگیری از بریده شدن محتوا زیر فوتر ثابت (خصوصاً در حالت نصب‌شده PWA) */}
+            <div
+              aria-hidden="true"
+              className="h-24 sm:h-28"
+              style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+            />
           </article>
+
         </main>
         
 
