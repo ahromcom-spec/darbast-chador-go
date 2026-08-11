@@ -5991,7 +5991,8 @@ export default function DailyReportModule() {
                         const ok = openOrderSheet(
                           selectedOrderDetails,
                           logs || [],
-                          parseOrderNotes(selectedOrderDetails.notes)
+                          parseOrderNotes(selectedOrderDetails.notes),
+                          { hidePrices: true }
                         );
                         if (!ok) toast.error('اجازه باز کردن پنجره جدید داده نشد');
                       } catch (e) {
