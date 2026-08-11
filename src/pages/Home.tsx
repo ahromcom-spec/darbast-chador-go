@@ -273,9 +273,9 @@ const Home = () => {
                 data-tour="quick-scaffolding-order"
               >
                 <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                <div className="relative flex items-center justify-between gap-3 sm:gap-4">
-                  <span className="text-amber-950 text-lg sm:text-xl shrink-0 group-hover:translate-x-1 transition-transform">
-                    ←
+                <div className="relative flex items-center justify-between gap-3">
+                  <span className="flex items-center justify-center w-[120px] h-[120px] shrink-0 overflow-hidden">
+                    <img src={scaffoldingIcon.url} alt="داربست فلزی" className="w-full h-full object-contain" loading="lazy" />
                   </span>
                   <div className="flex-1 text-center">
                     <div className="text-sm sm:text-base font-bold text-amber-950 leading-tight">
@@ -285,8 +285,8 @@ const Home = () => {
                       استعلام قیمت و ثبت سفارش
                     </div>
                   </div>
-                  <span className="flex items-center justify-center w-[120px] h-[120px] shrink-0 overflow-hidden">
-                    <img src={scaffoldingIcon.url} alt="داربست فلزی" className="w-full h-full object-contain" loading="lazy" />
+                  <span className="text-amber-950 text-lg sm:text-xl shrink-0 group-hover:-translate-x-1 transition-transform">
+                    ←
                   </span>
                 </div>
               </button>
