@@ -4838,12 +4838,15 @@ export type Database = {
           country: string | null
           created_at: string
           data_transferred_bytes: number | null
+          details: Json
           device_model: string | null
           device_type: string | null
           entry_page: string | null
           event_type: string
           id: string
+          impersonator_user_id: string | null
           ip_address: unknown
+          is_impersonation: boolean
           is_logged_in: boolean | null
           language: string | null
           os_name: string | null
@@ -4872,12 +4875,15 @@ export type Database = {
           country?: string | null
           created_at?: string
           data_transferred_bytes?: number | null
+          details?: Json
           device_model?: string | null
           device_type?: string | null
           entry_page?: string | null
           event_type: string
           id?: string
+          impersonator_user_id?: string | null
           ip_address?: unknown
+          is_impersonation?: boolean
           is_logged_in?: boolean | null
           language?: string | null
           os_name?: string | null
@@ -4906,12 +4912,15 @@ export type Database = {
           country?: string | null
           created_at?: string
           data_transferred_bytes?: number | null
+          details?: Json
           device_model?: string | null
           device_type?: string | null
           entry_page?: string | null
           event_type?: string
           id?: string
+          impersonator_user_id?: string | null
           ip_address?: unknown
+          is_impersonation?: boolean
           is_logged_in?: boolean | null
           language?: string | null
           os_name?: string | null
@@ -4947,7 +4956,9 @@ export type Database = {
           entry_page: string | null
           exit_page: string | null
           id: string
+          impersonator_user_id: string | null
           ip_address: unknown
+          is_impersonation: boolean
           is_logged_in: boolean | null
           os_name: string | null
           os_version: string | null
@@ -4973,7 +4984,9 @@ export type Database = {
           entry_page?: string | null
           exit_page?: string | null
           id?: string
+          impersonator_user_id?: string | null
           ip_address?: unknown
+          is_impersonation?: boolean
           is_logged_in?: boolean | null
           os_name?: string | null
           os_version?: string | null
@@ -4999,7 +5012,9 @@ export type Database = {
           entry_page?: string | null
           exit_page?: string | null
           id?: string
+          impersonator_user_id?: string | null
           ip_address?: unknown
+          is_impersonation?: boolean
           is_logged_in?: boolean | null
           os_name?: string | null
           os_version?: string | null
