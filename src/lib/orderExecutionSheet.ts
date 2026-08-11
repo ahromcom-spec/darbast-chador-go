@@ -51,7 +51,12 @@ export function buildOrderStages(order: any): StageRow[] {
   ];
 }
 
-export function buildOrderSheetHtml(order: any, logs: DailyLogEntry[] = [], notes?: any): string {
+export interface OrderSheetOptions {
+  hidePrices?: boolean;
+}
+
+export function buildOrderSheetHtml(order: any, logs: DailyLogEntry[] = [], notes?: any, options: OrderSheetOptions = {}): string {
+  const hidePrices = !!options.hidePrices;
   const dims: any[] = Array.isArray(notes?.dimensions) ? notes.dimensions : [];
   const calc = calculateTotalFromDimensions(dims, notes?.columnHeight);
   const stages = buildOrderStages(order);
@@ -127,8 +132,8 @@ export function buildOrderSheetHtml(order: any, logs: DailyLogEntry[] = [], note
       <div><b>مشتری</b>${esc(customer)}</div>
       <div><b>شماره تماس</b>${esc(phone)}</div>
       <div style="grid-column:1/-1"><b>آدرس</b>${esc(address)}</div>
-      <div><b>مبلغ کل</b>${esc(money(order?.total_price))}</div>
-      <div><b>مبلغ پرداخت‌شده</b>${esc(money(order?.total_paid))}</div>
+      ${hidePrices ? '' : `<div><b>مبلغ کل</b>${esc(money(order?.total_price))}</div>
+      <div><b>مبلغ پرداخت‌شده</b>${esc(money(order?.total_paid))}</div>`}
     </div>
   </section>
 
@@ -166,8 +171,8 @@ export function buildOrderSheetHtml(order: any, logs: DailyLogEntry[] = [], note
 </body></html>`;
 }
 
-export function openOrderSheet(order: any, logs: DailyLogEntry[] = [], notes?: any) {
-  const html = buildOrderSheetHtml(order, logs, notes);
+export function openOrderSheet(order: any, logs: DailyLogEntry[] = [], notes?: any, options: OrderSheetOptions = {}) {
+  const html = buildOrderSheetHtml(order, logs, notes, options);
   const win = window.open('', '_blank');
   if (!win) return false;
   win.document.open();
