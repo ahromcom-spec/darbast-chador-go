@@ -268,14 +268,14 @@ const Home = () => {
                   setSelectedServiceType('37726fa7-7679-42f0-b893-4893b654e694');
                   setSelectedSubcategory('10');
                 }}
-                className="group relative w-full mt-3 overflow-hidden rounded-xl border-2 border-amber-500 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-400 px-4 py-3 sm:py-3.5 shadow-lg hover:shadow-2xl hover:border-amber-600 transition-all duration-300 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-amber-400/60"
+                className="group relative w-full mt-3 overflow-hidden rounded-xl border-2 border-amber-500 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-400 px-4 py-3 sm:py-4 shadow-lg hover:shadow-2xl hover:border-amber-600 transition-all duration-300 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-amber-400/60"
                 aria-label="استعلام قیمت و ثبت سفارش خدمات اجرای داربست با اجناس"
                 data-tour="quick-scaffolding-order"
               >
                 <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                <div className="relative flex items-center justify-between gap-3">
-                  <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/80 border border-amber-600 shrink-0 overflow-hidden">
-                    <img src={scaffoldingIcon.url} alt="داربست فلزی" className="w-full h-full object-contain p-0.5" loading="lazy" />
+                <div className="relative flex items-center justify-between gap-3 sm:gap-4">
+                  <span className="text-amber-950 text-lg sm:text-xl shrink-0 group-hover:translate-x-1 transition-transform">
+                    ←
                   </span>
                   <div className="flex-1 text-center">
                     <div className="text-sm sm:text-base font-bold text-amber-950 leading-tight">
@@ -285,8 +285,8 @@ const Home = () => {
                       استعلام قیمت و ثبت سفارش
                     </div>
                   </div>
-                  <span className="text-amber-950 text-lg shrink-0 group-hover:-translate-x-1 transition-transform">
-                    ←
+                  <span className="flex items-center justify-center w-28 h-28 sm:w-30 sm:h-30 shrink-0 overflow-hidden">
+                    <img src={scaffoldingIcon.url} alt="داربست فلزی" className="w-full h-full object-contain" loading="lazy" />
                   </span>
                 </div>
               </button>
