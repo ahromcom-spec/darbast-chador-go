@@ -346,6 +346,14 @@ export const RecentActivities: React.FC = () => {
             ))}
           </div>
         </CardContent>
+
+        {/* View more hint - glowing to indicate the card is clickable */}
+        <div className="px-4 pb-3 pt-0">
+          <div className="flex items-center justify-center gap-1.5 text-sm text-blue-500 animate-pulse">
+            <ChevronLeft className="h-4 w-4" />
+            <span className="font-medium">مشاهده فعالیت‌های بیشتر</span>
+          </div>
+        </div>
       </Card>
 
       {/* Full Gallery Dialog with Infinite Scroll */}
