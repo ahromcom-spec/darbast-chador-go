@@ -243,7 +243,7 @@ export const RecentActivities: React.FC = () => {
         <CardHeader className="pb-2">
           <CardTitle className="text-lg text-blue-400 flex items-center gap-2">
             <Play className="h-5 w-5" />
-            فعالیت‌های اخیر
+            فعالیت‌های اخیر اهرم
           </CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center py-8">
@@ -259,7 +259,7 @@ export const RecentActivities: React.FC = () => {
         <CardHeader className="pb-2">
           <CardTitle className="text-lg text-blue-400 flex items-center gap-2">
             <Play className="h-5 w-5" />
-            فعالیت‌های اخیر
+            فعالیت‌های اخیر اهرم
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center py-8 text-muted-foreground">
@@ -280,7 +280,7 @@ export const RecentActivities: React.FC = () => {
         <CardHeader className="pb-2">
           <CardTitle className="text-lg text-blue-400 flex items-center gap-2">
             <Play className="h-5 w-5" />
-            فعالیت‌های اخیر
+            فعالیت‌های اخیر اهرم
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -344,7 +344,7 @@ export const RecentActivities: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-blue-400 flex items-center gap-2">
               <Play className="h-5 w-5" />
-              فعالیت‌های اخیر
+              فعالیت‌های اخیر اهرم
             </h2>
           </div>
           <InfiniteScrollGallery
