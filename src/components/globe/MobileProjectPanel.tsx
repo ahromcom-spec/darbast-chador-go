@@ -242,6 +242,7 @@ export function MobileProjectPanel({
   onViewImage,
   onViewVideo,
   hideFinancials = false,
+  managerView = false,
 }: MobileProjectPanelProps) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -282,6 +283,11 @@ export function MobileProjectPanel({
   };
 
   const handleViewOrderDetail = (orderId: string) => {
+    if (managerView) {
+      // مدیران به جزئیات سفارش در ماژول مدیریت سفارشات هدایت می‌شوند
+      navigate(`/executive/all-orders?orderId=${orderId}`);
+      return;
+    }
     navigate(`/orders/${orderId}`);
   };
 

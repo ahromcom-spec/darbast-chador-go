@@ -3371,6 +3371,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           project={mobileSelectedProject}
           allProjectsAtLocation={mobileSelectedLocationProjects}
           hideFinancials={activeExecutionOnly}
+          managerView={activeExecutionOnly}
           onClose={() => {
             setMobileSelectedProject(null);
             setMobileSelectedLocationProjects([]);
