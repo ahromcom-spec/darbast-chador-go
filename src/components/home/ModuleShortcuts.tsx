@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { toast } from 'sonner';
 
 const SHORTCUT_COLORS = [
-  { name: 'پیش‌فرض', value: null, bg: 'bg-white/10', text: 'text-white/90', icon: 'text-white/80', border: 'border-white/10' },
+  { name: 'پیش‌فرض', value: null, bg: 'bg-secondary', text: 'text-secondary-foreground', icon: 'text-primary', border: 'border-border' },
   { name: 'آبی', value: 'blue', bg: 'bg-blue-600', text: 'text-white', icon: 'text-white', border: 'border-blue-400' },
   { name: 'سبز', value: 'green', bg: 'bg-emerald-600', text: 'text-white', icon: 'text-white', border: 'border-emerald-400' },
   { name: 'قرمز', value: 'red', bg: 'bg-red-600', text: 'text-white', icon: 'text-white', border: 'border-red-400' },
@@ -19,7 +19,7 @@ const SHORTCUT_COLORS = [
   { name: 'نارنجی', value: 'orange', bg: 'bg-orange-600', text: 'text-white', icon: 'text-white', border: 'border-orange-400' },
   { name: 'زرد', value: 'yellow', bg: 'bg-yellow-500', text: 'text-black', icon: 'text-black', border: 'border-yellow-300' },
   { name: 'صورتی', value: 'pink', bg: 'bg-pink-600', text: 'text-white', icon: 'text-white', border: 'border-pink-400' },
-  { name: 'سفید', value: 'white', bg: 'bg-white', text: 'text-black', icon: 'text-black', border: 'border-gray-300' },
+  { name: 'سفید', value: 'white', bg: 'bg-white', text: 'text-gray-900', icon: 'text-gray-900', border: 'border-gray-400' },
   { name: 'سیاه', value: 'black', bg: 'bg-gray-900', text: 'text-white', icon: 'text-white', border: 'border-gray-600' },
   { name: 'سرمه‌ای', value: 'navy', bg: 'bg-slate-800', text: 'text-white', icon: 'text-white', border: 'border-slate-500' },
   { name: 'قهوه‌ای', value: 'brown', bg: 'bg-amber-900', text: 'text-white', icon: 'text-white', border: 'border-amber-600' },
@@ -202,8 +202,8 @@ export function ModuleShortcuts() {
 
   return (
     <div className="w-full max-w-2xl mx-auto px-4">
-      <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
-        <h3 className="text-white/90 text-sm font-medium mb-3 text-center">میانبرهای ماژول</h3>
+      <div className="bg-card rounded-2xl p-4 border border-border shadow-md">
+        <h3 className="text-foreground text-sm font-semibold mb-3 text-center">میانبرهای ماژول</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 auto-rows-fr">
           {shortcuts.map((s, index) => {
             const colors = getColorClasses(s.color);
@@ -238,7 +238,7 @@ export function ModuleShortcuts() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute top-1 left-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-white/60 hover:text-red-400 hover:bg-red-400/20"
+                    className="absolute top-1 left-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                     onClick={(e) => handleRemove(e, s.module_key)}
                   >
                     <X className="h-3 w-3" />
@@ -247,7 +247,7 @@ export function ModuleShortcuts() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute top-1 right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-white/60 hover:text-white hover:bg-white/20"
+                    className="absolute top-1 right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground hover:bg-muted"
                     onClick={(e) => handleColorToggle(e, s.module_key)}
                   >
                     <Palette className="h-3 w-3" />

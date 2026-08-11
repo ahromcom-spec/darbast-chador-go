@@ -267,24 +267,24 @@ const Home = () => {
                   setSelectedServiceType('37726fa7-7679-42f0-b893-4893b654e694');
                   setSelectedSubcategory('10');
                 }}
-                className="group relative w-full mt-3 overflow-hidden rounded-xl border-2 border-amber-400/40 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 backdrop-blur-xl px-4 py-3 sm:py-3.5 shadow-lg hover:shadow-2xl hover:border-amber-300/70 transition-all duration-300 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-amber-400/60"
+                className="group relative w-full mt-3 overflow-hidden rounded-xl border-2 border-amber-500 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-400 px-4 py-3 sm:py-3.5 shadow-lg hover:shadow-2xl hover:border-amber-600 transition-all duration-300 hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-amber-400/60"
                 aria-label="ثبت سریع سفارش خدمات اجرای داربست به همراه اجناس و حمل و نقل"
                 data-tour="quick-scaffolding-order"
               >
                 <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                 <div className="relative flex items-center justify-between gap-3">
-                  <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-amber-500/30 border border-amber-300/40 text-amber-100 text-xl shrink-0">
+                  <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/80 border border-amber-600 text-amber-900 text-xl shrink-0">
                     🏗️
                   </span>
                   <div className="flex-1 text-center">
-                    <div className="text-sm sm:text-base font-bold text-amber-50 leading-tight">
+                    <div className="text-sm sm:text-base font-bold text-amber-950 leading-tight">
                       خدمات اجرای داربست به همراه اجناس و حمل و نقل
                     </div>
-                    <div className="text-[11px] sm:text-xs text-amber-200/90 mt-0.5">
+                    <div className="text-[11px] sm:text-xs text-amber-900 mt-0.5">
                       ثبت سریع سفارش — مستقیم به انتخاب آدرس
                     </div>
                   </div>
-                  <span className="text-amber-100 text-lg shrink-0 group-hover:-translate-x-1 transition-transform">
+                  <span className="text-amber-950 text-lg shrink-0 group-hover:-translate-x-1 transition-transform">
                     ←
                   </span>
                 </div>
@@ -308,7 +308,7 @@ const Home = () => {
                   />
                 </button>
                 {/* Text below globe */}
-                <span className="text-blue-400 text-sm font-medium mt-0.5">
+                <span className="text-primary text-sm font-semibold mt-0.5">
                   موقعیت پروژه شما
                 </span>
               </div>
