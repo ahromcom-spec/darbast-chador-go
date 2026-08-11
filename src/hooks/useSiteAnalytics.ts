@@ -2,6 +2,40 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
+// Which manager (if any) is currently impersonating a customer account.
+// Used so the activity log never credits the customer for a manager's session.
+const getImpersonatorId = (): string | null => {
+  try {
+    const raw = localStorage.getItem('original_admin_session');
+    return raw ? (JSON.parse(raw)?.user_id ?? null) : null;
+  } catch {
+    return null;
+  }
+};
+
+// Never record what people type into sensitive fields.
+const isSensitiveField = (el: HTMLInputElement | HTMLTextAreaElement): boolean => {
+  const type = (el as HTMLInputElement).type?.toLowerCase() || 'text';
+  if (['password', 'hidden'].includes(type)) return true;
+  const hay = `${el.name || ''} ${el.id || ''} ${el.getAttribute('autocomplete') || ''}`.toLowerCase();
+  return /pass|otp|code|cvv|card|token|secret/.test(hay);
+};
+
+const fieldLabel = (el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement): string => {
+  const aria = el.getAttribute('aria-label');
+  const ph = (el as HTMLInputElement).placeholder;
+  if (aria) return aria.trim().slice(0, 60);
+  if (ph) return ph.trim().slice(0, 60);
+  if (el.id) {
+    const lab = document.querySelector(`label[for="${el.id}"]`);
+    if (lab?.textContent) return lab.textContent.trim().slice(0, 60);
+  }
+  const wrapLabel = el.closest('label')?.textContent;
+  if (wrapLabel) return wrapLabel.trim().slice(0, 60);
+  return el.name || el.id || 'فیلد';
+};
+
+
 // Generate or get session ID
 const getSessionId = (): string => {
   let sessionId = sessionStorage.getItem('site_session_id');
