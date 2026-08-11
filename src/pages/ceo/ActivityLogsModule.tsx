@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { VisitorSessionsPanel } from '@/components/ceo/VisitorSessionsPanel';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -503,8 +504,15 @@ export default function ActivityLogsModule() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="logs"><Activity className="w-4 h-4 ml-1" /> لاگ فعالیت‌ها</TabsTrigger>
+          <TabsTrigger value="visitors"><Activity className="w-4 h-4 ml-1" /> بازدیدها و رفتار کاربران</TabsTrigger>
           <TabsTrigger value="rules"><Mail className="w-4 h-4 ml-1" /> قوانین ایمیل خودکار</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="visitors" className="space-y-4">
+          <VisitorSessionsPanel />
+        </TabsContent>
+
+
 
         <TabsContent value="logs" className="space-y-4">
           <Card>

@@ -58,8 +58,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // with localStorage timestamp per user. Navigation between pages won't relog.
         if (event === 'SIGNED_IN' && session?.user) {
           try {
+            // While a manager is impersonating a customer, never log the session
+            // under the customer's name — it isn't a real login by that user.
+            if (localStorage.getItem('original_admin_session')) return;
             const uid = session.user.id;
             const loginKey = `ahrom:last_login_log:${uid}`;
+
             const activityKey = 'ahrom:last_activity';
             const lastLogin = Number(localStorage.getItem(loginKey) || '0');
             const lastActivity = Number(localStorage.getItem(activityKey) || '0');
