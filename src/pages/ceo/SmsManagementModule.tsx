@@ -142,13 +142,13 @@ export default function SmsManagementModule() {
   const previewText = (item: SmsTemplate) => {
     const m = merged(item);
     const body = (m.template || "")
-      .replaceAll("{code}", "1000123")
-      .replaceAll("{serviceType}", "داربست نما (ثبت شد)")
-      .replaceAll("{address}", "تهران، خیابان نمونه")
-      .replaceAll("{customerName}", "علی رضایی")
-      .replaceAll("{dateTime}", "1404/04/08 ساعت 14:30")
-      .replaceAll("{amount}", "۲٬۵۰۰٬۰۰۰")
-      .replaceAll("{orderLink}", "https://ahrom.ir/orders/123");
+      .replace(/\{code\}/g, "1000123")
+      .replace(/\{serviceType\}/g, "داربست نما (ثبت شد)")
+      .replace(/\{address\}/g, "تهران، خیابان نمونه")
+      .replace(/\{customerName\}/g, "علی رضایی")
+      .replace(/\{dateTime\}/g, "1404/04/08 ساعت 14:30")
+      .replace(/\{amount\}/g, "۲٬۵۰۰٬۰۰۰")
+      .replace(/\{orderLink\}/g, "https://ahrom.ir/orders/123");
     const footer = (m.footer || BRAND_FOOTER).trim() || BRAND_FOOTER;
     const header = "خدمات ساختمانی و منزل اهرم";
     const withHeader = body.startsWith(header) ? body : `${header}\n${body}`;
