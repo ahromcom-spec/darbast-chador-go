@@ -3072,10 +3072,10 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
 
 
   return (
-    <div className={embedded ? 'relative w-full h-[75vh] min-h-[420px] rounded-xl overflow-hidden border bg-background' : 'fixed inset-0 z-[40] flex flex-col bg-background'}>
+    <div className={embedded ? 'relative w-full h-[75vh] min-h-[420px] rounded-xl overflow-hidden border bg-background' : 'fixed inset-0 z-[70] flex flex-col bg-background'}>
       {/* سربرگ بالای نقشه (نوار اطلاعات و بازگشت) */}
       {!embedded && (
-        <div className="shrink-0 z-[50] border-b bg-card/95 backdrop-blur-sm shadow-sm">
+        <div className="shrink-0 z-[80] border-b bg-card/95 backdrop-blur-sm shadow-sm">
           <div className="container mx-auto px-3 py-2 sm:px-4 sm:py-3">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 min-w-0">
