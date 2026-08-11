@@ -3083,31 +3083,44 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
 
 
   return (
-    <div className={embedded ? 'relative w-full h-[75vh] min-h-[420px] rounded-xl overflow-hidden border bg-background' : 'fixed inset-0 z-50 bg-background'}>
+    <div className={embedded ? 'relative w-full h-[75vh] min-h-[420px] rounded-xl overflow-hidden border bg-background' : 'fixed inset-0 z-[40] flex flex-col bg-background'}>
+      {/* سربرگ بالای نقشه (نوار اطلاعات و بازگشت) */}
+      {!embedded && (
+        <div className="shrink-0 z-[50] border-b bg-card/95 backdrop-blur-sm shadow-sm">
+          <div className="container mx-auto px-3 py-2 sm:px-4 sm:py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="p-1.5 rounded-lg bg-primary/10 shrink-0">
+                  <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="font-bold text-sm sm:text-base text-foreground truncate">لوکیشن اجرایی پروژه</h1>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{projectsWithMedia.length} پروژه فعال</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onClose}
+                className="gap-1.5 shrink-0 text-xs h-8 sm:h-9"
+              >
+                <ArrowRight className="h-4 w-4" />
+                <span className="hidden sm:inline">بازگشت</span>
+                <span className="sm:hidden">بازگشت</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* لایه‌ی روی نقشه برای کنترل‌ها */}
-      <div className="absolute inset-0 z-[2000] pointer-events-none">
-        {/* دکمه بازگشت - گوشه راست بالا (پایین‌تر از هدر سایت تا همیشه قابل مشاهده باشد) */}
-        <Button
-          variant="default"
-          size="sm"
-          onClick={onClose}
-          className={`pointer-events-auto absolute right-3 z-[2100] shadow-xl border border-primary-foreground/20 text-xs px-3 py-1.5 h-9 rounded-lg bg-primary hover:bg-primary/90 ${
-            isImpersonating ? 'top-28' : 'top-16'
-          }`}
-        >
-          <ArrowRight className="h-4 w-4 ml-1" />
-          <span className="font-bold text-xs">بازگشت</span>
-        </Button>
-
-
+      <div className="relative flex-1 min-h-0">
         {/* دکمه تغییر نمای نقشه (استاندارد/ماهواره‌ای) - بالا سمت چپ */}
         <Button
           variant="default"
           size="sm"
           onClick={() => setMapStyle(prev => prev === 'standard' ? 'satellite' : 'standard')}
-          className={`pointer-events-auto absolute left-2 shadow-lg border border-primary/20 text-[10px] px-2 py-0.5 h-6 rounded-md bg-primary/60 hover:bg-primary/75 backdrop-blur-md ${
-            isImpersonating ? 'top-14' : 'top-2'
-          }`}
+          className="pointer-events-auto absolute left-2 top-2 shadow-lg border border-primary/20 text-[10px] px-2 py-0.5 h-6 rounded-md bg-primary/60 hover:bg-primary/75 backdrop-blur-md z-[2100]"
           title={mapStyle === 'standard' ? 'نمای ماهواره‌ای' : 'نمای استاندارد'}
         >
           {mapStyle === 'standard' ? (
@@ -3124,9 +3137,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
         </Button>
 
         {/* کارت تعداد پروژه‌ها - زیر دکمه ماهواره‌ای */}
-        <Card className={`pointer-events-auto absolute left-2 bg-card/50 backdrop-blur-md shadow-lg border border-primary/20 p-1 rounded-md ${
-          isImpersonating ? 'top-22' : 'top-10'
-        }`}>
+        <Card className="pointer-events-auto absolute left-2 top-10 bg-card/50 backdrop-blur-md shadow-lg border border-primary/20 p-1 rounded-md z-[2100]">
           <div className="flex items-center gap-1">
             <div className="p-0.5 bg-primary/10 rounded">
               <MapPin className="h-2.5 w-2.5 text-primary" />
@@ -3139,7 +3150,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
         </Card>
 
         {/* کادر جستجوی آدرس - پایین نقشه */}
-        <div className="pointer-events-auto absolute bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md">
+        <div className="pointer-events-auto absolute bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-[2100]">
           <MapSearchBox
             onLocationSelect={(lat, lng, placeName) => {
               // پرواز به موقعیت جستجو شده
@@ -3157,10 +3168,10 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           />
         </div>
 
+        {/* نقشه */}
+        <div ref={mapContainer} className="absolute inset-0" style={{ touchAction: 'pan-x pan-y' }} />
       </div>
 
-      {/* نقشه */}
-      <div ref={mapContainer} className="w-full h-full" style={{ touchAction: 'pan-x pan-y' }} />
 
       {/* کادر آپلود برای سفارش خاص */}
       {selectedOrderForUpload && typeof document !== 'undefined' && createPortal((() => {
