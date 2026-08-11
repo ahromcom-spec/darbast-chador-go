@@ -158,7 +158,7 @@ export default function SmsManagementModule() {
   const save = async (item: SmsTemplate) => {
     const m = merged(item);
     setSaving(item.id);
-    const { error } = await supabase.from("sms_templates").update({
+    const { data, error } = await supabase.from("sms_templates").update({
       template: m.template,
       description: m.description,
       title: m.title,
@@ -167,10 +167,15 @@ export default function SmsManagementModule() {
       conditions: m.conditions || {},
       footer: (m.footer || BRAND_FOOTER).trim() || BRAND_FOOTER,
       append_footer: m.append_footer !== false,
-    }).eq("id", item.id);
+    }).eq("id", item.id).select("id");
     setSaving(null);
-    if (error) toast.error("خطا در ذخیره: " + error.message);
-    else { toast.success("ذخیره شد"); await load(); }
+    if (error) { toast.error("خطا در ذخیره: " + error.message); return; }
+    if (!data || data.length === 0) {
+      toast.error("ذخیره انجام نشد — دسترسی ویرایش قالب پیامک برای حساب شما وجود ندارد");
+      return;
+    }
+    toast.success("ذخیره شد");
+    await load();
   };
 
   const resetToDefault = async (item: SmsTemplate) => {
@@ -181,11 +186,14 @@ export default function SmsManagementModule() {
 
   const toggleEnabled = async (item: SmsTemplate, value: boolean) => {
     setSaving(item.id);
-    const { error } = await supabase.from("sms_templates").update({ enabled: value }).eq("id", item.id);
+    const { data, error } = await supabase.from("sms_templates").update({ enabled: value }).eq("id", item.id).select("id");
     setSaving(null);
-    if (error) toast.error("خطا: " + error.message);
-    else { toast.success(value ? "فعال شد" : "غیرفعال شد"); load(); }
+    if (error) { toast.error("خطا: " + error.message); return; }
+    if (!data || data.length === 0) { toast.error("تغییر وضعیت انجام نشد — دسترسی کافی ندارید"); return; }
+    toast.success(value ? "فعال شد" : "غیرفعال شد");
+    load();
   };
+
 
   const groups: Record<string, SmsTemplate[]> = useMemo(() => {
     const g: Record<string, SmsTemplate[]> = { customer: [], ceo: [] };
