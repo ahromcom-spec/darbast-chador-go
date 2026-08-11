@@ -3,7 +3,7 @@ import { Phone, Building, ChevronDown, User, LogOut, FolderKanban, MessageCircle
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import ahromLogo from "@/assets/ahrom-logo.png";
@@ -190,15 +190,14 @@ const Header = memo(() => {
 
   const HomeButton = (
     <Button
-      type="button"
+      asChild
       variant="ghost"
       size="icon"
       className="h-8 w-8 rounded-full border border-border/60 bg-background/40 hover:bg-primary/10 ml-auto"
-      onClick={() => navigate('/')}
-      aria-label="صفحه نخست"
-      title="صفحه نخست"
     >
-      <Home className="h-4 w-4" />
+      <Link to="/" aria-label="صفحه نخست" title="صفحه نخست">
+        <Home className="h-4 w-4" />
+      </Link>
     </Button>
   );
 
@@ -217,7 +216,7 @@ const Header = memo(() => {
           <div className="md:hidden">
             <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 py-0.5 px-1">
               {/* Logo - Right side (RTL) */}
-              <div className="cursor-pointer" onClick={() => navigate('/')}>
+              <Link to="/" className="cursor-pointer" aria-label="صفحه نخست">
                 <img 
                   src={ahromLogo} 
                   alt="لوگوی اهرم" 
@@ -226,7 +225,8 @@ const Header = memo(() => {
                   className="h-10 sm:h-11 w-auto object-contain"
                   loading="eager"
                 />
-              </div>
+              </Link>
+
 
               {/* Company Name - Center */}
               <div className="flex justify-center">
@@ -298,7 +298,7 @@ const Header = memo(() => {
             <div className="grid grid-cols-3 items-center py-1">
               {/* Logo - Right side (RTL) */}
               <div className="flex justify-end">
-                <div className="cursor-pointer md:translate-x-4 lg:translate-x-6 xl:translate-x-0" onClick={() => navigate('/')}>
+                <Link to="/" className="cursor-pointer md:translate-x-4 lg:translate-x-6 xl:translate-x-0" aria-label="صفحه نخست">
                   <img 
                     src={ahromLogo} 
                     alt="لوگوی اهرم" 
@@ -307,7 +307,8 @@ const Header = memo(() => {
                     className="h-12 lg:h-14 xl:h-16 w-auto object-contain"
                     loading="eager"
                   />
-                </div>
+                </Link>
+
               </div>
 
               {/* Company Name - Center */}
