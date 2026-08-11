@@ -114,9 +114,17 @@ export function ServiceTypeSelectionDialog({
         subcategoryId: leaf.id,
         subcategoryCode: leaf.code || '',
         returnToMap: true,
+        locationAddress: locationInfo?.address_line || '',
+        lat: locationInfo?.lat ?? null,
+        lng: locationInfo?.lng ?? null,
+        provinceId: locationInfo?.province_id ?? null,
+        districtId: locationInfo?.district_id ?? null,
+        provinceName: locationInfo?.provinces?.name || '',
+        districtName: locationInfo?.districts?.name || '',
       },
     });
-  }, [isNavigating, navigate, onOpenChange, locationId, selectedServiceType]);
+  }, [isNavigating, navigate, onOpenChange, locationId, selectedServiceType, locationInfo]);
+
 
   const handleSelectServiceType = useCallback((typeId: string) => {
     setSelectedServiceType(typeId);
