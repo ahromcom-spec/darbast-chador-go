@@ -307,7 +307,8 @@ const Header = memo(() => {
                     className="h-12 lg:h-14 xl:h-16 w-auto object-contain"
                     loading="eager"
                   />
-                </div>
+                </Link>
+
               </div>
 
               {/* Company Name - Center */}
