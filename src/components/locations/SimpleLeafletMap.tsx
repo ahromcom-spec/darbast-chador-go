@@ -448,7 +448,7 @@ function SimpleLeafletMapInner({
       className={
         isFullscreen
           ? 'fixed top-0 left-0 z-[99999] bg-background overflow-hidden'
-          : 'relative w-full'
+          : 'relative w-full min-h-[420px] overflow-hidden rounded-lg'
       }
       style={
         isFullscreen
@@ -458,10 +458,8 @@ function SimpleLeafletMapInner({
     >
       <div
         ref={mapContainer}
-        className={isFullscreen ? 'w-full h-full' : 'w-full rounded-lg border border-border'}
+        className="absolute inset-0 h-full w-full rounded-lg border border-border"
         style={{
-          minHeight: isFullscreen ? '100%' : '420px',
-          height: isFullscreen ? '100%' : undefined,
           // جلوگیری از تداخل CSS zoom با نقشه
           zoom: 1,
           transform: 'translateZ(0)'
