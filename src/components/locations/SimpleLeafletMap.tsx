@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
+import { createPortal } from 'react-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { supabase } from '@/integrations/supabase/client';
@@ -344,12 +345,27 @@ function SimpleLeafletMapInner({
     tileLayerRef.current = newLayer;
   }, [mapStyle]);
 
-  // در تغییر حالت تمام‌صفحه، اندازه نقشه را مجدد محاسبه کن
+  // در تغییر حالت تمام‌صفحه، اندازه نقشه و تایل‌ها را مجدد محاسبه/بارگذاری کن
   useEffect(() => {
-    const timers = [50, 200, 500].map((d) =>
-      setTimeout(() => mapRef.current?.invalidateSize({ animate: false }), d),
-    );
-    return () => timers.forEach(clearTimeout);
+    const prevOverflow = document.body.style.overflow;
+    if (isFullscreen) document.body.style.overflow = 'hidden';
+
+    const refresh = () => {
+      const map = mapRef.current;
+      if (!map) return;
+      map.invalidateSize({ animate: false });
+      // اجبار به بارگذاری مجدد تایل‌ها (رفع مشکل نقشه خاکستری در تمام‌صفحه)
+      tileLayerRef.current?.redraw();
+    };
+
+    const raf = requestAnimationFrame(refresh);
+    const timers = [50, 150, 350, 700, 1200].map((d) => setTimeout(refresh, d));
+
+    return () => {
+      cancelAnimationFrame(raf);
+      timers.forEach(clearTimeout);
+      document.body.style.overflow = prevOverflow;
+    };
   }, [isFullscreen]);
 
   // Handler for search box location selection
@@ -402,12 +418,17 @@ function SimpleLeafletMapInner({
     }
   }));
 
-  return (
+  const content = (
     <div
       className={
         isFullscreen
-          ? 'fixed inset-0 z-[9999] bg-background'
+          ? 'fixed top-0 left-0 z-[99999] bg-background overflow-hidden'
           : 'relative w-full'
+      }
+      style={
+        isFullscreen
+          ? { width: '100vw', height: '100dvh' }
+          : undefined
       }
     >
       <div
@@ -478,7 +499,7 @@ function SimpleLeafletMapInner({
       )}
 
       {/* راهنمای انتخاب با نگه‌داشتن ۲ ثانیه */}
-      <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-[10001] pointer-events-none">
+      <div className={`absolute ${isFullscreen ? 'bottom-24' : 'bottom-16'} left-1/2 -translate-x-1/2 z-[10001] pointer-events-none`}>
         <span className={`rounded-full px-3 py-1 text-[11px] font-medium shadow-md backdrop-blur-md ${isPressing ? 'bg-primary text-primary-foreground' : 'bg-background/80 border border-border text-muted-foreground'}`}>
           {isPressing ? 'نگه دارید... در حال انتخاب موقعیت' : 'برای انتخاب موقعیت، ۲ ثانیه روی نقشه نگه دارید'}
         </span>
@@ -486,7 +507,7 @@ function SimpleLeafletMapInner({
 
       {/* بازگشت به فرم ثبت آدرس در حالت تمام‌صفحه */}
       {isFullscreen && (
-        <div className="fixed bottom-0 left-0 right-0 p-3 pb-5 bg-background/95 backdrop-blur-md border-t border-border z-[10002]">
+        <div className="absolute bottom-0 left-0 right-0 p-3 pb-5 bg-background/95 backdrop-blur-md border-t border-border z-[10002]">
           <Button
             type="button"
             className="w-full h-12 text-base font-bold shadow-lg"
@@ -500,7 +521,7 @@ function SimpleLeafletMapInner({
 
 
       {selectedPos && (
-        <div className={`absolute ${isFullscreen ? 'bottom-20' : 'bottom-2'} right-2 bg-background/70 backdrop-blur-md border border-white/20 rounded-md px-1.5 py-0.5 shadow-sm z-[10000]`}>
+        <div className={`absolute ${isFullscreen ? 'bottom-24' : 'bottom-2'} right-2 bg-background/70 backdrop-blur-md border border-white/20 rounded-md px-1.5 py-0.5 shadow-sm z-[10000]`}>
           {loadingRoute ? (
             <span className="text-[8px] text-muted-foreground">محاسبه مسیر...</span>
           ) : selectedPos.roadDistance ? (
@@ -514,6 +535,8 @@ function SimpleLeafletMapInner({
       )}
     </div>
   );
+
+  return isFullscreen ? createPortal(content, document.body) : content;
 }
 
 const SimpleLeafletMap = forwardRef(SimpleLeafletMapInner);
