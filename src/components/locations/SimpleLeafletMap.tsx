@@ -17,6 +17,7 @@ interface SimpleLeafletMapProps {
   initialLat?: number;
   initialLng?: number;
   showSearch?: boolean;
+  onFullscreenChange?: (isFullscreen: boolean) => void;
 }
 
 // مختصات مرکز شهر قم
@@ -40,6 +41,7 @@ function SimpleLeafletMapInner({
   initialLat = 34.6416,
   initialLng = 50.8746,
   showSearch = true,
+  onFullscreenChange,
 }: SimpleLeafletMapProps, ref: React.Ref<SimpleLeafletMapRef>) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -50,8 +52,18 @@ function SimpleLeafletMapInner({
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [mapStyle, setMapStyle] = useState<'standard' | 'satellite'>('standard');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isPressing, setIsPressing] = useState(false);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const mapboxTokenRef = useRef<string | null>(null);
+
+  const toggleFullscreen = () => {
+    setIsFullscreen((prev) => {
+      const next = !prev;
+      onFullscreenChange?.(next);
+      return next;
+    });
+  };
+
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
@@ -203,28 +215,65 @@ function SimpleLeafletMapInner({
       });
     }
 
-    // رویداد کلیک روی نقشه
-    map.on('click', async (e: L.LeafletMouseEvent) => {
-      const { lat, lng } = e.latlng;
-
-      // حذف marker قبلی
+    // انتخاب موقعیت با نگه‌داشتن ۲ ثانیه‌ای روی نقشه (به‌جای کلیک ساده)
+    const placeMarker = async (lat: number, lng: number) => {
       if (markerRef.current) {
         markerRef.current.remove();
       }
-
-      // اضافه کردن marker جدید (قابل‌جابجایی)
       const marker = L.marker([lat, lng], { icon: customIcon, draggable: true }).addTo(map);
       markerRef.current = marker;
-
-      // محاسبه و رسم مسیر برای این نقطه
-      await computeRoute(lat, lng);
-
-      // در صورت drag شدن مارکر، مسیر مجدد محاسبه شود
       marker.on('dragend', async () => {
         const pos = marker.getLatLng();
         await computeRoute(pos.lat, pos.lng);
       });
-    });
+      await computeRoute(lat, lng);
+    };
+
+    const containerEl = map.getContainer();
+    let pressTimer: number | undefined;
+    let startPoint: { x: number; y: number } | null = null;
+
+    const clearPress = () => {
+      if (pressTimer) {
+        window.clearTimeout(pressTimer);
+        pressTimer = undefined;
+      }
+      startPoint = null;
+      setIsPressing(false);
+    };
+
+    const onPointerDown = (ev: PointerEvent) => {
+      if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+      // اگر روی مارکر یا دکمه‌ها فشار داده شد، نادیده بگیر
+      const target = ev.target as HTMLElement;
+      if (target.closest('.leaflet-marker-icon') || target.closest('button')) return;
+
+      startPoint = { x: ev.clientX, y: ev.clientY };
+      setIsPressing(true);
+      pressTimer = window.setTimeout(() => {
+        if (!startPoint) return;
+        const rect = containerEl.getBoundingClientRect();
+        const latlng = map.containerPointToLatLng(
+          L.point(startPoint.x - rect.left, startPoint.y - rect.top),
+        );
+        clearPress();
+        void placeMarker(latlng.lat, latlng.lng);
+      }, 2000);
+    };
+
+    const onPointerMove = (ev: PointerEvent) => {
+      if (!startPoint) return;
+      const dist = Math.hypot(ev.clientX - startPoint.x, ev.clientY - startPoint.y);
+      if (dist > 12) clearPress();
+    };
+
+    containerEl.addEventListener('pointerdown', onPointerDown);
+    containerEl.addEventListener('pointermove', onPointerMove);
+    containerEl.addEventListener('pointerup', clearPress);
+    containerEl.addEventListener('pointercancel', clearPress);
+    containerEl.addEventListener('pointerleave', clearPress);
+    map.on('movestart zoomstart', clearPress);
+
 
     // Resize handler برای modal
     const resizeObserver = new ResizeObserver(() => {
@@ -251,6 +300,14 @@ function SimpleLeafletMapInner({
     return () => {
       resizeTimeouts.forEach(clearTimeout);
       resizeObserver.disconnect();
+      clearPress();
+      containerEl.removeEventListener('pointerdown', onPointerDown);
+      containerEl.removeEventListener('pointermove', onPointerMove);
+      containerEl.removeEventListener('pointerup', clearPress);
+      containerEl.removeEventListener('pointercancel', clearPress);
+      containerEl.removeEventListener('pointerleave', clearPress);
+
+
 
       if (markerRef.current) {
         markerRef.current.remove();
@@ -367,6 +424,7 @@ function SimpleLeafletMapInner({
 
       {/* دکمه تغییر نمای نقشه */}
       <Button
+        type="button"
         variant="ghost"
         size="sm"
         onClick={() => setMapStyle(prev => prev === 'standard' ? 'satellite' : 'standard')}
@@ -388,9 +446,10 @@ function SimpleLeafletMapInner({
 
       {/* دکمه تمام‌صفحه / خروج از تمام‌صفحه */}
       <Button
+        type="button"
         variant="ghost"
         size="sm"
-        onClick={() => setIsFullscreen(prev => !prev)}
+        onClick={toggleFullscreen}
         className="absolute top-14 right-3 z-[10002] h-9 px-3 text-xs rounded-md bg-background/80 backdrop-blur-md border border-border text-foreground hover:bg-background shadow-md"
         title={isFullscreen ? 'کوچک کردن نقشه' : 'نمایش تمام‌صفحه نقشه'}
       >
@@ -418,18 +477,27 @@ function SimpleLeafletMapInner({
         </div>
       )}
 
-      {/* تایید موقعیت در حالت تمام‌صفحه */}
+      {/* راهنمای انتخاب با نگه‌داشتن ۲ ثانیه */}
+      <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-[10001] pointer-events-none">
+        <span className={`rounded-full px-3 py-1 text-[11px] font-medium shadow-md backdrop-blur-md ${isPressing ? 'bg-primary text-primary-foreground' : 'bg-background/80 border border-border text-muted-foreground'}`}>
+          {isPressing ? 'نگه دارید... در حال انتخاب موقعیت' : 'برای انتخاب موقعیت، ۲ ثانیه روی نقشه نگه دارید'}
+        </span>
+      </div>
+
+      {/* بازگشت به فرم ثبت آدرس در حالت تمام‌صفحه */}
       {isFullscreen && (
-        <div className="absolute bottom-4 left-4 right-4 z-[10002]">
+        <div className="fixed bottom-0 left-0 right-0 p-3 pb-5 bg-background/95 backdrop-blur-md border-t border-border z-[10002]">
           <Button
+            type="button"
             className="w-full h-12 text-base font-bold shadow-lg"
-            onClick={() => setIsFullscreen(false)}
+            onClick={toggleFullscreen}
           >
             <Check className="h-5 w-5 ml-2" />
-            {selectedPos ? 'تایید موقعیت و بازگشت به فرم' : 'بازگشت به فرم'}
+            بازگشت به ثبت آدرس
           </Button>
         </div>
       )}
+
 
       {selectedPos && (
         <div className={`absolute ${isFullscreen ? 'bottom-20' : 'bottom-2'} right-2 bg-background/70 backdrop-blur-md border border-white/20 rounded-md px-1.5 py-0.5 shadow-sm z-[10000]`}>

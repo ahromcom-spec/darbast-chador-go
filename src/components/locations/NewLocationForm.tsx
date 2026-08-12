@@ -58,6 +58,7 @@ export const NewLocationForm = ({ onSuccess, initialData, serviceTypeName }: New
   const [hasMapPin, setHasMapPin] = useState(!!initialData?.lat && !!initialData?.lng);
   const [isInitialized, setIsInitialized] = useState(false);
   const [distanceFromCenter, setDistanceFromCenter] = useState<number | null>(null);
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
 
   // شناسایی استان قم
   const qomProvince = provinces.find(p => p.code === '10');
@@ -122,7 +123,15 @@ export const NewLocationForm = ({ onSuccess, initialData, serviceTypeName }: New
       return;
     }
 
-    // انتخاب موقعیت روی نقشه اختیاری است (کاربر می‌تواند بعداً آن را ثبت کند)
+    // انتخاب موقعیت روی نقشه الزامی است
+    if (!hasMapPin || !formData.lat || !formData.lng) {
+      toast({
+        title: 'انتخاب موقعیت روی نقشه الزامی است',
+        description: 'برای انتخاب موقعیت، حدود ۲ ثانیه روی نقطه مورد نظر در نقشه نگه دارید',
+        variant: 'destructive'
+      });
+      return;
+    }
 
 
     setIsSubmitting(true);
@@ -253,7 +262,7 @@ export const NewLocationForm = ({ onSuccess, initialData, serviceTypeName }: New
         <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900 py-2">
           <MapPin className="h-4 w-4 text-amber-600 dark:text-amber-400" />
           <AlertDescription className="text-amber-800 dark:text-amber-300 text-xs sm:text-sm">
-            انتخاب موقعیت روی نقشه اختیاری است؛ می‌توانید بعداً موقعیت پروژه را ثبت کنید تا سفارش روی نقشه کره زمین نمایش داده شود.
+انتخاب موقعیت پروژه روی نقشه الزامی است؛ برای انتخاب، حدود ۲ ثانیه روی نقطه مورد نظر نگه دارید.
           </AlertDescription>
         </Alert>
       )}
@@ -322,7 +331,7 @@ export const NewLocationForm = ({ onSuccess, initialData, serviceTypeName }: New
 
       <div className="space-y-1">
         <div className="flex items-center justify-between">
-          <Label className="text-xs sm:text-sm">انتخاب موقعیت روی نقشه (اختیاری)</Label>
+          <Label className="text-xs sm:text-sm">انتخاب موقعیت روی نقشه *</Label>
           {hasMapPin && (
             <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
               <MapPin className="w-3 h-3" />
@@ -331,20 +340,25 @@ export const NewLocationForm = ({ onSuccess, initialData, serviceTypeName }: New
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          در صورت تمایل روی نقشه کلیک کنید یا نشانگر را بکشید تا موقعیت دقیق ثبت شود (اختیاری)
+          حدود ۲ ثانیه روی نقطه مورد نظر در نقشه نگه دارید تا موقعیت پروژه انتخاب شود (یا نشانگر را بکشید)
         </p>
         <div className="[&_.h-\[500px\]]:h-[280px] sm:[&_.h-\[500px\]]:h-[320px]">
           <InteractiveLocationMap
             onLocationSelect={handleLocationSelect}
             initialLat={hasValidInitialCoords ? formData.lat : undefined}
             initialLng={hasValidInitialCoords ? formData.lng : undefined}
+            onFullscreenChange={setIsMapFullscreen}
             provinceCode={provinces.find(p => p.id === formData.province_id)?.code}
             districtId={formData.district_id}
           />
         </div>
       </div>
 
-      <Button type="submit" className="w-full h-10 text-sm" disabled={!isQomSelected || isSubmitting}>
+      <Button
+        type="submit"
+        className={`w-full h-10 text-sm ${isMapFullscreen ? 'hidden' : ''}`}
+        disabled={!isQomSelected || isSubmitting || !hasMapPin}
+      >
 
         {isSubmitting ? (
           <>

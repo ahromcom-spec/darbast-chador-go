@@ -10,6 +10,7 @@ interface InteractiveLocationMapProps {
   initialLng?: number;
   provinceCode?: string;
   districtId?: string;
+  onFullscreenChange?: (isFullscreen: boolean) => void;
 }
 
 // مختصات مراکز استان‌های ایران
@@ -58,6 +59,7 @@ export function InteractiveLocationMap({
   initialLat = 34.6416,
   initialLng = 50.8746,
   provinceCode,
+  onFullscreenChange,
 }: InteractiveLocationMapProps) {
   const { toast } = useToast();
   const mapRef = useRef<SimpleLeafletMapRef>(null);
@@ -114,10 +116,12 @@ export function InteractiveLocationMap({
           }}
           initialLat={startCoords.lat}
           initialLng={startCoords.lng}
+          onFullscreenChange={onFullscreenChange}
         />
 
         {/* دکمه موقعیت من */}
         <Button
+          type="button"
           size="icon"
           variant="secondary"
           className="absolute top-16 right-4 bg-background/95 backdrop-blur shadow-lg hover:scale-105 transition-transform z-[1003]"

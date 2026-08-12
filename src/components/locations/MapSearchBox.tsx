@@ -156,6 +156,7 @@ export function MapSearchBox({
             <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
           ) : searchTerm ? (
             <Button
+              type="button"
               variant="ghost"
               size="icon"
               className="absolute left-1 top-1/2 -translate-y-1/2 h-6 w-6"
@@ -168,6 +169,7 @@ export function MapSearchBox({
 
         {showSearchButton && (
           <Button
+            type="button"
             onClick={handleSearchClick}
             disabled={loading || !searchTerm.trim()}
             size="icon"
@@ -188,6 +190,7 @@ export function MapSearchBox({
         >
           {results.map((result) => (
             <button
+              type="button"
               key={result.id}
               onClick={() => handleSelectResult(result)}
               className="w-full px-3 py-2 text-right hover:bg-accent flex items-start gap-2 border-b border-border/50 last:border-b-0 transition-colors"
