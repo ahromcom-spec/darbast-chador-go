@@ -215,28 +215,65 @@ function SimpleLeafletMapInner({
       });
     }
 
-    // رویداد کلیک روی نقشه
-    map.on('click', async (e: L.LeafletMouseEvent) => {
-      const { lat, lng } = e.latlng;
-
-      // حذف marker قبلی
+    // انتخاب موقعیت با نگه‌داشتن ۲ ثانیه‌ای روی نقشه (به‌جای کلیک ساده)
+    const placeMarker = async (lat: number, lng: number) => {
       if (markerRef.current) {
         markerRef.current.remove();
       }
-
-      // اضافه کردن marker جدید (قابل‌جابجایی)
       const marker = L.marker([lat, lng], { icon: customIcon, draggable: true }).addTo(map);
       markerRef.current = marker;
-
-      // محاسبه و رسم مسیر برای این نقطه
-      await computeRoute(lat, lng);
-
-      // در صورت drag شدن مارکر، مسیر مجدد محاسبه شود
       marker.on('dragend', async () => {
         const pos = marker.getLatLng();
         await computeRoute(pos.lat, pos.lng);
       });
-    });
+      await computeRoute(lat, lng);
+    };
+
+    const containerEl = map.getContainer();
+    let pressTimer: number | undefined;
+    let startPoint: { x: number; y: number } | null = null;
+
+    const clearPress = () => {
+      if (pressTimer) {
+        window.clearTimeout(pressTimer);
+        pressTimer = undefined;
+      }
+      startPoint = null;
+      setIsPressing(false);
+    };
+
+    const onPointerDown = (ev: PointerEvent) => {
+      if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+      // اگر روی مارکر یا دکمه‌ها فشار داده شد، نادیده بگیر
+      const target = ev.target as HTMLElement;
+      if (target.closest('.leaflet-marker-icon') || target.closest('button')) return;
+
+      startPoint = { x: ev.clientX, y: ev.clientY };
+      setIsPressing(true);
+      pressTimer = window.setTimeout(() => {
+        if (!startPoint) return;
+        const rect = containerEl.getBoundingClientRect();
+        const latlng = map.containerPointToLatLng(
+          L.point(startPoint.x - rect.left, startPoint.y - rect.top),
+        );
+        clearPress();
+        void placeMarker(latlng.lat, latlng.lng);
+      }, 2000);
+    };
+
+    const onPointerMove = (ev: PointerEvent) => {
+      if (!startPoint) return;
+      const dist = Math.hypot(ev.clientX - startPoint.x, ev.clientY - startPoint.y);
+      if (dist > 12) clearPress();
+    };
+
+    containerEl.addEventListener('pointerdown', onPointerDown);
+    containerEl.addEventListener('pointermove', onPointerMove);
+    containerEl.addEventListener('pointerup', clearPress);
+    containerEl.addEventListener('pointercancel', clearPress);
+    containerEl.addEventListener('pointerleave', clearPress);
+    map.on('movestart zoomstart', clearPress);
+
 
     // Resize handler برای modal
     const resizeObserver = new ResizeObserver(() => {
