@@ -345,12 +345,27 @@ function SimpleLeafletMapInner({
     tileLayerRef.current = newLayer;
   }, [mapStyle]);
 
-  // در تغییر حالت تمام‌صفحه، اندازه نقشه را مجدد محاسبه کن
+  // در تغییر حالت تمام‌صفحه، اندازه نقشه و تایل‌ها را مجدد محاسبه/بارگذاری کن
   useEffect(() => {
-    const timers = [50, 200, 500].map((d) =>
-      setTimeout(() => mapRef.current?.invalidateSize({ animate: false }), d),
-    );
-    return () => timers.forEach(clearTimeout);
+    const prevOverflow = document.body.style.overflow;
+    if (isFullscreen) document.body.style.overflow = 'hidden';
+
+    const refresh = () => {
+      const map = mapRef.current;
+      if (!map) return;
+      map.invalidateSize({ animate: false });
+      // اجبار به بارگذاری مجدد تایل‌ها (رفع مشکل نقشه خاکستری در تمام‌صفحه)
+      tileLayerRef.current?.redraw();
+    };
+
+    const raf = requestAnimationFrame(refresh);
+    const timers = [50, 150, 350, 700, 1200].map((d) => setTimeout(refresh, d));
+
+    return () => {
+      cancelAnimationFrame(raf);
+      timers.forEach(clearTimeout);
+      document.body.style.overflow = prevOverflow;
+    };
   }, [isFullscreen]);
 
   // Handler for search box location selection
