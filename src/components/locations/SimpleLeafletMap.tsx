@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
-import { createPortal } from 'react-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { supabase } from '@/integrations/supabase/client';
@@ -45,6 +44,7 @@ function SimpleLeafletMapInner({
   onFullscreenChange,
 }: SimpleLeafletMapProps, ref: React.Ref<SimpleLeafletMapRef>) {
   const mapContainer = useRef<HTMLDivElement>(null);
+  const mapWrapperRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const qomCenterMarkerRef = useRef<L.Marker | null>(null);
@@ -53,17 +53,41 @@ function SimpleLeafletMapInner({
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [mapStyle, setMapStyle] = useState<'standard' | 'satellite'>('standard');
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isPressing, setIsPressing] = useState(false);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const mapboxTokenRef = useRef<string | null>(null);
 
-  const toggleFullscreen = () => {
-    setIsFullscreen((prev) => {
-      const next = !prev;
-      onFullscreenChange?.(next);
-      return next;
-    });
+  const toggleFullscreen = async () => {
+    const wrapper = mapWrapperRef.current;
+    if (!wrapper) return;
+
+    try {
+      if (document.fullscreenElement === wrapper) {
+        await document.exitFullscreen();
+      } else if (wrapper.requestFullscreen) {
+        await wrapper.requestFullscreen();
+      } else {
+        // Fallback for older mobile browsers without the Fullscreen API.
+        setIsFullscreen((prev) => {
+          const next = !prev;
+          onFullscreenChange?.(next);
+          return next;
+        });
+      }
+    } catch (error) {
+      console.error('[SimpleLeafletMap] Fullscreen failed:', error);
+    }
   };
+
+  useEffect(() => {
+    const syncFullscreenState = () => {
+      const next = document.fullscreenElement === mapWrapperRef.current;
+      setIsFullscreen(next);
+      onFullscreenChange?.(next);
+    };
+
+    document.addEventListener('fullscreenchange', syncFullscreenState);
+    return () => document.removeEventListener('fullscreenchange', syncFullscreenState);
+  }, [onFullscreenChange]);
 
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
@@ -240,7 +264,6 @@ function SimpleLeafletMapInner({
         pressTimer = undefined;
       }
       startPoint = null;
-      setIsPressing(false);
     };
 
     const onPointerDown = (ev: PointerEvent) => {
@@ -250,7 +273,6 @@ function SimpleLeafletMapInner({
       if (target.closest('.leaflet-marker-icon') || target.closest('button')) return;
 
       startPoint = { x: ev.clientX, y: ev.clientY };
-      setIsPressing(true);
       pressTimer = window.setTimeout(() => {
         if (!startPoint) return;
         const rect = containerEl.getBoundingClientRect();
@@ -394,7 +416,9 @@ function SimpleLeafletMapInner({
         markerRef.current = L.marker([lat, lng], { icon: markerIcon, draggable: true }).addTo(mapRef.current);
         
         markerRef.current.on('dragend', function() {
-          const pos = markerRef.current!.getLatLng();
+          const currentMarker = markerRef.current;
+          if (!currentMarker) return;
+          const pos = currentMarker.getLatLng();
           const dist = calculateDistance(pos.lat, pos.lng, QOM_CENTER.lat, QOM_CENTER.lng);
           setSelectedPos({ lat: pos.lat, lng: pos.lng, distance: dist });
           onLocationSelect(pos.lat, pos.lng);
@@ -418,8 +442,9 @@ function SimpleLeafletMapInner({
     }
   }));
 
-  const content = (
+  return (
     <div
+      ref={mapWrapperRef}
       className={
         isFullscreen
           ? 'fixed top-0 left-0 z-[99999] bg-background overflow-hidden'
@@ -498,13 +523,6 @@ function SimpleLeafletMapInner({
         </div>
       )}
 
-      {/* راهنمای انتخاب با نگه‌داشتن ۲ ثانیه */}
-      <div className={`absolute ${isFullscreen ? 'bottom-24' : 'bottom-16'} left-1/2 -translate-x-1/2 z-[10001] pointer-events-none`}>
-        <span className={`rounded-full px-3 py-1 text-[11px] font-medium shadow-md backdrop-blur-md ${isPressing ? 'bg-primary text-primary-foreground' : 'bg-background/80 border border-border text-muted-foreground'}`}>
-          {isPressing ? 'نگه دارید... در حال انتخاب موقعیت' : 'برای انتخاب موقعیت، ۲ ثانیه روی نقشه نگه دارید'}
-        </span>
-      </div>
-
       {/* بازگشت به فرم ثبت آدرس در حالت تمام‌صفحه */}
       {isFullscreen && (
         <div className="absolute bottom-0 left-0 right-0 p-3 pb-5 bg-background/95 backdrop-blur-md border-t border-border z-[10002]">
@@ -535,8 +553,6 @@ function SimpleLeafletMapInner({
       )}
     </div>
   );
-
-  return isFullscreen ? createPortal(content, document.body) : content;
 }
 
 const SimpleLeafletMap = forwardRef(SimpleLeafletMapInner);

@@ -127,7 +127,6 @@ export const NewLocationForm = ({ onSuccess, initialData, serviceTypeName }: New
     if (!hasMapPin || !formData.lat || !formData.lng) {
       toast({
         title: 'انتخاب موقعیت روی نقشه الزامی است',
-        description: 'برای انتخاب موقعیت، حدود ۲ ثانیه روی نقطه مورد نظر در نقشه نگه دارید',
         variant: 'destructive'
       });
       return;
@@ -258,16 +257,6 @@ export const NewLocationForm = ({ onSuccess, initialData, serviceTypeName }: New
         </Alert>
       )}
 
-      {!hasMapPin && (
-        <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900 py-2">
-          <MapPin className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-          <AlertDescription className="text-amber-800 dark:text-amber-300 text-xs sm:text-sm">
-انتخاب موقعیت پروژه روی نقشه الزامی است؛ برای انتخاب، حدود ۲ ثانیه روی نقطه مورد نظر نگه دارید.
-          </AlertDescription>
-        </Alert>
-      )}
-
-
       <div className="space-y-1">
         <Label htmlFor="title" className="text-xs sm:text-sm">عنوان آدرس (اختیاری)</Label>
         <Input
@@ -339,9 +328,6 @@ export const NewLocationForm = ({ onSuccess, initialData, serviceTypeName }: New
             </span>
           )}
         </div>
-        <p className="text-xs text-muted-foreground">
-          حدود ۲ ثانیه روی نقطه مورد نظر در نقشه نگه دارید تا موقعیت پروژه انتخاب شود (یا نشانگر را بکشید)
-        </p>
         <div className="[&_.h-\[500px\]]:h-[280px] sm:[&_.h-\[500px\]]:h-[320px]">
           <InteractiveLocationMap
             onLocationSelect={handleLocationSelect}
