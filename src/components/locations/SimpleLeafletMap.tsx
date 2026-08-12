@@ -491,7 +491,7 @@ function SimpleLeafletMapInner({
 
       {/* بازگشت به فرم ثبت آدرس در حالت تمام‌صفحه */}
       {isFullscreen && (
-        <div className="fixed bottom-0 left-0 right-0 p-3 pb-5 bg-background/95 backdrop-blur-md border-t border-border z-[10002]">
+        <div className="absolute bottom-0 left-0 right-0 p-3 pb-5 bg-background/95 backdrop-blur-md border-t border-border z-[10002]">
           <Button
             type="button"
             className="w-full h-12 text-base font-bold shadow-lg"
@@ -505,7 +505,7 @@ function SimpleLeafletMapInner({
 
 
       {selectedPos && (
-        <div className={`absolute ${isFullscreen ? 'bottom-20' : 'bottom-2'} right-2 bg-background/70 backdrop-blur-md border border-white/20 rounded-md px-1.5 py-0.5 shadow-sm z-[10000]`}>
+        <div className={`absolute ${isFullscreen ? 'bottom-24' : 'bottom-2'} right-2 bg-background/70 backdrop-blur-md border border-white/20 rounded-md px-1.5 py-0.5 shadow-sm z-[10000]`}>
           {loadingRoute ? (
             <span className="text-[8px] text-muted-foreground">محاسبه مسیر...</span>
           ) : selectedPos.roadDistance ? (
@@ -519,6 +519,8 @@ function SimpleLeafletMapInner({
       )}
     </div>
   );
+
+  return isFullscreen ? createPortal(content, document.body) : content;
 }
 
 const SimpleLeafletMap = forwardRef(SimpleLeafletMapInner);
