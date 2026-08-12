@@ -240,7 +240,7 @@ function SimpleLeafletMapInner({
       });
     }
 
-    // انتخاب موقعیت با نگه‌داشتن ۲ ثانیه‌ای روی نقشه (به‌جای کلیک ساده)
+    // انتخاب موقعیت با نگه‌داشتن یک‌ثانیه‌ای روی نقشه (به‌جای کلیک ساده)
     const placeMarker = async (lat: number, lng: number) => {
       if (markerRef.current) {
         markerRef.current.remove();
@@ -281,7 +281,7 @@ function SimpleLeafletMapInner({
         );
         clearPress();
         void placeMarker(latlng.lat, latlng.lng);
-      }, 2000);
+      }, 1000);
     };
 
     const onPointerMove = (ev: PointerEvent) => {
@@ -512,7 +512,14 @@ function SimpleLeafletMapInner({
 
       {/* کادر جستجوی آدرس - با فاصله از دکمه ماهواره */}
       {showSearch && (
-        <div className="absolute top-3 left-3 z-[10001]" style={{ right: '8.5rem' }}>
+        <div
+          className={cn(
+            'absolute top-3 left-3 z-[10001] transition-[right] duration-200',
+            isFullscreen
+              ? 'right-[8.5rem] focus-within:right-3 focus-within:z-[10003]'
+              : 'right-[8.5rem] focus-within:right-3 focus-within:z-[10003]'
+          )}
+        >
           <MapSearchBox
             onLocationSelect={handleSearchLocationSelect}
             placeholder="جستجوی آدرس..."
