@@ -424,6 +424,7 @@ function SimpleLeafletMapInner({
 
       {/* دکمه تغییر نمای نقشه */}
       <Button
+        type="button"
         variant="ghost"
         size="sm"
         onClick={() => setMapStyle(prev => prev === 'standard' ? 'satellite' : 'standard')}
@@ -445,9 +446,10 @@ function SimpleLeafletMapInner({
 
       {/* دکمه تمام‌صفحه / خروج از تمام‌صفحه */}
       <Button
+        type="button"
         variant="ghost"
         size="sm"
-        onClick={() => setIsFullscreen(prev => !prev)}
+        onClick={toggleFullscreen}
         className="absolute top-14 right-3 z-[10002] h-9 px-3 text-xs rounded-md bg-background/80 backdrop-blur-md border border-border text-foreground hover:bg-background shadow-md"
         title={isFullscreen ? 'کوچک کردن نقشه' : 'نمایش تمام‌صفحه نقشه'}
       >
@@ -475,18 +477,27 @@ function SimpleLeafletMapInner({
         </div>
       )}
 
-      {/* تایید موقعیت در حالت تمام‌صفحه */}
+      {/* راهنمای انتخاب با نگه‌داشتن ۲ ثانیه */}
+      <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-[10001] pointer-events-none">
+        <span className={`rounded-full px-3 py-1 text-[11px] font-medium shadow-md backdrop-blur-md ${isPressing ? 'bg-primary text-primary-foreground' : 'bg-background/80 border border-border text-muted-foreground'}`}>
+          {isPressing ? 'نگه دارید... در حال انتخاب موقعیت' : 'برای انتخاب موقعیت، ۲ ثانیه روی نقشه نگه دارید'}
+        </span>
+      </div>
+
+      {/* بازگشت به فرم ثبت آدرس در حالت تمام‌صفحه */}
       {isFullscreen && (
-        <div className="absolute bottom-4 left-4 right-4 z-[10002]">
+        <div className="fixed bottom-0 left-0 right-0 p-3 pb-5 bg-background/95 backdrop-blur-md border-t border-border z-[10002]">
           <Button
+            type="button"
             className="w-full h-12 text-base font-bold shadow-lg"
-            onClick={() => setIsFullscreen(false)}
+            onClick={toggleFullscreen}
           >
             <Check className="h-5 w-5 ml-2" />
-            {selectedPos ? 'تایید موقعیت و بازگشت به فرم' : 'بازگشت به فرم'}
+            بازگشت به ثبت آدرس
           </Button>
         </div>
       )}
+
 
       {selectedPos && (
         <div className={`absolute ${isFullscreen ? 'bottom-20' : 'bottom-2'} right-2 bg-background/70 backdrop-blur-md border border-white/20 rounded-md px-1.5 py-0.5 shadow-sm z-[10000]`}>
