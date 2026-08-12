@@ -269,7 +269,6 @@ export function createNeshanTileLayer(
     attribution: OSM_ATTRIBUTION,
     maxZoom: 22,
     maxNativeZoom: 19,
-    crossOrigin: true,
     ...options,
   });
 }
