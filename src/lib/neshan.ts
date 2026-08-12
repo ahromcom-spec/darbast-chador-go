@@ -203,18 +203,35 @@ export function createNeshanTileLayer(
   options?: L.TileLayerOptions,
 ): L.TileLayer {
   if (mapType === 'satellite') {
-    const sat = L.tileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      {
-        attribution: ESRI_ATTRIBUTION,
-        maxZoom: 22,
-        // Esri returns a grey "Map data not yet available" placeholder for
-        // parts of Qom at z19+. Oversample z18 instead so deep zoom stays usable.
-        maxNativeZoom: 18,
-        crossOrigin: true,
-        ...options,
-      },
-    );
+    const ESRI_SAT_URL =
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+    // منبع جایگزین در صورت خطای تایل (فایرفاکس/موبایل و فیلترینگ)
+    const WIKIMEDIA_SAT_FALLBACK =
+      'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+
+    const sat = L.tileLayer(ESRI_SAT_URL, {
+      attribution: ESRI_ATTRIBUTION,
+      maxZoom: 22,
+      // Esri returns a grey "Map data not yet available" placeholder for
+      // parts of Qom at z19+. Oversample z18 instead so deep zoom stays usable.
+      maxNativeZoom: 18,
+      // crossOrigin عمداً تنظیم نشده است: در فایرفاکس موبایل اگر پاسخ سرور
+      // هدر CORS نداشته باشد، تصویر تایل رد می‌شود و نقشه خاکستری می‌ماند.
+      updateWhenIdle: false,
+      keepBuffer: 3,
+      ...options,
+    });
+
+    // اگر تایل‌های منبع اول لود نشوند، یک‌بار به منبع جایگزین سوییچ می‌کنیم
+    let satErrors = 0;
+    let switched = false;
+    sat.on('tileerror', () => {
+      satErrors += 1;
+      if (!switched && satErrors >= 3) {
+        switched = true;
+        sat.setUrl(WIKIMEDIA_SAT_FALLBACK);
+      }
+    });
 
     // پوشش برچسب‌ها (نام خیابان‌ها، محله‌ها، شهرها) به‌صورت تایل‌های شفاف
     // روی تصاویر ماهواره‌ای — از CartoDB labels-only که در داخل ایران
@@ -226,15 +243,8 @@ export function createNeshanTileLayer(
         subdomains: 'abcd',
         maxZoom: 22,
         maxNativeZoom: 20,
-        crossOrigin: true,
         pane: 'overlayPane',
       },
-    );
-
-    // خطوط راه‌ها (street network) برای دیده‌شدن مسیر خیابان‌ها روی ماهواره
-    const cartoLines = L.tileLayer(
-      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',
-      { attribution: '', subdomains: 'abcd', maxZoom: 22, maxNativeZoom: 20, crossOrigin: true },
     );
 
     const persianLabels = createPersianLabelsOverlay();
