@@ -337,42 +337,70 @@ function SimpleLeafletMapInner({
   }));
 
   return (
-    <div className="relative w-full">
+    <div
+      className={
+        isFullscreen
+          ? 'fixed inset-0 z-[9999] bg-background'
+          : 'relative w-full'
+      }
+    >
       <div
         ref={mapContainer}
-        className="w-full rounded-lg border border-border"
-        style={{ 
-          minHeight: '420px',
+        className={isFullscreen ? 'w-full h-full' : 'w-full rounded-lg border border-border'}
+        style={{
+          minHeight: isFullscreen ? '100%' : '420px',
+          height: isFullscreen ? '100%' : undefined,
           // جلوگیری از تداخل CSS zoom با نقشه
           zoom: 1,
           transform: 'translateZ(0)'
         }}
       />
 
-      {/* دکمه تغییر نمای نقشه - کوچک و شیشه‌ای */}
+      {/* دکمه تغییر نمای نقشه */}
       <Button
         variant="ghost"
         size="sm"
         onClick={() => setMapStyle(prev => prev === 'standard' ? 'satellite' : 'standard')}
-        className="absolute top-3 right-3 z-[1002] h-7 px-2 text-[10px] rounded-md bg-background/40 backdrop-blur-md border border-white/20 text-foreground hover:bg-background/60 shadow-sm"
+        className="absolute top-3 right-3 z-[10002] h-9 px-3 text-xs rounded-md bg-background/80 backdrop-blur-md border border-border text-foreground hover:bg-background shadow-md"
         title={mapStyle === 'standard' ? 'نمای ماهواره‌ای' : 'نمای استاندارد'}
       >
         {mapStyle === 'standard' ? (
           <>
-            <Satellite className="h-3 w-3 ml-1" />
+            <Satellite className="h-4 w-4 ml-1" />
             <span className="font-medium">ماهواره‌ای</span>
           </>
         ) : (
           <>
-            <MapIcon className="h-3 w-3 ml-1" />
+            <MapIcon className="h-4 w-4 ml-1" />
             <span className="font-medium">نقشه</span>
+          </>
+        )}
+      </Button>
+
+      {/* دکمه تمام‌صفحه / خروج از تمام‌صفحه */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setIsFullscreen(prev => !prev)}
+        className="absolute top-14 right-3 z-[10002] h-9 px-3 text-xs rounded-md bg-background/80 backdrop-blur-md border border-border text-foreground hover:bg-background shadow-md"
+        title={isFullscreen ? 'کوچک کردن نقشه' : 'نمایش تمام‌صفحه نقشه'}
+      >
+        {isFullscreen ? (
+          <>
+            <Minimize2 className="h-4 w-4 ml-1" />
+            <span className="font-medium">کوچک کردن</span>
+          </>
+        ) : (
+          <>
+            <Maximize2 className="h-4 w-4 ml-1" />
+            <span className="font-medium">تمام‌صفحه</span>
           </>
         )}
       </Button>
 
       {/* کادر جستجوی آدرس - با فاصله از دکمه ماهواره */}
       {showSearch && (
-        <div className="absolute top-3 left-3 z-[1001]" style={{ right: '6.5rem' }}>
+        <div className="absolute top-3 left-3 z-[10001]" style={{ right: '8.5rem' }}>
           <MapSearchBox
             onLocationSelect={handleSearchLocationSelect}
             placeholder="جستجوی آدرس..."
@@ -381,8 +409,21 @@ function SimpleLeafletMapInner({
         </div>
       )}
 
+      {/* تایید موقعیت در حالت تمام‌صفحه */}
+      {isFullscreen && (
+        <div className="absolute bottom-4 left-4 right-4 z-[10002]">
+          <Button
+            className="w-full h-12 text-base font-bold shadow-lg"
+            onClick={() => setIsFullscreen(false)}
+          >
+            <Check className="h-5 w-5 ml-2" />
+            {selectedPos ? 'تایید موقعیت و بازگشت به فرم' : 'بازگشت به فرم'}
+          </Button>
+        </div>
+      )}
+
       {selectedPos && (
-        <div className="absolute bottom-2 right-2 bg-background/70 backdrop-blur-md border border-white/20 rounded-md px-1.5 py-0.5 shadow-sm z-[1000]">
+        <div className={`absolute ${isFullscreen ? 'bottom-20' : 'bottom-2'} right-2 bg-background/70 backdrop-blur-md border border-white/20 rounded-md px-1.5 py-0.5 shadow-sm z-[10000]`}>
           {loadingRoute ? (
             <span className="text-[8px] text-muted-foreground">محاسبه مسیر...</span>
           ) : selectedPos.roadDistance ? (
