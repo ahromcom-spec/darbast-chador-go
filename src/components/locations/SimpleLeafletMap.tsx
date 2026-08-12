@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import { supabase } from '@/integrations/supabase/client';
 import { MapSearchBox } from './MapSearchBox';
 import { Button } from '@/components/ui/button';
-import { Satellite, Map as MapIcon } from 'lucide-react';
+import { Satellite, Map as MapIcon, Maximize2, Minimize2, Check } from 'lucide-react';
 import { createNeshanTileLayer, neshanDirection } from '@/lib/neshan';
 
 export interface SimpleLeafletMapRef {
@@ -49,6 +49,7 @@ function SimpleLeafletMapInner({
   const [selectedPos, setSelectedPos] = useState<{ lat: number; lng: number; distance: number; roadDistance?: number } | null>(null);
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [mapStyle, setMapStyle] = useState<'standard' | 'satellite'>('standard');
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const mapboxTokenRef = useRef<string | null>(null);
   useEffect(() => {
@@ -285,6 +286,14 @@ function SimpleLeafletMapInner({
     newLayer.addTo(map);
     tileLayerRef.current = newLayer;
   }, [mapStyle]);
+
+  // در تغییر حالت تمام‌صفحه، اندازه نقشه را مجدد محاسبه کن
+  useEffect(() => {
+    const timers = [50, 200, 500].map((d) =>
+      setTimeout(() => mapRef.current?.invalidateSize({ animate: false }), d),
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [isFullscreen]);
 
   // Handler for search box location selection
   const handleSearchLocationSelect = (lat: number, lng: number, placeName: string) => {
