@@ -499,7 +499,7 @@ function SimpleLeafletMapInner({
       )}
 
       {/* راهنمای انتخاب با نگه‌داشتن ۲ ثانیه */}
-      <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-[10001] pointer-events-none">
+      <div className={`absolute ${isFullscreen ? 'bottom-24' : 'bottom-16'} left-1/2 -translate-x-1/2 z-[10001] pointer-events-none`}>
         <span className={`rounded-full px-3 py-1 text-[11px] font-medium shadow-md backdrop-blur-md ${isPressing ? 'bg-primary text-primary-foreground' : 'bg-background/80 border border-border text-muted-foreground'}`}>
           {isPressing ? 'نگه دارید... در حال انتخاب موقعیت' : 'برای انتخاب موقعیت، ۲ ثانیه روی نقشه نگه دارید'}
         </span>
