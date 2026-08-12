@@ -17,6 +17,7 @@ interface SimpleLeafletMapProps {
   initialLat?: number;
   initialLng?: number;
   showSearch?: boolean;
+  onFullscreenChange?: (isFullscreen: boolean) => void;
 }
 
 // مختصات مرکز شهر قم
