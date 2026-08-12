@@ -300,6 +300,14 @@ function SimpleLeafletMapInner({
     return () => {
       resizeTimeouts.forEach(clearTimeout);
       resizeObserver.disconnect();
+      clearPress();
+      containerEl.removeEventListener('pointerdown', onPointerDown);
+      containerEl.removeEventListener('pointermove', onPointerMove);
+      containerEl.removeEventListener('pointerup', clearPress);
+      containerEl.removeEventListener('pointercancel', clearPress);
+      containerEl.removeEventListener('pointerleave', clearPress);
+
+
 
       if (markerRef.current) {
         markerRef.current.remove();
