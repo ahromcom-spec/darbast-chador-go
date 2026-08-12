@@ -402,12 +402,17 @@ function SimpleLeafletMapInner({
     }
   }));
 
-  return (
+  const content = (
     <div
       className={
         isFullscreen
-          ? 'fixed inset-0 z-[9999] bg-background'
+          ? 'fixed top-0 left-0 z-[99999] bg-background overflow-hidden'
           : 'relative w-full'
+      }
+      style={
+        isFullscreen
+          ? { width: '100vw', height: '100dvh' }
+          : undefined
       }
     >
       <div
