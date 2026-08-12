@@ -41,6 +41,7 @@ function SimpleLeafletMapInner({
   initialLat = 34.6416,
   initialLng = 50.8746,
   showSearch = true,
+  onFullscreenChange,
 }: SimpleLeafletMapProps, ref: React.Ref<SimpleLeafletMapRef>) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -51,8 +52,18 @@ function SimpleLeafletMapInner({
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [mapStyle, setMapStyle] = useState<'standard' | 'satellite'>('standard');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isPressing, setIsPressing] = useState(false);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const mapboxTokenRef = useRef<string | null>(null);
+
+  const toggleFullscreen = () => {
+    setIsFullscreen((prev) => {
+      const next = !prev;
+      onFullscreenChange?.(next);
+      return next;
+    });
+  };
+
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
