@@ -513,12 +513,7 @@ function SimpleLeafletMapInner({
       {/* کادر جستجوی آدرس - با فاصله از دکمه ماهواره */}
       {showSearch && (
         <div
-          className={cn(
-            'absolute top-3 left-3 z-[10001] transition-[right] duration-200',
-            isFullscreen
-              ? 'right-[8.5rem] focus-within:right-3 focus-within:z-[10003]'
-              : 'right-[8.5rem] focus-within:right-3 focus-within:z-[10003]'
-          )}
+          className="absolute top-3 left-3 right-[8.5rem] z-[10001] transition-[right] duration-200 focus-within:right-3 focus-within:z-[10003]"
         >
           <MapSearchBox
             onLocationSelect={handleSearchLocationSelect}
