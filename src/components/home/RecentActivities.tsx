@@ -81,15 +81,14 @@ const InfiniteScrollGallery: React.FC<InfiniteScrollGalleryProps> = ({
           display: none;
         }
       `}</style>
-      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+      <div className="grid grid-cols-3 gap-0">
         {displayData.map((data, displayIndex) => (
           <button
             key={`${data.item.id}-${displayIndex}`}
             onClick={() => onSelectItem(data.originalIndex)}
             className={cn(
-              "relative aspect-square rounded-lg overflow-hidden group",
-              "transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20",
-              "border border-border/50 hover:border-blue-400/50"
+              "relative aspect-[3/4] overflow-hidden group",
+              "transition-opacity duration-200 hover:opacity-90"
             )}
           >
             {isVideoFile(data.item) ? (
