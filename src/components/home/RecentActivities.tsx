@@ -238,8 +238,8 @@ export const RecentActivities: React.FC = () => {
 
   const selectedMedia = selectedIndex !== null ? media[selectedIndex] : null;
   
-  // Show only first 4 items (1 row) in preview
-  const previewMedia = media.slice(0, 4);
+  // Show 2 rows × 3 items in preview
+  const previewMedia = media.slice(0, 6);
 
   if (loading) {
     return (
