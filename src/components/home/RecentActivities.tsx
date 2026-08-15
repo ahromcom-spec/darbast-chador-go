@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { Play, Image as ImageIcon, Loader2, ChevronLeft, ChevronRight, X, Grid3X3 } from 'lucide-react';
+import { Play, Image as ImageIcon, Loader2, ChevronLeft, ChevronRight, X, Grid3X3, Maximize2, Minimize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
