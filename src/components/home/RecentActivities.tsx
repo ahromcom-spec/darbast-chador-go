@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { Play, Image as ImageIcon, Loader2, ChevronLeft, ChevronRight, X, Grid3X3, Maximize2, Minimize2 } from 'lucide-react';
+import { Play, Image as ImageIcon, Loader2, ChevronLeft, ChevronRight, X, Grid3X3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -148,32 +148,7 @@ export const RecentActivities: React.FC = () => {
   const [showGallery, setShowGallery] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
-  const [isVideoFullscreen, setIsVideoFullscreen] = useState(false);
-  const videoWrapperRef = useRef<HTMLDivElement>(null);
 
-  // Fullscreen the wrapper (not the <video>) so logo/title overlays stay visible
-  const toggleVideoFullscreen = useCallback(async () => {
-    const el = videoWrapperRef.current;
-    if (!el) return;
-    try {
-      if (document.fullscreenElement) {
-        await document.exitFullscreen();
-      } else {
-        await el.requestFullscreen();
-      }
-    } catch {
-      setIsVideoFullscreen(prev => !prev);
-    }
-  }, []);
-
-  useEffect(() => {
-    const onChange = () => setIsVideoFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', onChange);
-    return () => document.removeEventListener('fullscreenchange', onChange);
-  }, []);
-
-  
-  
   // Swipe handling refs
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
@@ -461,42 +436,20 @@ export const RecentActivities: React.FC = () => {
               {/* Media Content */}
               <div className="flex items-center justify-center min-h-[300px] max-h-[80vh]">
                 {isVideoFile(selectedMedia) ? (
-                  <div
-                    ref={videoWrapperRef}
-                    className={cn(
-                      "relative flex items-center justify-center bg-black",
-                      isVideoFullscreen ? "w-screen h-screen" : "max-w-full max-h-[80vh]"
-                    )}
-                  >
+                  <div className="relative flex items-center justify-center bg-black max-w-full max-h-[80vh]">
                     <video
                       key={selectedMedia.id}
                       src={getMediaUrl(selectedMedia.file_path)}
-                      className={cn(
-                        "object-contain",
-                        isVideoFullscreen ? "w-full h-full" : "max-w-full max-h-[80vh]"
-                      )}
+                      className="object-contain max-w-full max-h-[80vh]"
                       controls
                       autoPlay
                       playsInline
                       webkit-playsinline="true"
-                      controlsList="nodownload noremoteplayback noplaybackrate nofullscreen"
+                      controlsList="nodownload noremoteplayback noplaybackrate"
                       disablePictureInPicture
                       disableRemotePlayback
                       onContextMenu={(e) => e.preventDefault()}
                     />
-                    {/* Custom fullscreen toggle (keeps logo/title overlays visible) */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 left-1/2 -translate-x-1/2 z-30 bg-black/50 hover:bg-black/70"
-                      onClick={toggleVideoFullscreen}
-                    >
-                      {isVideoFullscreen ? (
-                        <Minimize2 className="h-5 w-5 text-white" />
-                      ) : (
-                        <Maximize2 className="h-5 w-5 text-white" />
-                      )}
-                    </Button>
                     <img
                       src={ahromWatermark}
                       alt=""
