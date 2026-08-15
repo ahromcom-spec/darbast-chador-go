@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { Play, Image as ImageIcon, Loader2, ChevronLeft, ChevronRight, X, Grid3X3 } from 'lucide-react';
+import { Play, Image as ImageIcon, Loader2, ChevronLeft, ChevronRight, X, Grid3X3, Maximize2, Minimize2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -81,15 +81,14 @@ const InfiniteScrollGallery: React.FC<InfiniteScrollGalleryProps> = ({
           display: none;
         }
       `}</style>
-      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+      <div className="grid grid-cols-3 gap-0">
         {displayData.map((data, displayIndex) => (
           <button
             key={`${data.item.id}-${displayIndex}`}
             onClick={() => onSelectItem(data.originalIndex)}
             className={cn(
-              "relative aspect-square rounded-lg overflow-hidden group",
-              "transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20",
-              "border border-border/50 hover:border-blue-400/50"
+              "relative aspect-[3/4] overflow-hidden group",
+              "transition-opacity duration-200 hover:opacity-90"
             )}
           >
             {isVideoFile(data.item) ? (
@@ -149,6 +148,31 @@ export const RecentActivities: React.FC = () => {
   const [showGallery, setShowGallery] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  const [isVideoFullscreen, setIsVideoFullscreen] = useState(false);
+  const videoWrapperRef = useRef<HTMLDivElement>(null);
+
+  // Fullscreen the wrapper (not the <video>) so logo/title overlays stay visible
+  const toggleVideoFullscreen = useCallback(async () => {
+    const el = videoWrapperRef.current;
+    if (!el) return;
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await el.requestFullscreen();
+      }
+    } catch {
+      setIsVideoFullscreen(prev => !prev);
+    }
+  }, []);
+
+  useEffect(() => {
+    const onChange = () => setIsVideoFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  
   
   // Swipe handling refs
   const touchStartX = useRef<number | null>(null);
@@ -239,8 +263,8 @@ export const RecentActivities: React.FC = () => {
 
   const selectedMedia = selectedIndex !== null ? media[selectedIndex] : null;
   
-  // Show only first 4 items (1 row) in preview
-  const previewMedia = media.slice(0, 4);
+  // Show 2 rows × 3 items in preview
+  const previewMedia = media.slice(0, 6);
 
   if (loading) {
     return (
@@ -288,14 +312,13 @@ export const RecentActivities: React.FC = () => {
             فعالیت‌های اخیر اهرم
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-4 gap-2">
+        <CardContent className="px-2">
+          <div className="grid grid-cols-3 gap-0 overflow-hidden rounded-lg">
             {previewMedia.map((item) => (
               <div
                 key={item.id}
                 className={cn(
-                  "relative aspect-square rounded-lg overflow-hidden",
-                  "border border-border/50"
+                  "relative aspect-[3/4] overflow-hidden"
                 )}
               >
                 {isVideoFile(item) ? (
@@ -438,28 +461,50 @@ export const RecentActivities: React.FC = () => {
               {/* Media Content */}
               <div className="flex items-center justify-center min-h-[300px] max-h-[80vh]">
                 {isVideoFile(selectedMedia) ? (
-                  <div className="relative max-w-full max-h-[80vh]">
+                  <div
+                    ref={videoWrapperRef}
+                    className={cn(
+                      "relative flex items-center justify-center bg-black",
+                      isVideoFullscreen ? "w-screen h-screen" : "max-w-full max-h-[80vh]"
+                    )}
+                  >
                     <video
                       key={selectedMedia.id}
                       src={getMediaUrl(selectedMedia.file_path)}
-                      className="max-w-full max-h-[80vh] object-contain"
+                      className={cn(
+                        "object-contain",
+                        isVideoFullscreen ? "w-full h-full" : "max-w-full max-h-[80vh]"
+                      )}
                       controls
                       autoPlay
                       playsInline
                       webkit-playsinline="true"
-                      controlsList="nodownload noremoteplayback noplaybackrate"
+                      controlsList="nodownload noremoteplayback noplaybackrate nofullscreen"
                       disablePictureInPicture
                       disableRemotePlayback
                       onContextMenu={(e) => e.preventDefault()}
                     />
+                    {/* Custom fullscreen toggle (keeps logo/title overlays visible) */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 left-1/2 -translate-x-1/2 z-30 bg-black/50 hover:bg-black/70"
+                      onClick={toggleVideoFullscreen}
+                    >
+                      {isVideoFullscreen ? (
+                        <Minimize2 className="h-5 w-5 text-white" />
+                      ) : (
+                        <Maximize2 className="h-5 w-5 text-white" />
+                      )}
+                    </Button>
                     <img
                       src={ahromWatermark}
                       alt=""
-                      className="absolute bottom-12 left-3 w-12 h-12 object-contain opacity-85 pointer-events-none"
+                      className="absolute bottom-12 left-3 w-12 h-12 object-contain opacity-85 pointer-events-none z-20"
                     />
                     {/* Title overlay on video */}
                     {(selectedMedia.title || selectedMedia.description) && (
-                      <div className="absolute bottom-14 right-3 text-right pointer-events-none">
+                      <div className="absolute bottom-14 right-3 text-right pointer-events-none z-20">
                         {selectedMedia.title && (
                           <p className="text-white text-sm font-medium drop-shadow-lg bg-black/40 px-2 py-0.5 rounded">
                             {selectedMedia.title}
