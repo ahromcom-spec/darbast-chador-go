@@ -287,14 +287,13 @@ export const RecentActivities: React.FC = () => {
             فعالیت‌های اخیر اهرم
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-4 gap-2">
+        <CardContent className="px-2">
+          <div className="grid grid-cols-3 gap-0 overflow-hidden rounded-lg">
             {previewMedia.map((item) => (
               <div
                 key={item.id}
                 className={cn(
-                  "relative aspect-square rounded-lg overflow-hidden",
-                  "border border-border/50"
+                  "relative aspect-[3/4] overflow-hidden"
                 )}
               >
                 {isVideoFile(item) ? (
