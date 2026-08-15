@@ -436,42 +436,20 @@ export const RecentActivities: React.FC = () => {
               {/* Media Content */}
               <div className="flex items-center justify-center min-h-[300px] max-h-[80vh]">
                 {isVideoFile(selectedMedia) ? (
-                  <div
-                    ref={videoWrapperRef}
-                    className={cn(
-                      "relative flex items-center justify-center bg-black",
-                      isVideoFullscreen ? "w-screen h-screen" : "max-w-full max-h-[80vh]"
-                    )}
-                  >
+                  <div className="relative flex items-center justify-center bg-black max-w-full max-h-[80vh]">
                     <video
                       key={selectedMedia.id}
                       src={getMediaUrl(selectedMedia.file_path)}
-                      className={cn(
-                        "object-contain",
-                        isVideoFullscreen ? "w-full h-full" : "max-w-full max-h-[80vh]"
-                      )}
+                      className="object-contain max-w-full max-h-[80vh]"
                       controls
                       autoPlay
                       playsInline
                       webkit-playsinline="true"
-                      controlsList="nodownload noremoteplayback noplaybackrate nofullscreen"
+                      controlsList="nodownload noremoteplayback noplaybackrate"
                       disablePictureInPicture
                       disableRemotePlayback
                       onContextMenu={(e) => e.preventDefault()}
                     />
-                    {/* Custom fullscreen toggle (keeps logo/title overlays visible) */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 left-1/2 -translate-x-1/2 z-30 bg-black/50 hover:bg-black/70"
-                      onClick={toggleVideoFullscreen}
-                    >
-                      {isVideoFullscreen ? (
-                        <Minimize2 className="h-5 w-5 text-white" />
-                      ) : (
-                        <Maximize2 className="h-5 w-5 text-white" />
-                      )}
-                    </Button>
                     <img
                       src={ahromWatermark}
                       alt=""
