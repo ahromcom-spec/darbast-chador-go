@@ -148,6 +148,31 @@ export const RecentActivities: React.FC = () => {
   const [showGallery, setShowGallery] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  const [isVideoFullscreen, setIsVideoFullscreen] = useState(false);
+  const videoWrapperRef = useRef<HTMLDivElement>(null);
+
+  // Fullscreen the wrapper (not the <video>) so logo/title overlays stay visible
+  const toggleVideoFullscreen = useCallback(async () => {
+    const el = videoWrapperRef.current;
+    if (!el) return;
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await el.requestFullscreen();
+      }
+    } catch {
+      setIsVideoFullscreen(prev => !prev);
+    }
+  }, []);
+
+  useEffect(() => {
+    const onChange = () => setIsVideoFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  
   
   // Swipe handling refs
   const touchStartX = useRef<number | null>(null);
