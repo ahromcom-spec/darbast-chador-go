@@ -81,7 +81,7 @@ const InfiniteScrollGallery: React.FC<InfiniteScrollGalleryProps> = ({
           display: none;
         }
       `}</style>
-      <div className="grid grid-cols-3 gap-0">
+      <div className="grid grid-cols-3 md:grid-cols-4 gap-0">
         {displayData.map((data, displayIndex) => (
           <button
             key={`${data.item.id}-${displayIndex}`}
@@ -288,7 +288,7 @@ export const RecentActivities: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="px-2">
-          <div className="grid grid-cols-3 gap-0 overflow-hidden rounded-lg">
+          <div className="grid grid-cols-3 md:grid-cols-4 gap-0 overflow-hidden rounded-lg">
             {previewMedia.map((item) => (
               <div
                 key={item.id}
