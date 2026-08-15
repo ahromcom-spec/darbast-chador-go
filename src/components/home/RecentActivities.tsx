@@ -436,28 +436,50 @@ export const RecentActivities: React.FC = () => {
               {/* Media Content */}
               <div className="flex items-center justify-center min-h-[300px] max-h-[80vh]">
                 {isVideoFile(selectedMedia) ? (
-                  <div className="relative max-w-full max-h-[80vh]">
+                  <div
+                    ref={videoWrapperRef}
+                    className={cn(
+                      "relative flex items-center justify-center bg-black",
+                      isVideoFullscreen ? "w-screen h-screen" : "max-w-full max-h-[80vh]"
+                    )}
+                  >
                     <video
                       key={selectedMedia.id}
                       src={getMediaUrl(selectedMedia.file_path)}
-                      className="max-w-full max-h-[80vh] object-contain"
+                      className={cn(
+                        "object-contain",
+                        isVideoFullscreen ? "w-full h-full" : "max-w-full max-h-[80vh]"
+                      )}
                       controls
                       autoPlay
                       playsInline
                       webkit-playsinline="true"
-                      controlsList="nodownload noremoteplayback noplaybackrate"
+                      controlsList="nodownload noremoteplayback noplaybackrate nofullscreen"
                       disablePictureInPicture
                       disableRemotePlayback
                       onContextMenu={(e) => e.preventDefault()}
                     />
+                    {/* Custom fullscreen toggle (keeps logo/title overlays visible) */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 left-1/2 -translate-x-1/2 z-30 bg-black/50 hover:bg-black/70"
+                      onClick={toggleVideoFullscreen}
+                    >
+                      {isVideoFullscreen ? (
+                        <Minimize2 className="h-5 w-5 text-white" />
+                      ) : (
+                        <Maximize2 className="h-5 w-5 text-white" />
+                      )}
+                    </Button>
                     <img
                       src={ahromWatermark}
                       alt=""
-                      className="absolute bottom-12 left-3 w-12 h-12 object-contain opacity-85 pointer-events-none"
+                      className="absolute bottom-12 left-3 w-12 h-12 object-contain opacity-85 pointer-events-none z-20"
                     />
                     {/* Title overlay on video */}
                     {(selectedMedia.title || selectedMedia.description) && (
-                      <div className="absolute bottom-14 right-3 text-right pointer-events-none">
+                      <div className="absolute bottom-14 right-3 text-right pointer-events-none z-20">
                         {selectedMedia.title && (
                           <p className="text-white text-sm font-medium drop-shadow-lg bg-black/40 px-2 py-0.5 rounded">
                             {selectedMedia.title}
