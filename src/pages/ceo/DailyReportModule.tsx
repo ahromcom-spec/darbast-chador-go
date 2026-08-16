@@ -313,6 +313,22 @@ interface StaffReportRow {
   source_created_by?: string; // For parent module: which user created this report
 }
 
+const createEmptyBankCardRow = (): StaffReportRow => ({
+  staff_user_id: null,
+  staff_name: '',
+  work_status: 'کارکرده',
+  overtime_hours: 0,
+  amount_received: 0,
+  receiving_notes: '',
+  amount_spent: 0,
+  spending_notes: '',
+  bank_card_id: null,
+  transaction_time: null,
+  notes: '',
+  is_cash_box: true,
+  is_company_expense: false,
+});
+
 // Bank card cache type for aggregated view
 interface BankCardCache {
   id: string;
@@ -704,6 +720,16 @@ export default function DailyReportModule() {
   const [staffReports, setStaffReports] = useState<StaffReportRow[]>([]);
   const [dailyNotes, setDailyNotes] = useState<string>('');
   const [existingReportId, setExistingReportId] = useState<string | null>(null);
+
+  // فرم قابل ویرایش همیشه یک سطر ثابت کارت دارد؛ ربات همین سطر را تکمیل می‌کند.
+  useEffect(() => {
+    if (loading || effectiveReadOnly) return;
+    setStaffReports((rows) =>
+      rows.some((row) => row.is_cash_box && !row.is_company_expense)
+        ? rows
+        : [createEmptyBankCardRow(), ...rows]
+    );
+  }, [loading, effectiveReadOnly, reportDate, activeModuleKey]);
   const [activeTab, setActiveTab] = useState<string>(() => {
     return localStorage.getItem('dailyReportActiveTab') || 'new-report';
   });
@@ -3083,20 +3109,7 @@ export default function DailyReportModule() {
     setIsSaved(false);
     markCurrentDateDirty();
     setStaffReports((prev) => [
-      {
-        staff_user_id: null,
-        staff_name: '',
-        work_status: 'کارکرده',
-        overtime_hours: 0,
-        amount_received: 0,
-        receiving_notes: '',
-        amount_spent: 0,
-        spending_notes: '',
-        bank_card_id: null,
-        transaction_time: null,
-        notes: '',
-        is_cash_box: true,
-      },
+      createEmptyBankCardRow(),
       ...prev,
     ]);
   };
