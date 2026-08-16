@@ -254,6 +254,8 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled, moduleKe
             r.bank_card_name || `${r.receiving_notes || ''} ${r.spending_notes || ''}`,
           );
           const isCompanyExpense = r.is_company_expense === true || String(r.is_company_expense).toLowerCase() === 'true';
+          const amountReceived = Number(r.amount_received) || 0;
+          const amountSpent = Number(r.amount_spent) || 0;
           const cardRow = {
             staff_user_id: null,
             real_user_id: null,
@@ -262,9 +264,9 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled, moduleKe
               : String(r.bank_card_name || 'کارت شرکت'),
             work_status: 'کارکرده',
             overtime_hours: 0,
-            amount_received: Number(r.amount_received) || 0,
+            amount_received: amountReceived,
             receiving_notes: String(r.receiving_notes || ''),
-            amount_spent: Number(r.amount_spent) || 0,
+            amount_spent: amountSpent,
             spending_notes: String(r.spending_notes || ''),
             notes: String(r.notes || ''),
             is_cash_box: true,
@@ -273,10 +275,6 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled, moduleKe
             transaction_time: null,
           } as StaffReportRow;
 
-          if (!isCompanyExpense) return [cardRow];
-
-          // The financial amount always belongs to the selectable card row. The
-          // company row is only a descriptive classification and must not duplicate it.
           const companyRow: StaffReportRow = {
             staff_user_id: null,
             real_user_id: null,
@@ -293,6 +291,12 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled, moduleKe
             bank_card_id: null,
             transaction_time: null,
           };
+
+          if (!isCompanyExpense) return [cardRow];
+          if (!card && amountReceived === 0 && amountSpent === 0) return [companyRow];
+
+          // The financial amount always belongs to the selectable card row. The
+          // company row is only a descriptive classification and must not duplicate it.
           return [cardRow, companyRow];
         })
         .filter(Boolean) as StaffReportRow[];
