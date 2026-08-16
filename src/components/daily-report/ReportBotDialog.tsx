@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bot, Loader2, Sparkles, Check, User, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,6 +25,10 @@ interface StaffDirectoryItem {
 
 interface ReportBotDialogProps {
   orders: Order[];
+  /** Module key used to filter the bank cards the bot may pick from */
+  moduleKey?: string;
+  /** Persian module label (e.g. «گزارش روزانه پشتیبانی») to help the bot pick the right card */
+  moduleLabel?: string;
   /** Persian label of the currently selected date (for display only) */
   dateLabel?: string;
   onApply: (rows: { orderRows: OrderReportRow[]; staffRows: StaffReportRow[] }) => void;
@@ -40,13 +44,14 @@ const normalize = (s: string) =>
     .trim()
     .toLowerCase();
 
-export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: ReportBotDialogProps) {
+export function ReportBotDialog({ orders, dateLabel, onApply, disabled, moduleKey, moduleLabel }: ReportBotDialogProps) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const [extra, setExtra] = useState('');
   const [loading, setLoading] = useState(false);
   const [staffDirectory, setStaffDirectory] = useState<StaffDirectoryItem[]>([]);
   const [bankCards, setBankCards] = useState<{ id: string; card_name: string; bank_name?: string | null }[]>([]);
+  const cardsLoadedRef = useRef(false);
   const [preview, setPreview] = useState<{
     orderRows: OrderReportRow[];
     staffRows: StaffReportRow[];
@@ -85,21 +90,28 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
     })();
   }, [open, staffDirectory.length]);
 
-  // Load active bank cards so the bot can detect "کارت ملت اجرایی/پشتیبانی/مدیریت"
+  // Load active bank cards (filtered by module access) so the bot can pick the right card
   useEffect(() => {
-    if (!open || bankCards.length > 0) return;
+    if (!open || cardsLoadedRef.current) return;
+    cardsLoadedRef.current = true;
     (async () => {
       try {
         const { data } = await supabase
           .from('bank_cards')
-          .select('id, card_name, bank_name')
-          .eq('is_active', true);
-        setBankCards((data || []) as any);
+          .select('id, card_name, bank_name, allowed_modules')
+          .eq('is_active', true)
+          .order('card_name');
+        const all = (data || []) as any[];
+        const filtered = moduleKey
+          ? all.filter((c) => !c.allowed_modules || c.allowed_modules.length === 0 || c.allowed_modules.includes(moduleKey))
+          : all;
+        setBankCards((filtered.length > 0 ? filtered : all) as any);
       } catch (e) {
         console.error('Error loading bank cards for bot:', e);
+        cardsLoadedRef.current = false;
       }
     })();
-  }, [open, bankCards.length]);
+  }, [open, moduleKey]);
 
 
   const findStaff = (code: string, name: string): StaffDirectoryItem | undefined => {
@@ -150,6 +162,8 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
         body: {
           text,
           extraInstructions: extra || undefined,
+          moduleKey: moduleKey || undefined,
+          moduleLabel: moduleLabel || undefined,
           staffDirectory: staffDirectory.map((s) => ({ code: s.code, name: s.name })),
           bankCardsDirectory: bankCards.map((c) => ({ id: c.id, card_name: c.card_name, bank_name: c.bank_name })),
           ordersDirectory: orders.slice(0, 400).map((o) => ({
@@ -228,12 +242,15 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
                   (c) => normalize(c.card_name).includes(cardName) || cardName.includes(normalize(c.card_name)),
                 )
               : undefined);
-          if (!card) return null;
           const isCompanyExpense = r.is_company_expense === true;
           return {
             staff_user_id: null,
             real_user_id: null,
-            staff_name: isCompanyExpense ? 'ماهیت شرکت اهرم' : `${card.card_name}${card.bank_name ? ` (${card.bank_name})` : ''}`,
+            staff_name: isCompanyExpense
+              ? 'ماهیت شرکت اهرم'
+              : card
+                ? `${card.card_name}${card.bank_name ? ` (${card.bank_name})` : ''}`
+                : String(r.bank_card_name || 'کارت شرکت'),
             work_status: 'کارکرده',
             overtime_hours: 0,
             amount_received: Number(r.amount_received) || 0,
@@ -243,7 +260,7 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
             notes: String(r.notes || ''),
             is_cash_box: !isCompanyExpense,
             is_company_expense: isCompanyExpense,
-            bank_card_id: card.id,
+            bank_card_id: card?.id || null,
             transaction_time: null,
           } as StaffReportRow;
         })
