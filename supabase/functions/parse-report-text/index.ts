@@ -79,7 +79,7 @@ serve(async (req) => {
   }
 
   try {
-    const { text, staffDirectory, ordersDirectory, extraInstructions } = await req.json();
+    const { text, staffDirectory, ordersDirectory, bankCardsDirectory, extraInstructions } = await req.json();
 
     if (!text || typeof text !== 'string' || !text.trim()) {
       return new Response(JSON.stringify({ success: false, error: 'متن گزارش ارسال نشده است' }), {
