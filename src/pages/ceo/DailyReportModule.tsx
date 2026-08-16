@@ -4708,13 +4708,6 @@ export default function DailyReportModule() {
               <span className="sm:hidden">پاکسازی</span>
             </Button>
           )}
-          {!effectiveReadOnly && (
-            <ReportBotDialog
-              orders={orders}
-              dateLabel={formatPersianDate(toLocalDateString(reportDate))}
-              onApply={handleReportBotApply}
-            />
-          )}
           {!isAggregated && (
             <ExcelImportDialog
               onImportComplete={handleExcelImport}
@@ -5645,6 +5638,18 @@ export default function DailyReportModule() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* ربات پرکردن گزارش */}
+                {!effectiveReadOnly && (
+                  <div className="flex justify-center">
+                    <ReportBotDialog
+                      orders={orders}
+                      dateLabel={formatPersianDate(toLocalDateString(reportDate))}
+                      onApply={handleReportBotApply}
+                    />
+                  </div>
+                )}
+
 
                 {/* Save Button - برای ماژول‌های غیر تجمیعی و ماژول مادر */}
                 {(!isAggregated || shouldShowAllUserReports) && (
