@@ -46,6 +46,7 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
   const [extra, setExtra] = useState('');
   const [loading, setLoading] = useState(false);
   const [staffDirectory, setStaffDirectory] = useState<StaffDirectoryItem[]>([]);
+  const [bankCards, setBankCards] = useState<{ id: string; card_name: string; bank_name?: string | null }[]>([]);
   const [preview, setPreview] = useState<{
     orderRows: OrderReportRow[];
     staffRows: StaffReportRow[];
@@ -53,6 +54,7 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
     unmatchedOrders: string[];
     unmatchedStaff: string[];
   } | null>(null);
+
 
   // Load staff directory (HR employees + salary settings) for name → code matching
   useEffect(() => {
