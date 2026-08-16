@@ -181,6 +181,18 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
         const rawName = String(r.staff_name || '').trim();
         const matched = findStaff(String(r.staff_code || ''), rawName);
         if (!matched && rawName) unmatchedStaff.push(rawName);
+
+        // Match bank card by id, or by name mentioned in the text
+        const cardName = normalize(String(r.bank_card_name || ''));
+        const card =
+          bankCards.find((c) => c.id === String(r.bank_card_id || '')) ||
+          (cardName
+            ? bankCards.find((c) => normalize(c.card_name) === cardName) ||
+              bankCards.find(
+                (c) => normalize(c.card_name).includes(cardName) || cardName.includes(normalize(c.card_name)),
+              )
+            : undefined);
+
         return {
           staff_user_id: matched?.code || null,
           real_user_id: matched?.user_id || null,
@@ -194,10 +206,11 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
           notes: String(r.notes || ''),
           is_cash_box: false,
           is_company_expense: false,
-          bank_card_id: null,
+          bank_card_id: card?.id || null,
           transaction_time: null,
         } as StaffReportRow;
       });
+
 
       if (orderRows.length === 0 && staffRows.length === 0) {
         toast.error('چیزی برای پرکردن جداول پیدا نشد');
