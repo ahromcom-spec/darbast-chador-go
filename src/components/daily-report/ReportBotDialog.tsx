@@ -85,6 +85,23 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
     })();
   }, [open, staffDirectory.length]);
 
+  // Load active bank cards so the bot can detect "کارت ملت اجرایی/پشتیبانی/مدیریت"
+  useEffect(() => {
+    if (!open || bankCards.length > 0) return;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('bank_cards')
+          .select('id, card_name, bank_name')
+          .eq('is_active', true);
+        setBankCards((data || []) as any);
+      } catch (e) {
+        console.error('Error loading bank cards for bot:', e);
+      }
+    })();
+  }, [open, bankCards.length]);
+
+
   const findStaff = (code: string, name: string): StaffDirectoryItem | undefined => {
     if (code) {
       const byCode = staffDirectory.find((s) => s.code === code);
