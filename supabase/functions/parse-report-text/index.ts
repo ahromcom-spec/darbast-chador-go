@@ -208,10 +208,40 @@ serve(async (req) => {
         .join(' - ');
     }
 
+    // Card rows: money taken out of company cards. Auto-derive missing ones from
+    // receivers that were paid by a card, so every card payment has a card row.
+    const cardRows: any[] = Array.isArray(parsed.cardRows) ? parsed.cardRows : [];
+    for (const r of staffRows) {
+      const cardId = String(r.bank_card_id || '').trim();
+      const amount = Number(r.amount_received) || 0;
+      if (!cardId || amount <= 0) continue;
+      const existing = cardRows.find((c) => String(c.bank_card_id || '').trim() === cardId);
+      const label = `به ${r.staff_name || ''} ${amount.toLocaleString('en-US')}`.trim();
+      if (existing) {
+        const notes = norm(existing.spending_notes);
+        const name = norm(r.staff_name);
+        if (name && notes.includes(name)) continue;
+        existing.amount_spent = (Number(existing.amount_spent) || 0) + amount;
+        existing.spending_notes = [existing.spending_notes, label].filter(Boolean).join(' - ');
+      } else {
+        cardRows.push({
+          bank_card_id: cardId,
+          bank_card_name: r.bank_card_name || '',
+          amount_received: 0,
+          receiving_notes: '',
+          amount_spent: amount,
+          spending_notes: label,
+          is_company_expense: false,
+          notes: '',
+        });
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         staffRows,
+        cardRows,
         orderRows: Array.isArray(parsed.orderRows) ? parsed.orderRows : [],
         summary: typeof parsed.summary === 'string' ? parsed.summary : '',
       }),
