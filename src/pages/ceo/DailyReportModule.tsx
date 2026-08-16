@@ -42,6 +42,8 @@ import { format } from 'date-fns-jalali';
 import { StaffAuditTab } from '@/components/ceo/StaffAuditTab';
 import { StaffSalarySettingsTab } from '@/components/ceo/StaffSalarySettingsTab';
 import { ExcelImportDialog } from '@/components/ceo/ExcelImportDialog';
+import { ReportBotDialog } from '@/components/daily-report/ReportBotDialog';
+
 import { ModuleLayout } from '@/components/layouts/ModuleLayout';
 import { OrderTimeline } from '@/components/orders/OrderTimeline';
 import { MediaGallery, MediaItem } from '@/components/media/MediaGallery';
