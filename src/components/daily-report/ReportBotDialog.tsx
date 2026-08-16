@@ -132,6 +132,11 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
       )
     );
   };
+  const getCardLabel = (cardId: string) => {
+    const c = bankCards.find((x) => x.id === cardId);
+    return c ? `${c.card_name}${c.bank_name ? ` (${c.bank_name})` : ''}` : '';
+  };
+
 
   const handleAnalyze = async () => {
     if (!text.trim()) {
