@@ -236,7 +236,7 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
               onChange={(e) => setText(e.target.value)}
               rows={9}
               dir="rtl"
-              placeholder={'مثال:\nداود کارکرد\n1 یک میلیون به حسین مالک داود زد\nاکیپ : جلال،،حسین مالک،،ابول نجفی\nپروژه: طایقان باز شد'}
+              placeholder="گزارش امروز را در اینجا توضیح دهید"
             />
           </div>
 
