@@ -4708,13 +4708,6 @@ export default function DailyReportModule() {
               <span className="sm:hidden">پاکسازی</span>
             </Button>
           )}
-          {!effectiveReadOnly && (
-            <ReportBotDialog
-              orders={orders}
-              dateLabel={formatPersianDate(toLocalDateString(reportDate))}
-              onApply={handleReportBotApply}
-            />
-          )}
           {!isAggregated && (
             <ExcelImportDialog
               onImportComplete={handleExcelImport}
