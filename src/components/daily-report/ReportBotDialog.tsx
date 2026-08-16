@@ -146,6 +146,7 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
           text,
           extraInstructions: extra || undefined,
           staffDirectory: staffDirectory.map((s) => ({ code: s.code, name: s.name })),
+          bankCardsDirectory: bankCards.map((c) => ({ id: c.id, card_name: c.card_name, bank_name: c.bank_name })),
           ordersDirectory: orders.slice(0, 400).map((o) => ({
             id: o.id,
             code: o.code,
@@ -154,6 +155,7 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
             subcategory_name: o.subcategory_name,
           })),
         },
+
       });
 
       if (error) throw error;
