@@ -168,15 +168,54 @@ serve(async (req) => {
       });
     }
 
+    const staffRows: any[] = Array.isArray(parsed.staffRows) ? parsed.staffRows : [];
+
+    // Safety net: mirror payments. If a receiver's notes say "از <someone>" and that
+    // someone is another row, make sure the payer's amount_spent reflects the payment.
+    const norm = (s: string) =>
+      String(s || '')
+        .replace(/[\u200c\u200f\u200e]/g, '')
+        .replace(/[ىي]/g, 'ی')
+        .replace(/ك/g, 'ک')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    for (const receiver of staffRows) {
+      const amount = Number(receiver.amount_received) || 0;
+      const note = norm(receiver.receiving_notes);
+      if (amount <= 0 || !note || note.includes('کارت') || note.includes('صندوق') || note.includes('تنخواه')) continue;
+
+      const payer = staffRows.find((p) => {
+        if (p === receiver) return false;
+        const name = norm(p.staff_name);
+        if (!name) return false;
+        const first = name.split(' ')[0];
+        return note.includes(name) || (first.length > 2 && note.includes(first));
+      });
+      if (!payer) continue;
+
+      const paidTo = norm(payer.spending_notes);
+      const receiverName = norm(receiver.staff_name);
+      const receiverFirst = receiverName.split(' ')[0];
+      const alreadyLogged = paidTo.includes(receiverName) || (receiverFirst.length > 2 && paidTo.includes(receiverFirst));
+      if (alreadyLogged) continue;
+
+      payer.amount_spent = (Number(payer.amount_spent) || 0) + amount;
+      payer.spending_notes = [payer.spending_notes, `به ${receiver.staff_name} ${amount.toLocaleString('en-US')}`]
+        .filter(Boolean)
+        .join(' - ');
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
-        staffRows: Array.isArray(parsed.staffRows) ? parsed.staffRows : [],
+        staffRows,
         orderRows: Array.isArray(parsed.orderRows) ? parsed.orderRows : [],
         summary: typeof parsed.summary === 'string' ? parsed.summary : '',
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
+
   } catch (error) {
     console.error('parse-report-text error:', error);
     return new Response(JSON.stringify({ success: false, error: 'خطای غیرمنتظره در ربات پرکردن گزارش' }), {
