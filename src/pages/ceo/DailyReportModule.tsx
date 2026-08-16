@@ -5280,28 +5280,13 @@ export default function DailyReportModule() {
                               >
                               <TableCell className="border border-amber-200">
                                  {isCompanyExpense ? (
-                                   <div className="min-w-[260px] space-y-2">
+                                   <div className="min-w-[200px] space-y-2">
                                      <div className="font-semibold flex items-center gap-2 text-foreground">
                                        <Building className="h-5 w-5 text-primary" />
                                        ماهیت شرکت اهرم
                                      </div>
-                                     {!effectiveReadOnly && (
-                                       <BankCardSelect
-                                         value={row.bank_card_id ?? null}
-                                         onValueChange={(value) => updateStaffRow(index, 'bank_card_id', value)}
-                                         placeholder="انتخاب کارت هزینه شرکت"
-                                         showBalance={true}
-                                         showManagementCards={true}
-                                         moduleKey={bankCardModuleKey || undefined}
-                                         asOfDate={toLocalDateString(reportDate)}
-                                       />
-                                     )}
-                                     {effectiveReadOnly && row.bank_card_id && (
-                                       <span className="text-xs text-muted-foreground">
-                                         {bankCardsCache.get(row.bank_card_id)?.card_name || 'کارت بانکی'}
-                                       </span>
-                                     )}
                                    </div>
+
                                  ) : row.is_cash_box ? (
                                    effectiveReadOnly ? (
                                      (() => {
