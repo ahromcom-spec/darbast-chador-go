@@ -4351,7 +4351,7 @@ export default function DailyReportModule() {
           // Company expense rows remain separate per bank card.
           if (row.is_company_expense) {
             const idx = merged.findIndex(
-              (r) => r.is_company_expense && Boolean(row.bank_card_id) && r.bank_card_id === row.bank_card_id
+              (r) => r.is_company_expense && (row.bank_card_id ? r.bank_card_id === row.bank_card_id : !r.bank_card_id)
             );
             if (idx >= 0) {
               const ex = merged[idx];

@@ -307,11 +307,69 @@ serve(async (req) => {
       }
     }
 
+    // A «company expense» is a classification, not the financial source. Keep the
+    // withdrawal on a real selectable card row and emit a separate zero-value
+    // company row so the same amount is never counted twice.
+    const normalizedCardRows: any[] = [];
+    const cardRowById = new Map<string, any>();
+    const companyDescriptions: string[] = [];
+
+    for (const sourceRow of cardRows) {
+      const resolved = resolveCard(
+        sourceRow.bank_card_id,
+        sourceRow.bank_card_name || `${sourceRow.receiving_notes || ''} ${sourceRow.spending_notes || ''} ${sourceRow.notes || ''}`,
+      );
+      const isCompanyExpense = sourceRow.is_company_expense === true ||
+        String(sourceRow.is_company_expense).toLowerCase() === 'true';
+
+      if (isCompanyExpense) {
+        const description = [sourceRow.spending_notes, sourceRow.notes].filter(Boolean).join(' - ');
+        if (description) companyDescriptions.push(description);
+      }
+
+      const cardId = resolved?.id || String(sourceRow.bank_card_id || '').trim();
+      if (!cardId) continue;
+
+      const existing = cardRowById.get(cardId);
+      if (existing) {
+        existing.amount_received += Number(sourceRow.amount_received) || 0;
+        existing.amount_spent += Number(sourceRow.amount_spent) || 0;
+        existing.receiving_notes = [existing.receiving_notes, sourceRow.receiving_notes].filter(Boolean).join(' - ');
+        existing.spending_notes = [existing.spending_notes, sourceRow.spending_notes].filter(Boolean).join(' - ');
+        existing.notes = [existing.notes, sourceRow.notes].filter(Boolean).join(' - ');
+        continue;
+      }
+
+      const normalized = {
+        ...sourceRow,
+        bank_card_id: cardId,
+        bank_card_name: resolved?.card_name || sourceRow.bank_card_name || '',
+        amount_received: Number(sourceRow.amount_received) || 0,
+        amount_spent: Number(sourceRow.amount_spent) || 0,
+        is_company_expense: false,
+      };
+      cardRowById.set(cardId, normalized);
+      normalizedCardRows.push(normalized);
+    }
+
+    if (companyDescriptions.length > 0) {
+      normalizedCardRows.push({
+        bank_card_id: '',
+        bank_card_name: '',
+        amount_received: 0,
+        receiving_notes: '',
+        amount_spent: 0,
+        spending_notes: '',
+        is_company_expense: true,
+        notes: companyDescriptions.join(' - '),
+      });
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         staffRows,
-        cardRows,
+        cardRows: normalizedCardRows,
         orderRows: Array.isArray(parsed.orderRows) ? parsed.orderRows : [],
         summary: typeof parsed.summary === 'string' ? parsed.summary : '',
       }),
