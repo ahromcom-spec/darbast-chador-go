@@ -309,8 +309,9 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
                 </p>
               )}
 
-              <ScrollArea className="max-h-56">
-                <div className="space-y-2 pl-1">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-blue-600">سفارشات شناسایی‌شده ({preview.orderRows.length})</p>
+                <div className="space-y-2">
                   {preview.orderRows.map((r, i) => {
                     const o = orders.find((x) => x.id === r.order_id);
                     return (
@@ -324,17 +325,39 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
                       </div>
                     );
                   })}
+                </div>
+
+                <p className="text-xs font-semibold text-amber-600">
+                  نیروهای شناسایی‌شده ({preview.staffRows.length})
+                </p>
+                <div className="space-y-2">
                   {preview.staffRows.map((r, i) => (
-                    <div key={`s-${i}`} className="text-xs rounded border bg-background p-2">
-                      <span className="font-semibold text-amber-600">{r.staff_name || 'نیروی نامشخص'}</span>
-                      {' — '}
-                      {r.work_status}
-                      {r.amount_received ? <span> | دریافتی: {r.amount_received.toLocaleString('en-US')}</span> : null}
-                      {r.amount_spent ? <span> | پرداختی: {r.amount_spent.toLocaleString('en-US')}</span> : null}
+                    <div key={`s-${i}`} className="text-xs rounded border bg-background p-2 space-y-1">
+                      <div>
+                        <span className="font-semibold text-amber-600">{r.staff_name || 'نیروی نامشخص'}</span>
+                        {' — '}
+                        {r.work_status}
+                        {r.overtime_hours ? <span> | اضافه‌کاری: {r.overtime_hours}</span> : null}
+                      </div>
+                      {r.amount_received ? (
+                        <div className="text-green-700">
+                          دریافتی: {r.amount_received.toLocaleString('en-US')}
+                          {r.receiving_notes ? ` (${r.receiving_notes})` : ''}
+                          {r.bank_card_id ? ` | ${getCardLabel(r.bank_card_id)}` : ''}
+                        </div>
+                      ) : null}
+                      {r.amount_spent ? (
+                        <div className="text-red-700">
+                          پرداختی: {r.amount_spent.toLocaleString('en-US')}
+                          {r.spending_notes ? ` (${r.spending_notes})` : ''}
+                        </div>
+                      ) : null}
+                      {r.notes ? <div className="text-muted-foreground">{r.notes}</div> : null}
                     </div>
                   ))}
                 </div>
-              </ScrollArea>
+              </div>
+
 
               <Button onClick={handleApply} className="w-full gap-2 bg-green-600 hover:bg-green-700">
                 <Check className="h-4 w-4" />
