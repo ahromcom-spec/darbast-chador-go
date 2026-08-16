@@ -4708,12 +4708,20 @@ export default function DailyReportModule() {
               <span className="sm:hidden">پاکسازی</span>
             </Button>
           )}
+          {!effectiveReadOnly && (
+            <ReportBotDialog
+              orders={orders}
+              dateLabel={formatPersianDate(toLocalDateString(reportDate))}
+              onApply={handleReportBotApply}
+            />
+          )}
           {!isAggregated && (
             <ExcelImportDialog
               onImportComplete={handleExcelImport}
               knownStaffMembers={staffMembers}
             />
           )}
+
           {autoSaveStatus !== 'idle' && !isAggregated && (
             <div className="flex items-center gap-2 text-sm">
               {autoSaveStatus === 'saving' && (
