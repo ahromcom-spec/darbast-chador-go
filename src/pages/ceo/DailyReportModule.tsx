@@ -42,6 +42,8 @@ import { format } from 'date-fns-jalali';
 import { StaffAuditTab } from '@/components/ceo/StaffAuditTab';
 import { StaffSalarySettingsTab } from '@/components/ceo/StaffSalarySettingsTab';
 import { ExcelImportDialog } from '@/components/ceo/ExcelImportDialog';
+import { ReportBotDialog } from '@/components/daily-report/ReportBotDialog';
+
 import { ModuleLayout } from '@/components/layouts/ModuleLayout';
 import { OrderTimeline } from '@/components/orders/OrderTimeline';
 import { MediaGallery, MediaItem } from '@/components/media/MediaGallery';
@@ -4309,6 +4311,62 @@ export default function DailyReportModule() {
     return ROW_COLORS.find(c => c.value === color)?.class || 'bg-background';
   };
 
+  const handleReportBotApply = ({
+    orderRows,
+    staffRows,
+  }: {
+    orderRows: OrderReportRow[];
+    staffRows: StaffReportRow[];
+  }) => {
+    setIsSaved(false);
+
+    if (orderRows.length > 0) {
+      const prev = orderReportsRef.current.filter(
+        (r) => r.order_id || r.activity_description || r.service_details || r.team_name || r.notes
+      );
+      const next = [...prev, ...orderRows].map((r, i) => ({
+        ...r,
+        row_color: ROW_COLORS[i % ROW_COLORS.length].value,
+      }));
+      orderReportsRef.current = next;
+      setOrderReports(next);
+    }
+
+    if (staffRows.length > 0) {
+      setStaffReports((prevRows) => {
+        const kept = prevRows.filter((r) => r.is_cash_box || r.is_company_expense || r.staff_user_id || r.staff_name);
+        const merged = [...kept];
+        staffRows.forEach((row) => {
+          const existingIndex = merged.findIndex(
+            (r) =>
+              !r.is_cash_box &&
+              !r.is_company_expense &&
+              ((row.staff_user_id && r.staff_user_id === row.staff_user_id) ||
+                (!row.staff_user_id && !!row.staff_name && r.staff_name === row.staff_name))
+          );
+          if (existingIndex >= 0) {
+            const ex = merged[existingIndex];
+            merged[existingIndex] = {
+              ...ex,
+              work_status: row.work_status,
+              overtime_hours: row.overtime_hours || ex.overtime_hours,
+              amount_received: row.amount_received || ex.amount_received,
+              receiving_notes: row.receiving_notes || ex.receiving_notes,
+              amount_spent: row.amount_spent || ex.amount_spent,
+              spending_notes: row.spending_notes || ex.spending_notes,
+              notes: row.notes || ex.notes,
+            };
+          } else {
+            merged.push(row);
+          }
+        });
+        return merged;
+      });
+    }
+
+    markCurrentDateDirty();
+  };
+
   const formatPersianDate = (dateStr: string) => {
     try {
       return format(new Date(dateStr), 'EEEE d MMMM yyyy');
@@ -4316,6 +4374,7 @@ export default function DailyReportModule() {
       return dateStr;
     }
   };
+
 
   // Fetch full order details for dialog
   const [orderMedia, setOrderMedia] = useState<Array<{id: string; file_path: string; file_type: string; url?: string; mime_type?: string; created_at?: string}>>([]);
@@ -4649,12 +4708,20 @@ export default function DailyReportModule() {
               <span className="sm:hidden">پاکسازی</span>
             </Button>
           )}
+          {!effectiveReadOnly && (
+            <ReportBotDialog
+              orders={orders}
+              dateLabel={formatPersianDate(toLocalDateString(reportDate))}
+              onApply={handleReportBotApply}
+            />
+          )}
           {!isAggregated && (
             <ExcelImportDialog
               onImportComplete={handleExcelImport}
               knownStaffMembers={staffMembers}
             />
           )}
+
           {autoSaveStatus !== 'idle' && !isAggregated && (
             <div className="flex items-center gap-2 text-sm">
               {autoSaveStatus === 'saving' && (
