@@ -5684,8 +5684,11 @@ export default function DailyReportModule() {
                     <ReportBotDialog
                       orders={orders}
                       dateLabel={formatPersianDate(toLocalDateString(reportDate))}
+                      moduleKey={bankCardModuleKey || undefined}
+                      moduleLabel={moduleName || undefined}
                       onApply={handleReportBotApply}
                     />
+
                   </div>
                 )}
 
