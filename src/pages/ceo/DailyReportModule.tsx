@@ -1341,13 +1341,14 @@ export default function DailyReportModule() {
      // اگر داده تغییر نکرده، ذخیره نکن
      if (dataHash === lastAutoSaveHashRef.current) return;
 
-    // Deduplicate: only allow ONE company expense row per report
+    // Deduplicate company expenses per card, not globally: each selected card owns a row.
     const deduplicatedStaff = (() => {
-      let hasCompanyExpense = false;
+      const companyExpenseKeys = new Set<string>();
       return staffReports.filter((s) => {
         if (s.is_company_expense) {
-          if (hasCompanyExpense) return false; // skip duplicates
-          hasCompanyExpense = true;
+          const key = s.bank_card_id || 'unassigned-company-expense';
+          if (companyExpenseKeys.has(key)) return false;
+          companyExpenseKeys.add(key);
         }
         return true;
       });
@@ -4337,22 +4338,25 @@ export default function DailyReportModule() {
         const kept = prevRows.filter((r) => r.is_cash_box || r.is_company_expense || r.staff_user_id || r.staff_name);
         const merged = [...kept];
         staffRows.forEach((row) => {
-          // Company nature row: there is only one, merge into it
+          // Company expense rows remain separate per bank card.
           if (row.is_company_expense) {
-            const idx = merged.findIndex((r) => r.is_company_expense);
+            const idx = merged.findIndex(
+              (r) => r.is_company_expense && Boolean(row.bank_card_id) && r.bank_card_id === row.bank_card_id
+            );
             if (idx >= 0) {
               const ex = merged[idx];
               merged[idx] = {
                 ...ex,
+                is_cash_box: true,
                 bank_card_id: row.bank_card_id || ex.bank_card_id,
-                amount_received: row.amount_received || ex.amount_received,
-                receiving_notes: row.receiving_notes || ex.receiving_notes,
-                amount_spent: row.amount_spent || ex.amount_spent,
-                spending_notes: row.spending_notes || ex.spending_notes,
-                notes: row.notes || ex.notes,
+                amount_received: (ex.amount_received || 0) + (row.amount_received || 0),
+                receiving_notes: [ex.receiving_notes, row.receiving_notes].filter(Boolean).join(' - '),
+                amount_spent: (ex.amount_spent || 0) + (row.amount_spent || 0),
+                spending_notes: [ex.spending_notes, row.spending_notes].filter(Boolean).join(' - '),
+                notes: [ex.notes, row.notes].filter(Boolean).join(' - '),
               };
             } else {
-              merged.push(row);
+              merged.push({ ...row, is_cash_box: true });
             }
             return;
           }
@@ -5276,9 +5280,27 @@ export default function DailyReportModule() {
                               >
                               <TableCell className="border border-amber-200">
                                  {isCompanyExpense ? (
-                                   <div className="min-w-[220px] font-semibold flex items-center gap-2 text-foreground">
-                                     <Building className="h-5 w-5 text-primary" />
-                                     ماهیت شرکت اهرم
+                                   <div className="min-w-[260px] space-y-2">
+                                     <div className="font-semibold flex items-center gap-2 text-foreground">
+                                       <Building className="h-5 w-5 text-primary" />
+                                       ماهیت شرکت اهرم
+                                     </div>
+                                     {!effectiveReadOnly && (
+                                       <BankCardSelect
+                                         value={row.bank_card_id ?? null}
+                                         onValueChange={(value) => updateStaffRow(index, 'bank_card_id', value)}
+                                         placeholder="انتخاب کارت هزینه شرکت"
+                                         showBalance={true}
+                                         showManagementCards={true}
+                                         moduleKey={bankCardModuleKey || undefined}
+                                         asOfDate={toLocalDateString(reportDate)}
+                                       />
+                                     )}
+                                     {effectiveReadOnly && row.bank_card_id && (
+                                       <span className="text-xs text-muted-foreground">
+                                         {bankCardsCache.get(row.bank_card_id)?.card_name || 'کارت بانکی'}
+                                       </span>
+                                     )}
                                    </div>
                                  ) : row.is_cash_box ? (
                                    effectiveReadOnly ? (
