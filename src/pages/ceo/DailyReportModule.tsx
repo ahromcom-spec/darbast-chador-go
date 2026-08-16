@@ -5639,6 +5639,18 @@ export default function DailyReportModule() {
                   </CardContent>
                 </Card>
 
+                {/* ربات پرکردن گزارش */}
+                {!effectiveReadOnly && (
+                  <div className="flex justify-center">
+                    <ReportBotDialog
+                      orders={orders}
+                      dateLabel={formatPersianDate(toLocalDateString(reportDate))}
+                      onApply={handleReportBotApply}
+                    />
+                  </div>
+                )}
+
+
                 {/* Save Button - برای ماژول‌های غیر تجمیعی و ماژول مادر */}
                 {(!isAggregated || shouldShowAllUserReports) && (
                   <div className="flex flex-col items-center gap-3">
