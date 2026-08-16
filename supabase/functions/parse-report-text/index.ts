@@ -65,8 +65,10 @@ RULES:
 9. activity_description = what was done today (e.g. "باز شد", "بسته شد", "زیر پودر و جنس دسته شد"). service_details = any counts/dimensions/metrage if mentioned, else "". notes = anything else relevant.
 10. Never invent staff or projects that are not in the text. Do not duplicate the same person in two rows - merge all their amounts and notes into one row.
 11. Before answering, re-read the text and verify: (a) every named person has a row, (b) for every payment the payer row's amount_spent equals the total they paid, (c) totals of amount_received from named payers equal those payers' amount_spent.
-12. Output MUST be valid minified JSON only, no markdown, matching:
-{"staffRows":[{"staff_code":"","staff_name":"","work_status":"کارکرده","overtime_hours":0,"amount_received":0,"receiving_notes":"","amount_spent":0,"spending_notes":"","bank_card_id":"","bank_card_name":"","notes":""}],"orderRows":[{"order_id":"","matched_label":"","activity_description":"","service_details":"","team_name":"","notes":""}],"summary":""}
+12. CARD ROWS (very important): whenever money is spent/withdrawn FROM a company card (کارت ملت اجرایی/پشتیبانی/مدیریت، کارت شرکت، صندوق شرکت) you MUST also add one row in "cardRows" for that card, with the exact bank_card_id from the directory, amount_spent = the amount taken out of that card, spending_notes = what it was spent on and to whom (e.g. "به حسین محمدی 1,000,000" or "خرید یخ برای شرکت"). Create one cardRows entry per card per purpose; if the same card paid several people/items, you may sum them and keep the breakdown in spending_notes.
+   - If the text says the expense belongs to the company itself (ماهیت شرکت اهرم، هزینه شرکت، برای شرکت خرج شد) set "is_company_expense": true on that card row; otherwise false.
+13. Output MUST be valid minified JSON only, no markdown, matching:
+{"staffRows":[{"staff_code":"","staff_name":"","work_status":"کارکرده","overtime_hours":0,"amount_received":0,"receiving_notes":"","amount_spent":0,"spending_notes":"","bank_card_id":"","bank_card_name":"","notes":""}],"cardRows":[{"bank_card_id":"","bank_card_name":"","amount_received":0,"receiving_notes":"","amount_spent":0,"spending_notes":"","is_company_expense":false,"notes":""}],"orderRows":[{"order_id":"","matched_label":"","activity_description":"","service_details":"","team_name":"","notes":""}],"summary":""}
 staff_code must be a code from the directory when matched, otherwise "" and staff_name holds the raw name.
 summary: one short Persian sentence about what was extracted, including how many people and projects.
 ${extra ? `\nEXTRA USER INSTRUCTIONS (highest priority):\n${extra}\n` : ''}`;
@@ -206,10 +208,40 @@ serve(async (req) => {
         .join(' - ');
     }
 
+    // Card rows: money taken out of company cards. Auto-derive missing ones from
+    // receivers that were paid by a card, so every card payment has a card row.
+    const cardRows: any[] = Array.isArray(parsed.cardRows) ? parsed.cardRows : [];
+    for (const r of staffRows) {
+      const cardId = String(r.bank_card_id || '').trim();
+      const amount = Number(r.amount_received) || 0;
+      if (!cardId || amount <= 0) continue;
+      const existing = cardRows.find((c) => String(c.bank_card_id || '').trim() === cardId);
+      const label = `به ${r.staff_name || ''} ${amount.toLocaleString('en-US')}`.trim();
+      if (existing) {
+        const notes = norm(existing.spending_notes);
+        const name = norm(r.staff_name);
+        if (name && notes.includes(name)) continue;
+        existing.amount_spent = (Number(existing.amount_spent) || 0) + amount;
+        existing.spending_notes = [existing.spending_notes, label].filter(Boolean).join(' - ');
+      } else {
+        cardRows.push({
+          bank_card_id: cardId,
+          bank_card_name: r.bank_card_name || '',
+          amount_received: 0,
+          receiving_notes: '',
+          amount_spent: amount,
+          spending_notes: label,
+          is_company_expense: false,
+          notes: '',
+        });
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         staffRows,
+        cardRows,
         orderRows: Array.isArray(parsed.orderRows) ? parsed.orderRows : [],
         summary: typeof parsed.summary === 'string' ? parsed.summary : '',
       }),

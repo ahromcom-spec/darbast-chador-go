@@ -216,15 +216,49 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
         } as StaffReportRow;
       });
 
+      // Card rows: expenses taken out of a company bank card (ردیف کارت)
+      const cardRows: StaffReportRow[] = (data.cardRows || [])
+        .map((r: any) => {
+          const cardName = normalize(String(r.bank_card_name || ''));
+          const card =
+            bankCards.find((c) => c.id === String(r.bank_card_id || '')) ||
+            (cardName
+              ? bankCards.find((c) => normalize(c.card_name) === cardName) ||
+                bankCards.find(
+                  (c) => normalize(c.card_name).includes(cardName) || cardName.includes(normalize(c.card_name)),
+                )
+              : undefined);
+          if (!card) return null;
+          const isCompanyExpense = r.is_company_expense === true;
+          return {
+            staff_user_id: null,
+            real_user_id: null,
+            staff_name: isCompanyExpense ? 'ماهیت شرکت اهرم' : `${card.card_name}${card.bank_name ? ` (${card.bank_name})` : ''}`,
+            work_status: 'کارکرده',
+            overtime_hours: 0,
+            amount_received: Number(r.amount_received) || 0,
+            receiving_notes: String(r.receiving_notes || ''),
+            amount_spent: Number(r.amount_spent) || 0,
+            spending_notes: String(r.spending_notes || ''),
+            notes: String(r.notes || ''),
+            is_cash_box: !isCompanyExpense,
+            is_company_expense: isCompanyExpense,
+            bank_card_id: card.id,
+            transaction_time: null,
+          } as StaffReportRow;
+        })
+        .filter(Boolean) as StaffReportRow[];
 
-      if (orderRows.length === 0 && staffRows.length === 0) {
+      const allStaffRows = [...staffRows, ...cardRows];
+
+      if (orderRows.length === 0 && allStaffRows.length === 0) {
         toast.error('چیزی برای پرکردن جداول پیدا نشد');
         return;
       }
 
       setPreview({
         orderRows,
-        staffRows,
+        staffRows: allStaffRows,
         summary: String(data.summary || ''),
         unmatchedOrders,
         unmatchedStaff,

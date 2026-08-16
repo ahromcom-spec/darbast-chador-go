@@ -4337,6 +4337,44 @@ export default function DailyReportModule() {
         const kept = prevRows.filter((r) => r.is_cash_box || r.is_company_expense || r.staff_user_id || r.staff_name);
         const merged = [...kept];
         staffRows.forEach((row) => {
+          // Company nature row: there is only one, merge into it
+          if (row.is_company_expense) {
+            const idx = merged.findIndex((r) => r.is_company_expense);
+            if (idx >= 0) {
+              const ex = merged[idx];
+              merged[idx] = {
+                ...ex,
+                bank_card_id: row.bank_card_id || ex.bank_card_id,
+                amount_received: row.amount_received || ex.amount_received,
+                receiving_notes: row.receiving_notes || ex.receiving_notes,
+                amount_spent: row.amount_spent || ex.amount_spent,
+                spending_notes: row.spending_notes || ex.spending_notes,
+                notes: row.notes || ex.notes,
+              };
+            } else {
+              merged.push(row);
+            }
+            return;
+          }
+
+          // Card rows: reuse an empty card row if available, otherwise add a new one
+          if (row.is_cash_box) {
+            const emptyIdx = merged.findIndex(
+              (r) =>
+                r.is_cash_box &&
+                !r.is_company_expense &&
+                !r.bank_card_id &&
+                !(r.amount_received ?? 0) &&
+                !(r.amount_spent ?? 0)
+            );
+            if (emptyIdx >= 0) {
+              merged[emptyIdx] = { ...merged[emptyIdx], ...row };
+            } else {
+              merged.push(row);
+            }
+            return;
+          }
+
           const existingIndex = merged.findIndex(
             (r) =>
               !r.is_cash_box &&
@@ -4363,6 +4401,7 @@ export default function DailyReportModule() {
         return merged;
       });
     }
+
 
     markCurrentDateDirty();
   };
