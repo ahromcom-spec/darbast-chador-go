@@ -720,16 +720,13 @@ export default function DailyReportModule() {
   const [staffReports, setStaffReports] = useState<StaffReportRow[]>([]);
   const [dailyNotes, setDailyNotes] = useState<string>('');
   const [existingReportId, setExistingReportId] = useState<string | null>(null);
+  const hasBankCardRow = staffReports.some((row) => row.is_cash_box && !row.is_company_expense);
 
   // فرم قابل ویرایش همیشه یک سطر ثابت کارت دارد؛ ربات همین سطر را تکمیل می‌کند.
   useEffect(() => {
-    if (loading || effectiveReadOnly) return;
-    setStaffReports((rows) =>
-      rows.some((row) => row.is_cash_box && !row.is_company_expense)
-        ? rows
-        : [createEmptyBankCardRow(), ...rows]
-    );
-  }, [loading, effectiveReadOnly, reportDate, activeModuleKey]);
+    if (loading || effectiveReadOnly || hasBankCardRow) return;
+    setStaffReports((rows) => [createEmptyBankCardRow(), ...rows]);
+  }, [loading, effectiveReadOnly, hasBankCardRow, reportDate, activeModuleKey]);
   const [activeTab, setActiveTab] = useState<string>(() => {
     return localStorage.getItem('dailyReportActiveTab') || 'new-report';
   });
