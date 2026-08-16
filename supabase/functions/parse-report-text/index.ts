@@ -99,6 +99,7 @@ serve(async (req) => {
     const systemPrompt = buildSystemPrompt(
       Array.isArray(staffDirectory) ? staffDirectory : [],
       Array.isArray(ordersDirectory) ? ordersDirectory : [],
+      Array.isArray(bankCardsDirectory) ? bankCardsDirectory : [],
       typeof extraInstructions === 'string' ? extraInstructions : undefined,
     );
 
@@ -109,13 +110,14 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'google/gemini-3.6-flash',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `متن گزارش روزانه:\n\n${text}\n\nفقط JSON معتبر برگردان.` },
+          { role: 'user', content: `متن گزارش روزانه:\n\n${text}\n\nفقط JSON معتبر برگردان. مطمئن شو همه اشخاص ذکرشده ردیف دارند و پرداخت‌ها دوطرفه ثبت شده است.` },
         ],
       }),
     });
+
 
     if (aiRes.status === 429) {
       return new Response(JSON.stringify({ success: false, error: 'محدودیت درخواست هوش مصنوعی؛ کمی بعد تلاش کنید' }), {
