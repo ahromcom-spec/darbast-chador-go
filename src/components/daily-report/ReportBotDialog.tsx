@@ -12,7 +12,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Order, OrderReportRow, StaffReportRow, ROW_COLORS } from '@/hooks/useDailyReport';
@@ -46,6 +46,7 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
   const [extra, setExtra] = useState('');
   const [loading, setLoading] = useState(false);
   const [staffDirectory, setStaffDirectory] = useState<StaffDirectoryItem[]>([]);
+  const [bankCards, setBankCards] = useState<{ id: string; card_name: string; bank_name?: string | null }[]>([]);
   const [preview, setPreview] = useState<{
     orderRows: OrderReportRow[];
     staffRows: StaffReportRow[];
@@ -53,6 +54,7 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
     unmatchedOrders: string[];
     unmatchedStaff: string[];
   } | null>(null);
+
 
   // Load staff directory (HR employees + salary settings) for name → code matching
   useEffect(() => {
@@ -82,6 +84,23 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
       }
     })();
   }, [open, staffDirectory.length]);
+
+  // Load active bank cards so the bot can detect "کارت ملت اجرایی/پشتیبانی/مدیریت"
+  useEffect(() => {
+    if (!open || bankCards.length > 0) return;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('bank_cards')
+          .select('id, card_name, bank_name')
+          .eq('is_active', true);
+        setBankCards((data || []) as any);
+      } catch (e) {
+        console.error('Error loading bank cards for bot:', e);
+      }
+    })();
+  }, [open, bankCards.length]);
+
 
   const findStaff = (code: string, name: string): StaffDirectoryItem | undefined => {
     if (code) {
@@ -113,6 +132,11 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
       )
     );
   };
+  const getCardLabel = (cardId: string) => {
+    const c = bankCards.find((x) => x.id === cardId);
+    return c ? `${c.card_name}${c.bank_name ? ` (${c.bank_name})` : ''}` : '';
+  };
+
 
   const handleAnalyze = async () => {
     if (!text.trim()) {
@@ -127,6 +151,7 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
           text,
           extraInstructions: extra || undefined,
           staffDirectory: staffDirectory.map((s) => ({ code: s.code, name: s.name })),
+          bankCardsDirectory: bankCards.map((c) => ({ id: c.id, card_name: c.card_name, bank_name: c.bank_name })),
           ordersDirectory: orders.slice(0, 400).map((o) => ({
             id: o.id,
             code: o.code,
@@ -135,6 +160,7 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
             subcategory_name: o.subcategory_name,
           })),
         },
+
       });
 
       if (error) throw error;
@@ -160,6 +186,18 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
         const rawName = String(r.staff_name || '').trim();
         const matched = findStaff(String(r.staff_code || ''), rawName);
         if (!matched && rawName) unmatchedStaff.push(rawName);
+
+        // Match bank card by id, or by name mentioned in the text
+        const cardName = normalize(String(r.bank_card_name || ''));
+        const card =
+          bankCards.find((c) => c.id === String(r.bank_card_id || '')) ||
+          (cardName
+            ? bankCards.find((c) => normalize(c.card_name) === cardName) ||
+              bankCards.find(
+                (c) => normalize(c.card_name).includes(cardName) || cardName.includes(normalize(c.card_name)),
+              )
+            : undefined);
+
         return {
           staff_user_id: matched?.code || null,
           real_user_id: matched?.user_id || null,
@@ -173,10 +211,11 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
           notes: String(r.notes || ''),
           is_cash_box: false,
           is_company_expense: false,
-          bank_card_id: null,
+          bank_card_id: card?.id || null,
           transaction_time: null,
         } as StaffReportRow;
       });
+
 
       if (orderRows.length === 0 && staffRows.length === 0) {
         toast.error('چیزی برای پرکردن جداول پیدا نشد');
@@ -275,8 +314,9 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
                 </p>
               )}
 
-              <ScrollArea className="max-h-56">
-                <div className="space-y-2 pl-1">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-blue-600">سفارشات شناسایی‌شده ({preview.orderRows.length})</p>
+                <div className="space-y-2">
                   {preview.orderRows.map((r, i) => {
                     const o = orders.find((x) => x.id === r.order_id);
                     return (
@@ -290,17 +330,39 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled }: Report
                       </div>
                     );
                   })}
+                </div>
+
+                <p className="text-xs font-semibold text-amber-600">
+                  نیروهای شناسایی‌شده ({preview.staffRows.length})
+                </p>
+                <div className="space-y-2">
                   {preview.staffRows.map((r, i) => (
-                    <div key={`s-${i}`} className="text-xs rounded border bg-background p-2">
-                      <span className="font-semibold text-amber-600">{r.staff_name || 'نیروی نامشخص'}</span>
-                      {' — '}
-                      {r.work_status}
-                      {r.amount_received ? <span> | دریافتی: {r.amount_received.toLocaleString('en-US')}</span> : null}
-                      {r.amount_spent ? <span> | پرداختی: {r.amount_spent.toLocaleString('en-US')}</span> : null}
+                    <div key={`s-${i}`} className="text-xs rounded border bg-background p-2 space-y-1">
+                      <div>
+                        <span className="font-semibold text-amber-600">{r.staff_name || 'نیروی نامشخص'}</span>
+                        {' — '}
+                        {r.work_status}
+                        {r.overtime_hours ? <span> | اضافه‌کاری: {r.overtime_hours}</span> : null}
+                      </div>
+                      {r.amount_received ? (
+                        <div className="text-green-700">
+                          دریافتی: {r.amount_received.toLocaleString('en-US')}
+                          {r.receiving_notes ? ` (${r.receiving_notes})` : ''}
+                          {r.bank_card_id ? ` | ${getCardLabel(r.bank_card_id)}` : ''}
+                        </div>
+                      ) : null}
+                      {r.amount_spent ? (
+                        <div className="text-red-700">
+                          پرداختی: {r.amount_spent.toLocaleString('en-US')}
+                          {r.spending_notes ? ` (${r.spending_notes})` : ''}
+                        </div>
+                      ) : null}
+                      {r.notes ? <div className="text-muted-foreground">{r.notes}</div> : null}
                     </div>
                   ))}
                 </div>
-              </ScrollArea>
+              </div>
+
 
               <Button onClick={handleApply} className="w-full gap-2 bg-green-600 hover:bg-green-700">
                 <Check className="h-4 w-4" />
