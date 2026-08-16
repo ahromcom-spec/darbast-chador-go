@@ -29,6 +29,7 @@ const buildSystemPrompt = (
   orders: OrderDirectoryItem[],
   cards: BankCardDirectoryItem[],
   extra?: string,
+  moduleLabel?: string,
 ) => {
   const staffList = staff.slice(0, 400).map((s) => `- code: ${s.code} | name: ${s.name}`).join('\n');
   const orderList = orders.slice(0, 400)
@@ -46,8 +47,9 @@ ${staffList || '(empty)'}
 KNOWN ORDERS DIRECTORY (match project/customer names to these; use the exact id):
 ${orderList || '(empty)'}
 
-KNOWN BANK CARDS (company cards, e.g. کارت ملت اجرایی / پشتیبانی / مدیریت):
+KNOWN BANK CARDS (company cards, e.g. کارت ملت اجرایی / پشتیبانی / مدیریت). These are the ONLY cards you may use, and they already belong to the current module:
 ${cardList || '(empty)'}
+${moduleLabel ? `CURRENT MODULE: ${moduleLabel}. When the money source is the company (card/صندوق/تنخواه/شرکت) but the exact card is not named, use the card in the list whose name best matches this module (اجرایی/پشتیبانی/مدیریت); if only one card exists in the list, use it.` : ''}
 
 RULES:
 1. Persian/Arabic digits must be converted to English digits.
@@ -66,6 +68,7 @@ RULES:
 10. Never invent staff or projects that are not in the text. Do not duplicate the same person in two rows - merge all their amounts and notes into one row.
 11. Before answering, re-read the text and verify: (a) every named person has a row, (b) for every payment the payer row's amount_spent equals the total they paid, (c) totals of amount_received from named payers equal those payers' amount_spent.
 12. CARD ROWS (very important): whenever money is spent/withdrawn FROM a company card (کارت ملت اجرایی/پشتیبانی/مدیریت، کارت شرکت، صندوق شرکت) you MUST also add one row in "cardRows" for that card, with the exact bank_card_id from the directory, amount_spent = the amount taken out of that card, spending_notes = what it was spent on and to whom (e.g. "به حسین محمدی 1,000,000" or "خرید یخ برای شرکت"). Create one cardRows entry per card per purpose; if the same card paid several people/items, you may sum them and keep the breakdown in spending_notes.
+   - ONE ROW PER CARD: create a separate cardRows entry for EVERY distinct card used that day (never merge two different cards into one row), and always fill bank_card_id with an exact id from the directory above. Even if the amount came from the company with no card explicitly named, still emit a cardRows entry using the module's card.
    - If the text says the expense belongs to the company itself (ماهیت شرکت اهرم، هزینه شرکت، برای شرکت خرج شد) set "is_company_expense": true on that card row; otherwise false.
 13. Output MUST be valid minified JSON only, no markdown, matching:
 {"staffRows":[{"staff_code":"","staff_name":"","work_status":"کارکرده","overtime_hours":0,"amount_received":0,"receiving_notes":"","amount_spent":0,"spending_notes":"","bank_card_id":"","bank_card_name":"","notes":""}],"cardRows":[{"bank_card_id":"","bank_card_name":"","amount_received":0,"receiving_notes":"","amount_spent":0,"spending_notes":"","is_company_expense":false,"notes":""}],"orderRows":[{"order_id":"","matched_label":"","activity_description":"","service_details":"","team_name":"","notes":""}],"summary":""}
@@ -81,7 +84,7 @@ serve(async (req) => {
   }
 
   try {
-    const { text, staffDirectory, ordersDirectory, bankCardsDirectory, extraInstructions } = await req.json();
+    const { text, staffDirectory, ordersDirectory, bankCardsDirectory, extraInstructions, moduleLabel } = await req.json();
 
     if (!text || typeof text !== 'string' || !text.trim()) {
       return new Response(JSON.stringify({ success: false, error: 'متن گزارش ارسال نشده است' }), {
@@ -103,6 +106,7 @@ serve(async (req) => {
       Array.isArray(ordersDirectory) ? ordersDirectory : [],
       Array.isArray(bankCardsDirectory) ? bankCardsDirectory : [],
       typeof extraInstructions === 'string' ? extraInstructions : undefined,
+      typeof moduleLabel === 'string' ? moduleLabel : undefined,
     );
 
     const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -211,6 +215,45 @@ serve(async (req) => {
     // Card rows: money taken out of company cards. Auto-derive missing ones from
     // receivers that were paid by a card, so every card payment has a card row.
     const cardRows: any[] = Array.isArray(parsed.cardRows) ? parsed.cardRows : [];
+    const cardDir: BankCardDirectoryItem[] = Array.isArray(bankCardsDirectory) ? bankCardsDirectory : [];
+    const resolveCard = (id?: string, name?: string) => {
+      const byId = cardDir.find((c) => c.id === String(id || '').trim());
+      if (byId) return byId;
+      const n = norm(name);
+      if (n) {
+        const byName =
+          cardDir.find((c) => norm(c.card_name) === n) ||
+          cardDir.find((c) => norm(c.card_name).includes(n) || n.includes(norm(c.card_name)));
+        if (byName) return byName;
+      }
+      const ml = norm(moduleLabel);
+      const byModule = ['اجرایی', 'پشتیبانی', 'مدیریت'].find((k) => ml.includes(k));
+      if (byModule) {
+        const c = cardDir.find((x) => norm(x.card_name).includes(byModule));
+        if (c) return c;
+      }
+      return cardDir.length === 1 ? cardDir[0] : undefined;
+    };
+
+    // Make sure every card row (and card payment on a staff row) points at a real card id
+    for (const c of cardRows) {
+      const resolved = resolveCard(c.bank_card_id, c.bank_card_name);
+      if (resolved) {
+        c.bank_card_id = resolved.id;
+        c.bank_card_name = resolved.card_name;
+      }
+    }
+    for (const r of staffRows) {
+      const note = norm(r.receiving_notes);
+      const mentionsCard = !!String(r.bank_card_id || r.bank_card_name || '').trim() ||
+        note.includes('کارت') || note.includes('صندوق') || note.includes('تنخواه');
+      if (!mentionsCard || !(Number(r.amount_received) > 0)) continue;
+      const resolved = resolveCard(r.bank_card_id, r.bank_card_name);
+      if (resolved) {
+        r.bank_card_id = resolved.id;
+        r.bank_card_name = resolved.card_name;
+      }
+    }
     for (const r of staffRows) {
       const cardId = String(r.bank_card_id || '').trim();
       const amount = Number(r.amount_received) || 0;
