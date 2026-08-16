@@ -40,9 +40,32 @@ const normalize = (s: string) =>
     .replace(/[\u200c\u200f\u200e]/g, '')
     .replace(/[ىي]/g, 'ی')
     .replace(/ك/g, 'ک')
+    .replace(/[،,_\-\/()]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
+
+const findBankCard = (
+  cards: { id: string; card_name: string; bank_name?: string | null }[],
+  id: unknown,
+  name: unknown,
+) => {
+  const byId = cards.find((card) => card.id === String(id || '').trim());
+  if (byId) return byId;
+
+  const requested = normalize(String(name || ''));
+  if (!requested) return undefined;
+  const requestedTokens = requested.split(' ').filter((token) => token.length > 1 && token !== 'کارت' && token !== 'بانک');
+
+  return cards
+    .map((card) => {
+      const searchable = normalize(`${card.card_name} ${card.bank_name || ''}`);
+      const score = requestedTokens.reduce((total, token) => total + (searchable.includes(token) ? 1 : 0), 0);
+      return { card, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .find((candidate) => candidate.score > 0)?.card;
+};
 
 export function ReportBotDialog({ orders, dateLabel, onApply, disabled, moduleKey, moduleLabel }: ReportBotDialogProps) {
   const [open, setOpen] = useState(false);
@@ -202,15 +225,7 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled, moduleKe
         if (!matched && rawName) unmatchedStaff.push(rawName);
 
         // Match bank card by id, or by name mentioned in the text
-        const cardName = normalize(String(r.bank_card_name || ''));
-        const card =
-          bankCards.find((c) => c.id === String(r.bank_card_id || '')) ||
-          (cardName
-            ? bankCards.find((c) => normalize(c.card_name) === cardName) ||
-              bankCards.find(
-                (c) => normalize(c.card_name).includes(cardName) || cardName.includes(normalize(c.card_name)),
-              )
-            : undefined);
+        const card = findBankCard(bankCards, r.bank_card_id, r.bank_card_name || r.receiving_notes);
 
         return {
           staff_user_id: matched?.code || null,
@@ -233,16 +248,12 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled, moduleKe
       // Card rows: expenses taken out of a company bank card (ردیف کارت)
       const cardRows: StaffReportRow[] = (data.cardRows || [])
         .map((r: any) => {
-          const cardName = normalize(String(r.bank_card_name || ''));
-          const card =
-            bankCards.find((c) => c.id === String(r.bank_card_id || '')) ||
-            (cardName
-              ? bankCards.find((c) => normalize(c.card_name) === cardName) ||
-                bankCards.find(
-                  (c) => normalize(c.card_name).includes(cardName) || cardName.includes(normalize(c.card_name)),
-                )
-              : undefined);
-          const isCompanyExpense = r.is_company_expense === true;
+          const card = findBankCard(
+            bankCards,
+            r.bank_card_id,
+            r.bank_card_name || `${r.receiving_notes || ''} ${r.spending_notes || ''}`,
+          );
+          const isCompanyExpense = r.is_company_expense === true || String(r.is_company_expense).toLowerCase() === 'true';
           return {
             staff_user_id: null,
             real_user_id: null,
@@ -258,7 +269,8 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled, moduleKe
             amount_spent: Number(r.amount_spent) || 0,
             spending_notes: String(r.spending_notes || ''),
             notes: String(r.notes || ''),
-            is_cash_box: !isCompanyExpense,
+            // Company expenses still belong to a specific card row and must retain its selector.
+            is_cash_box: true,
             is_company_expense: isCompanyExpense,
             bank_card_id: card?.id || null,
             transaction_time: null,

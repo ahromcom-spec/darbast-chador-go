@@ -183,8 +183,10 @@ serve(async (req) => {
         .replace(/[\u200c\u200f\u200e]/g, '')
         .replace(/[ىي]/g, 'ی')
         .replace(/ك/g, 'ک')
+        .replace(/[،,_\-\/()]/g, ' ')
         .replace(/\s+/g, ' ')
-        .trim();
+        .trim()
+        .toLowerCase();
 
     for (const receiver of staffRows) {
       const amount = Number(receiver.amount_received) || 0;
@@ -221,9 +223,15 @@ serve(async (req) => {
       if (byId) return byId;
       const n = norm(name);
       if (n) {
-        const byName =
-          cardDir.find((c) => norm(c.card_name) === n) ||
-          cardDir.find((c) => norm(c.card_name).includes(n) || n.includes(norm(c.card_name)));
+        const tokens = n.split(' ').filter((token) => token.length > 1 && token !== 'کارت' && token !== 'بانک');
+        const byName = cardDir
+          .map((card) => {
+            const searchable = norm(`${card.card_name} ${card.bank_name || ''}`);
+            const score = tokens.reduce((total, token) => total + (searchable.includes(token) ? 1 : 0), 0);
+            return { card, score };
+          })
+          .sort((a, b) => b.score - a.score)
+          .find((candidate) => candidate.score > 0)?.card;
         if (byName) return byName;
       }
       const ml = norm(moduleLabel);
@@ -237,11 +245,30 @@ serve(async (req) => {
 
     // Make sure every card row (and card payment on a staff row) points at a real card id
     for (const c of cardRows) {
-      const resolved = resolveCard(c.bank_card_id, c.bank_card_name);
+      const resolved = resolveCard(
+        c.bank_card_id,
+        c.bank_card_name || `${c.receiving_notes || ''} ${c.spending_notes || ''} ${c.notes || ''}`,
+      );
       if (resolved) {
         c.bank_card_id = resolved.id;
         c.bank_card_name = resolved.card_name;
       }
+      const expenseText = norm(`${c.bank_card_name || ''} ${c.receiving_notes || ''} ${c.spending_notes || ''} ${c.notes || ''}`);
+      c.is_company_expense = c.is_company_expense === true ||
+        String(c.is_company_expense).toLowerCase() === 'true' ||
+        expenseText.includes('ماهیت شرکت') ||
+        expenseText.includes('هزینه شرکت') ||
+        expenseText.includes('برای شرکت');
+    }
+
+    // If the report explicitly calls an expense «ماهیت/هزینه شرکت» and there is only
+    // one card expense, classify that card row deterministically even if the model omitted the flag.
+    const reportText = norm(text);
+    if (
+      cardRows.length === 1 &&
+      (reportText.includes('ماهیت شرکت') || reportText.includes('هزینه شرکت') || reportText.includes('برای شرکت'))
+    ) {
+      cardRows[0].is_company_expense = true;
     }
     for (const r of staffRows) {
       const note = norm(r.receiving_notes);
