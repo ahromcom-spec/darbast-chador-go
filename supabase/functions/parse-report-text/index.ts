@@ -132,11 +132,11 @@ serve(async (req) => {
         },
       );
 
-    let aiRes = await callGemini('gemini-2.0-flash');
+    let aiRes = await callGemini('gemini-3.6-flash');
     if (!aiRes.ok && (aiRes.status === 404 || aiRes.status === 400)) {
       const firstErr = await aiRes.text();
       console.error('Gemini primary model error', aiRes.status, firstErr);
-      aiRes = await callGemini('gemini-1.5-flash');
+      aiRes = await callGemini('gemini-flash-latest');
     }
 
     if (aiRes.status === 429) {
