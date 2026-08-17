@@ -137,6 +137,17 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    if (aiRes.status === 403) {
+      const errText = await aiRes.text();
+      console.error('AI error', aiRes.status, errText);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'سقف اعتبار هوش مصنوعی این ورک‌اسپیس پر شده است؛ لطفاً اعتبار/سقف مصرف را در تنظیمات لاوابل افزایش دهید.',
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
     if (!aiRes.ok) {
       const errText = await aiRes.text();
       console.error('AI error', aiRes.status, errText);
@@ -145,6 +156,7 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
 
     const aiData = await aiRes.json();
     const content: string = aiData.choices?.[0]?.message?.content ?? '';
