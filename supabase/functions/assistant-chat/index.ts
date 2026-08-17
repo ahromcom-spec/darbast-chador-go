@@ -467,6 +467,8 @@ const ASSISTANT_TOOLS = [
           subcategory_id: { type: "string", description: "شناسه زیرشاخه خدمت (از list_active_services)" },
           quantity: { type: "number", description: "مقدار (متراژ/تعداد واحد)، پیش‌فرض ۱" },
           days: { type: "number", description: "تعداد روز، در صورتی که خدمت اجاره‌ای/روزانه باشد" },
+          work_type: { type: "string", enum: ["facade", "formwork", "ceiling_beam", "ceiling_slab", "pipe_length", "column"], description: "نوع کار داربست: نما=facade، کفراژ=formwork، زیربتن تیرچه=ceiling_beam، زیربتن دال/وافل=ceiling_slab، لوله‌ای=pipe_length، ستونی=column" },
+          months: { type: "number", description: "مدت اجاره به ماه، پیش‌فرض ۱" },
         },
         required: ["subcategory_id"],
       },
