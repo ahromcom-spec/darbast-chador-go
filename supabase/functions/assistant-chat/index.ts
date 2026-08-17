@@ -413,6 +413,21 @@ const TOOLS_GUIDE = `
 - create_pricing_order_request را فقط زمانی صدا بزن که کاربر صراحتاً بگوید نمی‌خواهد فرم را پر کند و می‌خواهد از طریق دستیار درخواستش را در صف کارشناس بگذاری، و آدرس هم داده باشد.
 - اگر کاربر لاگین نکرده و می‌خواهد سفارش ثبت کند، بگو باید ابتدا وارد حساب کاربری خود شود و لینک [ورود / ثبت‌نام](/auth/login) را بده.
 - هیچ محدودیت تعدادی روی سوالات کاربر وجود ندارد؛ هر تعداد سوال بپرسد به همه پاسخ بده.
+
+⭐ پیش‌فرض‌های اجباری قیمت‌دهی (بسیار مهم):
+وقتی کاربر قیمت می‌خواهد، سؤال‌پیچش نکن. با پیش‌فرض‌های زیر (که همان پیش‌فرض‌های فرم سایت است) فوراً قیمت بده:
+- استان/محل اجرا: **قم**
+- اجناس: **از خود شرکت اهرم** (یعنی «داربست فلزی – اجرا با اجناس»)
+- نوع اجرا: **داربست از روی زمین** (ارتفاع پای کار = ۰، بدون پشت‌بام/بالکن)
+- مدت اجاره: **یک ماه**
+- فاصله حمل خودرو تا محل نصب و سایر افزایش‌های درصدی: بدون افزایش (حالت پیش‌فرض)
+قواعد:
+1. فقط چیزهایی را بپرس که بدون آن‌ها محاسبه غیرممکن است: نوع کار (نما/کفراژ/زیربتن/ستونی/لوله‌ای) و ابعاد یا متراژ.
+2. اگر کاربر ابعاد داده ولی استان/جنس/نوع اجرا/مدت را نگفته، **هرگز سؤال نکن** — همان پیش‌فرض‌های بالا را اعمال کن و قیمت را اعلام کن.
+3. زیر قیمت، پیش‌فرض‌های استفاده‌شده را در یک خط کوتاه بنویس، مثلاً: «محاسبه بر اساس پیش‌فرض‌ها: استان قم، اجناس از اهرم، داربست از روی زمین، مدت یک ماه» و اضافه کن: «اگر هر یک از این موارد متفاوت است بگو تا دوباره محاسبه کنم».
+4. اگر کاربر پیش‌فرضی را تغییر داد (مثلاً «تهران»، «جنس خودم»، «روی پشت‌بام»، «سه ماه»)، همان را جای پیش‌فرض بگذار و قیمت را دوباره حساب کن.
+5. برای مدت بیشتر از یک ماه، قیمت ماه اول را مبنا بگیر و ماه‌های تمدید را بر اساس تنظیمات قیمت‌گذاری همان خدمت اضافه کن و جمع کل را بگو.
+6. جریان اجباری برای سؤال قیمت داربست: ابتدا list_active_services، سپس **حتماً** estimate_service_price را با subcategory_id مربوط به «داربست فلزی – اجرا با اجناس»، work_type مناسب (نما=facade و ...)، quantity = متراژ محاسبه‌شده (مثلاً ۲۰×۸ = ۱۶۰) و months (پیش‌فرض ۱) صدا بزن. سپس **عدد calculated.estimated_total_toman** را دقیقاً به کاربر اعلام کن؛ خودت محاسبه نکن و هرگز عدد صفر اعلام نکن. **بدون صدا زدن estimate_service_price هرگز پاسخ نده** و هرگز نگو «ابزارها قابلیت محاسبه ندارند» یا «کارشناس اعلام می‌کند».
 `;
 
 
@@ -452,6 +467,8 @@ const ASSISTANT_TOOLS = [
           subcategory_id: { type: "string", description: "شناسه زیرشاخه خدمت (از list_active_services)" },
           quantity: { type: "number", description: "مقدار (متراژ/تعداد واحد)، پیش‌فرض ۱" },
           days: { type: "number", description: "تعداد روز، در صورتی که خدمت اجاره‌ای/روزانه باشد" },
+          work_type: { type: "string", enum: ["facade", "formwork", "ceiling_beam", "ceiling_slab", "pipe_length", "column"], description: "نوع کار داربست: نما=facade، کفراژ=formwork، زیربتن تیرچه=ceiling_beam، زیربتن دال/وافل=ceiling_slab، لوله‌ای=pipe_length، ستونی=column" },
+          months: { type: "number", description: "مدت اجاره به ماه، پیش‌فرض ۱" },
         },
         required: ["subcategory_id"],
       },
@@ -556,11 +573,20 @@ async function estimateServicePrice(supabase: any, args: any) {
   // اگر فرمول service_pricing_rules نبود، از آیتم‌های subcategory_pricing_items استفاده کن
   // (مثل قالی‌شویی که هر آیتم قیمت جدا دارد: فرش ۱۲ متری، ۹ متری، ۶ متری، سفارشی، موکت ...)
   if (!rule) {
-    const { data: items } = await supabase
+    const SCAFFOLD_SUBS = [
+      "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d",
+      "527e9baa-54c6-4131-81cb-32d29ebae91a",
+    ];
+    const { data: rawItems } = await supabase
       .from("subcategory_pricing_items")
       .select("key,category,label,value,unit,description,sort_order")
       .eq("subcategory_id", subcategoryId)
       .order("sort_order", { ascending: true });
+
+    // برای داربست از جدول پیکربندی داربست استفاده می‌شود، نه آیتم‌های صفر
+    const items = SCAFFOLD_SUBS.includes(subcategoryId)
+      ? []
+      : (rawItems || []).filter((i: any) => Number(i.value) > 0);
 
     if (items && items.length > 0) {
       return {
@@ -598,17 +624,59 @@ async function estimateServicePrice(supabase: any, args: any) {
         .order("sort_order", { ascending: true });
 
       if (cfg && cfg.length > 0) {
+        const P = (key: string) => Number(cfg.find((c: any) => c.key === key)?.value) || 0;
+        const workTypeRaw = String(args?.work_type || "facade").toLowerCase();
+        const workType = ["facade", "formwork", "ceiling_beam", "ceiling_slab", "pipe_length", "column"].includes(workTypeRaw)
+          ? workTypeRaw
+          : "facade";
+        const months = Math.max(1, Number(args?.months) || 1);
+        const qty = quantity;
+
+        // قیمت پایه ماه اول با پیش‌فرض‌ها (استان قم، از روی زمین، بدون افزایش درصدی)
+        let base = 0;
+        if (workType === "facade") {
+          base = qty <= 50 ? P("facade_fixed_under_50") : qty <= 100 ? P("facade_fixed_50_to_100") : qty * P("facade_per_meter_over_100");
+        } else if (workType === "formwork") {
+          base = qty <= 100 ? P("formwork_fixed_under_100") : qty <= 200 ? P("formwork_fixed_100_to_200") : qty * P("formwork_per_meter_over_200");
+        } else if (workType === "ceiling_beam") {
+          base = qty <= 100 ? P("ceiling_beam_fixed_under_100") : qty <= 200 ? P("ceiling_beam_fixed_100_to_200") : qty * P("ceiling_beam_per_meter_over_200");
+        } else if (workType === "ceiling_slab") {
+          base = qty <= 100 ? P("ceiling_slab_fixed_under_100") : qty <= 200 ? P("ceiling_slab_fixed_100_to_200") : qty * P("ceiling_slab_per_meter_over_200");
+        } else if (workType === "pipe_length") {
+          base = qty <= 100 ? P("pipe_fixed_under_100m") : qty <= 200 ? P("pipe_fixed_100_to_200m") : qty * P("pipe_per_meter_over_200");
+        } else if (workType === "column") {
+          base = qty * P("column_price_per_unit");
+        }
+        base = Math.round(base);
+
+        // ماه‌های اضافه
+        let total = base;
+        if (months > 1) {
+          const factor = (P("extra_month_factor_pct") || 70) / 100;
+          total = Math.round(base + base * factor * (months - 1));
+          if (workType === "facade") {
+            const discountPct = months === 2 ? P("rental_discount_2_months_pct") : P("rental_discount_3plus_months_pct");
+            if (discountPct > 0) total = Math.round(total * (1 - discountPct / 100));
+          }
+        }
+
         return {
           requires_expert_review: false,
           pricing_model: "scaffolding_config",
           subcategory: isScaffoldingWith ? "اجرای داربست به همراه اجناس" : "اجرای داربست بدون اجناس",
-          order_form_url: isScaffoldingWith ? "/scaffolding/form" : "/scaffolding/form",
+          order_form_url: "/scaffolding/form",
+          calculated: {
+            work_type: workType,
+            quantity: qty,
+            months,
+            base_price_first_month_toman: base,
+            estimated_total_toman: total,
+            assumptions: "استان قم، اجناس از اهرم، داربست از روی زمین (ارتفاع پای کار ۰)، بدون افزایش فاصله و فاصله خودرو",
+          },
           note:
-            "قیمت داربست از جدول پیکربندی رسمی سایت اهرم محاسبه می‌شود. " +
-            "بر اساس نوع کاربری (نما/کفراژ/زیربتن تیرچه/زیربتن دال/لوله‌ای/ستونی) قیمت پایه را از category متناظر بردار، " +
-            "برای متراژ زیر آستانه از fixed_under، برای متراژ بین آستانه‌ها از fixed_..._to_... و برای متراژ بالاتر از per_meter_over استفاده کن. " +
-            "افزایش‌های درصدی مربوط به فاصله (distance)، ارتفاع پای کار (platform_height)، ارتفاع داربست (scaffold_height) و فاصله خودرو (vehicle_distance) را در صورت داشتن اطلاعات اعمال کن؛ در غیر این صورت با فرض پیش‌فرض (بدون افزایش) قیمت پایه را اعلام کن و صریحاً بگو قیمت نهایی پس از تایید ابعاد و آدرس دقیق ممکن است اندکی تغییر کند. " +
-            "هرگز نگو قیمت باید توسط کارشناس اعلام شود؛ همیشه قیمت پیش‌فرض بده.",
+            "مقدار estimated_total_toman قیمت نهایی محاسبه‌شده با پیش‌فرض‌های سایت است؛ همین عدد را به تومان به کاربر اعلام کن و هرگز خودت دوباره محاسبه نکن و هرگز صفر نگو. " +
+            "اگر کاربر ارتفاع پای کار، فاصله یا فاصله خودرو را گفت، درصدهای مربوطه از items را روی همین عدد اعمال کن. " +
+            "هرگز نگو قیمت باید توسط کارشناس اعلام شود.",
           items: cfg.map((i: any) => ({
             key: i.key,
             label: i.label,
@@ -619,6 +687,7 @@ async function estimateServicePrice(supabase: any, args: any) {
           })),
         };
       }
+
     }
 
     return {
