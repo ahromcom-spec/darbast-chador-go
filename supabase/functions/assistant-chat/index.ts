@@ -573,11 +573,20 @@ async function estimateServicePrice(supabase: any, args: any) {
   // اگر فرمول service_pricing_rules نبود، از آیتم‌های subcategory_pricing_items استفاده کن
   // (مثل قالی‌شویی که هر آیتم قیمت جدا دارد: فرش ۱۲ متری، ۹ متری، ۶ متری، سفارشی، موکت ...)
   if (!rule) {
-    const { data: items } = await supabase
+    const SCAFFOLD_SUBS = [
+      "3b44e5ee-8a2c-4e50-8f70-df753df8ef3d",
+      "527e9baa-54c6-4131-81cb-32d29ebae91a",
+    ];
+    const { data: rawItems } = await supabase
       .from("subcategory_pricing_items")
       .select("key,category,label,value,unit,description,sort_order")
       .eq("subcategory_id", subcategoryId)
       .order("sort_order", { ascending: true });
+
+    // برای داربست از جدول پیکربندی داربست استفاده می‌شود، نه آیتم‌های صفر
+    const items = SCAFFOLD_SUBS.includes(subcategoryId)
+      ? []
+      : (rawItems || []).filter((i: any) => Number(i.value) > 0);
 
     if (items && items.length > 0) {
       return {
