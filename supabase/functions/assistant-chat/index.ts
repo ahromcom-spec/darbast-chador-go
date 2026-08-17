@@ -613,17 +613,59 @@ async function estimateServicePrice(supabase: any, args: any) {
         .order("sort_order", { ascending: true });
 
       if (cfg && cfg.length > 0) {
+        const P = (key: string) => Number(cfg.find((c: any) => c.key === key)?.value) || 0;
+        const workTypeRaw = String(args?.work_type || "facade").toLowerCase();
+        const workType = ["facade", "formwork", "ceiling_beam", "ceiling_slab", "pipe_length", "column"].includes(workTypeRaw)
+          ? workTypeRaw
+          : "facade";
+        const months = Math.max(1, Number(args?.months) || 1);
+        const qty = quantity;
+
+        // قیمت پایه ماه اول با پیش‌فرض‌ها (استان قم، از روی زمین، بدون افزایش درصدی)
+        let base = 0;
+        if (workType === "facade") {
+          base = qty <= 50 ? P("facade_fixed_under_50") : qty <= 100 ? P("facade_fixed_50_to_100") : qty * P("facade_per_meter_over_100");
+        } else if (workType === "formwork") {
+          base = qty <= 100 ? P("formwork_fixed_under_100") : qty <= 200 ? P("formwork_fixed_100_to_200") : qty * P("formwork_per_meter_over_200");
+        } else if (workType === "ceiling_beam") {
+          base = qty <= 100 ? P("ceiling_beam_fixed_under_100") : qty <= 200 ? P("ceiling_beam_fixed_100_to_200") : qty * P("ceiling_beam_per_meter_over_200");
+        } else if (workType === "ceiling_slab") {
+          base = qty <= 100 ? P("ceiling_slab_fixed_under_100") : qty <= 200 ? P("ceiling_slab_fixed_100_to_200") : qty * P("ceiling_slab_per_meter_over_200");
+        } else if (workType === "pipe_length") {
+          base = qty <= 100 ? P("pipe_fixed_under_100m") : qty <= 200 ? P("pipe_fixed_100_to_200m") : qty * P("pipe_per_meter_over_200");
+        } else if (workType === "column") {
+          base = qty * P("column_price_per_unit");
+        }
+        base = Math.round(base);
+
+        // ماه‌های اضافه
+        let total = base;
+        if (months > 1) {
+          const factor = (P("extra_month_factor_pct") || 70) / 100;
+          total = Math.round(base + base * factor * (months - 1));
+          if (workType === "facade") {
+            const discountPct = months === 2 ? P("rental_discount_2_months_pct") : P("rental_discount_3plus_months_pct");
+            if (discountPct > 0) total = Math.round(total * (1 - discountPct / 100));
+          }
+        }
+
         return {
           requires_expert_review: false,
           pricing_model: "scaffolding_config",
           subcategory: isScaffoldingWith ? "اجرای داربست به همراه اجناس" : "اجرای داربست بدون اجناس",
-          order_form_url: isScaffoldingWith ? "/scaffolding/form" : "/scaffolding/form",
+          order_form_url: "/scaffolding/form",
+          calculated: {
+            work_type: workType,
+            quantity: qty,
+            months,
+            base_price_first_month_toman: base,
+            estimated_total_toman: total,
+            assumptions: "استان قم، اجناس از اهرم، داربست از روی زمین (ارتفاع پای کار ۰)، بدون افزایش فاصله و فاصله خودرو",
+          },
           note:
-            "قیمت داربست از جدول پیکربندی رسمی سایت اهرم محاسبه می‌شود. " +
-            "بر اساس نوع کاربری (نما/کفراژ/زیربتن تیرچه/زیربتن دال/لوله‌ای/ستونی) قیمت پایه را از category متناظر بردار، " +
-            "برای متراژ زیر آستانه از fixed_under، برای متراژ بین آستانه‌ها از fixed_..._to_... و برای متراژ بالاتر از per_meter_over استفاده کن. " +
-            "افزایش‌های درصدی مربوط به فاصله (distance)، ارتفاع پای کار (platform_height)، ارتفاع داربست (scaffold_height) و فاصله خودرو (vehicle_distance) را در صورت داشتن اطلاعات اعمال کن؛ در غیر این صورت با فرض پیش‌فرض (بدون افزایش) قیمت پایه را اعلام کن و صریحاً بگو قیمت نهایی پس از تایید ابعاد و آدرس دقیق ممکن است اندکی تغییر کند. " +
-            "هرگز نگو قیمت باید توسط کارشناس اعلام شود؛ همیشه قیمت پیش‌فرض بده.",
+            "مقدار estimated_total_toman قیمت نهایی محاسبه‌شده با پیش‌فرض‌های سایت است؛ همین عدد را به تومان به کاربر اعلام کن و هرگز خودت دوباره محاسبه نکن و هرگز صفر نگو. " +
+            "اگر کاربر ارتفاع پای کار، فاصله یا فاصله خودرو را گفت، درصدهای مربوطه از items را روی همین عدد اعمال کن. " +
+            "هرگز نگو قیمت باید توسط کارشناس اعلام شود.",
           items: cfg.map((i: any) => ({
             key: i.key,
             label: i.label,
@@ -634,6 +676,7 @@ async function estimateServicePrice(supabase: any, args: any) {
           })),
         };
       }
+
     }
 
     return {
