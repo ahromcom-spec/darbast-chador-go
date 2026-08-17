@@ -93,9 +93,9 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ success: false, error: 'کلید هوش مصنوعی پیکربندی نشده است' }), {
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    if (!GEMINI_API_KEY) {
+      return new Response(JSON.stringify({ success: false, error: 'کلید هوش مصنوعی جیمینای پیکربندی نشده است' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -109,21 +109,35 @@ serve(async (req) => {
       typeof moduleLabel === 'string' ? moduleLabel : undefined,
     );
 
-    const aiRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-3.6-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `متن گزارش روزانه:\n\n${text}\n\nفقط JSON معتبر برگردان. مطمئن شو همه اشخاص ذکرشده ردیف دارند و پرداخت‌ها دوطرفه ثبت شده است.` },
-        ],
-      }),
-    });
+    const userPrompt = `متن گزارش روزانه:\n\n${text}\n\nفقط JSON معتبر برگردان. مطمئن شو همه اشخاص ذکرشده ردیف دارند و پرداخت‌ها دوطرفه ثبت شده است.`;
 
+    const callGemini = async (model: string) =>
+      await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': GEMINI_API_KEY,
+          },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+            generationConfig: {
+              temperature: 0.2,
+              responseMimeType: 'application/json',
+              maxOutputTokens: 8192,
+            },
+          }),
+        },
+      );
+
+    let aiRes = await callGemini('gemini-3.6-flash');
+    if (!aiRes.ok && (aiRes.status === 404 || aiRes.status === 400)) {
+      const firstErr = await aiRes.text();
+      console.error('Gemini primary model error', aiRes.status, firstErr);
+      aiRes = await callGemini('gemini-flash-latest');
+    }
 
     if (aiRes.status === 429) {
       return new Response(JSON.stringify({ success: false, error: 'محدودیت درخواست هوش مصنوعی؛ کمی بعد تلاش کنید' }), {
@@ -131,35 +145,28 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    if (aiRes.status === 402) {
-      return new Response(JSON.stringify({ success: false, error: 'اعتبار هوش مصنوعی کافی نیست' }), {
-        status: 402,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    if (aiRes.status === 403) {
+    if (aiRes.status === 401 || aiRes.status === 403) {
       const errText = await aiRes.text();
-      console.error('AI error', aiRes.status, errText);
+      console.error('Gemini auth error', aiRes.status, errText);
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'سقف اعتبار هوش مصنوعی این ورک‌اسپیس پر شده است؛ لطفاً اعتبار/سقف مصرف را در تنظیمات لاوابل افزایش دهید.',
-        }),
+        JSON.stringify({ success: false, error: 'کلید جیمینای معتبر نیست یا دسترسی ندارد؛ کلید API را بررسی کنید.' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
     if (!aiRes.ok) {
       const errText = await aiRes.text();
-      console.error('AI error', aiRes.status, errText);
+      console.error('Gemini error', aiRes.status, errText);
       return new Response(JSON.stringify({ success: false, error: 'خطا در پردازش هوش مصنوعی' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-
     const aiData = await aiRes.json();
-    const content: string = aiData.choices?.[0]?.message?.content ?? '';
+    const content: string = (aiData?.candidates?.[0]?.content?.parts || [])
+      .map((p: any) => p?.text || '')
+      .join('') || '';
+
 
     let parsed: any = null;
     try {
