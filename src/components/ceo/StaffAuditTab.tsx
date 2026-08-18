@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { Loader2, Calculator, TrendingUp, TrendingDown, Search, User, Calendar, DollarSign, Clock, FileText, Wallet, Download, CalendarDays, Gift, MinusCircle, CreditCard, Banknote, Send, CheckCircle2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, setMonth as setJalaliMonth, setYear as setJalaliYear } from 'date-fns-jalali';
 import { Separator } from '@/components/ui/separator';
+import { formatOvertime, formatOvertimeLabel } from '@/lib/overtimeUtils';
 // Persian months
 const PERSIAN_MONTHS = [
   { value: 1, label: 'فروردین' },
@@ -79,13 +80,20 @@ interface AuditSummary {
   // Basic counts
   totalDaysWorked: number;
   totalAbsentDays: number;
+  /** مجموع ساعات اضافه‌کاری (مثبت) */
   totalOvertime: number;
+  /** مجموع ساعات کم‌کاری (عدد مثبت) */
+  totalUndertime: number;
+  /** خالص اضافه‌کاری منهای کم‌کاری */
+  netOvertime: number;
   // Financial flows
   totalReceived: number;
   totalSpent: number;
   // Calculated salary
   estimatedSalary: number;
   overtimePay: number;
+  /** مبلغ کسر شده بابت کم‌کاری */
+  undertimeDeduction: number;
   totalWorkAndBenefits: number;
   // Balance calculations
   remainingBalanceFromPreviousMonth: number;
@@ -99,6 +107,7 @@ interface AuditSummary {
   displayDailySalary: number;
   salaryBreakdowns: SalaryBreakdown[];
 }
+
 
 export function StaffAuditTab() {
   const [selectedStaffCode, setSelectedStaffCode] = useState<string>('');
@@ -232,7 +241,10 @@ export function StaffAuditTab() {
     // Basic counts
     const totalDaysWorked = records.filter(r => r.work_status === 'حاضر').length;
     const totalAbsentDays = records.filter(r => r.work_status === 'غایب').length;
-    const totalOvertime = records.reduce((sum, r) => sum + (r.overtime_hours || 0), 0);
+    const totalOvertime = records.reduce((sum, r) => sum + Math.max(0, r.overtime_hours || 0), 0);
+    const totalUndertime = records.reduce((sum, r) => sum + Math.max(0, -(r.overtime_hours || 0)), 0);
+    const netOvertime = totalOvertime - totalUndertime;
+
     
     // Financial flows
     const totalReceived = records.reduce((sum, r) => sum + (r.amount_received || 0), 0);
@@ -241,6 +253,7 @@ export function StaffAuditTab() {
     // Calculated salary - per-day based on effective date ranges
     let estimatedSalary = 0;
     let overtimePay = 0;
+    let undertimeDeduction = 0;
     const salaryUsageCount: Record<number, number> = {};
     const breakdownMap: Record<number, SalaryBreakdown> = {};
     for (const r of records) {
@@ -254,16 +267,20 @@ export function StaffAuditTab() {
         breakdownMap[base].daysWorked++;
         breakdownMap[base].totalSalary += base;
       }
-      if (r.overtime_hours > 0) {
-        const otPay = r.overtime_hours * base * fraction;
-        overtimePay += otPay;
+      const hours = r.overtime_hours || 0;
+      if (hours !== 0) {
+        // نرخ کم‌کاری برابر نرخ اضافه‌کاری است (یک‌ششم حقوق روزانه) و از مبلغ کارکرد کم می‌شود
+        const pay = Math.abs(hours) * base * fraction;
+        if (hours > 0) overtimePay += pay;
+        else undertimeDeduction += pay;
         if (!breakdownMap[base]) {
           breakdownMap[base] = { dailySalary: base, daysWorked: 0, totalSalary: 0, overtimeHours: 0, overtimePay: 0 };
         }
-        breakdownMap[base].overtimeHours += r.overtime_hours;
-        breakdownMap[base].overtimePay += otPay;
+        breakdownMap[base].overtimeHours += hours;
+        breakdownMap[base].overtimePay += hours > 0 ? pay : -pay;
       }
     }
+
     const salaryBreakdowns = Object.values(breakdownMap).sort((a, b) => a.dailySalary - b.dailySalary);
     // Find the most-used daily salary for display purposes
     let displayDailySalary = settings.base_daily_salary;
@@ -281,9 +298,10 @@ export function StaffAuditTab() {
     const remainingBalanceFromPreviousMonth = localPrevBalance ?? prevMonthBalance;
     const extraReceivedPreviousMonth = localPrevExtra ?? prevMonthExtra;
     
-    // Total work and benefits includes bonuses
-    const totalWorkAndBenefits = estimatedSalary + overtimePay + benefits;
+    // Total work and benefits includes bonuses, minus undertime deduction
+    const totalWorkAndBenefits = estimatedSalary + overtimePay - undertimeDeduction + benefits;
     const totalWorkAmount = totalWorkAndBenefits;
+
     
     // Net calculation: 
     // What company owes = (work + benefits + prev balance) - (received + deductions + prev extra received)
@@ -300,8 +318,12 @@ export function StaffAuditTab() {
       totalDaysWorked,
       totalAbsentDays,
       totalOvertime,
+      totalUndertime,
+      netOvertime,
+      undertimeDeduction,
       totalReceived,
       totalSpent,
+
       estimatedSalary,
       overtimePay,
       totalWorkAndBenefits,
@@ -394,7 +416,7 @@ export function StaffAuditTab() {
         } else {
           // Merge: prefer 'حاضر' if any module has it
           if (rec.work_status === 'حاضر') existing.work_status = 'حاضر';
-          existing.overtime_hours = Math.max(existing.overtime_hours, rec.overtime_hours);
+          existing.overtime_hours = Math.abs(rec.overtime_hours) > Math.abs(existing.overtime_hours) ? rec.overtime_hours : existing.overtime_hours;
           existing.amount_received += rec.amount_received;
           existing.amount_spent += rec.amount_spent;
           // Merge notes
@@ -578,7 +600,7 @@ export function StaffAuditTab() {
                   <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center;">${(index + 1).toLocaleString('fa-IR')}</td>
                   <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${formatPersianDateNumeric(record.report_date)}</td>
                   <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${record.work_status === 'حاضر' ? '۱ روز' : 'غایب'}</td>
-                  <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${record.overtime_hours > 0 ? record.overtime_hours + ' ساعت' : '—'}</td>
+                  <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${formatOvertimeLabel(record.overtime_hours)}</td>
                   <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; color: ${record.amount_received > 0 ? '#16a34a' : '#666'};">${record.amount_received > 0 ? '<span style="white-space: nowrap;">' + record.amount_received.toLocaleString('fa-IR') + '</span><br/>تومان' : '—'}</td>
                   <td style="padding: 6px 8px; border: 1px solid #d4a574; text-align: right; word-break: break-word;">${record.receiving_notes || '—'}</td>
                   <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; color: ${record.amount_spent > 0 ? '#dc2626' : '#666'};">${record.amount_spent > 0 ? '<span style="white-space: nowrap;">' + record.amount_spent.toLocaleString('fa-IR') + '</span><br/>تومان' : '—'}</td>
@@ -591,7 +613,7 @@ export function StaffAuditTab() {
               <tr style="background-color: #f5e6d3; font-weight: bold;">
                 <td colspan="2" style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">جمع کل:</td>
                 <td style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${summary.totalDaysWorked.toLocaleString('fa-IR')} روز</td>
-                <td style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${summary.totalOvertime.toLocaleString('fa-IR')} ساعت</td>
+                <td style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${formatOvertime(summary.totalOvertime)} (کم‌کاری: ${formatOvertime(summary.totalUndertime)})</td>
                 <td style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; color: #16a34a;"><span style="white-space: nowrap;">${summary.totalReceived.toLocaleString('fa-IR')}</span><br/>تومان</td>
                 <td style="padding: 8px; border: 1px solid #d4a574;"></td>
                 <td style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; color: #dc2626;"><span style="white-space: nowrap;">${summary.totalSpent.toLocaleString('fa-IR')}</span><br/>تومان</td>
@@ -779,8 +801,12 @@ export function StaffAuditTab() {
                         </tr>`
                     }
                     <tr>
-                      <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: 500;">اضافه‌کاری (${summary.totalOvertime} ساعت)</td>
+                      <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: 500;">اضافه‌کاری (${formatOvertime(summary.totalOvertime)})</td>
                       <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: bold; text-align: left; color: #16a34a;">${formatCurrency(summary.overtimePay)}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: 500;">کسر کم‌کاری (${formatOvertime(summary.totalUndertime)})</td>
+                      <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: bold; text-align: left; color: #dc2626;">- ${formatCurrency(summary.undertimeDeduction)}</td>
                     </tr>
                     <tr style="background-color: #f0fdf4;">
                       <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: 500;">مزایا</td>
@@ -796,7 +822,7 @@ export function StaffAuditTab() {
                     </tr>
                     <tr style="background-color: #bbf7d0; border-top: 2px solid #22c55e;">
                       <td style="padding: 10px; font-weight: bold; font-size: 14px;">جمع بستانکار:</td>
-                      <td style="padding: 10px; font-weight: bold; font-size: 14px; text-align: left; color: #166534;">${formatCurrency(summary.estimatedSalary + summary.overtimePay + summary.benefits + summary.remainingBalanceFromPreviousMonth + summary.totalSpent)}</td>
+                      <td style="padding: 10px; font-weight: bold; font-size: 14px; text-align: left; color: #166534;">${formatCurrency(summary.estimatedSalary + summary.overtimePay - summary.undertimeDeduction + summary.benefits + summary.remainingBalanceFromPreviousMonth + summary.totalSpent)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -836,7 +862,7 @@ export function StaffAuditTab() {
                   <td style="padding: 8px 10px; border: 1px solid #fcd34d; font-weight: 500;">جمع کارکرد</td>
                   <td style="padding: 8px 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${summary.totalDaysWorked.toLocaleString('fa-IR')} روز</td>
                   <td style="padding: 8px 10px; border: 1px solid #fcd34d; font-weight: 500;">جمع اضافه‌کاری</td>
-                  <td style="padding: 8px 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${summary.totalOvertime.toLocaleString('fa-IR')} ساعت</td>
+                  <td style="padding: 8px 10px; border: 1px solid #fcd34d; font-weight: bold; text-align: left;">${formatOvertime(summary.totalOvertime)} (کم‌کاری: ${formatOvertime(summary.totalUndertime)})</td>
                 </tr>
               </tbody>
             </table>
@@ -949,7 +975,7 @@ export function StaffAuditTab() {
         ? `طلب کارکرد ${dateRangeStr}` 
         : `بدهی کارکرد ${dateRangeStr}`;
       
-      const description = `کارکرد: ${summary.totalDaysWorked} روز | اضافه‌کاری: ${summary.totalOvertime} ساعت | حقوق: ${formatCurrency(summary.estimatedSalary)} | اضافه‌کاری: ${formatCurrency(summary.overtimePay)}`;
+      const description = `کارکرد: ${summary.totalDaysWorked} روز | اضافه‌کاری: ${formatOvertime(summary.totalOvertime)} | کم‌کاری: ${formatOvertime(summary.totalUndertime)} | حقوق: ${formatCurrency(summary.estimatedSalary)} | اضافه‌کاری: ${formatCurrency(summary.overtimePay)}`;
 
       const { error: txError } = await supabase
         .from('wallet_transactions')
@@ -1200,7 +1226,7 @@ export function StaffAuditTab() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">اضافه‌کاری</p>
-                  <p className="text-xl font-bold">{summary.totalOvertime} ساعت</p>
+                  <p className="text-xl font-bold">{formatOvertime(summary.totalOvertime)}</p>
                 </div>
               </div>
             </CardContent>
@@ -1271,7 +1297,7 @@ export function StaffAuditTab() {
                           {record.work_status === 'حاضر' ? '۱ روز کارکرد' : 'غایب'}
                         </Badge>
                       </TableCell>
-                      <TableCell>{record.overtime_hours > 0 ? `${record.overtime_hours} ساعت` : '—'}</TableCell>
+                      <TableCell>{formatOvertimeLabel(record.overtime_hours)}</TableCell>
                       <TableCell className="text-green-600 font-medium">
                         {record.amount_received > 0 ? formatCurrency(record.amount_received) : '—'}
                       </TableCell>
@@ -1288,7 +1314,7 @@ export function StaffAuditTab() {
                   <TableRow className="bg-amber-200/50 dark:bg-amber-900/50 font-bold">
                     <TableCell colSpan={2} className="text-right">جمع کل:</TableCell>
                     <TableCell>{summary?.totalDaysWorked.toLocaleString('fa-IR')} روز</TableCell>
-                    <TableCell>{summary?.totalOvertime.toLocaleString('fa-IR')} ساعت</TableCell>
+                    <TableCell>{formatOvertime(summary?.totalOvertime || 0)}</TableCell>
                     <TableCell className="text-green-600">{formatCurrency(summary?.totalReceived || 0)}</TableCell>
                     <TableCell></TableCell>
                     <TableCell className="text-red-600">{formatCurrency(summary?.totalSpent || 0)}</TableCell>
@@ -1373,8 +1399,12 @@ export function StaffAuditTab() {
                       </TableRow>
                     )}
                     <TableRow>
-                      <TableCell className="font-medium text-right">اضافه‌کاری ({summary.totalOvertime} ساعت)</TableCell>
+                      <TableCell className="font-medium text-right">اضافه‌کاری ({formatOvertime(summary.totalOvertime)})</TableCell>
                       <TableCell className="text-left font-bold text-green-700">{formatCurrency(summary.overtimePay)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium text-right">کسر کم‌کاری ({formatOvertime(summary.totalUndertime)})</TableCell>
+                      <TableCell className="text-left font-bold text-red-600">- {formatCurrency(summary.undertimeDeduction)}</TableCell>
                     </TableRow>
                     <TableRow className="bg-green-50/50 dark:bg-green-900/20">
                       <TableCell className="font-medium text-right">مزایا</TableCell>
@@ -1391,7 +1421,7 @@ export function StaffAuditTab() {
                     <TableRow className="bg-green-200 dark:bg-green-800 border-t-2 border-green-400">
                       <TableCell className="font-bold text-right text-lg">جمع بستانکار:</TableCell>
                       <TableCell className="text-left font-bold text-lg text-green-800 dark:text-green-200">
-                        {formatCurrency(summary.estimatedSalary + summary.overtimePay + summary.benefits + summary.remainingBalanceFromPreviousMonth + summary.totalSpent)}
+                        {formatCurrency(summary.estimatedSalary + summary.overtimePay - summary.undertimeDeduction + summary.benefits + summary.remainingBalanceFromPreviousMonth + summary.totalSpent)}
                       </TableCell>
                     </TableRow>
                   </TableBody>
@@ -1445,7 +1475,7 @@ export function StaffAuditTab() {
                   <div className="flex justify-between items-center p-2 bg-green-50 dark:bg-green-900/30 rounded">
                     <span className="text-green-700 dark:text-green-300">جمع بستانکار:</span>
                     <span className="font-bold text-green-700 dark:text-green-300">
-                      {formatCurrency(summary.estimatedSalary + summary.overtimePay + summary.benefits + summary.remainingBalanceFromPreviousMonth + summary.totalSpent)}
+                      {formatCurrency(summary.estimatedSalary + summary.overtimePay - summary.undertimeDeduction + summary.benefits + summary.remainingBalanceFromPreviousMonth + summary.totalSpent)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center p-2 bg-red-50 dark:bg-red-900/30 rounded">
