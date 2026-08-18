@@ -518,7 +518,7 @@ export function StaffReportsTable({
                 <TableCell className="border border-amber-300">{totals.totalSpent.toLocaleString('fa-IR')} تومان</TableCell>
                 <TableCell className="border border-amber-300"></TableCell>
                 <TableCell className="border border-amber-300">{totals.totalReceived.toLocaleString('fa-IR')} تومان</TableCell>
-                <TableCell className="border border-amber-300">{totals.totalOvertime} ساعت</TableCell>
+                <TableCell className="border border-amber-300 tabular-nums" dir="ltr">{formatOvertime(totals.totalOvertime || 0)}</TableCell>
                 <TableCell className="border border-amber-300">{totals.presentCount} نیرو</TableCell>
                 <TableCell className="border border-amber-300 text-right">جمع:</TableCell>
               </TableRow>
