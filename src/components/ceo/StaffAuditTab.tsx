@@ -79,13 +79,20 @@ interface AuditSummary {
   // Basic counts
   totalDaysWorked: number;
   totalAbsentDays: number;
+  /** مجموع ساعات اضافه‌کاری (مثبت) */
   totalOvertime: number;
+  /** مجموع ساعات کم‌کاری (عدد مثبت) */
+  totalUndertime: number;
+  /** خالص اضافه‌کاری منهای کم‌کاری */
+  netOvertime: number;
   // Financial flows
   totalReceived: number;
   totalSpent: number;
   // Calculated salary
   estimatedSalary: number;
   overtimePay: number;
+  /** مبلغ کسر شده بابت کم‌کاری */
+  undertimeDeduction: number;
   totalWorkAndBenefits: number;
   // Balance calculations
   remainingBalanceFromPreviousMonth: number;
@@ -99,6 +106,7 @@ interface AuditSummary {
   displayDailySalary: number;
   salaryBreakdowns: SalaryBreakdown[];
 }
+
 
 export function StaffAuditTab() {
   const [selectedStaffCode, setSelectedStaffCode] = useState<string>('');
