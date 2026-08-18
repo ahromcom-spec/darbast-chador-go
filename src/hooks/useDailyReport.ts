@@ -614,7 +614,7 @@ export function useDailyReport() {
         !s.is_cash_box &&
         (Boolean(s.staff_user_id) ||
           Boolean(s.staff_name?.trim()) ||
-          (s.overtime_hours ?? 0) > 0 ||
+          (s.overtime_hours ?? 0) !== 0 ||
           (s.amount_received ?? 0) > 0 ||
           (s.amount_spent ?? 0) > 0 ||
           Boolean(s.receiving_notes?.trim()) ||
@@ -664,7 +664,7 @@ export function useDailyReport() {
         s.is_company_expense ||
         Boolean(s.staff_user_id) ||
         Boolean(s.staff_name?.trim()) ||
-        (s.overtime_hours ?? 0) > 0 ||
+        (s.overtime_hours ?? 0) !== 0 ||
         (s.amount_received ?? 0) > 0 ||
         (s.amount_spent ?? 0) > 0 ||
         Boolean(s.receiving_notes?.trim()) ||
@@ -1163,7 +1163,7 @@ export function useDailyReport() {
           s.is_company_expense ||
           Boolean(s.staff_user_id) ||
           Boolean(s.staff_name?.trim()) ||
-          (s.overtime_hours ?? 0) > 0 ||
+          (s.overtime_hours ?? 0) !== 0 ||
           (s.amount_received ?? 0) > 0 ||
           (s.amount_spent ?? 0) > 0 ||
           Boolean(s.receiving_notes?.trim()) ||
