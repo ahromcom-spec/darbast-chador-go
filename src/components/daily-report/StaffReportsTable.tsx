@@ -272,8 +272,8 @@ export function StaffReportsTable({
                         }
                       }}
                       placeholder={row.is_company_expense ? "هزینه‌های شرکت (نهار، ایاب‌ذهاب و...)" : "توضیحات..."}
-                       className="w-[14ch] min-h-[70px]"
-                       maxLength={300}
+                       className="w-[24ch] min-h-[140px]"
+                       maxLength={600}
                      />
                    </TableCell>
                    <TableCell className="border border-amber-200">
@@ -302,8 +302,8 @@ export function StaffReportsTable({
                         }
                       }}
                       placeholder="توضیحات..."
-                       className="w-[14ch] min-h-[70px]"
-                       maxLength={300}
+                       className="w-[24ch] min-h-[140px]"
+                       maxLength={600}
                      />
                    </TableCell>
                    <TableCell className="border border-amber-200">
@@ -329,8 +329,8 @@ export function StaffReportsTable({
                           }
                         }}
                         placeholder={row.is_company_expense ? "توضیحات دریافتی شرکت..." : "توضیحات..."}
-                         className="w-[14ch] min-h-[70px]"
-                         maxLength={300}
+                         className="w-[24ch] min-h-[140px]"
+                         maxLength={600}
                        />
                      ) : (
                        <AutoResizeTextarea
@@ -341,8 +341,8 @@ export function StaffReportsTable({
                            }
                          }}
                          placeholder="توضیحات..."
-                         className="w-[14ch] min-h-[70px]"
-                        maxLength={300}
+                         className="w-[24ch] min-h-[140px]"
+                        maxLength={600}
                       />
                     )}
                   </TableCell>
