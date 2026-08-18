@@ -238,8 +238,8 @@ export const RecentActivities: React.FC = () => {
 
   const selectedMedia = selectedIndex !== null ? media[selectedIndex] : null;
   
-  // Show 2 rows × 3 items in preview
-  const previewMedia = media.slice(0, 6);
+  // Show 2 full rows: 3 per row on mobile (6), 4 per row on desktop (8)
+  const previewMedia = media.slice(0, 8);
 
   if (loading) {
     return (
@@ -289,11 +289,12 @@ export const RecentActivities: React.FC = () => {
         </CardHeader>
         <CardContent className="px-2">
           <div className="grid grid-cols-3 md:grid-cols-4 gap-0 overflow-hidden rounded-lg">
-            {previewMedia.map((item) => (
+            {previewMedia.map((item, previewIdx) => (
               <div
                 key={item.id}
                 className={cn(
-                  "relative aspect-[3/4] overflow-hidden"
+                  "relative aspect-[3/4] overflow-hidden",
+                  previewIdx >= 6 && "hidden md:block"
                 )}
               >
                 {isVideoFile(item) ? (
