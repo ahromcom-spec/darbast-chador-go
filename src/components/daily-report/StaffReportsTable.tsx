@@ -376,26 +376,12 @@ export function StaffReportsTable({
                     {row.is_cash_box || row.is_company_expense ? (
                       <span className="text-muted-foreground">—</span>
                     ) : (
-                      <div className="relative">
-                        <Input
-                          type="text"
-                          inputMode="decimal"
-                          value={row.overtime_hours === 0 ? '' : row.overtime_hours.toString()}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/^0+(?=\d)/, '');
-                            const numVal = parseFloat(val) || 0;
-                            if (numVal <= 15) {
-                              onUpdateRow(index, 'overtime_hours', numVal);
-                            } else {
-                              toast.error('اضافه‌کاری نمی‌تواند بیشتر از ۱۵ ساعت باشد');
-                            }
-                          }}
-                          className="w-[80px] pl-10 text-left"
-                          dir="ltr"
-                          placeholder="0"
-                        />
-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">ساعت</span>
-                      </div>
+                      <OvertimeInput
+                        value={row.overtime_hours || 0}
+                        onChange={(hours) => onUpdateRow(index, 'overtime_hours', hours)}
+                        className="w-[100px]"
+                      />
+
                     )}
                   </TableCell>
                   <TableCell className="border border-amber-200" {...(!row.is_cash_box && !row.is_company_expense ? { 'data-workstatus-cell': index } : {})}>
