@@ -5500,39 +5500,18 @@ export default function DailyReportModule() {
                               <TableCell className="border border-amber-200">
                                  {row.is_cash_box || isCompanyExpense ? (
                                   <span className="text-muted-foreground">—</span>
-                                ) : effectiveReadOnly ? (
-                                  <div className="min-w-[90px] p-2 bg-background/50 rounded border text-sm text-left" dir="ltr">
-                                    {row.overtime_hours || 0} ساعت
-                                  </div>
-                                ) : (
-                                  <div className="relative">
-                                    <Input
-                                      type="text"
-                                      inputMode="decimal"
-                                      value={row.overtime_hours === 0 ? '' : row.overtime_hours.toString()}
-                                      onChange={(e) => {
-                                        let raw = e.target.value.trim();
-                                        // اجازه‌ی ورود علامت منفی و حالت میانی "-"
-                                        if (raw === '' || raw === '-') {
-                                          updateStaffRow(index, 'overtime_hours', raw === '-' ? ('-' as any) : 0);
-                                          return;
-                                        }
-                                        const isNeg = raw.startsWith('-');
-                                        let digits = (isNeg ? raw.slice(1) : raw).replace(/^0+(?=\d)/, '');
-                                        const numVal = (isNeg ? -1 : 1) * (parseFloat(digits) || 0);
-                                        if (Math.abs(numVal) <= 15) {
-                                          updateStaffRow(index, 'overtime_hours', numVal);
-                                        } else {
-                                          toast.error('اضافه‌کاری نمی‌تواند بیشتر از ۱۵ ساعت (مثبت یا منفی) باشد');
-                                        }
-                                      }}
-                                      className="min-w-[90px] pl-10 text-left"
-                                      dir="ltr"
-                                      placeholder="0"
-                                    />
-                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">ساعت</span>
-                                  </div>
-                                )}
+                                 ) : effectiveReadOnly ? (
+                                   <div className="min-w-[90px] p-2 bg-background/50 rounded border text-sm text-left tabular-nums" dir="ltr">
+                                     {formatOvertime(row.overtime_hours || 0)}
+                                   </div>
+                                 ) : (
+                                   <OvertimeInput
+                                     value={Number(row.overtime_hours) || 0}
+                                     onChange={(hours) => updateStaffRow(index, 'overtime_hours', hours)}
+                                     className="min-w-[100px]"
+                                   />
+                                 )}
+
                               </TableCell>
                               <TableCell className="border border-amber-200">
                                 {effectiveReadOnly ? (
