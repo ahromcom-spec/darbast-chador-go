@@ -126,41 +126,69 @@ serve(async (req) => {
             generationConfig: {
               temperature: 0.2,
               responseMimeType: 'application/json',
-              maxOutputTokens: 8192,
+              maxOutputTokens: 32768,
             },
           }),
         },
       );
 
-    let aiRes = await callGemini('gemini-3.6-flash');
-    if (!aiRes.ok && (aiRes.status === 404 || aiRes.status === 400)) {
-      const firstErr = await aiRes.text();
-      console.error('Gemini primary model error', aiRes.status, firstErr);
-      aiRes = await callGemini('gemini-flash-latest');
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    // Try several models; retry transient overload/rate-limit errors with backoff so
+    // long reports still go through when a model is busy.
+    const models = ['gemini-3.6-flash', 'gemini-flash-latest', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+    let aiRes: Response | null = null;
+    let lastStatus = 0;
+    let lastErrText = '';
+
+    outer: for (const model of models) {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const res = await callGemini(model);
+        if (res.ok) {
+          aiRes = res;
+          break outer;
+        }
+        lastStatus = res.status;
+        lastErrText = await res.text();
+        console.error('Gemini error', model, res.status, lastErrText.slice(0, 400));
+
+        if (res.status === 401 || res.status === 403) break outer;
+        if (res.status === 404 || res.status === 400) break; // bad model → next model
+        if (res.status === 429 || res.status >= 500) {
+          await sleep(1500 * (attempt + 1) + Math.floor(Math.random() * 500));
+          continue;
+        }
+        break; // other terminal error → next model
+      }
     }
 
-    if (aiRes.status === 429) {
-      return new Response(JSON.stringify({ success: false, error: 'محدودیت درخواست هوش مصنوعی؛ کمی بعد تلاش کنید' }), {
-        status: 429,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    if (aiRes.status === 401 || aiRes.status === 403) {
-      const errText = await aiRes.text();
-      console.error('Gemini auth error', aiRes.status, errText);
-      return new Response(
-        JSON.stringify({ success: false, error: 'کلید جیمینای معتبر نیست یا دسترسی ندارد؛ کلید API را بررسی کنید.' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
-    }
-    if (!aiRes.ok) {
-      const errText = await aiRes.text();
-      console.error('Gemini error', aiRes.status, errText);
+    if (!aiRes) {
+      if (lastStatus === 401 || lastStatus === 403) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'کلید جیمینای معتبر نیست یا دسترسی ندارد؛ کلید API را بررسی کنید.' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      if (lastStatus === 429) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'محدودیت درخواست هوش مصنوعی؛ چند لحظه بعد دوباره تلاش کنید.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      if (lastStatus >= 500) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'سرور هوش مصنوعی جیمینای موقتاً شلوغ است (۵۰۳). چند لحظه بعد دوباره «تحلیل هوشمند متن» را بزنید.',
+          }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
       return new Response(JSON.stringify({ success: false, error: 'خطا در پردازش هوش مصنوعی' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
 
     const aiData = await aiRes.json();
     const content: string = (aiData?.candidates?.[0]?.content?.parts || [])
