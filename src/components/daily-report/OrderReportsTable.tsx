@@ -107,10 +107,15 @@ export function OrderReportsTable({
                   <TableCell className="border border-blue-200">
                     <AutoResizeTextarea
                       value={row.notes}
-                      onChange={(e) => onUpdateRow(index, 'notes', e.target.value)}
+                      onChange={(e) => {
+                        if (e.target.value.length <= 600) {
+                          onUpdateRow(index, 'notes', e.target.value);
+                        }
+                      }}
                        className="min-h-[140px] w-[24ch] bg-background/50"
                        placeholder="توضیحات..."
-                    />
+                       maxLength={600}
+                     />
                   </TableCell>
                   <TableCell className="border border-blue-200">
                     <Input
