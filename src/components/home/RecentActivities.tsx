@@ -289,11 +289,12 @@ export const RecentActivities: React.FC = () => {
         </CardHeader>
         <CardContent className="px-2">
           <div className="grid grid-cols-3 md:grid-cols-4 gap-0 overflow-hidden rounded-lg">
-            {previewMedia.map((item) => (
+            {previewMedia.map((item, previewIdx) => (
               <div
                 key={item.id}
                 className={cn(
-                  "relative aspect-[3/4] overflow-hidden"
+                  "relative aspect-[3/4] overflow-hidden",
+                  previewIdx >= 6 && "hidden md:block"
                 )}
               >
                 {isVideoFile(item) ? (
