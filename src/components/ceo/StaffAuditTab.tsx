@@ -240,7 +240,10 @@ export function StaffAuditTab() {
     // Basic counts
     const totalDaysWorked = records.filter(r => r.work_status === 'حاضر').length;
     const totalAbsentDays = records.filter(r => r.work_status === 'غایب').length;
-    const totalOvertime = records.reduce((sum, r) => sum + (r.overtime_hours || 0), 0);
+    const totalOvertime = records.reduce((sum, r) => sum + Math.max(0, r.overtime_hours || 0), 0);
+    const totalUndertime = records.reduce((sum, r) => sum + Math.max(0, -(r.overtime_hours || 0)), 0);
+    const netOvertime = totalOvertime - totalUndertime;
+
     
     // Financial flows
     const totalReceived = records.reduce((sum, r) => sum + (r.amount_received || 0), 0);
