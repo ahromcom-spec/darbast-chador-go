@@ -200,8 +200,20 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled, moduleKe
 
       });
 
-      if (error) throw error;
+      if (error) {
+        // Non-2xx responses hide the JSON body; read it so the real Persian message shows.
+        let serverMessage = '';
+        try {
+          const ctx: any = (error as any)?.context;
+          if (ctx && typeof ctx.json === 'function') {
+            const body = await ctx.json();
+            serverMessage = String(body?.error || '');
+          }
+        } catch { /* ignore */ }
+        throw new Error(serverMessage || 'خطا در تحلیل متن؛ چند لحظه بعد دوباره تلاش کنید');
+      }
       if (!data?.success) throw new Error(data?.error || 'خطا در تحلیل متن');
+
 
       const unmatchedOrders: string[] = [];
       const unmatchedStaff: string[] = [];
