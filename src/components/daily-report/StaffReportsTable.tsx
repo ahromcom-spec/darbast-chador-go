@@ -267,7 +267,7 @@ export function StaffReportsTable({
                     <AutoResizeTextarea
                       value={row.notes}
                       onChange={(e) => {
-                        if (e.target.value.length <= 300) {
+                        if (e.target.value.length <= 600) {
                           onUpdateRow(index, 'notes', e.target.value);
                         }
                       }}
@@ -297,7 +297,7 @@ export function StaffReportsTable({
                     <AutoResizeTextarea
                       value={row.spending_notes}
                       onChange={(e) => {
-                        if (e.target.value.length <= 300) {
+                        if (e.target.value.length <= 600) {
                           onUpdateRow(index, 'spending_notes', e.target.value);
                         }
                       }}
@@ -324,7 +324,7 @@ export function StaffReportsTable({
                       <AutoResizeTextarea
                         value={row.receiving_notes}
                         onChange={(e) => {
-                          if (e.target.value.length <= 300) {
+                          if (e.target.value.length <= 600) {
                             onUpdateRow(index, 'receiving_notes', e.target.value);
                           }
                         }}
@@ -336,7 +336,7 @@ export function StaffReportsTable({
                        <AutoResizeTextarea
                          value={row.receiving_notes}
                          onChange={(e) => {
-                           if (e.target.value.length <= 300) {
+                           if (e.target.value.length <= 600) {
                              onUpdateRow(index, 'receiving_notes', e.target.value);
                            }
                          }}
