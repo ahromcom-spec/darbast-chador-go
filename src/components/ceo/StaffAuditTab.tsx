@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { Loader2, Calculator, TrendingUp, TrendingDown, Search, User, Calendar, DollarSign, Clock, FileText, Wallet, Download, CalendarDays, Gift, MinusCircle, CreditCard, Banknote, Send, CheckCircle2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, setMonth as setJalaliMonth, setYear as setJalaliYear } from 'date-fns-jalali';
 import { Separator } from '@/components/ui/separator';
+import { formatOvertime, formatOvertimeLabel } from '@/lib/overtimeUtils';
 // Persian months
 const PERSIAN_MONTHS = [
   { value: 1, label: 'فروردین' },
@@ -803,6 +804,10 @@ export function StaffAuditTab() {
                       <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: 500;">اضافه‌کاری (${formatOvertime(summary.totalOvertime)})</td>
                       <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: bold; text-align: left; color: #16a34a;">${formatCurrency(summary.overtimePay)}</td>
                     </tr>
+                    <tr>
+                      <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: 500;">کسر کم‌کاری (${formatOvertime(summary.totalUndertime)})</td>
+                      <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: bold; text-align: left; color: #dc2626;">- ${formatCurrency(summary.undertimeDeduction)}</td>
+                    </tr>
                     <tr style="background-color: #f0fdf4;">
                       <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: 500;">مزایا</td>
                       <td style="padding: 8px 10px; border: 1px solid #bbf7d0; font-weight: bold; text-align: left; color: #16a34a;">${formatCurrency(summary.benefits)}</td>
@@ -1396,6 +1401,10 @@ export function StaffAuditTab() {
                     <TableRow>
                       <TableCell className="font-medium text-right">اضافه‌کاری ({formatOvertime(summary.totalOvertime)})</TableCell>
                       <TableCell className="text-left font-bold text-green-700">{formatCurrency(summary.overtimePay)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium text-right">کسر کم‌کاری ({formatOvertime(summary.totalUndertime)})</TableCell>
+                      <TableCell className="text-left font-bold text-red-600">- {formatCurrency(summary.undertimeDeduction)}</TableCell>
                     </TableRow>
                     <TableRow className="bg-green-50/50 dark:bg-green-900/20">
                       <TableCell className="font-medium text-right">مزایا</TableCell>
