@@ -297,9 +297,10 @@ export function StaffAuditTab() {
     const remainingBalanceFromPreviousMonth = localPrevBalance ?? prevMonthBalance;
     const extraReceivedPreviousMonth = localPrevExtra ?? prevMonthExtra;
     
-    // Total work and benefits includes bonuses
-    const totalWorkAndBenefits = estimatedSalary + overtimePay + benefits;
+    // Total work and benefits includes bonuses, minus undertime deduction
+    const totalWorkAndBenefits = estimatedSalary + overtimePay - undertimeDeduction + benefits;
     const totalWorkAmount = totalWorkAndBenefits;
+
     
     // Net calculation: 
     // What company owes = (work + benefits + prev balance) - (received + deductions + prev extra received)
