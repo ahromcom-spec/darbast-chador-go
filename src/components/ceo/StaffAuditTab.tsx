@@ -252,6 +252,7 @@ export function StaffAuditTab() {
     // Calculated salary - per-day based on effective date ranges
     let estimatedSalary = 0;
     let overtimePay = 0;
+    let undertimeDeduction = 0;
     const salaryUsageCount: Record<number, number> = {};
     const breakdownMap: Record<number, SalaryBreakdown> = {};
     for (const r of records) {
@@ -265,16 +266,20 @@ export function StaffAuditTab() {
         breakdownMap[base].daysWorked++;
         breakdownMap[base].totalSalary += base;
       }
-      if (r.overtime_hours > 0) {
-        const otPay = r.overtime_hours * base * fraction;
-        overtimePay += otPay;
+      const hours = r.overtime_hours || 0;
+      if (hours !== 0) {
+        // نرخ کم‌کاری برابر نرخ اضافه‌کاری است (یک‌ششم حقوق روزانه) و از مبلغ کارکرد کم می‌شود
+        const pay = Math.abs(hours) * base * fraction;
+        if (hours > 0) overtimePay += pay;
+        else undertimeDeduction += pay;
         if (!breakdownMap[base]) {
           breakdownMap[base] = { dailySalary: base, daysWorked: 0, totalSalary: 0, overtimeHours: 0, overtimePay: 0 };
         }
-        breakdownMap[base].overtimeHours += r.overtime_hours;
-        breakdownMap[base].overtimePay += otPay;
+        breakdownMap[base].overtimeHours += hours;
+        breakdownMap[base].overtimePay += hours > 0 ? pay : -pay;
       }
     }
+
     const salaryBreakdowns = Object.values(breakdownMap).sort((a, b) => a.dailySalary - b.dailySalary);
     // Find the most-used daily salary for display purposes
     let displayDailySalary = settings.base_daily_salary;
