@@ -5561,13 +5561,13 @@ export default function DailyReportModule() {
                                   <AutoResizeTextarea
                                     value={row.receiving_notes ?? ''}
                                     onChange={(e) => {
-                                      if (e.target.value.length <= 300) {
+                                      if (e.target.value.length <= 600) {
                                         updateStaffRow(index, 'receiving_notes', e.target.value);
                                       }
                                     }}
                                     placeholder={isCompanyExpense ? 'توضیحات دریافتی شرکت...' : 'توضیحات...'}
                                     className="min-w-[30ch] min-h-[50px]"
-                                    maxLength={300}
+                                    maxLength={600}
                                   />
                                 )}
                               </TableCell>
@@ -5598,13 +5598,13 @@ export default function DailyReportModule() {
                                   <AutoResizeTextarea
                                     value={row.spending_notes}
                                     onChange={(e) => {
-                                      if (e.target.value.length <= 300) {
+                                      if (e.target.value.length <= 600) {
                                         updateStaffRow(index, 'spending_notes', e.target.value);
                                       }
                                     }}
                                     placeholder="توضیحات..."
                                     className="min-w-[30ch] min-h-[50px]"
-                                    maxLength={300}
+                                    maxLength={600}
                                   />
                                 )}
                               </TableCell>
@@ -5617,13 +5617,13 @@ export default function DailyReportModule() {
                                   <AutoResizeTextarea
                                     value={row.notes}
                                     onChange={(e) => {
-                                      if (e.target.value.length <= 300) {
+                                      if (e.target.value.length <= 600) {
                                         updateStaffRow(index, 'notes', e.target.value);
                                       }
                                     }}
                                      placeholder={isCompanyExpense ? 'هزینه‌های شرکت (نهار، ایاب‌وذهاب و...)' : 'توضیحات...'}
                                     className="min-w-[30ch] min-h-[50px]"
-                                    maxLength={300}
+                                    maxLength={600}
                                   />
                                 )}
                               </TableCell>
