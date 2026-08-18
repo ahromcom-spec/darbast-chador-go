@@ -1,11 +1,12 @@
-import { parsePersianNumber } from '@/lib/numberParsing';
+import { toEnglishDigits } from '@/lib/numberParsing';
 
 /**
  * اضافه‌کاری / کم‌کاری بر حسب ساعت اعشاری ذخیره می‌شود (مثلاً 1.5 = 01:30، -0.5 = -00:30)
  * ورودی کاربر می‌تواند "1:30" یا "-0:30" یا "1.5" باشد.
  */
 export const parseOvertimeInput = (input: string): number => {
-  const raw = String(parsePersianNumber(String(input ?? '')) ?? '').trim();
+  const raw = toEnglishDigits(String(input ?? '')).trim();
+
   if (!raw || raw === '-' || raw === ':' || raw === '-:') return 0;
 
   const isNeg = raw.startsWith('-');
