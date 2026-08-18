@@ -317,8 +317,12 @@ export function StaffAuditTab() {
       totalDaysWorked,
       totalAbsentDays,
       totalOvertime,
+      totalUndertime,
+      netOvertime,
+      undertimeDeduction,
       totalReceived,
       totalSpent,
+
       estimatedSalary,
       overtimePay,
       totalWorkAndBenefits,
