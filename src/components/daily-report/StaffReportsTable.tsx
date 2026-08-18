@@ -15,7 +15,10 @@ import { StaffSearchSelect } from '@/components/staff/StaffSearchSelect';
 import { StaffReportRow, StaffMember } from '@/hooks/useDailyReport';
 import { WorkStatusSelect } from '@/components/daily-report/WorkStatusSelect';
 import { BankCardSelect } from '@/components/bank-cards/BankCardSelect';
+import { OvertimeInput } from '@/components/daily-report/OvertimeInput';
+import { formatOvertime } from '@/lib/overtimeUtils';
 import { supabase } from '@/integrations/supabase/client';
+
 
 interface BankCardInfo {
   id: string;
