@@ -238,8 +238,8 @@ export const RecentActivities: React.FC = () => {
 
   const selectedMedia = selectedIndex !== null ? media[selectedIndex] : null;
   
-  // Show 2 rows × 3 items in preview
-  const previewMedia = media.slice(0, 6);
+  // Show 2 full rows: 3 per row on mobile (6), 4 per row on desktop (8)
+  const previewMedia = media.slice(0, 8);
 
   if (loading) {
     return (
