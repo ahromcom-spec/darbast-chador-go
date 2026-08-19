@@ -49,7 +49,8 @@ export function useStableTableScroll<T extends HTMLElement = HTMLDivElement>() {
       if (isEditable(event.target)) scheduleRestore();
     };
 
-    const handleFocusOut = () => {
+    const handleFocusOut = (event: FocusEvent) => {
+      if (isEditable(event.relatedTarget) && container.contains(event.relatedTarget as Node)) return;
       lockedScrollLeft = null;
     };
 
