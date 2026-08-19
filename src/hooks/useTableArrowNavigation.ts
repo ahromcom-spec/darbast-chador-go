@@ -122,7 +122,7 @@ function handleArrowNav(e: KeyboardEvent) {
   if (!focusable) return;
   e.preventDefault();
   e.stopPropagation();
-  focusable.focus();
+  focusable.focus({ preventScroll: true });
   if (focusable instanceof HTMLInputElement || focusable instanceof HTMLTextAreaElement) {
     try { focusable.select(); } catch { /* noop */ }
   }
