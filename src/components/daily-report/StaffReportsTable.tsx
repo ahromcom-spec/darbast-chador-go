@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTableArrowNavigation } from '@/hooks/useTableArrowNavigation';
+import { useStableTableScroll } from '@/hooks/useStableTableScroll';
 import { Plus, Trash2, User, CreditCard, Building, Clock } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger, PopoverClose } from '@/components/ui/popover';
 import { toast } from 'sonner';
@@ -162,7 +163,7 @@ export function StaffReportsTable({
     focusNextRowTrigger(index, 'data-workstatus-cell');
   };
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useStableTableScroll<HTMLDivElement>();
   const arrowNavRef = useTableArrowNavigation<HTMLDivElement>();
 
   // Scroll to rightmost position on mount (for RTL layout)
