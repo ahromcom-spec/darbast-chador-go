@@ -38,7 +38,7 @@ export function OvertimeInput({ value, onChange, className, disabled }: Overtime
   const isNegative = (Number(value) || 0) < 0;
 
   return (
-    <div className="relative">
+    <div className="relative min-w-[115px]">
       <Input
         type="text"
         inputMode="text"
@@ -53,10 +53,10 @@ export function OvertimeInput({ value, onChange, className, disabled }: Overtime
           const hours = parseOvertimeInput(text);
           setText(hours ? formatOvertime(hours) : '');
         }}
-        className={`pl-12 text-left tabular-nums ${isNegative ? 'text-destructive' : ''} ${className || ''}`}
+        className={`pl-10 text-left tabular-nums text-sm ${isNegative ? 'text-destructive' : ''} ${className || ''}`}
         dir="ltr"
-        placeholder="00:00"
-        title="ساعت:دقیقه — برای کم‌کاری علامت منفی بگذارید مثل -00:30"
+        placeholder="-00:00"
+        title="ساعت:دقیقه — برای کم‌کاری منفی بگذارید"
       />
       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">
         {isNegative ? 'کم‌کاری' : 'ساعت'}

@@ -382,7 +382,7 @@ export function StaffReportsTable({
                       <OvertimeInput
                         value={row.overtime_hours || 0}
                         onChange={(hours) => onUpdateRow(index, 'overtime_hours', hours)}
-                        className="w-[100px]"
+                        className="w-[135px]"
                       />
 
                     )}
