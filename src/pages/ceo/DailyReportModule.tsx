@@ -37,6 +37,7 @@ import { OrderSearchSelect } from '@/components/orders/OrderSearchSelect';
 import { StaffSearchSelect } from '@/components/staff/StaffSearchSelect';
 import { WorkStatusSelect } from '@/components/daily-report/WorkStatusSelect';
 import { OvertimeInput } from '@/components/daily-report/OvertimeInput';
+import { useStableTableScroll } from '@/hooks/useStableTableScroll';
 import { formatOvertime } from '@/lib/overtimeUtils';
 
 import { BankCardSelect } from '@/components/bank-cards/BankCardSelect';
@@ -825,8 +826,8 @@ export default function DailyReportModule() {
   // Prevent stale state on fast actions (حذف سریع و سپس ذخیره)
   const orderReportsRef = useRef<OrderReportRow[]>([]);
 
-  const orderTableScrollRef = useRef<HTMLDivElement>(null);
-  const staffTableScrollRef = useRef<HTMLDivElement>(null);
+  const orderTableScrollRef = useStableTableScroll<HTMLDivElement>();
+  const staffTableScrollRef = useStableTableScroll<HTMLDivElement>();
 
   useEffect(() => {
     orderReportsRef.current = orderReports;

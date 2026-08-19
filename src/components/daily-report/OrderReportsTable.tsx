@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useTableArrowNavigation } from '@/hooks/useTableArrowNavigation';
+import { useStableTableScroll } from '@/hooks/useStableTableScroll';
 import { Plus, Trash2, Package, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,7 +42,7 @@ export function OrderReportsTable({
       }] 
     : orderReports;
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useStableTableScroll<HTMLDivElement>();
   const arrowNavRef = useTableArrowNavigation<HTMLDivElement>();
 
   // Scroll to rightmost position on mount (for RTL layout)

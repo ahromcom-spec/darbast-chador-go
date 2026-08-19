@@ -348,8 +348,8 @@ body {
     /* اجازه Pull-to-Refresh - فقط محدودیت افقی */
     overscroll-behavior-x: contain;
     overscroll-behavior-y: auto;
-    /* اجازه اسکرول افقی و عمودی */
-    overflow-x: auto;
+    /* اسکرول افقی فقط داخل جدول‌ها باشد تا کل صفحه هنگام فوکوس نلغزد */
+    overflow-x: hidden;
     overflow-y: auto;
     /* Allow pinch-to-zoom and one-finger pan on mobile */
     touch-action: pan-x pan-y pinch-zoom;
@@ -374,6 +374,8 @@ body {
   }
 
   .daily-report-touch-scroll {
+    width: 100%;
+    max-width: 100%;
     overflow-x: auto;
     overflow-y: visible;
     overscroll-behavior-x: contain;
@@ -381,6 +383,13 @@ body {
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x pan-y pinch-zoom !important;
     scroll-behavior: auto;
+    overflow-anchor: none;
+  }
+
+  .daily-report-touch-scroll table,
+  .daily-report-touch-scroll input,
+  .daily-report-touch-scroll textarea {
+    overflow-anchor: none;
   }
 
   /* Container override: کانتینر پیش‌فرض tailwind در ترکیب با zoom داخلی،
