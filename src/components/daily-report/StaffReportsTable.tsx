@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTableArrowNavigation } from '@/hooks/useTableArrowNavigation';
 import { useStableTableScroll } from '@/hooks/useStableTableScroll';
 import { Plus, Trash2, User, CreditCard, Building, Clock } from 'lucide-react';

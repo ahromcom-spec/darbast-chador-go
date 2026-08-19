@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useTableArrowNavigation } from '@/hooks/useTableArrowNavigation';
 import { useStableTableScroll } from '@/hooks/useStableTableScroll';
 import { Plus, Trash2, Package, Eye } from 'lucide-react';
