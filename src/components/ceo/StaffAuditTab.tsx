@@ -239,7 +239,8 @@ export function StaffAuditTab() {
 
   const calculateSummary = (records: StaffAuditRecord[], settings: SalarySettings, localBonuses?: number, localDeductions?: number, localPrevBalance?: number, localPrevExtra?: number) => {
     // Basic counts
-    const totalDaysWorked = records.filter(r => r.work_status === 'حاضر').length;
+    const totalDaysWorked = records.filter(r => r.work_status === 'حاضر').length
+      + 0.5 * records.filter(r => r.work_status === 'نصف روز').length;
     const totalAbsentDays = records.filter(r => r.work_status === 'غایب').length;
     const totalOvertime = records.reduce((sum, r) => sum + Math.max(0, r.overtime_hours || 0), 0);
     const totalUndertime = records.reduce((sum, r) => sum + Math.max(0, -(r.overtime_hours || 0)), 0);
@@ -258,14 +259,15 @@ export function StaffAuditTab() {
     const breakdownMap: Record<number, SalaryBreakdown> = {};
     for (const r of records) {
       const { base, fraction } = getSalaryForDate(r.report_date, settings.periods, settings);
-      if (r.work_status === 'حاضر') {
-        estimatedSalary += base;
+      if (r.work_status === 'حاضر' || r.work_status === 'نصف روز') {
+        const dayFactor = r.work_status === 'نصف روز' ? 0.5 : 1;
+        estimatedSalary += base * dayFactor;
         salaryUsageCount[base] = (salaryUsageCount[base] || 0) + 1;
         if (!breakdownMap[base]) {
           breakdownMap[base] = { dailySalary: base, daysWorked: 0, totalSalary: 0, overtimeHours: 0, overtimePay: 0 };
         }
-        breakdownMap[base].daysWorked++;
-        breakdownMap[base].totalSalary += base;
+        breakdownMap[base].daysWorked += dayFactor;
+        breakdownMap[base].totalSalary += base * dayFactor;
       }
       const hours = r.overtime_hours || 0;
       if (hours !== 0) {
@@ -416,6 +418,7 @@ export function StaffAuditTab() {
         } else {
           // Merge: prefer 'حاضر' if any module has it
           if (rec.work_status === 'حاضر') existing.work_status = 'حاضر';
+          else if (rec.work_status === 'نصف روز' && existing.work_status !== 'حاضر') existing.work_status = 'نصف روز';
           existing.overtime_hours = Math.abs(rec.overtime_hours) > Math.abs(existing.overtime_hours) ? rec.overtime_hours : existing.overtime_hours;
           existing.amount_received += rec.amount_received;
           existing.amount_spent += rec.amount_spent;
@@ -557,6 +560,7 @@ export function StaffAuditTab() {
       // Build daily records HTML - only records with meaningful data
       const recordsWithData = records.filter((r) =>
         r.work_status === 'حاضر' ||
+        r.work_status === 'نصف روز' ||
         (r.amount_received || 0) > 0 ||
         (r.amount_spent || 0) > 0 ||
         !!r.notes ||
@@ -599,7 +603,7 @@ export function StaffAuditTab() {
                 <tr style="background-color: ${index % 2 === 0 ? '#fff' : '#faf5ef'};">
                   <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center;">${(index + 1).toLocaleString('fa-IR')}</td>
                   <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${formatPersianDateNumeric(record.report_date)}</td>
-                  <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${record.work_status === 'حاضر' ? '۱ روز' : 'غایب'}</td>
+                  <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${record.work_status === 'حاضر' ? '۱ روز' : (record.work_status === 'نصف روز' ? 'نصف روز' : 'غایب')}</td>
                   <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${formatOvertimeLabel(record.overtime_hours)}</td>
                   <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; color: ${record.amount_received > 0 ? '#16a34a' : '#666'};">${record.amount_received > 0 ? '<span style="white-space: nowrap;">' + record.amount_received.toLocaleString('fa-IR') + '</span><br/>تومان' : '—'}</td>
                   <td style="padding: 6px 8px; border: 1px solid #d4a574; text-align: right; word-break: break-word;">${record.receiving_notes || '—'}</td>
@@ -1293,8 +1297,8 @@ export function StaffAuditTab() {
                       <TableCell className="text-center font-medium">{(index + 1).toLocaleString('fa-IR')}</TableCell>
                       <TableCell className="whitespace-nowrap">{formatPersianDate(record.report_date)}</TableCell>
                       <TableCell>
-                        <Badge variant={record.work_status === 'حاضر' ? 'default' : 'secondary'}>
-                          {record.work_status === 'حاضر' ? '۱ روز کارکرد' : 'غایب'}
+                        <Badge variant={record.work_status === 'حاضر' ? 'default' : (record.work_status === 'نصف روز' ? 'outline' : 'secondary')}>
+                          {record.work_status === 'حاضر' ? '۱ روز کارکرد' : (record.work_status === 'نصف روز' ? 'نصف روز کارکرد' : 'غایب')}
                         </Badge>
                       </TableCell>
                       <TableCell>{formatOvertimeLabel(record.overtime_hours)}</TableCell>

@@ -281,6 +281,7 @@ export function UserWallet() {
       // Calculate summary from records
       allRecords.forEach(record => {
         if (record.work_status === 'حاضر') workRecordsSummary.totalPresent++;
+        else if (record.work_status === 'نصف روز') workRecordsSummary.totalPresent += 0.5;
         if (record.work_status === 'غایب') workRecordsSummary.totalAbsent++;
         workRecordsSummary.totalOvertime += record.overtime_hours || 0;
         workRecordsSummary.totalReceived += record.amount_received || 0;

@@ -19,7 +19,7 @@ interface StaffReportRow {
   staff_user_id: string | null;
   real_user_id?: string | null;
   staff_name: string;
-  work_status: 'کارکرده' | 'غایب';
+  work_status: 'کارکرده' | 'غایب' | 'نصف روز';
   overtime_hours: number;
   amount_received: number;
   receiving_notes: string;

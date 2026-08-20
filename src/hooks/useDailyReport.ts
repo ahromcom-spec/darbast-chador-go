@@ -23,7 +23,7 @@ export interface StaffReportRow {
   staff_user_id: string | null;
   real_user_id?: string | null;
   staff_name: string;
-  work_status: 'کارکرده' | 'غایب';
+  work_status: 'کارکرده' | 'غایب' | 'نصف روز';
   overtime_hours: number;
   amount_received: number;
   receiving_notes: string;
@@ -118,11 +118,13 @@ const extractStaffCode = (value: unknown): string => {
   return codeMatch?.[0] ?? '';
 };
 
-const toDbWorkStatus = (value: unknown): 'حاضر' | 'غایب' => {
+const toDbWorkStatus = (value: unknown): 'حاضر' | 'غایب' | 'نصف روز' => {
+  if (value === 'نصف روز') return 'نصف روز';
   return value === 'کارکرده' || value === 'حاضر' ? 'حاضر' : 'غایب';
 };
 
-const fromDbWorkStatus = (value: unknown): 'کارکرده' | 'غایب' => {
+const fromDbWorkStatus = (value: unknown): 'کارکرده' | 'غایب' | 'نصف روز' => {
+  if (value === 'نصف روز') return 'نصف روز';
   return value === 'حاضر' ? 'کارکرده' : 'غایب';
 };
 
@@ -981,7 +983,8 @@ export function useDailyReport() {
 
   // Calculate totals
   const calculateTotals = useCallback(() => {
-    const presentCount = staffReports.filter(s => s.work_status === 'کارکرده' && !s.is_cash_box && !s.is_company_expense).length;
+    const presentCount = staffReports.filter(s => s.work_status === 'کارکرده' && !s.is_cash_box && !s.is_company_expense).length
+      + 0.5 * staffReports.filter(s => s.work_status === 'نصف روز' && !s.is_cash_box && !s.is_company_expense).length;
     const totalOvertime = staffReports.reduce((sum, s) => sum + (s.overtime_hours || 0), 0);
     
     const cashBoxSpent = staffReports
