@@ -396,6 +396,7 @@ export default function AccountingModule() {
 
         records.forEach(r => {
           if (r.work_status === 'حاضر') totalPresent++;
+          else if (r.work_status === 'نصف روز') totalPresent += 0.5;
           totalReceived += r.amount_received || 0;
           totalSpent += r.amount_spent || 0;
         });

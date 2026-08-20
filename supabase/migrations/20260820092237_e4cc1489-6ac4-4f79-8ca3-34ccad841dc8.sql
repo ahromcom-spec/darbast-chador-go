@@ -1,0 +1,2 @@
+ALTER TABLE public.daily_report_staff DROP CONSTRAINT IF EXISTS daily_report_staff_work_status_check;
+ALTER TABLE public.daily_report_staff ADD CONSTRAINT daily_report_staff_work_status_check CHECK (work_status IN ('حاضر', 'غایب', 'نصف روز'));

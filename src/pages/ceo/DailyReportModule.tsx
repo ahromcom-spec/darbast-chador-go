@@ -300,7 +300,7 @@ interface StaffReportRow {
   staff_user_id: string | null; // This stores the staff code for UI display
   real_user_id?: string | null; // This stores the actual UUID for wallet sync
   staff_name: string;
-  work_status: 'کارکرده' | 'غایب';
+  work_status: 'کارکرده' | 'غایب' | 'نصف روز';
   overtime_hours: number;
   amount_received: number;
   receiving_notes: string;
@@ -394,12 +394,14 @@ const extractStaffCode = (value: unknown): string => {
 };
 
 // DB constraint expects: 'حاضر' | 'غایب'
-const toDbWorkStatus = (value: unknown): 'حاضر' | 'غایب' => {
+const toDbWorkStatus = (value: unknown): 'حاضر' | 'غایب' | 'نصف روز' => {
+  if (value === 'نصف روز') return 'نصف روز';
   return value === 'کارکرده' || value === 'حاضر' ? 'حاضر' : 'غایب';
 };
 
 // UI expects: 'کارکرده' | 'غایب'
-const fromDbWorkStatus = (value: unknown): 'کارکرده' | 'غایب' => {
+const fromDbWorkStatus = (value: unknown): 'کارکرده' | 'غایب' | 'نصف روز' => {
+  if (value === 'نصف روز') return 'نصف روز';
   return value === 'حاضر' ? 'کارکرده' : 'غایب';
 };
 
@@ -2419,6 +2421,8 @@ export default function DailyReportModule() {
                 // اگر در هر کدام کارکرده بود، کارکرده نگه دار
                 if (staffRow.work_status === 'کارکرده') {
                   existing.work_status = 'کارکرده';
+                } else if (staffRow.work_status === 'نصف روز' && existing.work_status === 'غایب') {
+                  existing.work_status = 'نصف روز';
                 }
                 // ادغام توضیحات
                 if (staffRow.receiving_notes?.trim() && existing.receiving_notes !== staffRow.receiving_notes) {
@@ -3250,7 +3254,8 @@ export default function DailyReportModule() {
 
   const calculateTotals = () => {
     // شمارش نیروهای کارکرده (بدون صندوق و بدون ماهیت شرکت)
-    const presentCount = staffReports.filter(s => s.work_status === 'کارکرده' && !s.is_cash_box && !s.is_company_expense).length;
+    const presentCount = staffReports.filter(s => s.work_status === 'کارکرده' && !s.is_cash_box && !s.is_company_expense).length
+      + 0.5 * staffReports.filter(s => s.work_status === 'نصف روز' && !s.is_cash_box && !s.is_company_expense).length;
     const totalOvertime = staffReports.reduce((sum, s) => sum + (s.overtime_hours || 0), 0);
     
     // صندوق: مبلغ خرج کرده = پرداخت به نیروها
@@ -4277,7 +4282,7 @@ export default function DailyReportModule() {
               daily_report_id: reportId,
               staff_user_id: matchedStaff?.user_id || null,
               staff_name: matchedStaff?.full_name || extractedName,
-              work_status: s.workStatus === 'حاضر' ? 'حاضر' : 'غایب',
+              work_status: s.workStatus === 'حاضر' ? 'حاضر' : (s.workStatus === 'نصف روز' ? 'نصف روز' : 'غایب'),
               overtime_hours: s.overtimeHours || 0,
               amount_received: s.amountReceived || 0,
               receiving_notes: s.receivingNotes || '',

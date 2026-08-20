@@ -5,7 +5,7 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getCurrentZoom } from '@/lib/zoom';
 
-export type WorkStatus = "کارکرده" | "غایب";
+export type WorkStatus = "کارکرده" | "غایب" | "نصف روز";
 
 interface WorkStatusSelectProps {
   value: WorkStatus;
@@ -36,6 +36,7 @@ export function WorkStatusSelect({
     () =>
       [
         { value: "کارکرده" as const, label: "کارکرده" },
+        { value: "نصف روز" as const, label: "نصف روز" },
         { value: "غایب" as const, label: "غایب" },
       ],
     [],

@@ -335,6 +335,7 @@ export default function PersonnelAccountingModule() {
 
       recordsWithDates.forEach(record => {
         if (record.work_status === 'حاضر') totalPresent++;
+        else if (record.work_status === 'نصف روز') totalPresent += 0.5;
         if (record.work_status === 'غایب') totalAbsent++;
         totalOvertime += record.overtime_hours || 0;
         totalReceived += record.amount_received || 0;
@@ -768,7 +769,7 @@ export default function PersonnelAccountingModule() {
                         <Calendar className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">{formatDate(record.report_date)}</span>
                       </div>
-                      <Badge variant={record.work_status === 'حاضر' ? 'default' : 'destructive'}>
+                      <Badge variant={record.work_status === 'حاضر' ? 'default' : (record.work_status === 'نصف روز' ? 'secondary' : 'destructive')}>
                         {record.work_status}
                       </Badge>
                     </div>
