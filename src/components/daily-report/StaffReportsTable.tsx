@@ -99,7 +99,7 @@ export function StaffReportsTable({
         `[${attr}="${currentIndex + 1}"] button`
       ) as HTMLButtonElement | null;
       if (nextEl) {
-        nextEl.focus();
+        nextEl.focus({ preventScroll: true });
         nextEl.click();
         return;
       }
