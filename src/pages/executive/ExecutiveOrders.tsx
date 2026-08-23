@@ -176,6 +176,7 @@ export default function ExecutiveOrders() {
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [isApplyingUpdate, setIsApplyingUpdate] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [executionDate, setExecutionDate] = useState('');
   const [completionDate, setCompletionDate] = useState('');
@@ -1402,13 +1403,34 @@ export default function ExecutiveOrders() {
             const amountNumber = typeof amountRaw === 'number' ? amountRaw : Number(amountRaw);
             const hasPaymentAmount = Number.isFinite(amountNumber) && amountNumber > 0;
 
-            const baseAmount = Number(order.payment_amount ?? 0);
-            const totalAmount = Number(order.total_price ?? 0) > 0 ? Number(order.total_price ?? 0) : baseAmount;
+            // قیمت محاسبه‌شده خودکار توسط سایت (در notes ذخیره می‌شود، نه ستون‌ها)
+            const siteEstimatedPrice = (() => {
+              const candidates = [
+                notesObj?.estimated_price,
+                notesObj?.estimatedPrice,
+                notesObj?.total_price,
+                notesObj?.totalPrice,
+                notesObj?.manager_set_price,
+              ];
+              for (const c of candidates) {
+                const n = typeof c === 'number' ? c : Number(c);
+                if (Number.isFinite(n) && n > 0) return n;
+              }
+              return 0;
+            })();
+
+            const columnBaseAmount = Number(order.payment_amount ?? 0);
+            const columnTotalAmount = Number(order.total_price ?? 0);
+            const baseAmount = columnBaseAmount > 0 ? columnBaseAmount : siteEstimatedPrice;
+            const totalAmount = columnTotalAmount > 0 ? columnTotalAmount : baseAmount;
             const addOnsAmount = Math.max(0, totalAmount - baseAmount);
+            // آیا قیمت فقط تخمین سایت است و هنوز در ستون‌های سفارش ثبت نشده؟
+            const isSiteEstimatedOnly = totalAmount > 0 && columnBaseAmount <= 0 && columnTotalAmount <= 0;
 
             // (بدون نیاز به تایید مشتری - تایید خودکار انجام می‌شود)
             // اگر payment_amount تنظیم شده باشد، حتی بدون price_set_by_manager هم قابل تایید است
-            const canApprove = !isExpertPricingRequest || hasPaymentAmount;
+            // همچنین قیمت محاسبه‌شده خودکار سایت هم سفارش را قابل تایید می‌کند
+            const canApprove = !isExpertPricingRequest || hasPaymentAmount || siteEstimatedPrice > 0;
 
             const serviceLabel = getOrderServiceLabel(notesObj);
             const isExecutionWithMaterialsOrder = order.subcategory_id === SUBCATEGORY_SCAFFOLD_EXECUTION_WITH_MATERIALS;
@@ -1561,16 +1583,54 @@ export default function ExecutiveOrders() {
 
                 {/* Price summary (General Manager module only) */}
                 {!isExecutiveModule && totalAmount > 0 && (
-                  <div className="rounded-lg border bg-muted/30 p-3">
+                  <div className={`rounded-lg border p-3 ${isSiteEstimatedOnly ? 'bg-blue-50/60 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800' : 'bg-muted/30'}`}>
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Banknote className="h-4 w-4" />
                         <span>مبلغ کل سفارش</span>
+                        {isSiteEstimatedOnly && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                            محاسبه خودکار سایت
+                          </span>
+                        )}
                       </div>
                       <div className="text-sm font-bold" dir="ltr">
                         {totalAmount.toLocaleString('fa-IR')} تومان
                       </div>
                     </div>
+                    {isSiteEstimatedOnly && (
+                      <div className="mt-2 flex items-center justify-between gap-2 flex-wrap">
+                        <p className="text-[11px] text-blue-700 dark:text-blue-300">
+                          این قیمت توسط سایت محاسبه شده و هنوز به‌عنوان قیمت نهایی ثبت نشده است.
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/40"
+                          disabled={isProcessing}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              setIsProcessing(true);
+                              const { error } = await supabase
+                                .from('projects_v3')
+                                .update({ payment_amount: siteEstimatedPrice, total_price: siteEstimatedPrice })
+                                .eq('id', order.id);
+                              if (error) throw error;
+                              toast({ title: '✓ قیمت ثبت شد', description: `مبلغ ${siteEstimatedPrice.toLocaleString('fa-IR')} تومان برای سفارش ${order.code} ثبت شد.` });
+                              fetchOrders();
+                            } catch (err: any) {
+                              toast({ variant: 'destructive', title: 'خطا', description: err.message || 'ثبت قیمت با خطا مواجه شد' });
+                            } finally {
+                              setIsProcessing(false);
+                            }
+                          }}
+                        >
+                          <CheckCircle className="h-3.5 w-3.5 ml-1" />
+                          ثبت به‌عنوان قیمت نهایی
+                        </Button>
+                      </div>
+                    )}
                     {baseAmount > 0 && addOnsAmount > 0 && (
                       <div className="mt-2 text-xs text-muted-foreground">
                         افزوده‌ها (تمدید/تعمیرات):{' '}
@@ -2604,7 +2664,7 @@ export default function ExecutiveOrders() {
             if (tp > 0) return tp;
             try {
               const n = typeof selectedOrder.notes === 'string' ? JSON.parse(selectedOrder.notes) : selectedOrder.notes;
-              return Number(n?.total_price) || 0;
+              return Number(n?.total_price) || Number(n?.estimated_price) || Number(n?.estimatedPrice) || Number(n?.manager_set_price) || 0;
             } catch { return 0; }
           })()}
           onPaymentSuccess={fetchOrders}
