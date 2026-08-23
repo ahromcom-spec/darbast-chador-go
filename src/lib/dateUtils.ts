@@ -2,30 +2,70 @@ import { format as formatJalali } from 'date-fns-jalali';
 
 const persianDays = ['یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه', 'شنبه'];
 
-// Iran timezone offset: UTC+3:30 (210 minutes)
+// Iran timezone (Asia/Tehran) — UTC+3:30, no DST
+const IRAN_TIME_ZONE = 'Asia/Tehran';
 const IRAN_TIMEZONE_OFFSET_MINUTES = 210;
 
+let iranPartsFormatter: Intl.DateTimeFormat | null = null;
+const getIranPartsFormatter = () => {
+  if (!iranPartsFormatter) {
+    iranPartsFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: IRAN_TIME_ZONE,
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  }
+  return iranPartsFormatter;
+};
+
 /**
- * Convert a date to Iran timezone (UTC+3:30)
+ * Convert a date to Iran timezone (Asia/Tehran).
+ * Returns a Date whose *local* fields (getHours/getDate/...) represent Tehran wall-clock time,
+ * regardless of the device/server timezone.
  */
 export function toIranTime(date: Date | string | null | undefined): Date | null {
   if (!date) return null;
-  
+
   try {
     const dateObj = typeof date === 'string' ? new Date(date) : new Date(date.getTime());
-    
-    // Get the UTC time in milliseconds
-    const utcTime = dateObj.getTime() + (dateObj.getTimezoneOffset() * 60 * 1000);
-    
-    // Add Iran timezone offset (UTC+3:30 = 210 minutes)
-    const iranTime = new Date(utcTime + (IRAN_TIMEZONE_OFFSET_MINUTES * 60 * 1000));
-    
-    return iranTime;
+    if (isNaN(dateObj.getTime())) return null;
+
+    try {
+      const parts = getIranPartsFormatter().formatToParts(dateObj);
+      const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+      const year = get('year');
+      const month = get('month');
+      const day = get('day');
+      let hour = get('hour');
+      const minute = get('minute');
+      const second = get('second');
+      if ([year, month, day, hour, minute, second].some((n) => Number.isNaN(n))) throw new Error('bad parts');
+      if (hour === 24) hour = 0;
+      return new Date(year, month - 1, day, hour, minute, second);
+    } catch {
+      // Fallback: fixed UTC+3:30 offset
+      const utcTime = dateObj.getTime() + dateObj.getTimezoneOffset() * 60 * 1000;
+      return new Date(utcTime + IRAN_TIMEZONE_OFFSET_MINUTES * 60 * 1000);
+    }
   } catch (error) {
     console.error('Error converting to Iran time:', error);
     return null;
   }
 }
+
+/**
+ * Minutes since midnight (Tehran wall clock) for a given instant
+ */
+export function getIranMinutesOfDay(date: Date | string | null | undefined = new Date()): number {
+  const iran = toIranTime(date) || new Date();
+  return iran.getHours() * 60 + iran.getMinutes();
+}
+
 
 /**
  * Get current date/time in Iran timezone

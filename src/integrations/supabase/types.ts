@@ -5118,6 +5118,33 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_send_window: {
+        Row: {
+          enabled: boolean
+          end_time: string
+          id: boolean
+          start_time: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          enabled?: boolean
+          end_time?: string
+          id?: boolean
+          start_time?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          enabled?: boolean
+          end_time?: string
+          id?: boolean
+          start_time?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       sms_templates: {
         Row: {
           append_footer: boolean
