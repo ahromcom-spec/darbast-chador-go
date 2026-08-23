@@ -54,6 +54,8 @@ const PLACEHOLDERS: { token: string; label: string }[] = [
   { token: "{amount}", label: "مبلغ" },
   { token: "{orderLink}", label: "لینک سفارش" },
   { token: "{description}", label: "شرح فعالیت سفارش" },
+  { token: "{paymentLink}", label: "لینک پرداخت سفارش" },
+
 ];
 
 const BRAND_FOOTER = "ahrom.ir";
