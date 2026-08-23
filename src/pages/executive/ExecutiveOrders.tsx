@@ -176,6 +176,7 @@ export default function ExecutiveOrders() {
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [isApplyingUpdate, setIsApplyingUpdate] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [executionDate, setExecutionDate] = useState('');
   const [completionDate, setCompletionDate] = useState('');
