@@ -135,6 +135,7 @@ interface SmsRequest {
   dateTime?: string;
   amount?: number;
   customerName?: string; // نام مشتری برای پیامک مدیرعامل
+  description?: string; // شرح فعالیت سفارش
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -144,7 +145,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { phone, orderCode, orderId, status, serviceType, address, dateTime, amount, customerName }: SmsRequest = await req.json();
+    const { phone, orderCode, orderId, status, serviceType, address, dateTime, amount, customerName, description }: SmsRequest = await req.json();
     
     console.log(`[send-order-sms] Received request - Phone: ${phone}, Order: ${orderCode}, Status: ${status}, Service: ${serviceType}, Address: ${address}, Amount: ${amount}, Customer: ${customerName}`);
 
@@ -321,7 +322,8 @@ const handler = async (req: Request): Promise<Response> => {
       .replaceAll("{dateTime}", persianDateTime)
       .replaceAll("{amount}", formattedAmount)
       .replaceAll("{orderLink}", orderLink)
-      .replaceAll("{customerName}", customerName || "مشتری");
+      .replaceAll("{customerName}", customerName || "مشتری")
+      .replaceAll("{description}", (description || "").toString().trim() || "ثبت نشده");
 
 
     // === سربرگ اجباری برند: همیشه در خط اول پیامک ===

@@ -53,6 +53,7 @@ const PLACEHOLDERS: { token: string; label: string }[] = [
   { token: "{dateTime}", label: "تاریخ/ساعت" },
   { token: "{amount}", label: "مبلغ" },
   { token: "{orderLink}", label: "لینک سفارش" },
+  { token: "{description}", label: "شرح فعالیت سفارش" },
 ];
 
 const BRAND_FOOTER = "ahrom.ir";
@@ -148,7 +149,8 @@ export default function SmsManagementModule() {
       .replace(/\{customerName\}/g, "علی رضایی")
       .replace(/\{dateTime\}/g, "1404/04/08 ساعت 14:30")
       .replace(/\{amount\}/g, "۲٬۵۰۰٬۰۰۰")
-      .replace(/\{orderLink\}/g, "https://ahrom.ir/orders/123");
+      .replace(/\{orderLink\}/g, "https://ahrom.ir/orders/123")
+      .replace(/\{description\}/g, "اجرای داربست نما ۱۲ متر طول × ۶ متر ارتفاع");
     const footer = (m.footer || BRAND_FOOTER).trim() || BRAND_FOOTER;
     const header = "خدمات ساختمانی و منزل اهرم";
     const withHeader = body.startsWith(header) ? body : `${header}\n${body}`;
