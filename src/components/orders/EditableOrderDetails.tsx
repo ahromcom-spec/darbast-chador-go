@@ -381,11 +381,11 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   const [savedScaffoldPrices, setSavedScaffoldPrices] = useState<string[]>(initialScaffoldPrices);
   const isScaffoldPricesChanged = JSON.stringify(scaffoldPrices) !== JSON.stringify(savedScaffoldPrices);
 
-  // Auto-sum to paymentAmount
+  // Auto-sum to paymentAmount (also reflects removed items)
   useEffect(() => {
     if (!hasExpertScaffolds) return;
     const sum = scaffoldPrices.reduce((s, v) => s + (parseFloat(v) || 0), 0);
-    if (sum > 0) setPaymentAmount(Math.round(sum).toString());
+    setPaymentAmount(sum > 0 ? Math.round(sum).toString() : '');
   }, [scaffoldPrices, hasExpertScaffolds]);
 
   // ===== Full-edit support for expert scaffolds (label, description, dimensions) =====
