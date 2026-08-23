@@ -3076,7 +3076,47 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
 
   // اگر نوار «مشاهده حساب کاربر» (impersonation) بالای صفحه باشد، نقشه تمام‌صفحه را پایین‌تر شروع کن
   // تا سربرگ و کلید بازگشت زیر آن پنهان نشود
+  // رهگیری مرکز نقشه برای مکان‌نمای ثابت و چسبیدن (snap) به پروژه‌های تا ۳ متری
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map) return;
+
+    const SNAP_METERS = 3;
+
+    const update = () => {
+      const c = map.getCenter();
+      setCenterPin({ lat: c.lat, lng: c.lng });
+
+      let nearest: ProjectWithMedia | null = null;
+      let nearestDist = Infinity;
+      projectsWithMedia.forEach((p) => {
+        const lat = p.locations?.lat;
+        const lng = p.locations?.lng;
+        if (!Number.isFinite(lat as number) || !Number.isFinite(lng as number)) return;
+        const d = map.distance(c, L.latLng(lat as number, lng as number));
+        if (d < nearestDist) {
+          nearestDist = d;
+          nearest = p;
+        }
+      });
+
+      setSnappedProject(nearestDist <= SNAP_METERS ? nearest : null);
+    };
+
+    update();
+    map.on('move', update);
+    map.on('zoom', update);
+
+    return () => {
+      map.off('move', update);
+      map.off('zoom', update);
+    };
+  }, [mapReady, projectsWithMedia]);
+
+  // اگر نوار «مشاهده حساب کاربر» (impersonation) بالای صفحه باشد، نقشه تمام‌صفحه را پایین‌تر شروع کن
+  // تا سربرگ و کلید بازگشت زیر آن پنهان نشود
   const [topOffset, setTopOffset] = useState(0);
+
   useEffect(() => {
     if (embedded) return;
     const measure = () => {
