@@ -358,6 +358,81 @@ function SimpleLeafletMapInner({
     };
   }, []);
 
+  // دریافت آدرس‌های قبلی کاربر برای نمایش و چسبیدن مکان‌نما به آن‌ها
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth?.user) return;
+      const { data, error } = await supabase
+        .from('locations')
+        .select('id, lat, lng, title')
+        .eq('user_id', auth.user.id)
+        .eq('is_active', true);
+      if (error || cancelled || !data) return;
+      setExistingLocations(
+        data
+          .filter((l) => Number.isFinite(Number(l.lat)) && Number.isFinite(Number(l.lng)))
+          .map((l) => ({ id: l.id, lat: Number(l.lat), lng: Number(l.lng), title: l.title })),
+      );
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // نمایش مارکر کوچک برای آدرس‌های قبلی کاربر
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady || existingLocations.length === 0) return;
+
+    const layer = L.layerGroup().addTo(map);
+    existingLocations.forEach((loc) => {
+      L.circleMarker([loc.lat, loc.lng], {
+        radius: 7,
+        color: '#ffffff',
+        weight: 2,
+        fillColor: '#f59e0b',
+        fillOpacity: 0.95,
+      })
+        .bindTooltip(loc.title || 'پروژه من', { direction: 'top' })
+        .addTo(layer);
+    });
+
+    return () => { layer.remove(); };
+  }, [existingLocations, mapReady]);
+
+  // رهگیری مرکز نقشه + چسبیدن به آدرس‌های تا ۳ متری
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+
+    const SNAP_METERS = 3;
+    const update = () => {
+      const c = map.getCenter();
+      setCenterPin({ lat: c.lat, lng: c.lng });
+
+      let nearest: typeof existingLocations[number] | null = null;
+      let nearestDist = Infinity;
+      existingLocations.forEach((loc) => {
+        const d = map.distance(c, L.latLng(loc.lat, loc.lng));
+        if (d < nearestDist) {
+          nearestDist = d;
+          nearest = loc;
+        }
+      });
+      setSnapTarget(nearestDist <= SNAP_METERS ? nearest : null);
+    };
+
+    update();
+    map.on('move', update);
+    map.on('zoom', update);
+    return () => {
+      map.off('move', update);
+      map.off('zoom', update);
+    };
+  }, [mapReady, existingLocations]);
+
+
+
   // تغییر نمای نقشه بین استاندارد و ماهواره‌ای (با تایل‌های نشان)
   useEffect(() => {
     if (!mapRef.current) return;
