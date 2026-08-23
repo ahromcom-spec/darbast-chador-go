@@ -222,6 +222,77 @@ const handler = async (req: Request): Promise<Response> => {
       console.log(`[send-order-sms] CEO notification (${status}) — bypassing whitelist filter`);
     }
 
+    // === بازه زمانی مجاز ارسال پیامک به مشتری (به وقت تهران) ===
+    // پیامک مدیرعامل و ارسال‌های زمان‌بندی‌شده از این محدودیت مستثنا هستند
+    if (!isCeoNotification && !bypassWindow) {
+      try {
+        const { data: winRow } = await supabase
+          .from("sms_send_window")
+          .select("enabled, start_time, end_time")
+          .maybeSingle();
+
+        const validTime = (v: unknown) => typeof v === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
+
+        if (winRow?.enabled && validTime(winRow.start_time) && validTime(winRow.end_time)) {
+          const toMin = (hhmm: string) => {
+            const [h, m] = hhmm.split(":").map((n) => parseInt(n, 10));
+            return h * 60 + m;
+          };
+          const startMin = toMin(winRow.start_time as string);
+          const endMin = toMin(winRow.end_time as string);
+
+          // ساعت جاری تهران
+          const tehranParts = new Intl.DateTimeFormat("en-US", {
+            timeZone: "Asia/Tehran",
+            hour12: false,
+            hour: "2-digit",
+            minute: "2-digit",
+          }).formatToParts(new Date());
+          const hh = Number(tehranParts.find((p) => p.type === "hour")?.value) % 24;
+          const mm = Number(tehranParts.find((p) => p.type === "minute")?.value);
+          const cur = hh * 60 + mm;
+
+          const inside =
+            startMin === endMin
+              ? true
+              : startMin < endMin
+              ? cur >= startMin && cur < endMin
+              : cur >= startMin || cur < endMin;
+
+          if (!inside) {
+            const waitMinutes = cur < startMin ? startMin - cur : 1440 - cur + startMin;
+            const sendAfter = new Date(Date.now() + waitMinutes * 60_000).toISOString();
+
+            const { error: queueError } = await supabase.from("scheduled_sms").insert({
+              phone: normalizedPhone,
+              order_code: orderCode,
+              order_id: orderId ?? null,
+              status_key: status,
+              payload: { serviceType, address, amount, customerName, description, resendMessage },
+              send_after: sendAfter,
+            });
+
+            if (!queueError) {
+              console.log(`[send-order-sms] Outside allowed window — queued for ${sendAfter}`);
+              return new Response(
+                JSON.stringify({
+                  success: true,
+                  scheduled: true,
+                  scheduledFor: sendAfter,
+                  message: "پیامک در بازه مجاز ارسال خواهد شد",
+                }),
+                { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+              );
+            }
+            console.warn("[send-order-sms] Failed to queue SMS, sending now:", queueError);
+          }
+        }
+      } catch (e) {
+        console.warn("[send-order-sms] Send-window check failed, sending now:", e);
+      }
+    }
+
+
 
     // Get SMS template — prefer DB-managed template, fallback to in-code default
     let template = SMS_TEMPLATES[status];
