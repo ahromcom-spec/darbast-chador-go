@@ -666,7 +666,7 @@ export function MobileProjectPanel({
                       </div>
 
                       {/* Media Gallery */}
-                      <div className="relative h-[20vh] min-h-[120px] bg-muted">
+                      <div className="relative h-[40vh] min-h-[240px] bg-muted">
                         {totalMedia > 0 ? (
                           <>
                             {allMedia.map((media, idx) => {
