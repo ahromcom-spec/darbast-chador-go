@@ -55,6 +55,12 @@ function SimpleLeafletMapInner({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const mapboxTokenRef = useRef<string | null>(null);
+  const placeMarkerRef = useRef<((lat: number, lng: number) => void) | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+  const [centerPin, setCenterPin] = useState<{ lat: number; lng: number } | null>(null);
+  const [existingLocations, setExistingLocations] = useState<Array<{ id: string; lat: number; lng: number; title: string | null }>>([]);
+  const [snapTarget, setSnapTarget] = useState<{ id: string; lat: number; lng: number; title: string | null } | null>(null);
+
 
   const toggleFullscreen = async () => {
     const wrapper = mapWrapperRef.current;
@@ -253,6 +259,10 @@ function SimpleLeafletMapInner({
       });
       await computeRoute(lat, lng);
     };
+    placeMarkerRef.current = (lat: number, lng: number) => { void placeMarker(lat, lng); };
+    setMapReady(true);
+
+
 
     const containerEl = map.getContainer();
     let pressTimer: number | undefined;
@@ -347,6 +357,81 @@ function SimpleLeafletMapInner({
       }
     };
   }, []);
+
+  // دریافت آدرس‌های قبلی کاربر برای نمایش و چسبیدن مکان‌نما به آن‌ها
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth?.user) return;
+      const { data, error } = await supabase
+        .from('locations')
+        .select('id, lat, lng, title')
+        .eq('user_id', auth.user.id)
+        .eq('is_active', true);
+      if (error || cancelled || !data) return;
+      setExistingLocations(
+        data
+          .filter((l) => Number.isFinite(Number(l.lat)) && Number.isFinite(Number(l.lng)))
+          .map((l) => ({ id: l.id, lat: Number(l.lat), lng: Number(l.lng), title: l.title })),
+      );
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // نمایش مارکر کوچک برای آدرس‌های قبلی کاربر
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady || existingLocations.length === 0) return;
+
+    const layer = L.layerGroup().addTo(map);
+    existingLocations.forEach((loc) => {
+      L.circleMarker([loc.lat, loc.lng], {
+        radius: 7,
+        color: '#ffffff',
+        weight: 2,
+        fillColor: '#f59e0b',
+        fillOpacity: 0.95,
+      })
+        .bindTooltip(loc.title || 'پروژه من', { direction: 'top' })
+        .addTo(layer);
+    });
+
+    return () => { layer.remove(); };
+  }, [existingLocations, mapReady]);
+
+  // رهگیری مرکز نقشه + چسبیدن به آدرس‌های تا ۳ متری
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+
+    const SNAP_METERS = 3;
+    const update = () => {
+      const c = map.getCenter();
+      setCenterPin({ lat: c.lat, lng: c.lng });
+
+      let nearest: typeof existingLocations[number] | null = null;
+      let nearestDist = Infinity;
+      existingLocations.forEach((loc) => {
+        const d = map.distance(c, L.latLng(loc.lat, loc.lng));
+        if (d < nearestDist) {
+          nearestDist = d;
+          nearest = loc;
+        }
+      });
+      setSnapTarget(nearestDist <= SNAP_METERS ? nearest : null);
+    };
+
+    update();
+    map.on('move', update);
+    map.on('zoom', update);
+    return () => {
+      map.off('move', update);
+      map.off('zoom', update);
+    };
+  }, [mapReady, existingLocations]);
+
+
 
   // تغییر نمای نقشه بین استاندارد و ماهواره‌ای (با تایل‌های نشان)
   useEffect(() => {
@@ -465,6 +550,43 @@ function SimpleLeafletMapInner({
           transform: 'translateZ(0)'
         }}
       />
+
+      {/* مکان‌نمای ثابت مرکز نقشه */}
+      <div className="pointer-events-none absolute left-1/2 top-1/2 z-[10004] -translate-x-1/2 -translate-y-full">
+        <svg width="42" height="52" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="20" cy="48" rx="7" ry="2" fill="rgba(0,0,0,0.25)" />
+          <path
+            d="M20 2C12 2 6 8 6 16C6 25 20 42 20 42C20 42 34 25 34 16C34 8 28 2 20 2Z"
+            fill={snapTarget ? '#16a34a' : '#ef4444'}
+            stroke="white"
+            strokeWidth="2.5"
+          />
+          <circle cx="20" cy="16" r="5.5" fill="white" />
+        </svg>
+      </div>
+
+      {/* دکمه تأیید موقعیت مرکز نقشه */}
+      <div className={`absolute ${isFullscreen ? 'bottom-24' : 'bottom-12'} left-1/2 -translate-x-1/2 w-[88%] max-w-sm z-[10004]`}>
+        <Button
+          type="button"
+          className={`w-full h-11 text-sm font-bold shadow-xl ${snapTarget ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+          onClick={() => {
+            const point = snapTarget ?? centerPin;
+            if (!point) return;
+            placeMarkerRef.current?.(point.lat, point.lng);
+            mapRef.current?.panTo([point.lat, point.lng]);
+          }}
+        >
+          <Check className="h-4 w-4 ml-1.5" />
+          {snapTarget
+            ? `انتخاب موقعیت پروژه: ${snapTarget.title || 'پروژه من'}`
+            : 'انتخاب این موقعیت'}
+        </Button>
+        <p className="mt-1 text-center text-[10px] text-muted-foreground bg-background/70 backdrop-blur-sm rounded px-2 py-0.5">
+          نقشه را جابجا کنید تا مکان‌نما روی محل پروژه قرار بگیرد (تا ۳ متری، موقعیت پروژه خودکار انتخاب می‌شود)
+        </p>
+      </div>
+
 
       {/* دکمه تغییر نمای نقشه */}
       <Button

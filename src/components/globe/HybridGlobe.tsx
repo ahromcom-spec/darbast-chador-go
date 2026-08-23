@@ -115,6 +115,11 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const buildingsLayerRef = useRef<L.LayerGroup | null>(null);
 
+  // مکان‌نمای ثابت مرکز نقشه + چسبیدن به مرکر پروژه‌های نزدیک (تا ۳ متر)
+  const [centerPin, setCenterPin] = useState<{ lat: number; lng: number } | null>(null);
+  const [snappedProject, setSnappedProject] = useState<ProjectWithMedia | null>(null);
+
+
   const isMobile = useIsMobile();
   const { projects: allProjects, loading, refetch } = useProjectsHierarchy();
   
@@ -3069,9 +3074,48 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
     };
   }, [mapReady]);
 
+  // رهگیری مرکز نقشه برای مکان‌نمای ثابت و چسبیدن (snap) به پروژه‌های تا ۳ متری
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map) return;
+
+    const SNAP_METERS = 3;
+
+    const update = () => {
+      const c = map.getCenter();
+      setCenterPin({ lat: c.lat, lng: c.lng });
+
+      let nearest: ProjectWithMedia | null = null;
+      let nearestDist = Infinity;
+      projectsWithMedia.forEach((p) => {
+        const lat = p.locations?.lat;
+        const lng = p.locations?.lng;
+        if (!Number.isFinite(lat as number) || !Number.isFinite(lng as number)) return;
+        const d = map.distance(c, L.latLng(lat as number, lng as number));
+        if (d < nearestDist) {
+          nearestDist = d;
+          nearest = p;
+        }
+      });
+
+      setSnappedProject(nearestDist <= SNAP_METERS ? nearest : null);
+    };
+
+    update();
+    map.on('move', update);
+    map.on('zoom', update);
+
+    return () => {
+      map.off('move', update);
+      map.off('zoom', update);
+    };
+  }, [mapReady, projectsWithMedia]);
+
   // اگر نوار «مشاهده حساب کاربر» (impersonation) بالای صفحه باشد، نقشه تمام‌صفحه را پایین‌تر شروع کن
   // تا سربرگ و کلید بازگشت زیر آن پنهان نشود
   const [topOffset, setTopOffset] = useState(0);
+
   useEffect(() => {
     if (embedded) return;
     const measure = () => {
@@ -3158,7 +3202,56 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           </div>
         </Card>
 
+        {/* مکان‌نمای ثابت مرکز نقشه */}
+        <div className="pointer-events-none absolute left-1/2 top-1/2 z-[2200] -translate-x-1/2 -translate-y-full">
+          <svg width="42" height="52" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="20" cy="48" rx="7" ry="2" fill="rgba(0,0,0,0.25)" />
+            <path
+              d="M20 2C12 2 6 8 6 16C6 25 20 42 20 42C20 42 34 25 34 16C34 8 28 2 20 2Z"
+              fill={snappedProject ? '#16a34a' : '#ef4444'}
+              stroke="white"
+              strokeWidth="2.5"
+            />
+            <circle cx="20" cy="16" r="5.5" fill="white" />
+          </svg>
+        </div>
+
+        {/* دکمه انتخاب موقعیت مرکز نقشه */}
+        <div className="pointer-events-auto absolute bottom-[4.75rem] left-1/2 -translate-x-1/2 w-[90%] max-w-md z-[2200]">
+          <Button
+            className={`w-full h-11 text-sm font-bold shadow-xl ${snappedProject ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+            onClick={() => {
+              if (snappedProject) {
+                if (isMobile) {
+                  setMobileSelectedProject(snappedProject);
+                  setMobileSelectedLocationProjects(
+                    projectsWithMedia.filter(p => p.location_id === snappedProject.location_id)
+                  );
+                } else {
+                  setSelectedProject(snappedProject);
+                }
+                return;
+              }
+              if (!centerPin) return;
+              navigate('/user/new-location', {
+                state: { lat: centerPin.lat, lng: centerPin.lng, fromMap: true },
+              });
+            }}
+          >
+            <MapPin className="h-4 w-4 ml-1.5" />
+            {snappedProject
+              ? `انتخاب پروژه: ${snappedProject.title || 'پروژه من'}`
+              : 'افزودن پروژه در این موقعیت'}
+          </Button>
+          {!snappedProject && (
+            <p className="mt-1 text-center text-[10px] text-muted-foreground bg-background/70 backdrop-blur-sm rounded px-2 py-0.5">
+              نقشه را جابجا کنید تا مکان‌نما روی محل پروژه قرار بگیرد (تا ۳ متری، پروژه خودکار انتخاب می‌شود)
+            </p>
+          )}
+        </div>
+
         {/* کادر جستجوی آدرس - پایین نقشه */}
+
         <div className="pointer-events-auto absolute bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-[2100]">
           <MapSearchBox
             onLocationSelect={(lat, lng, placeName) => {
