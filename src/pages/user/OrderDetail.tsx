@@ -265,6 +265,20 @@ export default function OrderDetail() {
   const mediaUpload = searchParams.get('mediaUpload');
   // مشاهده بدون مبالغ (مثلاً ورود از نقشه لوکیشن اجرایی در ماژول گزارش روزانه)
   const hideAmounts = searchParams.get('hideAmounts') === '1';
+  // ورود از لینک پرداخت پیامک: باز کردن و اسکرول به بخش پرداخت
+  const openPayment = searchParams.get('pay') === '1';
+
+  useEffect(() => {
+    if (!openPayment || loading) return;
+    setIsDetailsSectionExpanded(true);
+    setIsPriceDetailsExpanded(true);
+    const t = setTimeout(() => {
+      document.getElementById('order-payment-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 600);
+    return () => clearTimeout(t);
+  }, [openPayment, loading]);
+
+
 
   // خواندن سطح دسترسی کاربر فعلی در صورتی که همکار سفارش باشد
   useEffect(() => {
@@ -2025,7 +2039,7 @@ export default function OrderDetail() {
                   
                   return (
                   <Collapsible open={isPriceDetailsExpanded} onOpenChange={setIsPriceDetailsExpanded}>
-                    <section className="rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 p-4 space-y-4">
+                    <section id="order-payment-section" className="rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 p-4 space-y-4">
                       {/* Summary View */}
                       <div className="flex flex-wrap items-center gap-3 justify-between">
                         <h3 className="font-semibold">هزینه قرارداد</h3>

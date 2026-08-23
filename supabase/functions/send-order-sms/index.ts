@@ -286,6 +286,9 @@ const handler = async (req: Request): Promise<Response> => {
     
     // لینک سفارش
     const orderLink = orderId ? `https://ahrom.ir/orders/${orderId}` : "https://ahrom.ir/my-orders";
+    // لینک پرداخت سفارش (کاربر مستقیم به بخش پرداخت سفارش هدایت می‌شود)
+    const paymentLink = orderId ? `https://ahrom.ir/user/orders/${orderId}?pay=1` : "https://ahrom.ir/user/orders";
+
     
     // فرمت مبلغ
     const formattedAmount = amount ? amount.toLocaleString('fa-IR') : "تعیین نشده";
@@ -322,8 +325,10 @@ const handler = async (req: Request): Promise<Response> => {
       .replaceAll("{dateTime}", persianDateTime)
       .replaceAll("{amount}", formattedAmount)
       .replaceAll("{orderLink}", orderLink)
+      .replaceAll("{paymentLink}", paymentLink)
       .replaceAll("{customerName}", customerName || "مشتری")
       .replaceAll("{description}", (description || "").toString().trim() || "ثبت نشده");
+
 
 
     // === سربرگ اجباری برند: همیشه در خط اول پیامک ===
