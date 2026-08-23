@@ -669,7 +669,10 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
     setDescription(parsedNotes?.description || parsedNotes?.installationDescription || parsedNotes?.additional_notes || '');
     setScaffoldingType(parsedNotes?.service_type || parsedNotes?.scaffoldingType || parsedNotes?.scaffold_type || '');
     setScaffoldEdits(initialScaffoldEdits);
+    setScaffoldPrices(savedScaffoldPrices);
     setMultiScaffoldsEdit(initialMultiScaffoldsEdit);
+    setConfirmDeleteExpert(null);
+    setConfirmDeleteMulti(null);
     setIsEditing(false);
   };
 
