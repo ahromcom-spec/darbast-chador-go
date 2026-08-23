@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { isAdminImpersonating } from './impersonation';
 import { extractOrderDescription } from './orderDescription';
+import { getNextAllowedSendTime } from './smsSendWindow';
 
 // شماره مدیرعامل برای ارسال پیامک
 export const CEO_PHONE = '09125511494';
@@ -161,7 +162,7 @@ export const sendOrderSms = async (
   orderCode: string,
   status: SmsStatus,
   details?: OrderSmsDetails
-): Promise<{ success: boolean; error?: string }> => {
+): Promise<{ success: boolean; error?: string; scheduledFor?: string }> => {
   // اگر مدیر در حال مشاهده حساب کاربر است، پیامک ارسال نشود
   if (isAdminImpersonating()) {
     console.log('[sendOrderSms] Skipped - Admin is impersonating user');
