@@ -285,23 +285,49 @@ export const sendCeoNotificationSms = async (
   try {
     // ارسال پیامک با وضعیت خاص برای مدیرعامل
     const ceoStatus = status === 'submitted' ? 'ceo_new_order' : 'ceo_payment';
-    
-    console.log(`[sendCeoNotificationSms] Sending CEO SMS - Order: ${orderCode}, Status: ${ceoStatus}, Details:`, details);
-    
+
+    // تکمیل اطلاعات ناقص (مخصوصاً مبلغ سفارش) از روی خود سفارش
+    let ceoDetails: OrderSmsDetails = { ...(details || {}) };
+    if (
+      ceoDetails.orderId &&
+      (ceoDetails.amount === undefined ||
+        !ceoDetails.address ||
+        !ceoDetails.serviceType ||
+        !ceoDetails.customerName ||
+        !ceoDetails.description)
+    ) {
+      try {
+        const resolved = await resolveOrderSmsDetails(ceoDetails.orderId);
+        ceoDetails = {
+          ...ceoDetails,
+          address: ceoDetails.address || resolved.address,
+          serviceType: ceoDetails.serviceType || resolved.serviceType,
+          customerName: ceoDetails.customerName || resolved.customerName,
+          description: ceoDetails.description || resolved.description,
+          amount: ceoDetails.amount ?? resolved.amount,
+        };
+      } catch (e) {
+        console.warn('[sendCeoNotificationSms] Could not resolve order details:', e);
+      }
+    }
+
+    console.log(`[sendCeoNotificationSms] Sending CEO SMS - Order: ${orderCode}, Status: ${ceoStatus}, Details:`, ceoDetails);
+
     const { data, error } = await supabase.functions.invoke('send-order-sms', {
       body: { 
         phone: CEO_PHONE, 
         orderCode, 
-        orderId: details?.orderId,
+        orderId: ceoDetails.orderId,
         status: ceoStatus,
-        serviceType: details?.serviceType,
-        address: details?.address,
-        dateTime: details?.dateTime,
-        amount: details?.amount,
-        customerName: details?.customerName,
-        description: details?.description
+        serviceType: ceoDetails.serviceType,
+        address: ceoDetails.address,
+        dateTime: ceoDetails.dateTime,
+        amount: ceoDetails.amount,
+        customerName: ceoDetails.customerName,
+        description: ceoDetails.description
       }
     });
+
 
     if (error) {
       console.error('[sendCeoNotificationSms] Error:', error);
