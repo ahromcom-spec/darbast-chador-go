@@ -505,6 +505,7 @@ export default function SmsManagementModule() {
                       <TableHead>وضعیت</TableHead>
                       <TableHead className="min-w-[260px]">متن پیامک</TableHead>
                       <TableHead>پاسخ سرویس‌دهنده</TableHead>
+                      <TableHead>ارسال مجدد</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
