@@ -265,6 +265,20 @@ export default function OrderDetail() {
   const mediaUpload = searchParams.get('mediaUpload');
   // مشاهده بدون مبالغ (مثلاً ورود از نقشه لوکیشن اجرایی در ماژول گزارش روزانه)
   const hideAmounts = searchParams.get('hideAmounts') === '1';
+  // ورود از لینک پرداخت پیامک: باز کردن و اسکرول به بخش پرداخت
+  const openPayment = searchParams.get('pay') === '1';
+
+  useEffect(() => {
+    if (!openPayment || loading) return;
+    setIsDetailsSectionExpanded(true);
+    setIsPriceDetailsExpanded(true);
+    const t = setTimeout(() => {
+      document.getElementById('order-payment-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 600);
+    return () => clearTimeout(t);
+  }, [openPayment, loading]);
+
+
 
   // خواندن سطح دسترسی کاربر فعلی در صورتی که همکار سفارش باشد
   useEffect(() => {
