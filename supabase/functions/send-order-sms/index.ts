@@ -286,6 +286,9 @@ const handler = async (req: Request): Promise<Response> => {
     
     // لینک سفارش
     const orderLink = orderId ? `https://ahrom.ir/orders/${orderId}` : "https://ahrom.ir/my-orders";
+    // لینک پرداخت سفارش (کاربر مستقیم به بخش پرداخت سفارش هدایت می‌شود)
+    const paymentLink = orderId ? `https://ahrom.ir/user/orders/${orderId}?pay=1` : "https://ahrom.ir/user/orders";
+
     
     // فرمت مبلغ
     const formattedAmount = amount ? amount.toLocaleString('fa-IR') : "تعیین نشده";
