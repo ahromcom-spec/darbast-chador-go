@@ -551,6 +551,43 @@ function SimpleLeafletMapInner({
         }}
       />
 
+      {/* مکان‌نمای ثابت مرکز نقشه */}
+      <div className="pointer-events-none absolute left-1/2 top-1/2 z-[10004] -translate-x-1/2 -translate-y-full">
+        <svg width="42" height="52" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="20" cy="48" rx="7" ry="2" fill="rgba(0,0,0,0.25)" />
+          <path
+            d="M20 2C12 2 6 8 6 16C6 25 20 42 20 42C20 42 34 25 34 16C34 8 28 2 20 2Z"
+            fill={snapTarget ? '#16a34a' : '#ef4444'}
+            stroke="white"
+            strokeWidth="2.5"
+          />
+          <circle cx="20" cy="16" r="5.5" fill="white" />
+        </svg>
+      </div>
+
+      {/* دکمه تأیید موقعیت مرکز نقشه */}
+      <div className={`absolute ${isFullscreen ? 'bottom-24' : 'bottom-12'} left-1/2 -translate-x-1/2 w-[88%] max-w-sm z-[10004]`}>
+        <Button
+          type="button"
+          className={`w-full h-11 text-sm font-bold shadow-xl ${snapTarget ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+          onClick={() => {
+            const point = snapTarget ?? centerPin;
+            if (!point) return;
+            placeMarkerRef.current?.(point.lat, point.lng);
+            mapRef.current?.panTo([point.lat, point.lng]);
+          }}
+        >
+          <Check className="h-4 w-4 ml-1.5" />
+          {snapTarget
+            ? `انتخاب موقعیت پروژه: ${snapTarget.title || 'پروژه من'}`
+            : 'انتخاب این موقعیت'}
+        </Button>
+        <p className="mt-1 text-center text-[10px] text-muted-foreground bg-background/70 backdrop-blur-sm rounded px-2 py-0.5">
+          نقشه را جابجا کنید تا مکان‌نما روی محل پروژه قرار بگیرد (تا ۳ متری، موقعیت پروژه خودکار انتخاب می‌شود)
+        </p>
+      </div>
+
+
       {/* دکمه تغییر نمای نقشه */}
       <Button
         type="button"
