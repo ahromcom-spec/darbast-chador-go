@@ -537,44 +537,36 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
 
         // Store per-scaffold prices if this is a multi-scaffold expert pricing
         if (hasExpertScaffolds) {
-          updatedNotes.scaffold_prices = expertScaffolds.map((sc, i) => {
-            const ed = scaffoldEdits[i];
-            const dimsForArea = ed?.dimensions || [];
-            return {
-              index: i,
-              label: (ed?.label || sc.label || `داربست ${i + 1}`),
-              description: (ed?.description ?? sc.description ?? ''),
-              area: ed ? calcDimsArea(dimsForArea) : calcScaffoldArea(sc),
-              unit: ed ? dimsUnit(dimsForArea) : scaffoldAreaUnit(sc),
-              total: parseFloat(scaffoldPrices[i] || '0') || 0,
-            };
-          });
+          updatedNotes.scaffold_prices = scaffoldEdits.map((ed, i) => ({
+            index: i,
+            label: ed.label || ed.orig?.label || `داربست ${i + 1}`,
+            description: ed.description ?? '',
+            area: calcDimsArea(ed.dimensions),
+            unit: dimsUnit(ed.dimensions),
+            total: parseFloat(scaffoldPrices[i] || '0') || 0,
+          }));
         }
       }
 
-      // Persist expert scaffold edits (label/description/dimensions) - independent of price flow
-      if (hasExpertScaffolds && expertScaffolds.length > 0) {
-        updatedNotes.scaffolds = expertScaffolds.map((sc: any, i: number) => {
-          const ed = scaffoldEdits[i];
-          if (!ed) return sc;
-          return {
-            ...sc,
-            label: ed.label || sc.label || `داربست ${i + 1}`,
-            description: ed.description,
-            dimensions: ed.dimensions.map(d => ({
-              length: parseLocalizedNumber(d.length),
-              width: parseLocalizedNumber(d.width),
-              height: parseLocalizedNumber(d.height),
-            })),
-          };
-        });
+      // Persist expert scaffold edits (label/description/dimensions/add/remove)
+      if (hasExpertScaffolds) {
+        updatedNotes.scaffolds = scaffoldEdits.map((ed, i) => ({
+          ...(ed.orig || {}),
+          label: ed.label || ed.orig?.label || `داربست ${i + 1}`,
+          description: ed.description,
+          dimensions: ed.dimensions.map(d => ({
+            length: parseLocalizedNumber(d.length),
+            width: parseLocalizedNumber(d.width),
+            height: parseLocalizedNumber(d.height),
+          })),
+        }));
+        updatedNotes.is_multi_scaffold = true;
       }
 
-      // Persist multi-scaffold (snapshot) edits
+      // Persist multi-scaffold (snapshot) edits including add/remove
       if (hasMultiScaffolds) {
-        updatedNotes.multi_scaffolds = initialMultiScaffolds.map((orig: any, i: number) => {
-          const ed = multiScaffoldsEdit[i];
-          if (!ed) return orig;
+        updatedNotes.multi_scaffolds = multiScaffoldsEdit.map((ed, i) => {
+          const orig = ed.orig || {};
           const cleanDims = ed.dimensions.map(d => ({
             length: parseLocalizedNumber(d.length),
             width: parseLocalizedNumber(d.width),
@@ -583,7 +575,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
           const area = calcDimsArea(ed.dimensions);
           return {
             ...orig,
-            label: ed.label || orig.label,
+            label: ed.label || orig.label || `داربست #${i + 1}`,
             description: ed.description,
             finalPrice: parseFloat(ed.finalPrice) || 0,
             totalArea: area,
