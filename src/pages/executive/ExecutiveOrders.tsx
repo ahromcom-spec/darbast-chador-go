@@ -1402,13 +1402,34 @@ export default function ExecutiveOrders() {
             const amountNumber = typeof amountRaw === 'number' ? amountRaw : Number(amountRaw);
             const hasPaymentAmount = Number.isFinite(amountNumber) && amountNumber > 0;
 
-            const baseAmount = Number(order.payment_amount ?? 0);
-            const totalAmount = Number(order.total_price ?? 0) > 0 ? Number(order.total_price ?? 0) : baseAmount;
+            // قیمت محاسبه‌شده خودکار توسط سایت (در notes ذخیره می‌شود، نه ستون‌ها)
+            const siteEstimatedPrice = (() => {
+              const candidates = [
+                notesObj?.estimated_price,
+                notesObj?.estimatedPrice,
+                notesObj?.total_price,
+                notesObj?.totalPrice,
+                notesObj?.manager_set_price,
+              ];
+              for (const c of candidates) {
+                const n = typeof c === 'number' ? c : Number(c);
+                if (Number.isFinite(n) && n > 0) return n;
+              }
+              return 0;
+            })();
+
+            const columnBaseAmount = Number(order.payment_amount ?? 0);
+            const columnTotalAmount = Number(order.total_price ?? 0);
+            const baseAmount = columnBaseAmount > 0 ? columnBaseAmount : siteEstimatedPrice;
+            const totalAmount = columnTotalAmount > 0 ? columnTotalAmount : baseAmount;
             const addOnsAmount = Math.max(0, totalAmount - baseAmount);
+            // آیا قیمت فقط تخمین سایت است و هنوز در ستون‌های سفارش ثبت نشده؟
+            const isSiteEstimatedOnly = totalAmount > 0 && columnBaseAmount <= 0 && columnTotalAmount <= 0;
 
             // (بدون نیاز به تایید مشتری - تایید خودکار انجام می‌شود)
             // اگر payment_amount تنظیم شده باشد، حتی بدون price_set_by_manager هم قابل تایید است
-            const canApprove = !isExpertPricingRequest || hasPaymentAmount;
+            // همچنین قیمت محاسبه‌شده خودکار سایت هم سفارش را قابل تایید می‌کند
+            const canApprove = !isExpertPricingRequest || hasPaymentAmount || siteEstimatedPrice > 0;
 
             const serviceLabel = getOrderServiceLabel(notesObj);
             const isExecutionWithMaterialsOrder = order.subcategory_id === SUBCATEGORY_SCAFFOLD_EXECUTION_WITH_MATERIALS;
