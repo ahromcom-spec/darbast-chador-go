@@ -3074,9 +3074,8 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
     };
   }, [mapReady]);
 
-  // اگر نوار «مشاهده حساب کاربر» (impersonation) بالای صفحه باشد، نقشه تمام‌صفحه را پایین‌تر شروع کن
-  // تا سربرگ و کلید بازگشت زیر آن پنهان نشود
   // رهگیری مرکز نقشه برای مکان‌نمای ثابت و چسبیدن (snap) به پروژه‌های تا ۳ متری
+
   useEffect(() => {
     const map = mapRef.current;
     if (!mapReady || !map) return;
