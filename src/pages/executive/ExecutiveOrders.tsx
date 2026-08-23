@@ -1582,16 +1582,54 @@ export default function ExecutiveOrders() {
 
                 {/* Price summary (General Manager module only) */}
                 {!isExecutiveModule && totalAmount > 0 && (
-                  <div className="rounded-lg border bg-muted/30 p-3">
+                  <div className={`rounded-lg border p-3 ${isSiteEstimatedOnly ? 'bg-blue-50/60 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800' : 'bg-muted/30'}`}>
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Banknote className="h-4 w-4" />
                         <span>مبلغ کل سفارش</span>
+                        {isSiteEstimatedOnly && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                            محاسبه خودکار سایت
+                          </span>
+                        )}
                       </div>
                       <div className="text-sm font-bold" dir="ltr">
                         {totalAmount.toLocaleString('fa-IR')} تومان
                       </div>
                     </div>
+                    {isSiteEstimatedOnly && (
+                      <div className="mt-2 flex items-center justify-between gap-2 flex-wrap">
+                        <p className="text-[11px] text-blue-700 dark:text-blue-300">
+                          این قیمت توسط سایت محاسبه شده و هنوز به‌عنوان قیمت نهایی ثبت نشده است.
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/40"
+                          disabled={isProcessing}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              setIsProcessing(true);
+                              const { error } = await supabase
+                                .from('projects_v3')
+                                .update({ payment_amount: siteEstimatedPrice, total_price: siteEstimatedPrice })
+                                .eq('id', order.id);
+                              if (error) throw error;
+                              toast({ title: '✓ قیمت ثبت شد', description: `مبلغ ${siteEstimatedPrice.toLocaleString('fa-IR')} تومان برای سفارش ${order.code} ثبت شد.` });
+                              fetchOrders();
+                            } catch (err: any) {
+                              toast({ variant: 'destructive', title: 'خطا', description: err.message || 'ثبت قیمت با خطا مواجه شد' });
+                            } finally {
+                              setIsProcessing(false);
+                            }
+                          }}
+                        >
+                          <CheckCircle className="h-3.5 w-3.5 ml-1" />
+                          ثبت به‌عنوان قیمت نهایی
+                        </Button>
+                      </div>
+                    )}
                     {baseAmount > 0 && addOnsAmount > 0 && (
                       <div className="mt-2 text-xs text-muted-foreground">
                         افزوده‌ها (تمدید/تعمیرات):{' '}
