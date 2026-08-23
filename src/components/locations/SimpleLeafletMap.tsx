@@ -259,6 +259,10 @@ function SimpleLeafletMapInner({
       });
       await computeRoute(lat, lng);
     };
+    placeMarkerRef.current = (lat: number, lng: number) => { void placeMarker(lat, lng); };
+    setMapReady(true);
+
+
 
     const containerEl = map.getContainer();
     let pressTimer: number | undefined;
