@@ -1539,12 +1539,17 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         {/* Multi-scaffolds (همزمان در یک مکان) full editor */}
         {hasMultiScaffolds && (
           <div className="bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-300 dark:border-blue-700 rounded-xl p-4 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <h4 className="font-bold text-blue-800 dark:text-blue-200 flex items-center gap-2">
                 <Layers className="h-4 w-4" />
-                داربست‌های همزمان در یک مکان ({initialMultiScaffolds.length.toLocaleString('fa-IR')} آیتم)
+                داربست‌های همزمان در یک مکان ({multiScaffoldsEdit.length.toLocaleString('fa-IR')} آیتم)
               </h4>
-              {!isEditing && (
+              {isEditing ? (
+                <Button type="button" size="sm" variant="outline" onClick={addMultiScaffoldItem} className="gap-1">
+                  <Plus className="h-4 w-4" />
+                  افزودن آیتم جدید
+                </Button>
+              ) : (
                 <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
                   <Edit className="h-4 w-4 ml-1" />
                   ویرایش آیتم‌ها
@@ -1554,7 +1559,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
 
             <div className="space-y-3">
               {multiScaffoldsEdit.map((ed, i) => {
-                const orig = initialMultiScaffolds[i] || {};
+                const orig = ed.orig || {};
                 const liveArea = isEditing ? calcDimsArea(ed.dimensions) : (orig.totalArea || calcDimsArea(ed.dimensions));
                 const liveUnit = dimsUnit(ed.dimensions);
                 const updateEd = (patch: Partial<MultiScaffoldEdit>) => {
@@ -1569,7 +1574,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                 };
                 return (
                   <div key={i} className="bg-background p-3 rounded-lg border space-y-2">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
                       {isEditing ? (
                         <Input
                           value={ed.label}
@@ -1580,12 +1585,51 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                       ) : (
                         <Label className="text-sm font-bold">{ed.label || `داربست #${i + 1}`}</Label>
                       )}
-                      {liveArea > 0 && (
-                        <Badge variant="outline">
-                          {Number(liveArea).toLocaleString('fa-IR', { maximumFractionDigits: 2 })} {liveUnit}
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {liveArea > 0 && (
+                          <Badge variant="outline">
+                            {Number(liveArea).toLocaleString('fa-IR', { maximumFractionDigits: 2 })} {liveUnit}
+                          </Badge>
+                        )}
+                        {isEditing && (
+                          <>
+                            <Button
+                              type="button" size="sm" variant="ghost"
+                              className="h-8 px-2 text-muted-foreground"
+                              onClick={() => duplicateMultiScaffoldItem(i)}
+                              title="کپی این آیتم"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button" size="sm" variant="ghost"
+                              className="h-8 px-2 text-destructive hover:text-destructive"
+                              onClick={() => setConfirmDeleteMulti(i)}
+                              title="حذف این آیتم"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
+
+                    {isEditing && confirmDeleteMulti === i && (
+                      <div className="flex items-center justify-between gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/30">
+                        <span className="text-xs text-destructive font-medium">این آیتم حذف شود؟</span>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button" size="sm" variant="destructive" className="h-7"
+                            onClick={() => { removeMultiScaffoldItem(i); setConfirmDeleteMulti(null); }}
+                          >
+                            حذف
+                          </Button>
+                          <Button type="button" size="sm" variant="outline" className="h-7" onClick={() => setConfirmDeleteMulti(null)}>
+                            انصراف
+                          </Button>
+                        </div>
+                      </div>
+                    )}
 
                     {isEditing ? (
                       <div className="space-y-2">
@@ -1594,10 +1638,18 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                           <p className="text-xs text-muted-foreground">ابعادی ثبت نشده.</p>
                         )}
                         {ed.dimensions.map((d, dIdx) => (
-                          <div key={dIdx} className="grid grid-cols-3 gap-2">
+                          <div key={dIdx} className="flex gap-2 items-center">
                             <Input value={d.length} onChange={(e) => updateDim(dIdx, 'length', e.target.value)} placeholder="طول" dir="ltr" />
                             <Input value={d.width} onChange={(e) => updateDim(dIdx, 'width', e.target.value)} placeholder="عرض" dir="ltr" />
                             <Input value={d.height} onChange={(e) => updateDim(dIdx, 'height', e.target.value)} placeholder="ارتفاع" dir="ltr" />
+                            <Button
+                              type="button" size="sm" variant="ghost"
+                              className="h-9 px-2 text-destructive hover:text-destructive shrink-0"
+                              onClick={() => updateEd({ dimensions: ed.dimensions.filter((_, x) => x !== dIdx) })}
+                              title="حذف این ردیف ابعاد"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         ))}
                         <div className="flex gap-2">
@@ -1605,12 +1657,6 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                             onClick={() => updateEd({ dimensions: [...ed.dimensions, { length: '', width: '', height: '' }] })}>
                             + افزودن بُعد
                           </Button>
-                          {ed.dimensions.length > 0 && (
-                            <Button type="button" size="sm" variant="ghost"
-                              onClick={() => updateEd({ dimensions: ed.dimensions.slice(0, -1) })}>
-                              حذف آخرین
-                            </Button>
-                          )}
                         </div>
                       </div>
                     ) : (
@@ -1662,12 +1708,34 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                   </div>
                 );
               })}
+
+              {multiScaffoldsEdit.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">هیچ آیتمی باقی نمانده است.</p>
+              )}
             </div>
 
-            {isEditing && !hidePrice && (
-              <div className="flex items-center justify-between gap-2 pt-2 border-t border-blue-200 dark:border-blue-700">
-                <span className="text-sm font-bold text-blue-800 dark:text-blue-200">مجموع کل آیتم‌ها</span>
-                <span className="text-lg font-bold">{(multiScaffoldsEdit.reduce((s, it) => s + (parseFloat(it.finalPrice) || 0), 0)).toLocaleString('fa-IR')} تومان</span>
+            {isEditing && (
+              <div className="space-y-2 pt-2 border-t border-blue-200 dark:border-blue-700">
+                {!hidePrice && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-bold text-blue-800 dark:text-blue-200">مجموع کل آیتم‌ها</span>
+                    <span className="text-lg font-bold">{(multiScaffoldsEdit.reduce((s, it) => s + (parseFloat(it.finalPrice) || 0), 0)).toLocaleString('fa-IR')} تومان</span>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleSave}
+                    disabled={saving || !isMultiScaffoldsChanged}
+                    className="flex-1 gap-1"
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {isMultiScaffoldsChanged ? 'ذخیره آیتم‌ها' : 'ذخیره شده ✓'}
+                  </Button>
+                  <Button variant="outline" onClick={handleCancel} disabled={saving} className="gap-1">
+                    <X className="h-4 w-4" />
+                    انصراف
+                  </Button>
+                </div>
               </div>
             )}
           </div>
