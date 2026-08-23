@@ -82,9 +82,10 @@ export const resolveOrderSmsDetails = async (orderId?: string | null): Promise<{
 
   const { data: order } = await supabase
     .from('projects_v3')
-    .select('code, customer_id, customer_name, customer_phone, address, detailed_address, notes, subcategory_id, total_price')
+    .select('code, customer_id, customer_name, customer_phone, address, detailed_address, notes, subcategory_id, total_price, payment_amount')
     .eq('id', orderId)
     .maybeSingle();
+
 
 
   if (!order) return {};
