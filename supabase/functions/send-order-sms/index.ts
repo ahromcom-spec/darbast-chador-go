@@ -226,6 +226,10 @@ const handler = async (req: Request): Promise<Response> => {
     // Get SMS template — prefer DB-managed template, fallback to in-code default
     let template = SMS_TEMPLATES[status];
     let dbTpl: any = null;
+    if (isResend) {
+      // ارسال مجدد: همان متن قبلی، فقط تاریخ به تاریخ جدید به‌روزرسانی می‌شود
+      template = resendMessage!;
+    } else {
     try {
       const { data: tplRow } = await supabase
         .from("sms_templates")
