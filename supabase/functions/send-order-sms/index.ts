@@ -338,6 +338,16 @@ const handler = async (req: Request): Promise<Response> => {
       .replaceAll("{customerName}", customerName || "مشتری")
       .replaceAll("{description}", (description || "").toString().trim() || "ثبت نشده");
 
+    // ارسال مجدد: تاریخ و ساعت داخل متن با تاریخ جدید جایگزین شود
+    if (isResend) {
+      const dateLine = /تاریخ:\s*[^\n]*/;
+      if (dateLine.test(message)) {
+        message = message.replace(dateLine, `تاریخ: ${persianDateTime}`);
+      } else {
+        message = `${message}\nتاریخ: ${persianDateTime}`;
+      }
+    }
+
 
 
     // === سربرگ اجباری برند: همیشه در خط اول پیامک ===
