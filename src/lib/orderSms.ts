@@ -283,7 +283,8 @@ export const sendCeoNotificationSms = async (
         address: details?.address,
         dateTime: details?.dateTime,
         amount: details?.amount,
-        customerName: details?.customerName
+        customerName: details?.customerName,
+        description: details?.description
       }
     });
 
