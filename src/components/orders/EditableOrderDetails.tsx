@@ -489,7 +489,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   useEffect(() => {
     if (!hasMultiScaffolds || !isEditing) return;
     const sum = multiScaffoldsEdit.reduce((s, it) => s + (parseFloat(it.finalPrice) || 0), 0);
-    if (sum > 0) setPaymentAmount(Math.round(sum).toString());
+    setPaymentAmount(sum > 0 ? Math.round(sum).toString() : '');
   }, [multiScaffoldsEdit, hasMultiScaffolds, isEditing]);
 
 
