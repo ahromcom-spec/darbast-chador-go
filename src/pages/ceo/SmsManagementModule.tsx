@@ -510,7 +510,7 @@ export default function SmsManagementModule() {
                   </TableHeader>
                   <TableBody>
                     {logs.length === 0 && (
-                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                         گزارشی ثبت نشده است.
                       </TableCell></TableRow>
                     )}
