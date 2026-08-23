@@ -666,7 +666,7 @@ export function MobileProjectPanel({
                       </div>
 
                       {/* Media Gallery */}
-                      <div className="relative h-[20vh] min-h-[120px] bg-muted">
+                      <div className="relative h-[40vh] min-h-[240px] bg-muted">
                         {totalMedia > 0 ? (
                           <>
                             {allMedia.map((media, idx) => {
@@ -694,6 +694,8 @@ export function MobileProjectPanel({
                                     preload="metadata"
                                     muted
                                     playsInline
+                                    autoPlay
+                                    loop
                                   />
                                   <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
                                     <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center">
