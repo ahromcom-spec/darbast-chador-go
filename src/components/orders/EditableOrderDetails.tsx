@@ -408,6 +408,10 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   const initialScaffoldEditsSer = JSON.stringify(initialScaffoldEdits);
   const isScaffoldEditsChanged = JSON.stringify(scaffoldEdits) !== initialScaffoldEditsSer;
 
+  // Inline delete confirmation state (per item index)
+  const [confirmDeleteExpert, setConfirmDeleteExpert] = useState<number | null>(null);
+  const [confirmDeleteMulti, setConfirmDeleteMulti] = useState<number | null>(null);
+
   // Add / duplicate / remove an expert-scaffold item (keeps prices aligned)
   const addScaffoldItem = () => {
     setScaffoldEdits([...scaffoldEdits, { label: '', description: '', dimensions: [emptyDimRow()], orig: {} }]);
