@@ -103,6 +103,7 @@ export const AdminImpersonationBanner = () => {
 
   return (
     <div 
+      data-impersonation-banner
       className="sticky top-0 left-0 right-0 z-[9999] bg-gradient-to-r from-red-600 to-red-500 text-white shadow-lg"
       role="alert"
       aria-live="polite"
