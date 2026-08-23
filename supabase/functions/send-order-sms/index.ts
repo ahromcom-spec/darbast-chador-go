@@ -325,8 +325,10 @@ const handler = async (req: Request): Promise<Response> => {
       .replaceAll("{dateTime}", persianDateTime)
       .replaceAll("{amount}", formattedAmount)
       .replaceAll("{orderLink}", orderLink)
+      .replaceAll("{paymentLink}", paymentLink)
       .replaceAll("{customerName}", customerName || "مشتری")
       .replaceAll("{description}", (description || "").toString().trim() || "ثبت نشده");
+
 
 
     // === سربرگ اجباری برند: همیشه در خط اول پیامک ===
