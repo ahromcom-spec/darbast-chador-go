@@ -12,7 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   ImageIcon, ChevronLeft, ChevronRight, Ruler, FileText, Layers, User, Phone, MapPin, 
-  Calendar, Banknote, Edit, Save, X, Upload, Trash2, Loader2, Printer, Wrench, Truck, Home, ExternalLink, RefreshCw
+  Calendar, Banknote, Edit, Save, X, Upload, Trash2, Loader2, Printer, Wrench, Truck, Home, ExternalLink, RefreshCw,
+  Plus, Copy
 } from 'lucide-react';
 import { ManagerOrderInvoice } from './ManagerOrderInvoice';
 import { formatPersianDate, formatPersianDateTime } from '@/lib/dateUtils';
@@ -379,45 +380,100 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   });
   const [scaffoldPrices, setScaffoldPrices] = useState<string[]>(initialScaffoldPrices);
   const [savedScaffoldPrices, setSavedScaffoldPrices] = useState<string[]>(initialScaffoldPrices);
-  const isScaffoldPricesChanged = scaffoldPrices.some((v, i) => v !== (savedScaffoldPrices[i] ?? ''));
+  const isScaffoldPricesChanged = JSON.stringify(scaffoldPrices) !== JSON.stringify(savedScaffoldPrices);
 
-  // Auto-sum to paymentAmount
+  // Auto-sum to paymentAmount (also reflects removed items)
   useEffect(() => {
     if (!hasExpertScaffolds) return;
     const sum = scaffoldPrices.reduce((s, v) => s + (parseFloat(v) || 0), 0);
-    if (sum > 0) setPaymentAmount(Math.round(sum).toString());
+    setPaymentAmount(sum > 0 ? Math.round(sum).toString() : '');
   }, [scaffoldPrices, hasExpertScaffolds]);
 
   // ===== Full-edit support for expert scaffolds (label, description, dimensions) =====
   type DimRow = { length: string; width: string; height: string };
+  const emptyDimRow = (): DimRow => ({ length: '', width: '', height: '' });
   const buildDimRows = (dims: any[]): DimRow[] => (Array.isArray(dims) ? dims : []).map((d: any) => ({
     length: d?.length != null ? String(d.length) : '',
     width: d?.width != null ? String(d.width) : '',
     height: d?.height != null ? String(d.height) : '',
   }));
-  type ScaffoldEdit = { label: string; description: string; dimensions: DimRow[] };
+  type ScaffoldEdit = { label: string; description: string; dimensions: DimRow[]; orig?: any };
   const initialScaffoldEdits: ScaffoldEdit[] = expertScaffolds.map((sc: any) => ({
     label: sc.label || '',
     description: sc.description || '',
     dimensions: buildDimRows(sc.dimensions),
+    orig: sc,
   }));
   const [scaffoldEdits, setScaffoldEdits] = useState<ScaffoldEdit[]>(initialScaffoldEdits);
   const initialScaffoldEditsSer = JSON.stringify(initialScaffoldEdits);
   const isScaffoldEditsChanged = JSON.stringify(scaffoldEdits) !== initialScaffoldEditsSer;
 
+  // Inline delete confirmation state (per item index)
+  const [confirmDeleteExpert, setConfirmDeleteExpert] = useState<number | null>(null);
+  const [confirmDeleteMulti, setConfirmDeleteMulti] = useState<number | null>(null);
+
+  // Add / duplicate / remove an expert-scaffold item (keeps prices aligned)
+  const addScaffoldItem = () => {
+    setScaffoldEdits([...scaffoldEdits, { label: '', description: '', dimensions: [emptyDimRow()], orig: {} }]);
+    setScaffoldPrices([...scaffoldPrices, '']);
+  };
+  const duplicateScaffoldItem = (i: number) => {
+    const src = scaffoldEdits[i];
+    const copy: ScaffoldEdit = {
+      label: src.label ? `${src.label} (کپی)` : '',
+      description: src.description,
+      dimensions: src.dimensions.map(d => ({ ...d })),
+      orig: { ...(src.orig || {}) },
+    };
+    const nextEdits = [...scaffoldEdits];
+    nextEdits.splice(i + 1, 0, copy);
+    const nextPrices = [...scaffoldPrices];
+    nextPrices.splice(i + 1, 0, scaffoldPrices[i] || '');
+    setScaffoldEdits(nextEdits);
+    setScaffoldPrices(nextPrices);
+  };
+  const removeScaffoldItem = (i: number) => {
+    setScaffoldEdits(scaffoldEdits.filter((_, idx) => idx !== i));
+    setScaffoldPrices(scaffoldPrices.filter((_, idx) => idx !== i));
+  };
+
   // ===== Multi-scaffolds (snapshot-based) full edit =====
   const initialMultiScaffolds: any[] = Array.isArray(parsedNotes?.multi_scaffolds) ? parsedNotes.multi_scaffolds : [];
   const hasMultiScaffolds = initialMultiScaffolds.length > 0;
-  type MultiScaffoldEdit = { label: string; description: string; dimensions: DimRow[]; finalPrice: string };
+  type MultiScaffoldEdit = { label: string; description: string; dimensions: DimRow[]; finalPrice: string; orig?: any };
   const initialMultiScaffoldsEdit: MultiScaffoldEdit[] = initialMultiScaffolds.map((it: any) => ({
     label: it.label || '',
     description: it.snapshot?.locationPurpose || it.description || '',
     dimensions: buildDimRows(it.snapshot?.dimensions),
     finalPrice: it.finalPrice != null ? String(it.finalPrice) : '',
+    orig: it,
   }));
   const [multiScaffoldsEdit, setMultiScaffoldsEdit] = useState<MultiScaffoldEdit[]>(initialMultiScaffoldsEdit);
   const initialMultiScaffoldsEditSer = JSON.stringify(initialMultiScaffoldsEdit);
   const isMultiScaffoldsChanged = JSON.stringify(multiScaffoldsEdit) !== initialMultiScaffoldsEditSer;
+
+  const addMultiScaffoldItem = () => {
+    setMultiScaffoldsEdit([
+      ...multiScaffoldsEdit,
+      { label: '', description: '', dimensions: [emptyDimRow()], finalPrice: '', orig: {} },
+    ]);
+  };
+  const duplicateMultiScaffoldItem = (i: number) => {
+    const src = multiScaffoldsEdit[i];
+    const copy: MultiScaffoldEdit = {
+      label: src.label ? `${src.label} (کپی)` : '',
+      description: src.description,
+      dimensions: src.dimensions.map(d => ({ ...d })),
+      finalPrice: src.finalPrice,
+      orig: { ...(src.orig || {}) },
+    };
+    const next = [...multiScaffoldsEdit];
+    next.splice(i + 1, 0, copy);
+    setMultiScaffoldsEdit(next);
+  };
+  const removeMultiScaffoldItem = (i: number) => {
+    setMultiScaffoldsEdit(multiScaffoldsEdit.filter((_, idx) => idx !== i));
+  };
 
   const calcDimsArea = (dims: DimRow[]) => {
     const hasW = dims.some(d => parseLocalizedNumber(d?.width) > 0);
@@ -438,7 +494,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   useEffect(() => {
     if (!hasMultiScaffolds || !isEditing) return;
     const sum = multiScaffoldsEdit.reduce((s, it) => s + (parseFloat(it.finalPrice) || 0), 0);
-    if (sum > 0) setPaymentAmount(Math.round(sum).toString());
+    setPaymentAmount(sum > 0 ? Math.round(sum).toString() : '');
   }, [multiScaffoldsEdit, hasMultiScaffolds, isEditing]);
 
 
@@ -486,44 +542,36 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
 
         // Store per-scaffold prices if this is a multi-scaffold expert pricing
         if (hasExpertScaffolds) {
-          updatedNotes.scaffold_prices = expertScaffolds.map((sc, i) => {
-            const ed = scaffoldEdits[i];
-            const dimsForArea = ed?.dimensions || [];
-            return {
-              index: i,
-              label: (ed?.label || sc.label || `داربست ${i + 1}`),
-              description: (ed?.description ?? sc.description ?? ''),
-              area: ed ? calcDimsArea(dimsForArea) : calcScaffoldArea(sc),
-              unit: ed ? dimsUnit(dimsForArea) : scaffoldAreaUnit(sc),
-              total: parseFloat(scaffoldPrices[i] || '0') || 0,
-            };
-          });
+          updatedNotes.scaffold_prices = scaffoldEdits.map((ed, i) => ({
+            index: i,
+            label: ed.label || ed.orig?.label || `داربست ${i + 1}`,
+            description: ed.description ?? '',
+            area: calcDimsArea(ed.dimensions),
+            unit: dimsUnit(ed.dimensions),
+            total: parseFloat(scaffoldPrices[i] || '0') || 0,
+          }));
         }
       }
 
-      // Persist expert scaffold edits (label/description/dimensions) - independent of price flow
-      if (hasExpertScaffolds && expertScaffolds.length > 0) {
-        updatedNotes.scaffolds = expertScaffolds.map((sc: any, i: number) => {
-          const ed = scaffoldEdits[i];
-          if (!ed) return sc;
-          return {
-            ...sc,
-            label: ed.label || sc.label || `داربست ${i + 1}`,
-            description: ed.description,
-            dimensions: ed.dimensions.map(d => ({
-              length: parseLocalizedNumber(d.length),
-              width: parseLocalizedNumber(d.width),
-              height: parseLocalizedNumber(d.height),
-            })),
-          };
-        });
+      // Persist expert scaffold edits (label/description/dimensions/add/remove)
+      if (hasExpertScaffolds) {
+        updatedNotes.scaffolds = scaffoldEdits.map((ed, i) => ({
+          ...(ed.orig || {}),
+          label: ed.label || ed.orig?.label || `داربست ${i + 1}`,
+          description: ed.description,
+          dimensions: ed.dimensions.map(d => ({
+            length: parseLocalizedNumber(d.length),
+            width: parseLocalizedNumber(d.width),
+            height: parseLocalizedNumber(d.height),
+          })),
+        }));
+        updatedNotes.is_multi_scaffold = true;
       }
 
-      // Persist multi-scaffold (snapshot) edits
+      // Persist multi-scaffold (snapshot) edits including add/remove
       if (hasMultiScaffolds) {
-        updatedNotes.multi_scaffolds = initialMultiScaffolds.map((orig: any, i: number) => {
-          const ed = multiScaffoldsEdit[i];
-          if (!ed) return orig;
+        updatedNotes.multi_scaffolds = multiScaffoldsEdit.map((ed, i) => {
+          const orig = ed.orig || {};
           const cleanDims = ed.dimensions.map(d => ({
             length: parseLocalizedNumber(d.length),
             width: parseLocalizedNumber(d.width),
@@ -532,7 +580,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
           const area = calcDimsArea(ed.dimensions);
           return {
             ...orig,
-            label: ed.label || orig.label,
+            label: ed.label || orig.label || `داربست #${i + 1}`,
             description: ed.description,
             finalPrice: parseFloat(ed.finalPrice) || 0,
             totalArea: area,
@@ -621,7 +669,10 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
     setDescription(parsedNotes?.description || parsedNotes?.installationDescription || parsedNotes?.additional_notes || '');
     setScaffoldingType(parsedNotes?.service_type || parsedNotes?.scaffoldingType || parsedNotes?.scaffold_type || '');
     setScaffoldEdits(initialScaffoldEdits);
+    setScaffoldPrices(savedScaffoldPrices);
     setMultiScaffoldsEdit(initialMultiScaffoldsEdit);
+    setConfirmDeleteExpert(null);
+    setConfirmDeleteMulti(null);
     setIsEditing(false);
   };
 
@@ -795,8 +846,26 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
           {/* Multi-scaffold per-item pricing (expert pricing requests) */}
           {hasExpertScaffolds ? (
             <div className="bg-white dark:bg-amber-900/50 rounded-lg p-4 border border-amber-200 dark:border-amber-600 space-y-4">
-              {expertScaffolds.map((sc, i) => {
-                const ed = scaffoldEdits[i] || { label: '', description: '', dimensions: [] };
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-sm font-bold text-amber-800 dark:text-amber-200 flex items-center gap-1">
+                  <Layers className="h-4 w-4" />
+                  آیتم‌های داربست ({scaffoldEdits.length.toLocaleString('fa-IR')})
+                </span>
+                {isEditing ? (
+                  <Button type="button" size="sm" variant="outline" onClick={addScaffoldItem} className="gap-1">
+                    <Plus className="h-4 w-4" />
+                    افزودن آیتم جدید
+                  </Button>
+                ) : (
+                  <Button type="button" size="sm" variant="outline" onClick={() => setIsEditing(true)} className="gap-1">
+                    <Edit className="h-4 w-4" />
+                    ویرایش آیتم‌ها
+                  </Button>
+                )}
+              </div>
+
+              {scaffoldEdits.map((ed, i) => {
+                const sc = ed.orig || {};
                 const editableDims = ed.dimensions;
                 const liveArea = isEditing ? calcDimsArea(editableDims) : calcScaffoldArea(sc);
                 const liveUnit = isEditing ? dimsUnit(editableDims) : scaffoldAreaUnit(sc);
@@ -813,7 +882,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                 };
                 return (
                   <div key={i} className="space-y-2 p-3 bg-muted/30 rounded-lg border">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
                       {isEditing ? (
                         <Input
                           value={ed.label}
@@ -822,14 +891,60 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                           className="text-sm font-bold max-w-[220px]"
                         />
                       ) : (
-                        <Label className="text-sm font-bold">{sc.label || `داربست ${i + 1}`}</Label>
+                        <Label className="text-sm font-bold">{ed.label || sc.label || `داربست ${i + 1}`}</Label>
                       )}
-                      {liveArea > 0 && (
-                        <Badge variant="outline">
-                          {liveArea.toLocaleString('fa-IR', { maximumFractionDigits: 2 })} {liveUnit}
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {liveArea > 0 && (
+                          <Badge variant="outline">
+                            {liveArea.toLocaleString('fa-IR', { maximumFractionDigits: 2 })} {liveUnit}
+                          </Badge>
+                        )}
+                        {isEditing && (
+                          <>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-muted-foreground"
+                              onClick={() => duplicateScaffoldItem(i)}
+                              title="کپی این آیتم"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-destructive hover:text-destructive"
+                              onClick={() => setConfirmDeleteExpert(i)}
+                              title="حذف این آیتم"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
+
+                    {isEditing && confirmDeleteExpert === i && (
+                      <div className="flex items-center justify-between gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/30">
+                        <span className="text-xs text-destructive font-medium">این آیتم حذف شود؟</span>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            className="h-7"
+                            onClick={() => { removeScaffoldItem(i); setConfirmDeleteExpert(null); }}
+                          >
+                            حذف
+                          </Button>
+                          <Button type="button" size="sm" variant="outline" className="h-7" onClick={() => setConfirmDeleteExpert(null)}>
+                            انصراف
+                          </Button>
+                        </div>
+                      </div>
+                    )}
 
                     {isEditing ? (
                       <div className="space-y-2">
@@ -838,7 +953,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                           <p className="text-xs text-muted-foreground">ابعادی ثبت نشده.</p>
                         )}
                         {editableDims.map((d, dIdx) => (
-                          <div key={dIdx} className="grid grid-cols-3 gap-2">
+                          <div key={dIdx} className="flex gap-2 items-center">
                             <Input
                               value={d.length}
                               onChange={(e) => updateDim(dIdx, 'length', e.target.value)}
@@ -857,6 +972,16 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                               placeholder="ارتفاع"
                               dir="ltr"
                             />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-9 px-2 text-destructive hover:text-destructive shrink-0"
+                              onClick={() => updateEd({ dimensions: editableDims.filter((_, x) => x !== dIdx) })}
+                              title="حذف این ردیف ابعاد"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         ))}
                         <div className="flex gap-2">
@@ -868,16 +993,6 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                           >
                             + افزودن بُعد
                           </Button>
-                          {editableDims.length > 0 && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => updateEd({ dimensions: editableDims.slice(0, -1) })}
-                            >
-                              حذف آخرین
-                            </Button>
-                          )}
                         </div>
                       </div>
                     ) : (
@@ -898,9 +1013,9 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                           rows={2}
                         />
                       ) : (
-                        sc.description ? (
+                        ed.description ? (
                           <p className="text-xs text-muted-foreground bg-background/60 p-2 rounded border">
-                            📝 {sc.description}
+                            📝 {ed.description}
                           </p>
                         ) : <p className="text-xs text-muted-foreground">—</p>
                       )}
@@ -927,6 +1042,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                   </div>
                 );
               })}
+
 
 
               {/* Grand Total + Save */}
@@ -1426,12 +1542,17 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         {/* Multi-scaffolds (همزمان در یک مکان) full editor */}
         {hasMultiScaffolds && (
           <div className="bg-blue-50 dark:bg-blue-950/30 border-2 border-blue-300 dark:border-blue-700 rounded-xl p-4 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <h4 className="font-bold text-blue-800 dark:text-blue-200 flex items-center gap-2">
                 <Layers className="h-4 w-4" />
-                داربست‌های همزمان در یک مکان ({initialMultiScaffolds.length.toLocaleString('fa-IR')} آیتم)
+                داربست‌های همزمان در یک مکان ({multiScaffoldsEdit.length.toLocaleString('fa-IR')} آیتم)
               </h4>
-              {!isEditing && (
+              {isEditing ? (
+                <Button type="button" size="sm" variant="outline" onClick={addMultiScaffoldItem} className="gap-1">
+                  <Plus className="h-4 w-4" />
+                  افزودن آیتم جدید
+                </Button>
+              ) : (
                 <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
                   <Edit className="h-4 w-4 ml-1" />
                   ویرایش آیتم‌ها
@@ -1441,7 +1562,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
 
             <div className="space-y-3">
               {multiScaffoldsEdit.map((ed, i) => {
-                const orig = initialMultiScaffolds[i] || {};
+                const orig = ed.orig || {};
                 const liveArea = isEditing ? calcDimsArea(ed.dimensions) : (orig.totalArea || calcDimsArea(ed.dimensions));
                 const liveUnit = dimsUnit(ed.dimensions);
                 const updateEd = (patch: Partial<MultiScaffoldEdit>) => {
@@ -1456,7 +1577,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                 };
                 return (
                   <div key={i} className="bg-background p-3 rounded-lg border space-y-2">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
                       {isEditing ? (
                         <Input
                           value={ed.label}
@@ -1467,12 +1588,51 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                       ) : (
                         <Label className="text-sm font-bold">{ed.label || `داربست #${i + 1}`}</Label>
                       )}
-                      {liveArea > 0 && (
-                        <Badge variant="outline">
-                          {Number(liveArea).toLocaleString('fa-IR', { maximumFractionDigits: 2 })} {liveUnit}
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {liveArea > 0 && (
+                          <Badge variant="outline">
+                            {Number(liveArea).toLocaleString('fa-IR', { maximumFractionDigits: 2 })} {liveUnit}
+                          </Badge>
+                        )}
+                        {isEditing && (
+                          <>
+                            <Button
+                              type="button" size="sm" variant="ghost"
+                              className="h-8 px-2 text-muted-foreground"
+                              onClick={() => duplicateMultiScaffoldItem(i)}
+                              title="کپی این آیتم"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button" size="sm" variant="ghost"
+                              className="h-8 px-2 text-destructive hover:text-destructive"
+                              onClick={() => setConfirmDeleteMulti(i)}
+                              title="حذف این آیتم"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
+
+                    {isEditing && confirmDeleteMulti === i && (
+                      <div className="flex items-center justify-between gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/30">
+                        <span className="text-xs text-destructive font-medium">این آیتم حذف شود؟</span>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button" size="sm" variant="destructive" className="h-7"
+                            onClick={() => { removeMultiScaffoldItem(i); setConfirmDeleteMulti(null); }}
+                          >
+                            حذف
+                          </Button>
+                          <Button type="button" size="sm" variant="outline" className="h-7" onClick={() => setConfirmDeleteMulti(null)}>
+                            انصراف
+                          </Button>
+                        </div>
+                      </div>
+                    )}
 
                     {isEditing ? (
                       <div className="space-y-2">
@@ -1481,10 +1641,18 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                           <p className="text-xs text-muted-foreground">ابعادی ثبت نشده.</p>
                         )}
                         {ed.dimensions.map((d, dIdx) => (
-                          <div key={dIdx} className="grid grid-cols-3 gap-2">
+                          <div key={dIdx} className="flex gap-2 items-center">
                             <Input value={d.length} onChange={(e) => updateDim(dIdx, 'length', e.target.value)} placeholder="طول" dir="ltr" />
                             <Input value={d.width} onChange={(e) => updateDim(dIdx, 'width', e.target.value)} placeholder="عرض" dir="ltr" />
                             <Input value={d.height} onChange={(e) => updateDim(dIdx, 'height', e.target.value)} placeholder="ارتفاع" dir="ltr" />
+                            <Button
+                              type="button" size="sm" variant="ghost"
+                              className="h-9 px-2 text-destructive hover:text-destructive shrink-0"
+                              onClick={() => updateEd({ dimensions: ed.dimensions.filter((_, x) => x !== dIdx) })}
+                              title="حذف این ردیف ابعاد"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         ))}
                         <div className="flex gap-2">
@@ -1492,12 +1660,6 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                             onClick={() => updateEd({ dimensions: [...ed.dimensions, { length: '', width: '', height: '' }] })}>
                             + افزودن بُعد
                           </Button>
-                          {ed.dimensions.length > 0 && (
-                            <Button type="button" size="sm" variant="ghost"
-                              onClick={() => updateEd({ dimensions: ed.dimensions.slice(0, -1) })}>
-                              حذف آخرین
-                            </Button>
-                          )}
                         </div>
                       </div>
                     ) : (
@@ -1549,12 +1711,34 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                   </div>
                 );
               })}
+
+              {multiScaffoldsEdit.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">هیچ آیتمی باقی نمانده است.</p>
+              )}
             </div>
 
-            {isEditing && !hidePrice && (
-              <div className="flex items-center justify-between gap-2 pt-2 border-t border-blue-200 dark:border-blue-700">
-                <span className="text-sm font-bold text-blue-800 dark:text-blue-200">مجموع کل آیتم‌ها</span>
-                <span className="text-lg font-bold">{(multiScaffoldsEdit.reduce((s, it) => s + (parseFloat(it.finalPrice) || 0), 0)).toLocaleString('fa-IR')} تومان</span>
+            {isEditing && (
+              <div className="space-y-2 pt-2 border-t border-blue-200 dark:border-blue-700">
+                {!hidePrice && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-bold text-blue-800 dark:text-blue-200">مجموع کل آیتم‌ها</span>
+                    <span className="text-lg font-bold">{(multiScaffoldsEdit.reduce((s, it) => s + (parseFloat(it.finalPrice) || 0), 0)).toLocaleString('fa-IR')} تومان</span>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleSave}
+                    disabled={saving || !isMultiScaffoldsChanged}
+                    className="flex-1 gap-1"
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {isMultiScaffoldsChanged ? 'ذخیره آیتم‌ها' : 'ذخیره شده ✓'}
+                  </Button>
+                  <Button variant="outline" onClick={handleCancel} disabled={saving} className="gap-1">
+                    <X className="h-4 w-4" />
+                    انصراف
+                  </Button>
+                </div>
               </div>
             )}
           </div>
