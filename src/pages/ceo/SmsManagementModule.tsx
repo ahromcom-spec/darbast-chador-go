@@ -96,6 +96,33 @@ export default function SmsManagementModule() {
   const [stats, setStats] = useState({ sentToday: 0, failedToday: 0, total: 0 });
   const [walletBalance, setWalletBalance] = useState<string | null>(null);
   const [walletLoading, setWalletLoading] = useState(false);
+  const [resending, setResending] = useState<string | null>(null);
+
+  const resendLog = async (l: SmsLog) => {
+    if (!l.message || !l.recipient) {
+      toast.error("متن یا شماره گیرنده برای ارسال مجدد موجود نیست");
+      return;
+    }
+    setResending(l.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-order-sms", {
+        body: {
+          phone: l.recipient,
+          orderCode: l.order_code || "-",
+          status: l.template_key || "resend",
+          resendMessage: l.message,
+        },
+      });
+      if (error) throw error;
+      if (data && (data as any).success === false) throw new Error((data as any).error || "ارسال مجدد ناموفق بود");
+      toast.success("پیامک با تاریخ جدید مجدداً ارسال شد");
+      load();
+    } catch (e: any) {
+      toast.error("خطا در ارسال مجدد: " + (e?.message || ""));
+    } finally {
+      setResending(null);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
