@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { isAdminImpersonating } from './impersonation';
 import { extractOrderDescription } from './orderDescription';
+import { getNextAllowedSendTime } from './smsSendWindow';
 
 // شماره مدیرعامل برای ارسال پیامک
 export const CEO_PHONE = '09125511494';
@@ -161,7 +162,7 @@ export const sendOrderSms = async (
   orderCode: string,
   status: SmsStatus,
   details?: OrderSmsDetails
-): Promise<{ success: boolean; error?: string }> => {
+): Promise<{ success: boolean; error?: string; scheduledFor?: string }> => {
   // اگر مدیر در حال مشاهده حساب کاربر است، پیامک ارسال نشود
   if (isAdminImpersonating()) {
     console.log('[sendOrderSms] Skipped - Admin is impersonating user');
@@ -218,11 +219,39 @@ export const sendOrderSms = async (
   } catch (e) {
     // در صورت خطا در بررسی، ارسال را ادامه می‌دهیم تا از قطع پیامک جلوگیری شود
   }
-
-
+  // بازه زمانی مجاز ارسال پیامک: خارج از بازه، پیامک در صف قرار می‌گیرد
+  try {
+    const sendAfter = getNextAllowedSendTime();
+    if (sendAfter) {
+      const { data: userRes } = await supabase.auth.getUser();
+      const { error: queueError } = await supabase.from('scheduled_sms').insert({
+        phone: targetPhone,
+        order_code: targetOrderCode,
+        order_id: smsDetails.orderId ?? null,
+        status_key: status,
+        payload: {
+          serviceType: smsDetails.serviceType,
+          address: smsDetails.address,
+          amount: smsDetails.amount,
+          customerName: smsDetails.customerName,
+          description: smsDetails.description,
+        },
+        send_after: sendAfter.toISOString(),
+        created_by: userRes?.user?.id ?? null,
+      });
+      if (!queueError) {
+        console.log('[sendOrderSms] Scheduled for later delivery:', sendAfter.toISOString());
+        return { success: true, scheduledFor: sendAfter.toISOString() };
+      }
+      console.warn('[sendOrderSms] Could not schedule SMS, sending immediately:', queueError);
+    }
+  } catch (e) {
+    console.warn('[sendOrderSms] Scheduling check failed, sending immediately:', e);
+  }
 
   try {
     console.log(`[sendOrderSms] Sending SMS - Phone: ${targetPhone}, Order: ${targetOrderCode}, Status: ${status}, Details:`, smsDetails);
+
     
     const { data, error } = await supabase.functions.invoke('send-order-sms', {
       body: { 

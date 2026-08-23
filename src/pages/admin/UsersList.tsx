@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { SmsSendWindowButton } from '@/components/sms/SmsSendWindowButton';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -139,7 +140,10 @@ export default function UsersList() {
     <div className="w-full p-2 sm:p-3 space-y-2" dir="rtl">
       <Card>
         <CardHeader className="py-2 px-3">
-          <CardTitle className="text-lg">ماژول ورود به حساب کاربران</CardTitle>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <CardTitle className="text-lg">ماژول ورود به حساب کاربران</CardTitle>
+            <SmsSendWindowButton />
+          </div>
         </CardHeader>
         <CardContent className="space-y-2 px-2 pb-2">
           <div className="relative">

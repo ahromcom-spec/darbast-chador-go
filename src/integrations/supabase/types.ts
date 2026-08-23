@@ -4341,6 +4341,54 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_sms: {
+        Row: {
+          attempts: number
+          created_at: string
+          created_by: string | null
+          id: string
+          last_error: string | null
+          order_code: string
+          order_id: string | null
+          payload: Json
+          phone: string
+          send_after: string
+          sent_at: string | null
+          state: string
+          status_key: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_error?: string | null
+          order_code: string
+          order_id?: string | null
+          payload?: Json
+          phone: string
+          send_after?: string
+          sent_at?: string | null
+          state?: string
+          status_key: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_error?: string | null
+          order_code?: string
+          order_id?: string | null
+          payload?: Json
+          phone?: string
+          send_after?: string
+          sent_at?: string | null
+          state?: string
+          status_key?: string
+        }
+        Relationships: []
+      }
       service_activity_types: {
         Row: {
           created_at: string | null

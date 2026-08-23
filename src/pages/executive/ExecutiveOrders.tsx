@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { SmsSendWindowButton } from '@/components/sms/SmsSendWindowButton';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -1528,6 +1529,7 @@ export default function ExecutiveOrders() {
                           aria-label="فعال/غیرفعال کردن ارسال پیامک به مشتری"
                         />
                       </div>
+                      <SmsSendWindowButton />
                     </div>
                     
                     <div className="space-y-1 text-sm">
