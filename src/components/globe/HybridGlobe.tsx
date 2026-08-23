@@ -115,6 +115,11 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const buildingsLayerRef = useRef<L.LayerGroup | null>(null);
 
+  // مکان‌نمای ثابت مرکز نقشه + چسبیدن به مرکر پروژه‌های نزدیک (تا ۳ متر)
+  const [centerPin, setCenterPin] = useState<{ lat: number; lng: number } | null>(null);
+  const [snappedProject, setSnappedProject] = useState<ProjectWithMedia | null>(null);
+
+
   const isMobile = useIsMobile();
   const { projects: allProjects, loading, refetch } = useProjectsHierarchy();
   
