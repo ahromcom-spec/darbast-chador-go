@@ -12,7 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   ImageIcon, ChevronLeft, ChevronRight, Ruler, FileText, Layers, User, Phone, MapPin, 
-  Calendar, Banknote, Edit, Save, X, Upload, Trash2, Loader2, Printer, Wrench, Truck, Home, ExternalLink, RefreshCw
+  Calendar, Banknote, Edit, Save, X, Upload, Trash2, Loader2, Printer, Wrench, Truck, Home, ExternalLink, RefreshCw,
+  Plus, Copy
 } from 'lucide-react';
 import { ManagerOrderInvoice } from './ManagerOrderInvoice';
 import { formatPersianDate, formatPersianDateTime } from '@/lib/dateUtils';
