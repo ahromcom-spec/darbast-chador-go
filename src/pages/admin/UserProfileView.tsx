@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
+import { SmsSendWindowButton } from '@/components/sms/SmsSendWindowButton';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -164,12 +165,15 @@ export default function UserProfileView() {
                 (پیامک‌های ثبت سفارش و تغییر مراحل)
               </span>
             </div>
-            <Switch
-              id="sms-toggle"
-              checked={(userProfile as any)?.sms_notifications_enabled !== false}
-              onCheckedChange={(checked) => toggleSmsMutation.mutate(checked)}
-              disabled={toggleSmsMutation.isPending}
-            />
+            <div className="flex items-center gap-2">
+              <SmsSendWindowButton />
+              <Switch
+                id="sms-toggle"
+                checked={(userProfile as any)?.sms_notifications_enabled !== false}
+                onCheckedChange={(checked) => toggleSmsMutation.mutate(checked)}
+                disabled={toggleSmsMutation.isPending}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
