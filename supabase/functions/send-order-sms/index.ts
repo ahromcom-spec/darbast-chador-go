@@ -146,7 +146,8 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { phone, orderCode, orderId, status, serviceType, address, dateTime, amount, customerName, description }: SmsRequest = await req.json();
+    const { phone, orderCode, orderId, status, serviceType, address, dateTime, amount, customerName, description, resendMessage }: SmsRequest = await req.json();
+    const isResend = typeof resendMessage === "string" && resendMessage.trim().length > 0;
     
     console.log(`[send-order-sms] Received request - Phone: ${phone}, Order: ${orderCode}, Status: ${status}, Service: ${serviceType}, Address: ${address}, Amount: ${amount}, Customer: ${customerName}`);
 
