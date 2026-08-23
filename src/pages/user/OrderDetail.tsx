@@ -2039,7 +2039,7 @@ export default function OrderDetail() {
                   
                   return (
                   <Collapsible open={isPriceDetailsExpanded} onOpenChange={setIsPriceDetailsExpanded}>
-                    <section className="rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 p-4 space-y-4">
+                    <section id="order-payment-section" className="rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 p-4 space-y-4">
                       {/* Summary View */}
                       <div className="flex flex-wrap items-center gap-3 justify-between">
                         <h3 className="font-semibold">هزینه قرارداد</h3>
