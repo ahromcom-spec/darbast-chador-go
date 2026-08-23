@@ -2664,7 +2664,7 @@ export default function ExecutiveOrders() {
             if (tp > 0) return tp;
             try {
               const n = typeof selectedOrder.notes === 'string' ? JSON.parse(selectedOrder.notes) : selectedOrder.notes;
-              return Number(n?.total_price) || 0;
+              return Number(n?.total_price) || Number(n?.estimated_price) || Number(n?.estimatedPrice) || Number(n?.manager_set_price) || 0;
             } catch { return 0; }
           })()}
           onPaymentSuccess={fetchOrders}
