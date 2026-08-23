@@ -1,7 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { isAdminImpersonating } from './impersonation';
 import { extractOrderDescription } from './orderDescription';
-import { getNextAllowedSendTime } from './smsSendWindow';
+import { getNextAllowedSendTimeFresh } from './smsSendWindow';
 
 // شماره مدیرعامل برای ارسال پیامک
 export const CEO_PHONE = '09125511494';
@@ -221,7 +221,7 @@ export const sendOrderSms = async (
   }
   // بازه زمانی مجاز ارسال پیامک: خارج از بازه، پیامک در صف قرار می‌گیرد
   try {
-    const sendAfter = getNextAllowedSendTime();
+    const sendAfter = await getNextAllowedSendTimeFresh();
     if (sendAfter) {
       const { data: userRes } = await supabase.auth.getUser();
       const { error: queueError } = await supabase.from('scheduled_sms').insert({

@@ -55,6 +55,7 @@ serve(async (req: Request): Promise<Response> => {
             orderCode: row.order_code,
             orderId: row.order_id ?? undefined,
             status: row.status_key,
+            bypassWindow: true,
           }),
         });
 
