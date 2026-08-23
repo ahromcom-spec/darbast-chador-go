@@ -55,6 +55,12 @@ function SimpleLeafletMapInner({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const mapboxTokenRef = useRef<string | null>(null);
+  const placeMarkerRef = useRef<((lat: number, lng: number) => void) | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+  const [centerPin, setCenterPin] = useState<{ lat: number; lng: number } | null>(null);
+  const [existingLocations, setExistingLocations] = useState<Array<{ id: string; lat: number; lng: number; title: string | null }>>([]);
+  const [snapTarget, setSnapTarget] = useState<{ id: string; lat: number; lng: number; title: string | null } | null>(null);
+
 
   const toggleFullscreen = async () => {
     const wrapper = mapWrapperRef.current;
