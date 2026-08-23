@@ -35,55 +35,41 @@ const normalizeIranPhone = (input: string) => {
   return raw;
 };
 
-// تابع برای تبدیل تاریخ میلادی به شمسی
+// تاریخ و ساعت شمسی به وقت ایران (Asia/Tehran)
+const IRAN_TZ = "Asia/Tehran";
+
+const toEnDigits = (v: string) =>
+  v.replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d)))
+   .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+
 function toJalali(date: Date): string {
-  const gyear = date.getFullYear();
-  const gm = date.getMonth() + 1;
-  const gd = date.getDate();
-  
-  const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
-  let jy = gyear <= 1600 ? 0 : 979;
-  if (gyear <= 1600) {
-    jy = 0;
-  } else {
-    jy = 979 + 33;
-  }
-  
-  const gy2 = gyear <= 1600 ? gyear - 621 : gyear - 1600;
-  let days = (365 * gy2) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) - 80 + gd + g_d_m[gm - 1];
-  
-  if (gm > 2) {
-    days += ((gyear % 4 === 0 && gyear % 100 !== 0) || gyear % 400 === 0) ? 1 : 0;
-  }
-  
-  jy += 33 * Math.floor(days / 12053);
-  days %= 12053;
-  jy += 4 * Math.floor(days / 1461);
-  days %= 1461;
-  
-  if (days > 365) {
-    jy += Math.floor((days - 1) / 365);
-    days = (days - 1) % 365;
-  }
-  
-  let jm, jd;
-  if (days < 186) {
-    jm = 1 + Math.floor(days / 31);
-    jd = 1 + (days % 31);
-  } else {
-    jm = 7 + Math.floor((days - 186) / 30);
-    jd = 1 + ((days - 186) % 30);
-  }
-  
-  return `${jy}/${jm.toString().padStart(2, '0')}/${jd.toString().padStart(2, '0')}`;
+  const parts = new Intl.DateTimeFormat("en-US-u-ca-persian-nu-latn", {
+    timeZone: IRAN_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const get = (t: string) => toEnDigits(parts.find((p) => p.type === t)?.value || "");
+  const year = get("year").replace(/[^0-9]/g, "");
+  return `${year}/${get("month")}/${get("day")}`;
+}
+
+function formatIranClock(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: IRAN_TZ,
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+  }).formatToParts(date);
+  const get = (t: string) => toEnDigits(parts.find((p) => p.type === t)?.value || "00");
+  let hour = get("hour");
+  if (hour === "24") hour = "00";
+  return `${hour.padStart(2, "0")}:${get("minute").padStart(2, "0")}`;
 }
 
 function formatPersianDateTime(): string {
   const now = new Date();
-  const jalaliDate = toJalali(now);
-  const hours = now.getHours().toString().padStart(2, '0');
-  const minutes = now.getMinutes().toString().padStart(2, '0');
-  return `${jalaliDate} ساعت ${hours}:${minutes}`;
+  return `${toJalali(now)} ساعت ${formatIranClock(now)}`;
 }
 
 // برچسب وضعیت سفارش که داخل serviceType جای داده می‌شود (الگوی پیامک توسط پارس‌گرین تایید شده و نباید تغییر کند)
