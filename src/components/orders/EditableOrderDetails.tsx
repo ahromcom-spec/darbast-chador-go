@@ -838,8 +838,26 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
           {/* Multi-scaffold per-item pricing (expert pricing requests) */}
           {hasExpertScaffolds ? (
             <div className="bg-white dark:bg-amber-900/50 rounded-lg p-4 border border-amber-200 dark:border-amber-600 space-y-4">
-              {expertScaffolds.map((sc, i) => {
-                const ed = scaffoldEdits[i] || { label: '', description: '', dimensions: [] };
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-sm font-bold text-amber-800 dark:text-amber-200 flex items-center gap-1">
+                  <Layers className="h-4 w-4" />
+                  آیتم‌های داربست ({scaffoldEdits.length.toLocaleString('fa-IR')})
+                </span>
+                {isEditing ? (
+                  <Button type="button" size="sm" variant="outline" onClick={addScaffoldItem} className="gap-1">
+                    <Plus className="h-4 w-4" />
+                    افزودن آیتم جدید
+                  </Button>
+                ) : (
+                  <Button type="button" size="sm" variant="outline" onClick={() => setIsEditing(true)} className="gap-1">
+                    <Edit className="h-4 w-4" />
+                    ویرایش آیتم‌ها
+                  </Button>
+                )}
+              </div>
+
+              {scaffoldEdits.map((ed, i) => {
+                const sc = ed.orig || {};
                 const editableDims = ed.dimensions;
                 const liveArea = isEditing ? calcDimsArea(editableDims) : calcScaffoldArea(sc);
                 const liveUnit = isEditing ? dimsUnit(editableDims) : scaffoldAreaUnit(sc);
@@ -856,7 +874,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                 };
                 return (
                   <div key={i} className="space-y-2 p-3 bg-muted/30 rounded-lg border">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
                       {isEditing ? (
                         <Input
                           value={ed.label}
@@ -865,14 +883,60 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                           className="text-sm font-bold max-w-[220px]"
                         />
                       ) : (
-                        <Label className="text-sm font-bold">{sc.label || `داربست ${i + 1}`}</Label>
+                        <Label className="text-sm font-bold">{ed.label || sc.label || `داربست ${i + 1}`}</Label>
                       )}
-                      {liveArea > 0 && (
-                        <Badge variant="outline">
-                          {liveArea.toLocaleString('fa-IR', { maximumFractionDigits: 2 })} {liveUnit}
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {liveArea > 0 && (
+                          <Badge variant="outline">
+                            {liveArea.toLocaleString('fa-IR', { maximumFractionDigits: 2 })} {liveUnit}
+                          </Badge>
+                        )}
+                        {isEditing && (
+                          <>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-muted-foreground"
+                              onClick={() => duplicateScaffoldItem(i)}
+                              title="کپی این آیتم"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-destructive hover:text-destructive"
+                              onClick={() => setConfirmDeleteExpert(i)}
+                              title="حذف این آیتم"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
+
+                    {isEditing && confirmDeleteExpert === i && (
+                      <div className="flex items-center justify-between gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/30">
+                        <span className="text-xs text-destructive font-medium">این آیتم حذف شود؟</span>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            className="h-7"
+                            onClick={() => { removeScaffoldItem(i); setConfirmDeleteExpert(null); }}
+                          >
+                            حذف
+                          </Button>
+                          <Button type="button" size="sm" variant="outline" className="h-7" onClick={() => setConfirmDeleteExpert(null)}>
+                            انصراف
+                          </Button>
+                        </div>
+                      </div>
+                    )}
 
                     {isEditing ? (
                       <div className="space-y-2">
@@ -881,7 +945,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                           <p className="text-xs text-muted-foreground">ابعادی ثبت نشده.</p>
                         )}
                         {editableDims.map((d, dIdx) => (
-                          <div key={dIdx} className="grid grid-cols-3 gap-2">
+                          <div key={dIdx} className="flex gap-2 items-center">
                             <Input
                               value={d.length}
                               onChange={(e) => updateDim(dIdx, 'length', e.target.value)}
@@ -900,6 +964,16 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                               placeholder="ارتفاع"
                               dir="ltr"
                             />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-9 px-2 text-destructive hover:text-destructive shrink-0"
+                              onClick={() => updateEd({ dimensions: editableDims.filter((_, x) => x !== dIdx) })}
+                              title="حذف این ردیف ابعاد"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         ))}
                         <div className="flex gap-2">
@@ -911,16 +985,6 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                           >
                             + افزودن بُعد
                           </Button>
-                          {editableDims.length > 0 && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => updateEd({ dimensions: editableDims.slice(0, -1) })}
-                            >
-                              حذف آخرین
-                            </Button>
-                          )}
                         </div>
                       </div>
                     ) : (
@@ -941,9 +1005,9 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                           rows={2}
                         />
                       ) : (
-                        sc.description ? (
+                        ed.description ? (
                           <p className="text-xs text-muted-foreground bg-background/60 p-2 rounded border">
-                            📝 {sc.description}
+                            📝 {ed.description}
                           </p>
                         ) : <p className="text-xs text-muted-foreground">—</p>
                       )}
@@ -970,6 +1034,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                   </div>
                 );
               })}
+
 
 
               {/* Grand Total + Save */}
