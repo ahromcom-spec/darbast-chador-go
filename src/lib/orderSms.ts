@@ -130,15 +130,29 @@ export const resolveOrderSmsDetails = async (orderId?: string | null): Promise<{
     serviceType = subcategory?.name || undefined;
   }
 
+  // مبلغ سفارش: اولویت total_price، سپس مبلغ پرداخت/قیمت محاسبه‌شده ذخیره‌شده در notes
+  const amountCandidates = [
+    (order as any).total_price,
+    (order as any).payment_amount,
+    notes?.manual_price_override,
+    notes?.estimated_price,
+    notes?.multi_summary?.grandTotal,
+    notes?.price_breakdown?.total,
+  ];
+  const resolvedAmount = amountCandidates
+    .map((v) => Number(v))
+    .find((v) => Number.isFinite(v) && v > 0);
+
   return {
     phone: isValidIranMobile(phone) ? phone : undefined,
     orderCode: (order as any).code || undefined,
     customerName,
     address: buildOrderSmsAddress((order as any).address, (order as any).detailed_address),
     serviceType: serviceType || 'خدمات',
-    amount: Number((order as any).total_price) > 0 ? Number((order as any).total_price) : undefined,
+    amount: resolvedAmount,
     description: extractOrderDescription((order as any).notes) || undefined,
   };
+
 };
 
 
