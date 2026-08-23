@@ -531,6 +531,20 @@ export default function SmsManagementModule() {
                         <TableCell className="text-[10px] text-muted-foreground max-w-[200px] truncate" title={l.provider_response || ""}>
                           {l.provider_response || "—"}
                         </TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs whitespace-nowrap"
+                            disabled={resending === l.id || !l.message}
+                            onClick={() => resendLog(l)}
+                          >
+                            {resending === l.id
+                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              : <RotateCcw className="h-3.5 w-3.5 ml-1" />}
+                            ارسال مجدد
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
