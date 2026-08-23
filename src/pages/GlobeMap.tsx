@@ -60,9 +60,20 @@ const GlobeMap = () => {
     return () => clearTimeout(timer);
   }, [retryKey]);
 
+  // کلید بازگشت مرورگر/گوشی: خروج از نقشه و رفتن به صفحه نخست
+  useEffect(() => {
+    window.history.pushState({ globeGuard: true }, '');
+    const onPop = () => {
+      navigate('/', { replace: true });
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [navigate]);
+
   const handleClose = useCallback(() => {
     navigate('/');
   }, [navigate]);
+
 
   const handleRetry = useCallback(() => {
     setIsReady(false);
