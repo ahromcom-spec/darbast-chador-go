@@ -82,9 +82,10 @@ export const resolveOrderSmsDetails = async (orderId?: string | null): Promise<{
 
   const { data: order } = await supabase
     .from('projects_v3')
-    .select('code, customer_id, customer_name, customer_phone, address, detailed_address, notes, subcategory_id, total_price')
+    .select('code, customer_id, customer_name, customer_phone, address, detailed_address, notes, subcategory_id, total_price, payment_amount')
     .eq('id', orderId)
     .maybeSingle();
+
 
 
   if (!order) return {};
@@ -129,15 +130,29 @@ export const resolveOrderSmsDetails = async (orderId?: string | null): Promise<{
     serviceType = subcategory?.name || undefined;
   }
 
+  // مبلغ سفارش: اولویت total_price، سپس مبلغ پرداخت/قیمت محاسبه‌شده ذخیره‌شده در notes
+  const amountCandidates = [
+    (order as any).total_price,
+    (order as any).payment_amount,
+    notes?.manual_price_override,
+    notes?.estimated_price,
+    notes?.multi_summary?.grandTotal,
+    notes?.price_breakdown?.total,
+  ];
+  const resolvedAmount = amountCandidates
+    .map((v) => Number(v))
+    .find((v) => Number.isFinite(v) && v > 0);
+
   return {
     phone: isValidIranMobile(phone) ? phone : undefined,
     orderCode: (order as any).code || undefined,
     customerName,
     address: buildOrderSmsAddress((order as any).address, (order as any).detailed_address),
     serviceType: serviceType || 'خدمات',
-    amount: Number((order as any).total_price) > 0 ? Number((order as any).total_price) : undefined,
+    amount: resolvedAmount,
     description: extractOrderDescription((order as any).notes) || undefined,
   };
+
 };
 
 
@@ -270,23 +285,49 @@ export const sendCeoNotificationSms = async (
   try {
     // ارسال پیامک با وضعیت خاص برای مدیرعامل
     const ceoStatus = status === 'submitted' ? 'ceo_new_order' : 'ceo_payment';
-    
-    console.log(`[sendCeoNotificationSms] Sending CEO SMS - Order: ${orderCode}, Status: ${ceoStatus}, Details:`, details);
-    
+
+    // تکمیل اطلاعات ناقص (مخصوصاً مبلغ سفارش) از روی خود سفارش
+    let ceoDetails: OrderSmsDetails = { ...(details || {}) };
+    if (
+      ceoDetails.orderId &&
+      (ceoDetails.amount === undefined ||
+        !ceoDetails.address ||
+        !ceoDetails.serviceType ||
+        !ceoDetails.customerName ||
+        !ceoDetails.description)
+    ) {
+      try {
+        const resolved = await resolveOrderSmsDetails(ceoDetails.orderId);
+        ceoDetails = {
+          ...ceoDetails,
+          address: ceoDetails.address || resolved.address,
+          serviceType: ceoDetails.serviceType || resolved.serviceType,
+          customerName: ceoDetails.customerName || resolved.customerName,
+          description: ceoDetails.description || resolved.description,
+          amount: ceoDetails.amount ?? resolved.amount,
+        };
+      } catch (e) {
+        console.warn('[sendCeoNotificationSms] Could not resolve order details:', e);
+      }
+    }
+
+    console.log(`[sendCeoNotificationSms] Sending CEO SMS - Order: ${orderCode}, Status: ${ceoStatus}, Details:`, ceoDetails);
+
     const { data, error } = await supabase.functions.invoke('send-order-sms', {
       body: { 
         phone: CEO_PHONE, 
         orderCode, 
-        orderId: details?.orderId,
+        orderId: ceoDetails.orderId,
         status: ceoStatus,
-        serviceType: details?.serviceType,
-        address: details?.address,
-        dateTime: details?.dateTime,
-        amount: details?.amount,
-        customerName: details?.customerName,
-        description: details?.description
+        serviceType: ceoDetails.serviceType,
+        address: ceoDetails.address,
+        dateTime: ceoDetails.dateTime,
+        amount: ceoDetails.amount,
+        customerName: ceoDetails.customerName,
+        description: ceoDetails.description
       }
     });
+
 
     if (error) {
       console.error('[sendCeoNotificationSms] Error:', error);
