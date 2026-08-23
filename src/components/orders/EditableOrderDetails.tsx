@@ -379,7 +379,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   });
   const [scaffoldPrices, setScaffoldPrices] = useState<string[]>(initialScaffoldPrices);
   const [savedScaffoldPrices, setSavedScaffoldPrices] = useState<string[]>(initialScaffoldPrices);
-  const isScaffoldPricesChanged = scaffoldPrices.some((v, i) => v !== (savedScaffoldPrices[i] ?? ''));
+  const isScaffoldPricesChanged = JSON.stringify(scaffoldPrices) !== JSON.stringify(savedScaffoldPrices);
 
   // Auto-sum to paymentAmount
   useEffect(() => {
@@ -390,34 +390,85 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
 
   // ===== Full-edit support for expert scaffolds (label, description, dimensions) =====
   type DimRow = { length: string; width: string; height: string };
+  const emptyDimRow = (): DimRow => ({ length: '', width: '', height: '' });
   const buildDimRows = (dims: any[]): DimRow[] => (Array.isArray(dims) ? dims : []).map((d: any) => ({
     length: d?.length != null ? String(d.length) : '',
     width: d?.width != null ? String(d.width) : '',
     height: d?.height != null ? String(d.height) : '',
   }));
-  type ScaffoldEdit = { label: string; description: string; dimensions: DimRow[] };
+  type ScaffoldEdit = { label: string; description: string; dimensions: DimRow[]; orig?: any };
   const initialScaffoldEdits: ScaffoldEdit[] = expertScaffolds.map((sc: any) => ({
     label: sc.label || '',
     description: sc.description || '',
     dimensions: buildDimRows(sc.dimensions),
+    orig: sc,
   }));
   const [scaffoldEdits, setScaffoldEdits] = useState<ScaffoldEdit[]>(initialScaffoldEdits);
   const initialScaffoldEditsSer = JSON.stringify(initialScaffoldEdits);
   const isScaffoldEditsChanged = JSON.stringify(scaffoldEdits) !== initialScaffoldEditsSer;
 
+  // Add / duplicate / remove an expert-scaffold item (keeps prices aligned)
+  const addScaffoldItem = () => {
+    setScaffoldEdits([...scaffoldEdits, { label: '', description: '', dimensions: [emptyDimRow()], orig: {} }]);
+    setScaffoldPrices([...scaffoldPrices, '']);
+  };
+  const duplicateScaffoldItem = (i: number) => {
+    const src = scaffoldEdits[i];
+    const copy: ScaffoldEdit = {
+      label: src.label ? `${src.label} (کپی)` : '',
+      description: src.description,
+      dimensions: src.dimensions.map(d => ({ ...d })),
+      orig: { ...(src.orig || {}) },
+    };
+    const nextEdits = [...scaffoldEdits];
+    nextEdits.splice(i + 1, 0, copy);
+    const nextPrices = [...scaffoldPrices];
+    nextPrices.splice(i + 1, 0, scaffoldPrices[i] || '');
+    setScaffoldEdits(nextEdits);
+    setScaffoldPrices(nextPrices);
+  };
+  const removeScaffoldItem = (i: number) => {
+    setScaffoldEdits(scaffoldEdits.filter((_, idx) => idx !== i));
+    setScaffoldPrices(scaffoldPrices.filter((_, idx) => idx !== i));
+  };
+
   // ===== Multi-scaffolds (snapshot-based) full edit =====
   const initialMultiScaffolds: any[] = Array.isArray(parsedNotes?.multi_scaffolds) ? parsedNotes.multi_scaffolds : [];
   const hasMultiScaffolds = initialMultiScaffolds.length > 0;
-  type MultiScaffoldEdit = { label: string; description: string; dimensions: DimRow[]; finalPrice: string };
+  type MultiScaffoldEdit = { label: string; description: string; dimensions: DimRow[]; finalPrice: string; orig?: any };
   const initialMultiScaffoldsEdit: MultiScaffoldEdit[] = initialMultiScaffolds.map((it: any) => ({
     label: it.label || '',
     description: it.snapshot?.locationPurpose || it.description || '',
     dimensions: buildDimRows(it.snapshot?.dimensions),
     finalPrice: it.finalPrice != null ? String(it.finalPrice) : '',
+    orig: it,
   }));
   const [multiScaffoldsEdit, setMultiScaffoldsEdit] = useState<MultiScaffoldEdit[]>(initialMultiScaffoldsEdit);
   const initialMultiScaffoldsEditSer = JSON.stringify(initialMultiScaffoldsEdit);
   const isMultiScaffoldsChanged = JSON.stringify(multiScaffoldsEdit) !== initialMultiScaffoldsEditSer;
+
+  const addMultiScaffoldItem = () => {
+    setMultiScaffoldsEdit([
+      ...multiScaffoldsEdit,
+      { label: '', description: '', dimensions: [emptyDimRow()], finalPrice: '', orig: {} },
+    ]);
+  };
+  const duplicateMultiScaffoldItem = (i: number) => {
+    const src = multiScaffoldsEdit[i];
+    const copy: MultiScaffoldEdit = {
+      label: src.label ? `${src.label} (کپی)` : '',
+      description: src.description,
+      dimensions: src.dimensions.map(d => ({ ...d })),
+      finalPrice: src.finalPrice,
+      orig: { ...(src.orig || {}) },
+    };
+    const next = [...multiScaffoldsEdit];
+    next.splice(i + 1, 0, copy);
+    setMultiScaffoldsEdit(next);
+  };
+  const removeMultiScaffoldItem = (i: number) => {
+    setMultiScaffoldsEdit(multiScaffoldsEdit.filter((_, idx) => idx !== i));
+  };
 
   const calcDimsArea = (dims: DimRow[]) => {
     const hasW = dims.some(d => parseLocalizedNumber(d?.width) > 0);
