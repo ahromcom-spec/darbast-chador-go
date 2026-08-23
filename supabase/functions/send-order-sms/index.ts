@@ -136,6 +136,7 @@ interface SmsRequest {
   amount?: number;
   customerName?: string; // نام مشتری برای پیامک مدیرعامل
   description?: string; // شرح فعالیت سفارش
+  resendMessage?: string; // ارسال مجدد متن پیامک قبلی (بدون قالب) با تاریخ جدید
 }
 
 const handler = async (req: Request): Promise<Response> => {
