@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { isAdminImpersonating } from './impersonation';
+import { extractOrderDescription } from './orderDescription';
 
 // شماره مدیرعامل برای ارسال پیامک
 export const CEO_PHONE = '09125511494';
@@ -23,6 +24,7 @@ interface OrderSmsDetails {
   dateTime?: string;      // تاریخ و زمان شمسی
   amount?: number;        // مبلغ سفارش
   customerName?: string;  // نام مشتری (برای پیامک به مدیرعامل)
+  description?: string;   // شرح فعالیت سفارش
 }
 
 const normalizeIranPhone = (input?: string | null) => {
@@ -74,6 +76,7 @@ export const resolveOrderSmsDetails = async (orderId?: string | null): Promise<{
   address?: string;
   serviceType?: string;
   amount?: number;
+  description?: string;
 }> => {
   if (!orderId) return {};
 
@@ -133,6 +136,7 @@ export const resolveOrderSmsDetails = async (orderId?: string | null): Promise<{
     address: buildOrderSmsAddress((order as any).address, (order as any).detailed_address),
     serviceType: serviceType || 'خدمات',
     amount: Number((order as any).total_price) > 0 ? Number((order as any).total_price) : undefined,
+    description: extractOrderDescription((order as any).notes) || undefined,
   };
 };
 
@@ -153,7 +157,7 @@ export const sendOrderSms = async (
   let targetOrderCode = orderCode;
   let smsDetails: OrderSmsDetails = { ...(details || {}) };
 
-  if (details?.orderId && (!isValidIranMobile(targetPhone) || !targetOrderCode || !smsDetails.address || !smsDetails.serviceType || !smsDetails.customerName || smsDetails.amount === undefined)) {
+  if (details?.orderId && (!isValidIranMobile(targetPhone) || !targetOrderCode || !smsDetails.address || !smsDetails.serviceType || !smsDetails.customerName || !smsDetails.description || smsDetails.amount === undefined)) {
     try {
       const resolved = await resolveOrderSmsDetails(details.orderId);
       if (!isValidIranMobile(targetPhone) && resolved.phone) targetPhone = resolved.phone;
@@ -163,6 +167,7 @@ export const sendOrderSms = async (
         address: smsDetails.address || resolved.address,
         serviceType: smsDetails.serviceType || resolved.serviceType,
         customerName: smsDetails.customerName || resolved.customerName,
+        description: smsDetails.description || resolved.description,
         amount: smsDetails.amount ?? resolved.amount,
       };
     } catch (e) {
@@ -214,7 +219,8 @@ export const sendOrderSms = async (
         address: smsDetails.address,
         dateTime: smsDetails.dateTime,
         amount: smsDetails.amount,
-        customerName: smsDetails.customerName
+        customerName: smsDetails.customerName,
+        description: smsDetails.description
       }
     });
 
@@ -242,6 +248,7 @@ export const sendOrderStageSms = async (
     address: resolved.address,
     serviceType: resolved.serviceType,
     customerName: resolved.customerName,
+    description: resolved.description,
     amount: resolved.amount,
     ...(details || {}),
   });
