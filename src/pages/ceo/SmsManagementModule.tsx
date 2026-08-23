@@ -96,6 +96,33 @@ export default function SmsManagementModule() {
   const [stats, setStats] = useState({ sentToday: 0, failedToday: 0, total: 0 });
   const [walletBalance, setWalletBalance] = useState<string | null>(null);
   const [walletLoading, setWalletLoading] = useState(false);
+  const [resending, setResending] = useState<string | null>(null);
+
+  const resendLog = async (l: SmsLog) => {
+    if (!l.message || !l.recipient) {
+      toast.error("متن یا شماره گیرنده برای ارسال مجدد موجود نیست");
+      return;
+    }
+    setResending(l.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-order-sms", {
+        body: {
+          phone: l.recipient,
+          orderCode: l.order_code || "-",
+          status: l.template_key || "resend",
+          resendMessage: l.message,
+        },
+      });
+      if (error) throw error;
+      if (data && (data as any).success === false) throw new Error((data as any).error || "ارسال مجدد ناموفق بود");
+      toast.success("پیامک با تاریخ جدید مجدداً ارسال شد");
+      load();
+    } catch (e: any) {
+      toast.error("خطا در ارسال مجدد: " + (e?.message || ""));
+    } finally {
+      setResending(null);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -478,11 +505,12 @@ export default function SmsManagementModule() {
                       <TableHead>وضعیت</TableHead>
                       <TableHead className="min-w-[260px]">متن پیامک</TableHead>
                       <TableHead>پاسخ سرویس‌دهنده</TableHead>
+                      <TableHead>ارسال مجدد</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {logs.length === 0 && (
-                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                         گزارشی ثبت نشده است.
                       </TableCell></TableRow>
                     )}
@@ -502,6 +530,20 @@ export default function SmsManagementModule() {
                         <TableCell className="text-xs whitespace-pre-wrap max-w-[320px]">{l.message}</TableCell>
                         <TableCell className="text-[10px] text-muted-foreground max-w-[200px] truncate" title={l.provider_response || ""}>
                           {l.provider_response || "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs whitespace-nowrap"
+                            disabled={resending === l.id || !l.message}
+                            onClick={() => resendLog(l)}
+                          >
+                            {resending === l.id
+                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              : <RotateCcw className="h-3.5 w-3.5 ml-1" />}
+                            ارسال مجدد
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}

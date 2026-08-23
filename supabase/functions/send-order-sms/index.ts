@@ -136,6 +136,7 @@ interface SmsRequest {
   amount?: number;
   customerName?: string; // نام مشتری برای پیامک مدیرعامل
   description?: string; // شرح فعالیت سفارش
+  resendMessage?: string; // ارسال مجدد متن پیامک قبلی (بدون قالب) با تاریخ جدید
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -145,7 +146,8 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { phone, orderCode, orderId, status, serviceType, address, dateTime, amount, customerName, description }: SmsRequest = await req.json();
+    const { phone, orderCode, orderId, status, serviceType, address, dateTime, amount, customerName, description, resendMessage }: SmsRequest = await req.json();
+    const isResend = typeof resendMessage === "string" && resendMessage.trim().length > 0;
     
     console.log(`[send-order-sms] Received request - Phone: ${phone}, Order: ${orderCode}, Status: ${status}, Service: ${serviceType}, Address: ${address}, Amount: ${amount}, Customer: ${customerName}`);
 
@@ -224,6 +226,10 @@ const handler = async (req: Request): Promise<Response> => {
     // Get SMS template — prefer DB-managed template, fallback to in-code default
     let template = SMS_TEMPLATES[status];
     let dbTpl: any = null;
+    if (isResend) {
+      // ارسال مجدد: همان متن قبلی، فقط تاریخ به تاریخ جدید به‌روزرسانی می‌شود
+      template = resendMessage!;
+    } else {
     try {
       const { data: tplRow } = await supabase
         .from("sms_templates")
@@ -279,6 +285,9 @@ const handler = async (req: Request): Promise<Response> => {
           { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } });
       }
     } catch (_) { /* ignore */ }
+    }
+
+
 
 
     // تاریخ و زمان شمسی
@@ -328,6 +337,16 @@ const handler = async (req: Request): Promise<Response> => {
       .replaceAll("{paymentLink}", paymentLink)
       .replaceAll("{customerName}", customerName || "مشتری")
       .replaceAll("{description}", (description || "").toString().trim() || "ثبت نشده");
+
+    // ارسال مجدد: تاریخ و ساعت داخل متن با تاریخ جدید جایگزین شود
+    if (isResend) {
+      const dateLine = /تاریخ:\s*[^\n]*/;
+      if (dateLine.test(message)) {
+        message = message.replace(dateLine, `تاریخ: ${persianDateTime}`);
+      } else {
+        message = `${message}\nتاریخ: ${persianDateTime}`;
+      }
+    }
 
 
 
