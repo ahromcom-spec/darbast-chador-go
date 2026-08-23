@@ -16,10 +16,59 @@ import {
 import { toast } from 'sonner';
 import {
   getSmsSendWindow,
-  setSmsSendWindow,
+  fetchSmsSendWindow,
+  saveSmsSendWindow,
   formatSmsWindowLabel,
   type SmsSendWindow,
 } from '@/lib/smsSendWindow';
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+const HOURS = Array.from({ length: 24 }, (_, i) => pad2(i));
+const MINUTES = Array.from({ length: 12 }, (_, i) => pad2(i * 5));
+
+/** انتخابگر ساعت ۲۴ ساعته (ساعت و دقیقه جداگانه) */
+function TimePicker24({
+  value,
+  disabled,
+  onChange,
+  idPrefix,
+}: {
+  value: string;
+  disabled?: boolean;
+  onChange: (v: string) => void;
+  idPrefix: string;
+}) {
+  const [h = '09', m = '00'] = (value || '09:00').split(':');
+  const base =
+    'h-9 rounded-md border border-input bg-background px-2 text-sm disabled:opacity-50';
+  return (
+    <div className="flex items-center gap-1" dir="ltr">
+      <select
+        id={`${idPrefix}-hour`}
+        className={base}
+        disabled={disabled}
+        value={h}
+        onChange={(e) => onChange(`${e.target.value}:${m}`)}
+      >
+        {HOURS.map((hh) => (
+          <option key={hh} value={hh}>{hh}</option>
+        ))}
+      </select>
+      <span className="text-muted-foreground">:</span>
+      <select
+        id={`${idPrefix}-minute`}
+        className={base}
+        disabled={disabled}
+        value={MINUTES.includes(m) ? m : '00'}
+        onChange={(e) => onChange(`${h}:${e.target.value}`)}
+      >
+        {MINUTES.map((mm) => (
+          <option key={mm} value={mm}>{mm}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
 interface SmsSendWindowButtonProps {
   /** نمایش فشرده (فقط آیکون) در کنار کلید خاموش/روشن پیامک */
@@ -39,16 +88,29 @@ export function SmsSendWindowButton({ compact = true, className }: SmsSendWindow
   }, []);
 
   useEffect(() => {
-    if (open) setDraft(getSmsSendWindow());
+    fetchSmsSendWindow().then(setWin).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      fetchSmsSendWindow().then((w) => {
+        setWin(w);
+        setDraft(w);
+      }).catch(() => setDraft(getSmsSendWindow()));
+    }
   }, [open]);
 
-  const save = () => {
-    const saved = setSmsSendWindow(draft);
+  const save = async () => {
+    const { win: saved, error } = await saveSmsSendWindow(draft);
+    if (error) {
+      toast.error('ذخیره بازه زمانی ارسال پیامک انجام نشد');
+      return;
+    }
     setWin(saved);
     setOpen(false);
     toast.success(
       saved.enabled
-        ? `پیامک‌ها فقط بین ساعت ${saved.start} تا ${saved.end} به مشتری ارسال می‌شوند`
+        ? `پیامک‌ها فقط بین ساعت ${saved.start} تا ${saved.end} (به وقت تهران) به مشتری ارسال می‌شوند`
         : 'محدودیت زمانی ارسال پیامک غیرفعال شد'
     );
   };
@@ -102,32 +164,28 @@ export function SmsSendWindowButton({ compact = true, className }: SmsSendWindow
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="sms-window-start" className="text-xs">از ساعت</Label>
-              <Input
-                id="sms-window-start"
-                type="time"
-                dir="ltr"
+              <Label className="text-xs">از ساعت (۲۴ ساعته)</Label>
+              <TimePicker24
+                idPrefix="sms-window-start"
                 value={draft.start}
                 disabled={!draft.enabled}
-                onChange={(e) => setDraft((d) => ({ ...d, start: e.target.value }))}
+                onChange={(v) => setDraft((d) => ({ ...d, start: v }))}
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="sms-window-end" className="text-xs">تا ساعت</Label>
-              <Input
-                id="sms-window-end"
-                type="time"
-                dir="ltr"
+              <Label className="text-xs">تا ساعت (۲۴ ساعته)</Label>
+              <TimePicker24
+                idPrefix="sms-window-end"
                 value={draft.end}
                 disabled={!draft.enabled}
-                onChange={(e) => setDraft((d) => ({ ...d, end: e.target.value }))}
+                onChange={(v) => setDraft((d) => ({ ...d, end: v }))}
               />
             </div>
           </div>
 
           <p className="text-xs text-muted-foreground">
             نمونه: با تنظیم ۰۹:۰۰ تا ۲۱:۰۰، پیامکی که ساعت ۲ بامداد ایجاد شود، ساعت ۹ صبح برای مشتری
-            ارسال می‌شود.
+            ارسال می‌شود. تمام ساعت‌ها به وقت تهران است.
           </p>
         </div>
 
