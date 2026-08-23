@@ -3069,13 +3069,33 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
     };
   }, [mapReady]);
 
-
+  // اگر نوار «مشاهده حساب کاربر» (impersonation) بالای صفحه باشد، نقشه تمام‌صفحه را پایین‌تر شروع کن
+  // تا سربرگ و کلید بازگشت زیر آن پنهان نشود
+  const [topOffset, setTopOffset] = useState(0);
+  useEffect(() => {
+    if (embedded) return;
+    const measure = () => {
+      const banner = document.querySelector('[data-impersonation-banner]') as HTMLElement | null;
+      setTopOffset(banner ? banner.getBoundingClientRect().height : 0);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    const id = window.setInterval(measure, 1000);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.clearInterval(id);
+    };
+  }, [embedded]);
 
   return (
-    <div className={embedded ? 'relative w-full h-[75vh] min-h-[420px] rounded-xl overflow-hidden border bg-background' : 'fixed inset-0 z-[70] flex flex-col bg-background'}>
+    <div
+      className={embedded ? 'relative w-full h-[75vh] min-h-[420px] rounded-xl overflow-hidden border bg-background' : 'fixed inset-x-0 bottom-0 z-[70] flex flex-col bg-background'}
+      style={embedded ? undefined : { top: topOffset }}
+    >
       {/* سربرگ بالای نقشه (نوار اطلاعات و بازگشت) */}
       {!embedded && (
         <div className="shrink-0 z-[80] border-b bg-card/95 backdrop-blur-sm shadow-sm">
+
           <div className="container mx-auto px-3 py-2 sm:px-4 sm:py-3">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 min-w-0">
