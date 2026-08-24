@@ -2335,7 +2335,7 @@ export default function OrderDetail() {
                         </div>
 
                         {/* اسلایدر پرداخت علی‌الحساب */}
-                        {showAdvancePayment && (() => {
+                        {showAdvancePayment && paidAmount === 0 && (() => {
                           // حداقل ۲ میلیون تومان برای علی‌الحساب
                           const MIN_ADVANCE_THRESHOLD = 2_000_000;
                           // حداقل ۳۰٪ باقی‌مانده، ولی حداقل ۲ میلیون تومان
