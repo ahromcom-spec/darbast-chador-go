@@ -43,6 +43,7 @@ serve(async (req) => {
     let order_id: string | null = null;
     let statement_id: string | null = null;
     let pay_all = false;
+    let hintedAmount = 0;
 
     if (req.method === 'POST') {
       try {
@@ -52,6 +53,7 @@ serve(async (req) => {
         order_id = body.order_id ?? null;
         statement_id = body.statement_id ?? null;
         pay_all = body.pay_all === true || body.pay_all === '1';
+        hintedAmount = Math.round(Number(body.amount ?? body.hinted_amount ?? 0)) || 0;
       } catch (parseError) {
         console.error('Error parsing JSON body:', parseError);
       }
@@ -118,7 +120,8 @@ serve(async (req) => {
     // and the full order price so a real partial payment is never lost (error -50).
     const totalPriceToman = Number(order.total_price ?? order.payment_amount ?? 0);
     const remainingToman = Math.max(totalPriceToman - Number(order.total_paid ?? 0), 0);
-    const candidates = [requestedAmount, remainingToman, totalPriceToman]
+    // hintedAmount is safe: ZarinPal only verifies the exact real transaction amount.
+    const candidates = [requestedAmount, hintedAmount, remainingToman, totalPriceToman]
       .map((n) => Math.round(Number(n) || 0))
       .filter((n) => n > 0)
       .filter((n, i, arr) => arr.indexOf(n) === i);
