@@ -113,21 +113,34 @@ serve(async (req) => {
     const ZARINPAL_MERCHANT_ID = '93f06023-423a-44d6-ac08-8ee0aa9ed257';
     const ZARINPAL_VERIFY_URL = 'https://api.zarinpal.com/pg/v4/payment/verify.json';
 
-    // Verify amount: prefer requestedAmount (handles over-payment); fallback to order.payment_amount
-    const verifyAmount = (requestedAmount > 0 ? requestedAmount : Number(order.payment_amount || 0)) * 10;
+    // Candidate amounts (Toman): the requested amount is authoritative, but if it
+    // is missing (e.g. the request log was not saved) we try the remaining amount
+    // and the full order price so a real partial payment is never lost (error -50).
+    const totalPriceToman = Number(order.total_price ?? order.payment_amount ?? 0);
+    const remainingToman = Math.max(totalPriceToman - Number(order.total_paid ?? 0), 0);
+    const candidates = [requestedAmount, remainingToman, totalPriceToman]
+      .map((n) => Math.round(Number(n) || 0))
+      .filter((n) => n > 0)
+      .filter((n, i, arr) => arr.indexOf(n) === i);
 
-    const verifyResponse = await fetch(ZARINPAL_VERIFY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        merchant_id: ZARINPAL_MERCHANT_ID,
-        amount: verifyAmount,
-        authority,
-      }),
-    });
+    let verifyData: any = null;
+    for (const candidate of candidates) {
+      const verifyResponse = await fetch(ZARINPAL_VERIFY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          merchant_id: ZARINPAL_MERCHANT_ID,
+          amount: candidate * 10,
+          authority,
+        }),
+      });
+      verifyData = await verifyResponse.json();
+      console.log('ZarinPal verify response for amount', candidate, verifyData);
+      const code = verifyData?.data?.code ?? verifyData?.errors?.code;
+      if (code === 100 || code === 101) break;
+      if (code !== -50) break; // only amount-mismatch is worth retrying
+    }
 
-    const verifyData = await verifyResponse.json();
-    console.log('ZarinPal verify response:', verifyData);
 
     if (verifyData.data && verifyData.data.code === 100) {
       const refID = verifyData.data.ref_id;
