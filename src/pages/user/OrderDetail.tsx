@@ -2309,8 +2309,9 @@ export default function OrderDetail() {
                             {paidAmount > 0 ? `پرداخت الباقی (${remainingAmount.toLocaleString('fa-IR')})` : 'پرداخت کامل'}
                           </Button>
                           
-                          {/* دکمه پرداخت علی‌الحساب - فقط اگر ۵۰٪ یا بیشتر پرداخت نشده و مانده ≥ ۱۰ میلیون */}
+                          {/* دکمه پرداخت علی‌الحساب - فقط یک بار در هر سفارش (تا وقتی هیچ پرداختی ثبت نشده) */}
                           {(() => {
+                            if (paidAmount > 0) return null;
                             const paidPercentage = grandTotal > 0 ? (paidAmount / grandTotal) * 100 : 0;
                             const showAdvanceButton = paidPercentage < 50 || remainingAmount >= 10_000_000;
                             if (!showAdvanceButton) return null;
