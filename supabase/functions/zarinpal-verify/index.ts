@@ -43,6 +43,7 @@ serve(async (req) => {
     let order_id: string | null = null;
     let statement_id: string | null = null;
     let pay_all = false;
+    let hintedAmount = 0;
 
     if (req.method === 'POST') {
       try {
@@ -52,6 +53,7 @@ serve(async (req) => {
         order_id = body.order_id ?? null;
         statement_id = body.statement_id ?? null;
         pay_all = body.pay_all === true || body.pay_all === '1';
+        hintedAmount = Math.round(Number(body.amount ?? body.hinted_amount ?? 0)) || 0;
       } catch (parseError) {
         console.error('Error parsing JSON body:', parseError);
       }
@@ -113,25 +115,47 @@ serve(async (req) => {
     const ZARINPAL_MERCHANT_ID = '93f06023-423a-44d6-ac08-8ee0aa9ed257';
     const ZARINPAL_VERIFY_URL = 'https://api.zarinpal.com/pg/v4/payment/verify.json';
 
-    // Verify amount: prefer requestedAmount (handles over-payment); fallback to order.payment_amount
-    const verifyAmount = (requestedAmount > 0 ? requestedAmount : Number(order.payment_amount || 0)) * 10;
+    // Candidate amounts (Toman): the requested amount is authoritative, but if it
+    // is missing (e.g. the request log was not saved) we try the remaining amount
+    // and the full order price so a real partial payment is never lost (error -50).
+    const totalPriceToman = Number(order.total_price ?? order.payment_amount ?? 0);
+    const remainingToman = Math.max(totalPriceToman - Number(order.total_paid ?? 0), 0);
+    // hintedAmount is safe: ZarinPal only verifies the exact real transaction amount.
+    const candidates = [requestedAmount, hintedAmount, remainingToman, totalPriceToman]
+      .map((n) => Math.round(Number(n) || 0))
+      .filter((n) => n > 0)
+      .filter((n, i, arr) => arr.indexOf(n) === i);
 
-    const verifyResponse = await fetch(ZARINPAL_VERIFY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        merchant_id: ZARINPAL_MERCHANT_ID,
-        amount: verifyAmount,
-        authority,
-      }),
-    });
+    let verifyData: any = null;
+    for (const candidate of candidates) {
+      const verifyResponse = await fetch(ZARINPAL_VERIFY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          merchant_id: ZARINPAL_MERCHANT_ID,
+          amount: candidate * 10,
+          authority,
+        }),
+      });
+      verifyData = await verifyResponse.json();
+      console.log('ZarinPal verify response for amount', candidate, verifyData);
+      const code = verifyData?.data?.code ?? verifyData?.errors?.code;
+      if (code === 100 || code === 101) break;
+      if (code !== -50) break; // only amount-mismatch is worth retrying
+    }
 
-    const verifyData = await verifyResponse.json();
-    console.log('ZarinPal verify response:', verifyData);
 
-    if (verifyData.data && verifyData.data.code === 100) {
-      const refID = verifyData.data.ref_id;
-      const paidAmount = Math.round(verifyData.data.amount / 10);
+    const verifyCode = verifyData?.data?.code ?? verifyData?.errors?.code;
+    const verifiedRefId = verifyData?.data?.ref_id ?? verifyData?.errors?.ref_id;
+
+    // code 100 = verified now, code 101 = already verified previously.
+    // Both mean the money was really paid, so both must be recorded.
+    if ((verifyCode === 100 || verifyCode === 101) && verifiedRefId) {
+      const refID = verifiedRefId;
+      const paidAmount = Math.round(Number(verifyData?.data?.amount ?? 0) / 10)
+        || Math.round(requestedAmount)
+        || remainingToman;
+
 
       // --- Waterfall distribution ---
       // pay_all: across ALL statements of the customer (lowest statement number first)
@@ -197,21 +221,31 @@ serve(async (req) => {
       }
 
 
-      // Insert order_payments rows
-      for (const d of distribution) {
-        const isPrimary = d.order_id === order_id;
-        await supabaseClient.from('order_payments').insert({
-          order_id: d.order_id,
-          paid_by: order.customer_id,
-          amount: d.amount,
-          payment_method: 'zarinpal',
-          receipt_number: refID.toString(),
-          notes: isPrimary
-            ? `پرداخت آنلاین زرین‌پال - کد پیگیری: ${refID}`
-            : `سرریز پرداخت صورتحساب - کد پیگیری: ${refID}`,
-          payment_date: new Date().toISOString(),
-        });
+      // Insert order_payments rows (idempotent per ZarinPal ref id)
+      const { data: existingPays } = await supabaseClient
+        .from('order_payments')
+        .select('id')
+        .eq('receipt_number', refID.toString());
+      const alreadyRecorded = (existingPays || []).length > 0;
+
+      if (!alreadyRecorded) {
+        for (const d of distribution) {
+          const isPrimary = d.order_id === order_id;
+          const { error: payErr } = await supabaseClient.from('order_payments').insert({
+            order_id: d.order_id,
+            paid_by: order.customer_id,
+            amount: d.amount,
+            payment_method: 'zarinpal',
+            receipt_number: refID.toString(),
+            notes: isPrimary
+              ? `پرداخت آنلاین زرین‌پال - کد پیگیری: ${refID}`
+              : `سرریز پرداخت صورتحساب - کد پیگیری: ${refID}`,
+            payment_date: new Date().toISOString(),
+          });
+          if (payErr) console.error('Failed to insert order_payment:', payErr);
+        }
       }
+
 
       // Recompute totals on each affected order
       for (const d of distribution) {
@@ -264,12 +298,8 @@ serve(async (req) => {
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
-    } else if (verifyData.data && verifyData.data.code === 101) {
-      return new Response(
-        JSON.stringify({ success: true, status: 'already_verified', order_id, statement_id }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     } else {
+
       console.error('Payment verification failed:', verifyData);
       await supabaseClient.from('audit_log').insert({
         entity: 'payment',

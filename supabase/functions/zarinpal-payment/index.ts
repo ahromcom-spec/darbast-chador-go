@@ -257,13 +257,22 @@ serve(async (req) => {
       const authority = zarinpalData.data.authority;
       const paymentUrl = `https://www.zarinpal.com/pg/StartPay/${authority}`;
 
-      await supabaseClient.from('audit_log').insert({
+      // IMPORTANT: audit_log inserts are blocked for end users by RLS.
+      // Use the service-role client so the requested amount is always stored,
+      // otherwise verify() cannot know the real amount (ZarinPal error -50).
+      const serviceClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      );
+      const { error: auditErr } = await serviceClient.from('audit_log').insert({
         entity: 'payment',
         entity_id: order_id,
         action: 'payment_requested',
         actor_user_id: user.id,
         meta: { authority, amount, statement_id: statement_id || null, pay_all },
       });
+      if (auditErr) console.error('Failed to log payment_requested:', auditErr);
+
 
       return new Response(
         JSON.stringify({ success: true, payment_url: paymentUrl, authority, order_id, statement_id: statement_id || null }),
