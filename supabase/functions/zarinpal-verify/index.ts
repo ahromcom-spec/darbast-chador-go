@@ -142,9 +142,17 @@ serve(async (req) => {
     }
 
 
-    if (verifyData.data && verifyData.data.code === 100) {
-      const refID = verifyData.data.ref_id;
-      const paidAmount = Math.round(verifyData.data.amount / 10);
+    const verifyCode = verifyData?.data?.code ?? verifyData?.errors?.code;
+    const verifiedRefId = verifyData?.data?.ref_id ?? verifyData?.errors?.ref_id;
+
+    // code 100 = verified now, code 101 = already verified previously.
+    // Both mean the money was really paid, so both must be recorded.
+    if ((verifyCode === 100 || verifyCode === 101) && verifiedRefId) {
+      const refID = verifiedRefId;
+      const paidAmount = Math.round(Number(verifyData?.data?.amount ?? 0) / 10)
+        || Math.round(requestedAmount)
+        || remainingToman;
+
 
       // --- Waterfall distribution ---
       // pay_all: across ALL statements of the customer (lowest statement number first)
