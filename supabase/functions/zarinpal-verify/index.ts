@@ -127,6 +127,9 @@ serve(async (req) => {
       .filter((n, i, arr) => arr.indexOf(n) === i);
 
     let verifyData: any = null;
+    // The candidate amount that ZarinPal actually accepted IS the real paid amount,
+    // because ZarinPal only verifies when the amount matches the session exactly.
+    let verifiedCandidate = 0;
     for (const candidate of candidates) {
       const verifyResponse = await fetch(ZARINPAL_VERIFY_URL, {
         method: 'POST',
@@ -140,7 +143,10 @@ serve(async (req) => {
       verifyData = await verifyResponse.json();
       console.log('ZarinPal verify response for amount', candidate, verifyData);
       const code = verifyData?.data?.code ?? verifyData?.errors?.code;
-      if (code === 100 || code === 101) break;
+      if (code === 100 || code === 101) {
+        verifiedCandidate = candidate;
+        break;
+      }
       if (code !== -50) break; // only amount-mismatch is worth retrying
     }
 
@@ -152,9 +158,12 @@ serve(async (req) => {
     // Both mean the money was really paid, so both must be recorded.
     if ((verifyCode === 100 || verifyCode === 101) && verifiedRefId) {
       const refID = verifiedRefId;
+      // ZarinPal's verify response often omits `amount`; the accepted candidate is
+      // authoritative. Never fall back to the remaining balance (over-records money).
       const paidAmount = Math.round(Number(verifyData?.data?.amount ?? 0) / 10)
-        || Math.round(requestedAmount)
-        || remainingToman;
+        || verifiedCandidate
+        || Math.round(requestedAmount);
+
 
 
       // --- Waterfall distribution ---
