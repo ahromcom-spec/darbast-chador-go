@@ -253,7 +253,53 @@ serve(async (req) => {
           });
           if (payErr) console.error('Failed to insert order_payment:', payErr);
         }
+
+        // Record deposit(s) in the management Mellat current-account card (online gateway destination)
+        try {
+          const ONLINE_GATEWAY_CARD_ID = '5a8bb67f-3757-4ac6-b745-44451d55630a';
+          const { data: cardRow } = await supabaseClient
+            .from('bank_cards')
+            .select('id, current_balance')
+            .eq('id', ONLINE_GATEWAY_CARD_ID)
+            .maybeSingle();
+
+          if (cardRow) {
+            const { data: dupTx } = await supabaseClient
+              .from('bank_card_transactions')
+              .select('id')
+              .eq('bank_card_id', ONLINE_GATEWAY_CARD_ID)
+              .eq('reference_type', 'order_payment')
+              .like('description', `%${refID}%`);
+
+            if (!dupTx || dupTx.length === 0) {
+              let running = Number(cardRow.current_balance) || 0;
+              const today = new Date().toISOString().slice(0, 10);
+              for (const d of distribution) {
+                const { data: ordInfo } = await supabaseClient
+                  .from('projects_v3')
+                  .select('code, customer_name')
+                  .eq('id', d.order_id)
+                  .maybeSingle();
+                running += Number(d.amount) || 0;
+                const { error: txErr } = await supabaseClient.from('bank_card_transactions').insert({
+                  bank_card_id: ONLINE_GATEWAY_CARD_ID,
+                  transaction_type: 'deposit',
+                  amount: d.amount,
+                  balance_after: running,
+                  description: `واریز پرداخت آنلاین زرین‌پال سفارش ${ordInfo?.code ?? ''}${ordInfo?.customer_name ? ' - ' + ordInfo.customer_name : ''} - کد پیگیری: ${refID}`,
+                  reference_type: 'order_payment',
+                  reference_id: d.order_id,
+                  report_date: today,
+                });
+                if (txErr) console.error('Failed to insert bank card transaction:', txErr);
+              }
+            }
+          }
+        } catch (bankErr) {
+          console.error('Bank card transaction logging error:', bankErr);
+        }
       }
+
 
 
       // Recompute totals on each affected order
