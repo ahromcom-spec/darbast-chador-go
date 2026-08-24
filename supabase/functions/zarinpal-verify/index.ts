@@ -295,12 +295,8 @@ serve(async (req) => {
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
-    } else if (verifyData.data && verifyData.data.code === 101) {
-      return new Response(
-        JSON.stringify({ success: true, status: 'already_verified', order_id, statement_id }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     } else {
+
       console.error('Payment verification failed:', verifyData);
       await supabaseClient.from('audit_log').insert({
         entity: 'payment',
