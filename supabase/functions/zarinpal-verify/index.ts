@@ -218,21 +218,31 @@ serve(async (req) => {
       }
 
 
-      // Insert order_payments rows
-      for (const d of distribution) {
-        const isPrimary = d.order_id === order_id;
-        await supabaseClient.from('order_payments').insert({
-          order_id: d.order_id,
-          paid_by: order.customer_id,
-          amount: d.amount,
-          payment_method: 'zarinpal',
-          receipt_number: refID.toString(),
-          notes: isPrimary
-            ? `پرداخت آنلاین زرین‌پال - کد پیگیری: ${refID}`
-            : `سرریز پرداخت صورتحساب - کد پیگیری: ${refID}`,
-          payment_date: new Date().toISOString(),
-        });
+      // Insert order_payments rows (idempotent per ZarinPal ref id)
+      const { data: existingPays } = await supabaseClient
+        .from('order_payments')
+        .select('id')
+        .eq('receipt_number', refID.toString());
+      const alreadyRecorded = (existingPays || []).length > 0;
+
+      if (!alreadyRecorded) {
+        for (const d of distribution) {
+          const isPrimary = d.order_id === order_id;
+          const { error: payErr } = await supabaseClient.from('order_payments').insert({
+            order_id: d.order_id,
+            paid_by: order.customer_id,
+            amount: d.amount,
+            payment_method: 'zarinpal',
+            receipt_number: refID.toString(),
+            notes: isPrimary
+              ? `پرداخت آنلاین زرین‌پال - کد پیگیری: ${refID}`
+              : `سرریز پرداخت صورتحساب - کد پیگیری: ${refID}`,
+            payment_date: new Date().toISOString(),
+          });
+          if (payErr) console.error('Failed to insert order_payment:', payErr);
+        }
       }
+
 
       // Recompute totals on each affected order
       for (const d of distribution) {
