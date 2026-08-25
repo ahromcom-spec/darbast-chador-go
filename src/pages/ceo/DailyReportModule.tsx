@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { calculateTotalFromDimensions } from '@/lib/dimensionCalculations';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard, RotateCcw, AlertTriangle, Clock, Lock, Unlock, Printer } from 'lucide-react';
+import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard, RotateCcw, AlertTriangle, Clock, Lock, Unlock, Printer, ZoomIn, ZoomOut } from 'lucide-react';
 import { openOrderSheet } from '@/lib/orderExecutionSheet';
 
 import { useDateFinalizationLock } from '@/hooks/useDateFinalizationLock';
@@ -767,6 +767,8 @@ export default function DailyReportModule() {
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
   const [selectedDailyOrderRow, setSelectedDailyOrderRow] = useState<OrderReportRow | null>(null);
   const [loadingOrderDetails, setLoadingOrderDetails] = useState(false);
+  // بزرگ‌نمایی محتویات پاپ‌آپ جزئیات سفارش (پیش‌فرض کوچک‌تر تا کادر شلوغ نباشد)
+  const [orderDetailsZoom, setOrderDetailsZoom] = useState(0.75);
 
   // Bulk delete hook
   const {
@@ -6126,6 +6128,35 @@ export default function DailyReportModule() {
                   </Button>
                 )}
 
+                {/* کوچک و بزرگ کردن محتویات کادر */}
+                <div className="flex items-center gap-1 rounded-lg border px-1 py-0.5">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setOrderDetailsZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 100) / 100))}
+                    aria-label="کوچک کردن"
+                  >
+                    <ZoomOut className="h-4 w-4" />
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => setOrderDetailsZoom(0.75)}
+                    className="min-w-[3rem] text-xs font-medium text-muted-foreground"
+                  >
+                    {Math.round(orderDetailsZoom * 100)}%
+                  </button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setOrderDetailsZoom((z) => Math.min(1.5, Math.round((z + 0.1) * 100) / 100))}
+                    aria-label="بزرگ کردن"
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                  </Button>
+                </div>
+
                 <Button
                   variant="destructive"
                   size="default"
@@ -6156,7 +6187,7 @@ export default function DailyReportModule() {
                   background: hsl(var(--primary) / 0.7);
                 }
               `}</style>
-              <div className="order-details-scroll">
+              <div className="order-details-scroll" style={{ zoom: orderDetailsZoom }}>
             
             <AlertDialogHeader className="sr-only">
               <AlertDialogTitle>مشخصات کامل سفارش</AlertDialogTitle>
@@ -6338,6 +6369,7 @@ export default function DailyReportModule() {
                       approvedCollectionDate={selectedOrderDetails.approved_collection_date}
                       totalPaid={selectedOrderDetails.total_paid}
                       totalPrice={selectedOrderDetails.total_price}
+                      hideAmounts
                     />
 
                     {/* Execution Schedule */}

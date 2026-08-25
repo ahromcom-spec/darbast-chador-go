@@ -31,6 +31,7 @@ interface OrderTimelineProps {
   approvedCollectionDate?: string | null; // تاریخ جمع‌آوری تایید شده توسط مدیر
   totalPaid?: number | null; // مجموع پرداخت شده
   totalPrice?: number | null; // مبلغ کل سفارش
+  hideAmounts?: boolean; // پنهان کردن مبالغ (برای ماژول‌های اجرایی بدون دسترسی مالی)
   approvals?: Array<{
     approver_role: string;
     approved_at: string | null;
@@ -74,6 +75,7 @@ export const OrderTimeline = ({
   approvedCollectionDate,
   totalPaid,
   totalPrice,
+  hideAmounts = false,
   approvals = [],
 }: OrderTimelineProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -221,9 +223,11 @@ export const OrderTimeline = ({
         details: fullyPaid
           ? 'پرداخت با موفقیت انجام شد ✓'
           : (currentStageNumber >= 3)
-            ? (paid > 0 && price > 0
-                ? `${paid.toLocaleString('fa-IR')} تومان پرداخت شده / ${Math.max(0, price - paid).toLocaleString('fa-IR')} تومان مانده`
-                : 'لطفاً مبلغ سفارش را پرداخت کنید')
+            ? (hideAmounts
+                ? 'در انتظار تسویه پرداخت'
+                : paid > 0 && price > 0
+                  ? `${paid.toLocaleString('fa-IR')} تومان پرداخت شده / ${Math.max(0, price - paid).toLocaleString('fa-IR')} تومان مانده`
+                  : 'لطفاً مبلغ سفارش را پرداخت کنید')
             : undefined,
       };
     })(),
