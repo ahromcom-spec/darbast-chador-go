@@ -6369,6 +6369,7 @@ export default function DailyReportModule() {
                       approvedCollectionDate={selectedOrderDetails.approved_collection_date}
                       totalPaid={selectedOrderDetails.total_paid}
                       totalPrice={selectedOrderDetails.total_price}
+                      hideAmounts
                     />
 
                     {/* Execution Schedule */}
