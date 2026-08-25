@@ -31,6 +31,7 @@ interface OrderTimelineProps {
   approvedCollectionDate?: string | null; // تاریخ جمع‌آوری تایید شده توسط مدیر
   totalPaid?: number | null; // مجموع پرداخت شده
   totalPrice?: number | null; // مبلغ کل سفارش
+  hideAmounts?: boolean; // پنهان کردن مبالغ (برای ماژول‌های اجرایی بدون دسترسی مالی)
   approvals?: Array<{
     approver_role: string;
     approved_at: string | null;
