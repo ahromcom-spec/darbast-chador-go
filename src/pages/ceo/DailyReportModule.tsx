@@ -767,6 +767,8 @@ export default function DailyReportModule() {
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<any>(null);
   const [selectedDailyOrderRow, setSelectedDailyOrderRow] = useState<OrderReportRow | null>(null);
   const [loadingOrderDetails, setLoadingOrderDetails] = useState(false);
+  // بزرگ‌نمایی محتویات پاپ‌آپ جزئیات سفارش (پیش‌فرض کوچک‌تر تا کادر شلوغ نباشد)
+  const [orderDetailsZoom, setOrderDetailsZoom] = useState(0.75);
 
   // Bulk delete hook
   const {
