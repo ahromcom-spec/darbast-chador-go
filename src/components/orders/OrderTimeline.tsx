@@ -75,6 +75,7 @@ export const OrderTimeline = ({
   approvedCollectionDate,
   totalPaid,
   totalPrice,
+  hideAmounts = false,
   approvals = [],
 }: OrderTimelineProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
