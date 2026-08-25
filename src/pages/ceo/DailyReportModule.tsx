@@ -6187,7 +6187,7 @@ export default function DailyReportModule() {
                   background: hsl(var(--primary) / 0.7);
                 }
               `}</style>
-              <div className="order-details-scroll">
+              <div className="order-details-scroll" style={{ zoom: orderDetailsZoom }}>
             
             <AlertDialogHeader className="sr-only">
               <AlertDialogTitle>مشخصات کامل سفارش</AlertDialogTitle>
