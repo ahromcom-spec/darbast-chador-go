@@ -223,9 +223,11 @@ export const OrderTimeline = ({
         details: fullyPaid
           ? 'پرداخت با موفقیت انجام شد ✓'
           : (currentStageNumber >= 3)
-            ? (paid > 0 && price > 0
-                ? `${paid.toLocaleString('fa-IR')} تومان پرداخت شده / ${Math.max(0, price - paid).toLocaleString('fa-IR')} تومان مانده`
-                : 'لطفاً مبلغ سفارش را پرداخت کنید')
+            ? (hideAmounts
+                ? 'در انتظار تسویه پرداخت'
+                : paid > 0 && price > 0
+                  ? `${paid.toLocaleString('fa-IR')} تومان پرداخت شده / ${Math.max(0, price - paid).toLocaleString('fa-IR')} تومان مانده`
+                  : 'لطفاً مبلغ سفارش را پرداخت کنید')
             : undefined,
       };
     })(),
