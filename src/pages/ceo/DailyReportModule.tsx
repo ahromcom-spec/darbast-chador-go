@@ -6128,6 +6128,35 @@ export default function DailyReportModule() {
                   </Button>
                 )}
 
+                {/* کوچک و بزرگ کردن محتویات کادر */}
+                <div className="flex items-center gap-1 rounded-lg border px-1 py-0.5">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setOrderDetailsZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 100) / 100))}
+                    aria-label="کوچک کردن"
+                  >
+                    <ZoomOut className="h-4 w-4" />
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => setOrderDetailsZoom(0.75)}
+                    className="min-w-[3rem] text-xs font-medium text-muted-foreground"
+                  >
+                    {Math.round(orderDetailsZoom * 100)}%
+                  </button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setOrderDetailsZoom((z) => Math.min(1.5, Math.round((z + 0.1) * 100) / 100))}
+                    aria-label="بزرگ کردن"
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                  </Button>
+                </div>
+
                 <Button
                   variant="destructive"
                   size="default"
