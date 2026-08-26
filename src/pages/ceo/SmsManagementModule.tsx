@@ -45,6 +45,20 @@ interface SmsLog {
   created_at: string;
 }
 
+interface ScheduledSms {
+  id: string;
+  phone: string;
+  order_code: string;
+  status_key: string;
+  send_after: string;
+  state: string;
+  attempts: number;
+  last_error: string | null;
+  payload: Record<string, any> | null;
+  created_at: string;
+}
+
+
 const PLACEHOLDERS: { token: string; label: string }[] = [
   { token: "{code}", label: "کد سفارش" },
   { token: "{serviceType}", label: "نوع خدمت" },
