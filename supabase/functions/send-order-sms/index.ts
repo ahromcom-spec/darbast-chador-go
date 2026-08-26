@@ -124,7 +124,13 @@ interface SmsRequest {
   description?: string; // شرح فعالیت سفارش
   resendMessage?: string; // ارسال مجدد متن پیامک قبلی (بدون قالب) با تاریخ جدید
   bypassWindow?: boolean; // نادیده گرفتن بازه زمانی (برای ارسال‌های زمان‌بندی‌شده)
+  retryCount?: number; // شمارش تلاش‌های خودکار مجدد در صورت ناموفق بودن
 }
+
+// حداکثر تلاش خودکار مجدد در صورت ناموفق بودن ارسال
+const MAX_AUTO_RETRIES = 5;
+// بازه رندوم تلاش مجدد: از ۵ تا ۱۲۰ ثانیه (برای جلوگیری از تجمع ارسال‌ها)
+const randomRetryDelayMs = () => (5 + Math.floor(Math.random() * 116)) * 1000;
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -133,8 +139,10 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { phone, orderCode, orderId, status, serviceType, address, dateTime, amount, customerName, description, resendMessage, bypassWindow }: SmsRequest = await req.json();
+    const { phone, orderCode, orderId, status, serviceType, address, dateTime, amount, customerName, description, resendMessage, bypassWindow, retryCount }: SmsRequest = await req.json();
     const isResend = typeof resendMessage === "string" && resendMessage.trim().length > 0;
+    const attemptNo = Number(retryCount ?? 0);
+
     
     console.log(`[send-order-sms] Received request - Phone: ${phone}, Order: ${orderCode}, Status: ${status}, Service: ${serviceType}, Address: ${address}, Amount: ${amount}, Customer: ${customerName}`);
 
@@ -511,10 +519,52 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     console.error(`[send-order-sms] Failed to send SMS: ${responseText.slice(0, 300)}`);
+
+    // === تلاش خودکار مجدد با زمان رندوم (۵ تا ۱۲۰ ثانیه) ===
+    let retryAt: string | null = null;
+    if (attemptNo < MAX_AUTO_RETRIES) {
+      try {
+        const sendAfter = new Date(Date.now() + randomRetryDelayMs()).toISOString();
+        const { error: retryError } = await supabase.from("scheduled_sms").insert({
+          phone: normalizedPhone,
+          order_code: orderCode,
+          order_id: orderId ?? null,
+          status_key: status,
+          payload: {
+            serviceType,
+            address,
+            amount,
+            customerName,
+            description,
+            // متن نهایی حفظ می‌شود تا پیام مجدد دقیقاً همان پیام باشد
+            resendMessage: message,
+            retryCount: attemptNo + 1,
+          },
+          send_after: sendAfter,
+          last_error: `retry ${attemptNo + 1}/${MAX_AUTO_RETRIES}: ${responseText.slice(0, 200)}`,
+        });
+        if (retryError) {
+          console.warn("[send-order-sms] Could not queue retry:", retryError);
+        } else {
+          retryAt = sendAfter;
+          console.log(`[send-order-sms] Retry #${attemptNo + 1} queued for ${sendAfter}`);
+        }
+      } catch (e) {
+        console.warn("[send-order-sms] Retry scheduling failed:", e);
+      }
+    }
+
     return new Response(
-      JSON.stringify({ success: false, error: "خطا در ارسال پیامک", details: responseText.slice(0, 300) }),
+      JSON.stringify({
+        success: false,
+        error: "خطا در ارسال پیامک",
+        details: responseText.slice(0, 300),
+        retryScheduledFor: retryAt,
+        retryCount: retryAt ? attemptNo + 1 : attemptNo,
+      }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
+
 
   } catch (error: any) {
     console.error("[send-order-sms] Error:", error);

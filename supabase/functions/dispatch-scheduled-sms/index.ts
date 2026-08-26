@@ -62,16 +62,18 @@ serve(async (req: Request): Promise<Response> => {
         const text = await res.text();
         if (!res.ok) {
           console.error(`[dispatch-scheduled-sms] send failed [${res.status}]: ${text}`);
+          // خود تابع ارسال، تلاش مجدد با زمان رندوم را در صف قرار می‌دهد
           await supabase
             .from("scheduled_sms")
             .update({
-              state: (row.attempts ?? 0) + 1 >= 3 ? "failed" : "pending",
+              state: "failed",
               last_error: `${res.status}: ${text.slice(0, 300)}`,
             })
             .eq("id", row.id);
           results.push({ id: row.id, ok: false, error: `${res.status}` });
           continue;
         }
+
 
         await supabase
           .from("scheduled_sms")
