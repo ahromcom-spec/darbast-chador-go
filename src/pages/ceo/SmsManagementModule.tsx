@@ -532,7 +532,77 @@ export default function SmsManagementModule() {
             <TabsTrigger value="customer">پیامک‌های مشتری ({groups.customer?.length || 0})</TabsTrigger>
             <TabsTrigger value="ceo">پیامک‌های مدیرعامل ({groups.ceo?.length || 0})</TabsTrigger>
             <TabsTrigger value="logs">گزارش ارسال ({logs.length})</TabsTrigger>
+            <TabsTrigger value="queue">در انتظار ارسال ({queue.length})</TabsTrigger>
           </TabsList>
+          <TabsContent value="queue" className="mt-4">
+            <Card>
+              <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-base">پیامک‌های در انتظار ارسال</CardTitle>
+                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={refreshQueue}>
+                  <RefreshCw className="h-3.5 w-3.5 ml-1" /> بارگذاری مجدد
+                </Button>
+              </CardHeader>
+              <CardContent className="overflow-x-auto">
+                <p className="text-xs text-muted-foreground mb-3">
+                  پیامک‌های ناموفق به‌صورت خودکار با یک زمان تصادفی بین ۵ تا ۱۲۰ ثانیه دوباره ارسال می‌شوند (حداکثر ۵ تلاش).
+                  در صورت انصراف می‌توانید ارسال را لغو کنید.
+                </p>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>زمان ارسال</TableHead>
+                      <TableHead>گیرنده</TableHead>
+                      <TableHead>کلید</TableHead>
+                      <TableHead>کد سفارش</TableHead>
+                      <TableHead>تلاش</TableHead>
+                      <TableHead>آخرین خطا</TableHead>
+                      <TableHead>لغو</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {queue.length === 0 && (
+                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        پیامکی در انتظار ارسال نیست.
+                      </TableCell></TableRow>
+                    )}
+                    {queue.map((row) => (
+                      <TableRow key={row.id}>
+                        <TableCell className="text-xs whitespace-nowrap">
+                          {new Date(row.send_after).toLocaleString("fa-IR")}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">{row.phone}</TableCell>
+                        <TableCell><Badge variant="outline" className="font-mono text-[10px]">{row.status_key}</Badge></TableCell>
+                        <TableCell className="font-mono text-xs">{row.order_code || "—"}</TableCell>
+                        <TableCell className="text-xs">
+                          {Number(row.payload?.retryCount ?? 0) > 0
+                            ? `تلاش مجدد ${row.payload?.retryCount}`
+                            : "اولین ارسال"}
+                        </TableCell>
+                        <TableCell className="text-[10px] text-muted-foreground max-w-[200px] truncate" title={row.last_error || ""}>
+                          {row.last_error || "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="h-7 text-xs whitespace-nowrap"
+                            disabled={canceling === row.id}
+                            onClick={() => cancelScheduled(row)}
+                          >
+                            {canceling === row.id
+                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              : <XCircle className="h-3.5 w-3.5 ml-1" />}
+                            لغو ارسال
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="customer" className="space-y-3 mt-4">
             {(groups.customer || []).map(renderItem)}
             {(!groups.customer || groups.customer.length === 0) && (
