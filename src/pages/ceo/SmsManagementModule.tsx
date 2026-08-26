@@ -161,12 +161,14 @@ export default function SmsManagementModule() {
 
   const load = async () => {
     setLoading(true);
-    const [tplRes, logsRes, statsRes] = await Promise.all([
+    const [tplRes, logsRes, statsRes, queueRes] = await Promise.all([
       supabase.from("sms_templates").select("*").order("scope").order("title"),
       supabase.from("sms_logs").select("*").order("created_at", { ascending: false }).limit(50),
       supabase.from("sms_logs").select("status, created_at").gte(
         "created_at", new Date(new Date().setHours(0, 0, 0, 0)).toISOString()
       ),
+      supabase.from("scheduled_sms").select("*").eq("state", "pending")
+        .order("send_after", { ascending: true }).limit(100),
     ]);
     if (tplRes.error) toast.error("خطا در دریافت قالب‌ها: " + tplRes.error.message);
     else {
@@ -174,6 +176,8 @@ export default function SmsManagementModule() {
       setDrafts({});
     }
     if (!logsRes.error) setLogs((logsRes.data || []) as SmsLog[]);
+    if (!queueRes.error) setQueue((queueRes.data || []) as unknown as ScheduledSms[]);
+
     if (!statsRes.error) {
       const rows = (statsRes.data || []) as { status: string }[];
       setStats({
