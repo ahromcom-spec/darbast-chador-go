@@ -124,7 +124,13 @@ interface SmsRequest {
   description?: string; // شرح فعالیت سفارش
   resendMessage?: string; // ارسال مجدد متن پیامک قبلی (بدون قالب) با تاریخ جدید
   bypassWindow?: boolean; // نادیده گرفتن بازه زمانی (برای ارسال‌های زمان‌بندی‌شده)
+  retryCount?: number; // شمارش تلاش‌های خودکار مجدد در صورت ناموفق بودن
 }
+
+// حداکثر تلاش خودکار مجدد در صورت ناموفق بودن ارسال
+const MAX_AUTO_RETRIES = 5;
+// بازه رندوم تلاش مجدد: از ۵ تا ۱۲۰ ثانیه (برای جلوگیری از تجمع ارسال‌ها)
+const randomRetryDelayMs = () => (5 + Math.floor(Math.random() * 116)) * 1000;
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -133,8 +139,10 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { phone, orderCode, orderId, status, serviceType, address, dateTime, amount, customerName, description, resendMessage, bypassWindow }: SmsRequest = await req.json();
+    const { phone, orderCode, orderId, status, serviceType, address, dateTime, amount, customerName, description, resendMessage, bypassWindow, retryCount }: SmsRequest = await req.json();
     const isResend = typeof resendMessage === "string" && resendMessage.trim().length > 0;
+    const attemptNo = Number(retryCount ?? 0);
+
     
     console.log(`[send-order-sms] Received request - Phone: ${phone}, Order: ${orderCode}, Status: ${status}, Service: ${serviceType}, Address: ${address}, Amount: ${amount}, Customer: ${customerName}`);
 
