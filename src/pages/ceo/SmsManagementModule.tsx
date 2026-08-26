@@ -132,7 +132,9 @@ export default function SmsManagementModule() {
     }
   };
 
+  const resendLog = async (l: SmsLog) => {
     if (!l.message || !l.recipient) {
+
       toast.error("متن یا شماره گیرنده برای ارسال مجدد موجود نیست");
       return;
     }
