@@ -202,7 +202,24 @@ export default function SmsManagementModule() {
     }
   };
 
+  const refreshQueue = async () => {
+    const { data, error } = await supabase
+      .from("scheduled_sms")
+      .select("*")
+      .eq("state", "pending")
+      .order("send_after", { ascending: true })
+      .limit(100);
+    if (!error) setQueue((data || []) as unknown as ScheduledSms[]);
+  };
+
   useEffect(() => { load(); }, []);
+
+  // به‌روزرسانی خودکار صف ارسال (برای دیدن تلاش‌های مجدد رندوم)
+  useEffect(() => {
+    const t = setInterval(() => { refreshQueue(); }, 20000);
+    return () => clearInterval(t);
+  }, []);
+
 
   const merged = (item: SmsTemplate): SmsTemplate => ({ ...item, ...(drafts[item.id] || {}) });
   const setDraft = (id: string, patch: Partial<SmsTemplate>) =>
