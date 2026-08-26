@@ -111,8 +111,27 @@ export default function SmsManagementModule() {
   const [walletBalance, setWalletBalance] = useState<string | null>(null);
   const [walletLoading, setWalletLoading] = useState(false);
   const [resending, setResending] = useState<string | null>(null);
+  const [queue, setQueue] = useState<ScheduledSms[]>([]);
+  const [canceling, setCanceling] = useState<string | null>(null);
 
-  const resendLog = async (l: SmsLog) => {
+  const cancelScheduled = async (row: ScheduledSms) => {
+    setCanceling(row.id);
+    try {
+      const { error } = await supabase
+        .from("scheduled_sms")
+        .delete()
+        .eq("id", row.id)
+        .eq("state", "pending");
+      if (error) throw error;
+      setQueue((q) => q.filter((r) => r.id !== row.id));
+      toast.success("ارسال این پیامک لغو شد");
+    } catch (e: any) {
+      toast.error("خطا در لغو ارسال: " + (e?.message || ""));
+    } finally {
+      setCanceling(null);
+    }
+  };
+
     if (!l.message || !l.recipient) {
       toast.error("متن یا شماره گیرنده برای ارسال مجدد موجود نیست");
       return;
