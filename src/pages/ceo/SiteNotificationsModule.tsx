@@ -23,7 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import { formatPersianDate } from '@/lib/dateUtils';
+import { formatPersianDateTime } from '@/lib/dateUtils';
 import { toast } from '@/hooks/use-toast';
 
 interface NotificationRow {
@@ -324,7 +324,7 @@ export default function SiteNotificationsModule() {
                             <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                               {row.customer_name && <span>مشتری: {row.customer_name}</span>}
                               {row.customer_phone && <span className="font-mono">{row.customer_phone}</span>}
-                              <span>{formatPersianDate(row.created_at, true)}</span>
+                              <span>{formatPersianDateTime(row.created_at)}</span>
                             </div>
 
                             {row.admin_note && noteOpenId !== row.id && (
