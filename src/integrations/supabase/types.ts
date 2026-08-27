@@ -4992,6 +4992,63 @@ export type Database = {
         }
         Relationships: []
       }
+      site_notifications: {
+        Row: {
+          actor_user_id: string | null
+          admin_note: string | null
+          body: string | null
+          created_at: string
+          customer_name: string | null
+          customer_phone: string | null
+          event_type: string
+          id: string
+          is_dismissed: boolean
+          is_important: boolean
+          order_code: string | null
+          order_id: string | null
+          source_id: string | null
+          source_table: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          admin_note?: string | null
+          body?: string | null
+          created_at?: string
+          customer_name?: string | null
+          customer_phone?: string | null
+          event_type: string
+          id?: string
+          is_dismissed?: boolean
+          is_important?: boolean
+          order_code?: string | null
+          order_id?: string | null
+          source_id?: string | null
+          source_table?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          admin_note?: string | null
+          body?: string | null
+          created_at?: string
+          customer_name?: string | null
+          customer_phone?: string | null
+          event_type?: string
+          id?: string
+          is_dismissed?: boolean
+          is_important?: boolean
+          order_code?: string | null
+          order_id?: string | null
+          source_id?: string | null
+          source_table?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       site_sessions: {
         Row: {
           browser_name: string | null
@@ -5922,6 +5979,10 @@ export type Database = {
       }
       can_manage_contractors: { Args: { _actor_id: string }; Returns: boolean }
       can_manage_order_renewals: { Args: { _uid: string }; Returns: boolean }
+      can_manage_site_notifications: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       cancel_contractor_service_exit: {
         Args: { _service_id: string }
         Returns: undefined
