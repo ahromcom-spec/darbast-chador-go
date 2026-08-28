@@ -13,6 +13,7 @@ import { OfflineIndicator } from "@/components/common/OfflineIndicator";
 import { AdminImpersonationBanner } from "@/components/common/AdminImpersonationBanner";
 import { NotificationAutoPrompt } from "@/components/common/NotificationAutoPrompt";
 import { NajvaSubscriber } from "@/components/common/NajvaSubscriber";
+import SiteNotificationSound from "@/components/notifications/SiteNotificationSound";
 // import { PageLoadProgress } from "@/components/common/PageLoadProgress";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { GlobalKeyboardShortcuts } from "@/components/common/GlobalKeyboardShortcuts";
@@ -215,6 +216,7 @@ const App = () => {
                 <AdminImpersonationBanner />
                 <NotificationAutoPrompt />
                 <NajvaSubscriber />
+                <SiteNotificationSound />
                 <GlobalKeyboardShortcuts />
               <GlobalIncomingCallPopup />
               
