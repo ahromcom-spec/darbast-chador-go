@@ -15,6 +15,8 @@ import {
   StickyNote,
   ExternalLink,
   Save,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,6 +27,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { formatPersianDateTime } from '@/lib/dateUtils';
 import { toast } from '@/hooks/use-toast';
+import { SITE_NOTIF_SOUND_KEY } from '@/components/notifications/SiteNotificationSound';
 
 interface NotificationRow {
   id: string;
@@ -57,6 +60,9 @@ export default function SiteNotificationsModule() {
   const [tab, setTab] = useState('active');
   const [noteOpenId, setNoteOpenId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
+  const [soundEnabled, setSoundEnabled] = useState(
+    () => localStorage.getItem(SITE_NOTIF_SOUND_KEY) !== 'false'
+  );
 
   const load = async () => {
     setLoading(true);
@@ -181,10 +187,25 @@ export default function SiteNotificationsModule() {
             <h1 className="text-lg font-bold md:text-xl">ماژول گزارشات و اعلانات سایت</h1>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const next = !soundEnabled;
+                setSoundEnabled(next);
+                localStorage.setItem(SITE_NOTIF_SOUND_KEY, next ? 'true' : 'false');
+                toast({ title: next ? 'صدای اعلان‌ها روشن شد' : 'صدای اعلان‌ها خاموش شد' });
+              }}
+              title="صدای اعلان‌ها"
+            >
+              {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              {soundEnabled ? 'صدا روشن' : 'صدا خاموش'}
+            </Button>
             <Button variant="outline" size="sm" onClick={load} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               بروزرسانی
             </Button>
+
             <Button variant="outline" size="sm" onClick={() => navigate('/profile?tab=modules')}>
               بازگشت
               <ArrowRight className="h-4 w-4" />
