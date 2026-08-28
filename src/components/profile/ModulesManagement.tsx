@@ -221,6 +221,14 @@ const AVAILABLE_MODULES: Module[] = [
     bgColor: 'bg-cyan-50',
   },
   {
+    key: 'site_notifications',
+    name: 'ماژول گزارشات و اعلانات سایت',
+    description: 'نمایش پاپ‌آپ هر پیام سفارش، ثبت سفارش جدید، درخواست تعمیر، جمع‌آوری و تمدید با امکان علامت مهم، توضیحات و حذف',
+    href: '/site-notifications',
+    color: 'text-rose-600',
+    bgColor: 'bg-rose-50',
+  },
+  {
     key: 'ratings_management',
     name: 'ماژول مدیریت امتیازدهی',
     description: 'مشاهده و مدیریت امتیازهای مشتریان به عملکرد پیمانکار/اجرایی و مدیریت، پیگیری و زمان‌بندی سفارش‌ها',
