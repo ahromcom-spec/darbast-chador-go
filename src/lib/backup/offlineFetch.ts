@@ -197,26 +197,68 @@ function parseAndGroup(value: string): Predicate | null {
   return (row) => subs.every((f) => f(row));
 }
 
-/** Build a single AND-combined predicate from all filter params on the URL. */
-function buildPredicate(url: URL): Predicate | undefined {
-  const preds: Predicate[] = [];
+const RESERVED_PARAMS = new Set(['select', 'limit', 'offset', 'order', 'on_conflict', 'columns']);
+
+/** Read a possibly dotted path (`subcategories.code`, `a.b.c`) from a row/embedded tree. */
+function readPath(row: any, path: string): any {
+  const segs = path.split('.');
+  let cur: any = row;
+  for (const s of segs) {
+    if (cur === null || cur === undefined) return undefined;
+    if (Array.isArray(cur)) {
+      // Any element matching is enough — return the array of values
+      cur = cur.map((el) => el?.[s]);
+      continue;
+    }
+    cur = cur[s];
+  }
+  return cur;
+}
+
+/** Predicate over an embedded (dotted) column — arrays match if ANY element matches. */
+function embeddedPredicate(path: string, expr: string): Predicate | null {
+  const base = parseExpression('__v', expr);
+  if (!base) return null;
+  return (row) => {
+    const v = readPath(row, path);
+    if (Array.isArray(v)) return v.some((x) => base({ __v: x }));
+    return base({ __v: v });
+  };
+}
+
+/**
+ * Build predicates from URL filters.
+ * Top-level (plain column) filters run before embedding; dotted filters that
+ * target embedded resources run after embedding.
+ */
+function buildPredicates(url: URL): { top?: Predicate; embedded?: Predicate } {
+  const top: Predicate[] = [];
+  const embedded: Predicate[] = [];
   for (const [key, value] of url.searchParams.entries()) {
-    if (key === 'select' || key === 'limit' || key === 'offset' || key === 'order') continue;
+    if (RESERVED_PARAMS.has(key)) continue;
     if (key === 'or') {
       const p = parseOrGroup(value);
-      if (p) preds.push(p);
+      if (p) top.push(p);
       continue;
     }
     if (key === 'and') {
       const p = parseAndGroup(value);
-      if (p) preds.push(p);
+      if (p) top.push(p);
+      continue;
+    }
+    if (key.includes('.')) {
+      const idx = key.lastIndexOf('.');
+      const p = embeddedPredicate(key.slice(0, idx) + '.' + key.slice(idx + 1), value);
+      if (p) embedded.push(p);
       continue;
     }
     const p = parseExpression(key, value);
-    if (p) preds.push(p);
+    if (p) top.push(p);
   }
-  if (preds.length === 0) return undefined;
-  return (row) => preds.every((f) => f(row));
+  return {
+    top: top.length ? (row) => top.every((f) => f(row)) : undefined,
+    embedded: embedded.length ? (row) => embedded.every((f) => f(row)) : undefined,
+  };
 }
 
 // ==================== Post-processing ====================
@@ -250,44 +292,197 @@ function applyOffsetLimit(rows: any[], url: URL): any[] {
   return out;
 }
 
-/**
- * Parse a PostgREST `select=` value and project each row.
- * Supports: `*`, `col1,col2`, `alias:col`, nested `related(col)` (nested is
- * flattened to null since embedded resource joins aren't materialised offline).
- */
-function applySelect(rows: any[], selectStr: string | null): any[] {
-  if (!selectStr || selectStr.trim() === '*' || selectStr.trim() === '') return rows;
-  // Split at top level (nested relations use parens)
+// ==================== select= parsing (with embedded resources) ====================
+
+interface PlainCol { key: string; source: string }
+interface RelSpec {
+  /** output key (alias or table name) */
+  key: string;
+  /** target table name */
+  table: string;
+  /** hint after `!` — either an FK name or a column name */
+  hint?: string;
+  inner: boolean;
+  /** nested select string, or null for `*` */
+  sub: string | null;
+}
+interface ParsedSelect { star: boolean; cols: PlainCol[]; rels: RelSpec[] }
+
+function parseSelect(selectStr: string | null): ParsedSelect {
+  const result: ParsedSelect = { star: false, cols: [], rels: [] };
+  if (!selectStr || selectStr.trim() === '' || selectStr.trim() === '*') {
+    result.star = true;
+    return result;
+  }
   const parts = splitTopLevel(selectStr, ',').map((s) => s.trim()).filter(Boolean);
-  const cols: { key: string; source: string; nested: boolean }[] = [];
   for (const p of parts) {
-    if (p === '*') return rows; // any '*' → return full row
-    // Detect nested `rel(...)` — offline we can't join, emit null
-    const nestedMatch = p.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*\(/);
-    if (nestedMatch) {
-      cols.push({ key: nestedMatch[1], source: nestedMatch[1], nested: true });
+    if (p === '*') { result.star = true; continue; }
+    const open = p.indexOf('(');
+    if (open !== -1 && p.endsWith(')')) {
+      const head = p.slice(0, open).trim();
+      const sub = p.slice(open + 1, -1).trim();
+      // head forms: `table`, `alias:table`, `table!inner`, `alias:table!fk`, `table!fk!inner`
+      let alias: string | undefined;
+      let rest = head;
+      if (rest.includes(':')) {
+        const i = rest.indexOf(':');
+        alias = rest.slice(0, i).trim();
+        rest = rest.slice(i + 1).trim();
+      }
+      const bangs = rest.split('!').map((s) => s.trim()).filter(Boolean);
+      const table = bangs.shift() || rest;
+      const inner = bangs.includes('inner');
+      const hint = bangs.find((b) => b !== 'inner' && b !== 'left');
+      result.rels.push({
+        key: alias || table,
+        table,
+        hint,
+        inner,
+        sub: sub === '*' || sub === '' ? null : sub,
+      });
       continue;
     }
-    // Alias: `alias:source` or `alias:source::type` — strip cast
     let key = p;
     let source = p;
     if (p.includes(':')) {
-      const [aliasPart, srcPart] = p.split(':');
-      key = aliasPart.trim();
-      source = srcPart.split('::')[0].trim();
+      const i = p.indexOf(':');
+      key = p.slice(0, i).trim();
+      source = p.slice(i + 1).split('::')[0].trim();
     } else if (p.includes('::')) {
       source = p.split('::')[0].trim();
       key = source;
     }
-    cols.push({ key, source, nested: false });
+    result.cols.push({ key, source });
   }
-  return rows.map((row) => {
-    const out: any = {};
-    for (const c of cols) {
-      out[c.key] = c.nested ? null : row?.[c.source] ?? null;
+  return result;
+}
+
+function singularize(name: string): string {
+  if (name.endsWith('ies')) return name.slice(0, -3) + 'y';
+  if (name.endsWith('ses')) return name.slice(0, -2);
+  if (name.endsWith('s')) return name.slice(0, -1);
+  return name;
+}
+
+/** Cache related tables per request batch so a join loads each table once. */
+type TableCache = Map<string, any[]>;
+
+async function loadTable(cache: TableCache, name: string): Promise<any[]> {
+  const hit = cache.get(name);
+  if (hit) return hit;
+  let rows: any[] = [];
+  try { rows = await queryTable<any>(name); } catch { rows = []; }
+  cache.set(name, rows);
+  return rows;
+}
+
+/**
+ * Resolve one embedded resource onto `rows` (mutates copies) and return the
+ * possibly filtered row list (for `!inner`).
+ */
+async function embedRelation(
+  parentTable: string,
+  rows: any[],
+  rel: RelSpec,
+  cache: TableCache,
+): Promise<any[]> {
+  if (rows.length === 0) return rows;
+  const childRows = await loadTable(cache, rel.table);
+  const sample = rows[0] || {};
+
+  // --- 1) many-to-one: find the FK column living on the parent row ---
+  const candidates: string[] = [];
+  if (rel.hint) {
+    if (/_fkey$/.test(rel.hint)) {
+      const stripped = rel.hint.replace(/_fkey$/, '');
+      // pick the parent column that is a suffix of the constraint name
+      for (const col of Object.keys(sample)) {
+        if (col.endsWith('_id') && stripped.endsWith(col)) candidates.push(col);
+      }
+    } else {
+      candidates.push(rel.hint);
+    }
+  }
+  candidates.push(`${rel.key}_id`, `${rel.table}_id`, `${singularize(rel.table)}_id`, `${singularize(rel.key)}_id`);
+
+  const fkCol = candidates.find((c) => c && Object.prototype.hasOwnProperty.call(sample, c));
+  if (fkCol) {
+    const byId = new Map<any, any>();
+    for (const c of childRows) if (c && c.id !== undefined) byId.set(String(c.id), c);
+    const out: any[] = [];
+    for (const row of rows) {
+      const target = row?.[fkCol] != null ? byId.get(String(row[fkCol])) ?? null : null;
+      if (rel.inner && !target) continue;
+      out.push({ ...row, [rel.key]: target ? projectRow(target, rel.sub) : null });
     }
     return out;
+  }
+
+  // --- 2) one-to-many: find the column on the child pointing back at us ---
+  const childSample = childRows[0] || {};
+  const backCandidates = [
+    rel.hint,
+    `${singularize(parentTable)}_id`,
+    `${parentTable}_id`,
+    'order_id',
+    'project_id',
+  ].filter(Boolean) as string[];
+  const backCol = backCandidates.find((c) => Object.prototype.hasOwnProperty.call(childSample, c));
+  if (!backCol) {
+    // Cannot resolve — expose an empty relation instead of breaking the caller
+    return rows.map((row) => ({ ...row, [rel.key]: rel.inner ? [] : [] }));
+  }
+  const grouped = new Map<string, any[]>();
+  for (const c of childRows) {
+    const k = c?.[backCol];
+    if (k == null) continue;
+    const key = String(k);
+    const arr = grouped.get(key);
+    if (arr) arr.push(c); else grouped.set(key, [c]);
+  }
+  const out: any[] = [];
+  for (const row of rows) {
+    const children = grouped.get(String(row?.id)) || [];
+    if (rel.inner && children.length === 0) continue;
+    out.push({ ...row, [rel.key]: children.map((c) => projectRow(c, rel.sub)) });
+  }
+  return out;
+}
+
+/** Project a single (already embedded) row against a nested select string. */
+function projectRow(row: any, sub: string | null): any {
+  if (!sub) return row;
+  const parsed = parseSelect(sub);
+  if (parsed.star && parsed.rels.length === 0) return row;
+  const out: any = parsed.star ? { ...row } : {};
+  for (const c of parsed.cols) out[c.key] = row?.[c.source] ?? null;
+  // Deeper nesting is not resolved here (would need async) — keep the raw value
+  for (const r of parsed.rels) out[r.key] = row?.[r.key] ?? null;
+  return out;
+}
+
+/** Final projection of top-level rows (embedded keys are preserved). */
+function applyProjection(rows: any[], parsed: ParsedSelect): any[] {
+  if (parsed.star) return rows;
+  if (parsed.cols.length === 0 && parsed.rels.length === 0) return rows;
+  const relKeys = parsed.rels.map((r) => r.key);
+  return rows.map((row) => {
+    const out: any = {};
+    for (const c of parsed.cols) out[c.key] = row?.[c.source] ?? null;
+    for (const k of relKeys) out[k] = row?.[k] ?? null;
+    return out;
   });
+}
+
+/** Resolve every embedded resource requested by `select=`. */
+async function applyEmbeds(table: string, rows: any[], parsed: ParsedSelect): Promise<any[]> {
+  if (parsed.rels.length === 0) return rows;
+  const cache: TableCache = new Map();
+  let current = rows;
+  for (const rel of parsed.rels) {
+    current = await embedRelation(table, current, rel, cache);
+  }
+  return current;
 }
 
 // ==================== REST + Storage handlers ====================
@@ -337,15 +532,35 @@ const RPC_REGISTRY: Record<string, RpcHandler> = {
   check_staff_whitelist: async (args: any) => {
     try {
       const phone = args?.p_phone || args?.phone;
-      const rows = await queryTable<any>('staff_whitelist', (r) => r?.phone === phone);
+      const rows = await queryTable<any>('staff_whitelist', (r) => r?.phone === phone || r?.phone_number === phone);
+      return rows.length > 0;
+    } catch { return false; }
+  },
+  check_phone_whitelist: async (args: any) => {
+    try {
+      const phone = args?.p_phone || args?.phone || args?.phone_number;
+      const rows = await queryTable<any>('phone_whitelist', (r) => r?.phone === phone || r?.phone_number === phone);
       return rows.length > 0;
     } catch { return false; }
   },
   lookup_profile_by_phone: async (args: any) => {
     try {
-      const phone = args?.p_phone || args?.phone;
-      const rows = await queryTable<any>('profiles', (r) => r?.phone === phone);
+      const phone = String(args?.p_phone ?? args?.phone ?? args?.phone_number ?? '').trim();
+      const rows = await queryTable<any>(
+        'profiles',
+        (r: any) => String(r?.phone_number ?? r?.phone ?? '').trim() === phone,
+      );
       return rows[0] || null;
+    } catch { return null; }
+  },
+  get_user_id_by_phone: async (args: any) => {
+    try {
+      const phone = String(args?.p_phone ?? args?.phone ?? args?.phone_number ?? '').trim();
+      const rows = await queryTable<any>(
+        'profiles',
+        (r: any) => String(r?.phone_number ?? r?.phone ?? '').trim() === phone,
+      );
+      return rows[0]?.user_id || null;
     } catch { return null; }
   },
   get_contractor_contact_info: async (args: any) => {
@@ -354,6 +569,21 @@ const RPC_REGISTRY: Record<string, RpcHandler> = {
       const rows = await queryTable<any>('contractors', (r) => r?.id === id);
       return rows[0] || null;
     } catch { return null; }
+  },
+  has_role: async (args: any) => {
+    try {
+      const uid = args?._user_id || args?.user_id;
+      const role = args?._role || args?.role;
+      const rows = await queryTable<any>('user_roles', (r: any) => r?.user_id === uid && r?.role === role);
+      return rows.length > 0;
+    } catch { return false; }
+  },
+  get_wallet_balance: async (args: any) => {
+    try {
+      const uid = args?.p_user_id || args?.user_id || args?.p_staff_id;
+      const rows = await queryTable<any>('wallet_transactions', (r: any) => !uid || r?.user_id === uid);
+      return rows.reduce((s: number, r: any) => s + Number(r?.amount || 0), 0);
+    } catch { return 0; }
   },
   get_module_lock_status: async () => null,
   acquire_module_lock: async () => ({ acquired: false, reason: 'offline' }),
@@ -428,21 +658,38 @@ async function handleRest(url: URL, init: RequestInit | undefined): Promise<Resp
   }
 
   // GET path — stream via cursor with predicate, never materialise full table.
-  const predicate = buildPredicate(url);
+  const { top, embedded } = buildPredicates(url);
   let filtered: any[];
   try {
-    filtered = await queryTable<any>(table, predicate);
+    filtered = await queryTable<any>(table, top);
   } catch {
-    return jsonResponse({ code: 'OFFLINE', message: `جدول «${table}» در بکاپ آفلاین موجود نیست`, details: null, hint: null }, 404);
+    filtered = [];
   }
 
-  // Order → offset/limit → select
+  const parsedSelect = parseSelect(url.searchParams.get('select'));
+
+  // Embedded resources (joins) → embedded filters → order
+  filtered = await applyEmbeds(table, filtered, parsedSelect);
+  if (embedded) filtered = filtered.filter(embedded);
   filtered = applyOrder(filtered, url);
-  filtered = applyOffsetLimit(filtered, url);
-  filtered = applySelect(filtered, url.searchParams.get('select'));
+
+  const matched = filtered.length;
+
+  // Pagination: PostgREST `Range` header (supabase-js `.range()`) + offset/limit params
+  const headers = new Headers(init?.headers || {});
+  const rangeHeader = headers.get('range') || '';
+  const rangeMatch = rangeHeader.match(/^(\d+)-(\d*)$/);
+  if (rangeMatch) {
+    const from = parseInt(rangeMatch[1], 10);
+    const to = rangeMatch[2] ? parseInt(rangeMatch[2], 10) : undefined;
+    filtered = filtered.slice(from, to !== undefined ? to + 1 : undefined);
+  } else {
+    filtered = applyOffsetLimit(filtered, url);
+  }
+
+  filtered = applyProjection(filtered, parsedSelect);
 
   // Single-object mode
-  const headers = new Headers(init?.headers || {});
   const accept = headers.get('accept') || '';
   if (accept.includes('vnd.pgrst.object+json')) {
     if (filtered.length === 0) {
@@ -451,12 +698,11 @@ async function handleRest(url: URL, init: RequestInit | undefined): Promise<Resp
     return jsonResponse(filtered[0]);
   }
 
-  // Count header
+  // Count header — must reflect the filtered total so paginated loops terminate
   const prefer = headers.get('prefer') || '';
   const extra: Record<string, string> = {};
   if (/count=(exact|planned|estimated)/.test(prefer)) {
-    const total = await countTable(table);
-    extra['Content-Range'] = `0-${Math.max(0, filtered.length - 1)}/${total}`;
+    extra['Content-Range'] = `0-${Math.max(0, filtered.length - 1)}/${matched}`;
   }
 
   return jsonResponse(filtered, 200, extra);
