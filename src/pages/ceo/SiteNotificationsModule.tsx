@@ -557,7 +557,7 @@ export default function SiteNotificationsModule() {
               className="rounded-xl"
               disabled={!hasFilters}
               onClick={() => {
-                setEventFilter('all');
+                setExcludedTypes(new Set());
                 setPersonFilter('');
                 setFromDate('');
                 setToDate('');
