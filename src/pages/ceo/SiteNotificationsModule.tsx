@@ -300,7 +300,7 @@ export default function SiteNotificationsModule() {
       if (tab === 'important' && (!r.is_important || r.is_dismissed)) return false;
       if (tab === 'dismissed' && !r.is_dismissed) return false;
 
-      if (eventFilter !== 'all' && r.event_type !== eventFilter) return false;
+      if (excludedTypes.has(r.event_type)) return false;
 
       if (person) {
         const hay = [r.customer_name, r.customer_phone].filter(Boolean).join(' ');
@@ -318,7 +318,7 @@ export default function SiteNotificationsModule() {
         .filter(Boolean)
         .some((v) => String(v).includes(q));
     });
-  }, [rows, search, tab, eventFilter, personFilter, fromDate, toDate]);
+  }, [rows, search, tab, excludedTypes, personFilter, fromDate, toDate]);
 
   const counts = useMemo(
     () => ({
@@ -331,7 +331,27 @@ export default function SiteNotificationsModule() {
   );
 
   const hasFilters =
-    !!search || !!personFilter || !!fromDate || !!toDate || eventFilter !== 'all';
+    !!search || !!personFilter || !!fromDate || !!toDate || excludedTypes.size > 0;
+
+  const allEventKeys = Object.keys(EVENT_META);
+  const activeTypeCount = allEventKeys.filter((k) => !excludedTypes.has(k)).length;
+
+  const toggleType = (key: string) => {
+    setExcludedTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const typeCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    rows.forEach((r) => {
+      map[r.event_type] = (map[r.event_type] || 0) + 1;
+    });
+    return map;
+  }, [rows]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-muted/40 to-background p-3 md:p-6" dir="rtl">
