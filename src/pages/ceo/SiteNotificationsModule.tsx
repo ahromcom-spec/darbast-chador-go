@@ -26,6 +26,8 @@ import {
   CheckCheck,
   Clock,
   User,
+  ChevronDown,
+  Tags,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,7 +35,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { supabase } from '@/integrations/supabase/client';
 import { formatPersianDateTime } from '@/lib/dateUtils';
@@ -164,7 +167,9 @@ export default function SiteNotificationsModule() {
   const [rows, setRows] = useState<NotificationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [eventFilter, setEventFilter] = useState('all');
+  // انواع اعلانی که مدیر تیکشان را برداشته (پیش‌فرض: هیچ‌کدام → همه نمایش داده می‌شوند)
+  const [excludedTypes, setExcludedTypes] = useState<Set<string>>(new Set());
+  const [typesOpen, setTypesOpen] = useState(false);
   const [personFilter, setPersonFilter] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -298,7 +303,7 @@ export default function SiteNotificationsModule() {
       if (tab === 'important' && (!r.is_important || r.is_dismissed)) return false;
       if (tab === 'dismissed' && !r.is_dismissed) return false;
 
-      if (eventFilter !== 'all' && r.event_type !== eventFilter) return false;
+      if (excludedTypes.has(r.event_type)) return false;
 
       if (person) {
         const hay = [r.customer_name, r.customer_phone].filter(Boolean).join(' ');
@@ -316,7 +321,7 @@ export default function SiteNotificationsModule() {
         .filter(Boolean)
         .some((v) => String(v).includes(q));
     });
-  }, [rows, search, tab, eventFilter, personFilter, fromDate, toDate]);
+  }, [rows, search, tab, excludedTypes, personFilter, fromDate, toDate]);
 
   const counts = useMemo(
     () => ({
@@ -329,7 +334,27 @@ export default function SiteNotificationsModule() {
   );
 
   const hasFilters =
-    !!search || !!personFilter || !!fromDate || !!toDate || eventFilter !== 'all';
+    !!search || !!personFilter || !!fromDate || !!toDate || excludedTypes.size > 0;
+
+  const allEventKeys = Object.keys(EVENT_META);
+  const activeTypeCount = allEventKeys.filter((k) => !excludedTypes.has(k)).length;
+
+  const toggleType = (key: string) => {
+    setExcludedTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const typeCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    rows.forEach((r) => {
+      map[r.event_type] = (map[r.event_type] || 0) + 1;
+    });
+    return map;
+  }, [rows]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-muted/40 to-background p-3 md:p-6" dir="rtl">
@@ -416,19 +441,91 @@ export default function SiteNotificationsModule() {
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <Select value={eventFilter} onValueChange={setEventFilter}>
-              <SelectTrigger className="rounded-xl">
-                <SelectValue placeholder="نوع اعلان" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">همه انواع اعلان</SelectItem>
-                {Object.entries(EVENT_META).map(([key, meta]) => (
-                  <SelectItem key={key} value={key}>
-                    {meta.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={typesOpen} onOpenChange={setTypesOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={typesOpen}
+                  className="h-10 w-full justify-between rounded-xl px-3 font-normal"
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <Tags className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="truncate text-sm">
+                      {excludedTypes.size === 0
+                        ? 'همه انواع اعلان'
+                        : activeTypeCount === 0
+                          ? 'هیچ نوعی انتخاب نشده'
+                          : `${activeTypeCount} نوع از ${allEventKeys.length}`}
+                    </span>
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      'h-4 w-4 shrink-0 text-muted-foreground transition-transform',
+                      typesOpen && 'rotate-180'
+                    )}
+                  />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-72 rounded-2xl p-0" dir="rtl">
+                <div className="flex items-center justify-between border-b px-3 py-2.5">
+                  <span className="text-xs font-semibold">انواع اعلان‌ها</span>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 rounded-lg px-2 text-[11px]"
+                      onClick={() => setExcludedTypes(new Set())}
+                      disabled={excludedTypes.size === 0}
+                    >
+                      انتخاب همه
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 rounded-lg px-2 text-[11px]"
+                      onClick={() => setExcludedTypes(new Set(allEventKeys))}
+                      disabled={activeTypeCount === 0}
+                    >
+                      حذف همه
+                    </Button>
+                  </div>
+                </div>
+                <div className="max-h-72 overflow-y-auto p-1.5">
+                  {Object.entries(EVENT_META).map(([key, meta]) => {
+                    const checked = !excludedTypes.has(key);
+                    const Icon = meta.icon;
+                    return (
+                      <label
+                        key={key}
+                        className={cn(
+                          'flex cursor-pointer items-center gap-2.5 rounded-xl px-2 py-2 transition-colors hover:bg-accent',
+                          !checked && 'opacity-50'
+                        )}
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={() => toggleType(key)}
+                          className="rounded-md"
+                        />
+                        <span
+                          className={cn(
+                            'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg',
+                            meta.iconWrap
+                          )}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                        </span>
+                        <span className="flex-1 truncate text-sm">{meta.label}</span>
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold tabular-nums">
+                          {typeCounts[key] || 0}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </PopoverContent>
+            </Popover>
 
             <div className="relative">
               <User className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -460,7 +557,7 @@ export default function SiteNotificationsModule() {
               className="rounded-xl"
               disabled={!hasFilters}
               onClick={() => {
-                setEventFilter('all');
+                setExcludedTypes(new Set());
                 setPersonFilter('');
                 setFromDate('');
                 setToDate('');
