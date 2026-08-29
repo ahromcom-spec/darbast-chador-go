@@ -17,6 +17,11 @@ import {
   Save,
   Volume2,
   VolumeX,
+  ArrowLeftRight,
+  Users,
+  GitBranch,
+  LogIn,
+  Filter,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,10 +29,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { supabase } from '@/integrations/supabase/client';
 import { formatPersianDateTime } from '@/lib/dateUtils';
 import { toast } from '@/hooks/use-toast';
 import { SITE_NOTIF_SOUND_KEY } from '@/components/notifications/SiteNotificationSound';
+
 
 interface NotificationRow {
   id: string;
@@ -52,13 +60,23 @@ const EVENT_META: Record<string, { label: string; icon: typeof Bell; className: 
   repair_request: { label: 'درخواست تعمیر', icon: Wrench, className: 'bg-amber-500/10 text-amber-600 border-amber-500/30' },
   collection_request: { label: 'درخواست جمع‌آوری', icon: PackageOpen, className: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30' },
   renewal_request: { label: 'درخواست تمدید', icon: CalendarClock, className: 'bg-purple-500/10 text-purple-600 border-purple-500/30' },
+  order_transfer: { label: 'انتقال سفارش', icon: ArrowLeftRight, className: 'bg-teal-500/10 text-teal-600 border-teal-500/30' },
+  order_collaborator: { label: 'همکاری در سفارش', icon: Users, className: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/30' },
+  order_stage_change: { label: 'تغییر مرحله سفارش', icon: GitBranch, className: 'bg-blue-500/10 text-blue-600 border-blue-500/30' },
+  user_visit: { label: 'ورود/بازدید کاربر', icon: LogIn, className: 'bg-slate-500/10 text-slate-600 border-slate-500/30' },
 };
+
 
 export default function SiteNotificationsModule() {
   const navigate = useNavigate();
   const [rows, setRows] = useState<NotificationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [eventFilter, setEventFilter] = useState('all');
+  const [personFilter, setPersonFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
   const [tab, setTab] = useState('active');
   const [noteOpenId, setNoteOpenId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
@@ -160,16 +178,35 @@ export default function SiteNotificationsModule() {
 
   const filtered = useMemo(() => {
     const q = search.trim();
+    const person = personFilter.trim();
+    const fromTs = fromDate ? new Date(new Date(fromDate).setHours(0, 0, 0, 0)).getTime() : null;
+    const toTs = toDate ? new Date(new Date(toDate).setHours(23, 59, 59, 999)).getTime() : null;
+
     return rows.filter((r) => {
       if (tab === 'active' && r.is_dismissed) return false;
       if (tab === 'important' && (!r.is_important || r.is_dismissed)) return false;
       if (tab === 'dismissed' && !r.is_dismissed) return false;
+
+      if (eventFilter !== 'all' && r.event_type !== eventFilter) return false;
+
+      if (person) {
+        const hay = [r.customer_name, r.customer_phone].filter(Boolean).join(' ');
+        if (!hay.includes(person)) return false;
+      }
+
+      if (fromTs || toTs) {
+        const ts = new Date(r.created_at).getTime();
+        if (fromTs && ts < fromTs) return false;
+        if (toTs && ts > toTs) return false;
+      }
+
       if (!q) return true;
       return [r.order_code, r.customer_name, r.customer_phone, r.title, r.body, r.admin_note]
         .filter(Boolean)
         .some((v) => String(v).includes(q));
     });
-  }, [rows, search, tab]);
+  }, [rows, search, tab, eventFilter, personFilter, fromDate, toDate]);
+
 
   const counts = useMemo(
     () => ({
@@ -218,7 +255,7 @@ export default function SiteNotificationsModule() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm text-muted-foreground">
-              هر پیام سفارش، ثبت سفارش جدید، درخواست تعمیر، جمع‌آوری و تمدید به‌صورت یک پاپ‌آپ در این ماژول ثبت می‌شود.
+              پیام سفارش، سفارش جدید، تعمیر، جمع‌آوری، تمدید، انتقال سفارش، همکاری، تغییر مرحله سفارش و ورود کاربران به‌صورت پاپ‌آپ در این ماژول ثبت می‌شود.
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -227,6 +264,66 @@ export default function SiteNotificationsModule() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                <Filter className="h-4 w-4 text-primary" />
+                فیلتر اعلان‌ها
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                <Select value={eventFilter} onValueChange={setEventFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="نوع اعلان" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">همه انواع اعلان</SelectItem>
+                    {Object.entries(EVENT_META).map(([key, meta]) => (
+                      <SelectItem key={key} value={key}>
+                        {meta.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Input
+                  placeholder="نام یا شماره شخص"
+                  value={personFilter}
+                  onChange={(e) => setPersonFilter(e.target.value)}
+                />
+
+                <PersianDatePicker
+                  value={fromDate}
+                  onChange={setFromDate}
+                  timeMode="none"
+                  placeholder="از تاریخ"
+                />
+                <PersianDatePicker
+                  value={toDate}
+                  onChange={setToDate}
+                  timeMode="none"
+                  placeholder="تا تاریخ"
+                />
+              </div>
+
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">{filtered.length} اعلان نمایش داده می‌شود</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEventFilter('all');
+                    setPersonFilter('');
+                    setFromDate('');
+                    setToDate('');
+                    setSearch('');
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                  حذف فیلترها
+                </Button>
+              </div>
+            </div>
+
 
             <Tabs value={tab} onValueChange={setTab}>
               <TabsList className="w-full">
