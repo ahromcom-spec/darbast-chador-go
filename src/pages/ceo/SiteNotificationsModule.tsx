@@ -72,6 +72,11 @@ export default function SiteNotificationsModule() {
   const [rows, setRows] = useState<NotificationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [eventFilter, setEventFilter] = useState('all');
+  const [personFilter, setPersonFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
   const [tab, setTab] = useState('active');
   const [noteOpenId, setNoteOpenId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
