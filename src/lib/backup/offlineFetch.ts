@@ -532,15 +532,35 @@ const RPC_REGISTRY: Record<string, RpcHandler> = {
   check_staff_whitelist: async (args: any) => {
     try {
       const phone = args?.p_phone || args?.phone;
-      const rows = await queryTable<any>('staff_whitelist', (r) => r?.phone === phone);
+      const rows = await queryTable<any>('staff_whitelist', (r) => r?.phone === phone || r?.phone_number === phone);
+      return rows.length > 0;
+    } catch { return false; }
+  },
+  check_phone_whitelist: async (args: any) => {
+    try {
+      const phone = args?.p_phone || args?.phone || args?.phone_number;
+      const rows = await queryTable<any>('phone_whitelist', (r) => r?.phone === phone || r?.phone_number === phone);
       return rows.length > 0;
     } catch { return false; }
   },
   lookup_profile_by_phone: async (args: any) => {
     try {
-      const phone = args?.p_phone || args?.phone;
-      const rows = await queryTable<any>('profiles', (r) => r?.phone === phone);
+      const phone = String(args?.p_phone ?? args?.phone ?? args?.phone_number ?? '').trim();
+      const rows = await queryTable<any>(
+        'profiles',
+        (r: any) => String(r?.phone_number ?? r?.phone ?? '').trim() === phone,
+      );
       return rows[0] || null;
+    } catch { return null; }
+  },
+  get_user_id_by_phone: async (args: any) => {
+    try {
+      const phone = String(args?.p_phone ?? args?.phone ?? args?.phone_number ?? '').trim();
+      const rows = await queryTable<any>(
+        'profiles',
+        (r: any) => String(r?.phone_number ?? r?.phone ?? '').trim() === phone,
+      );
+      return rows[0]?.user_id || null;
     } catch { return null; }
   },
   get_contractor_contact_info: async (args: any) => {
@@ -549,6 +569,21 @@ const RPC_REGISTRY: Record<string, RpcHandler> = {
       const rows = await queryTable<any>('contractors', (r) => r?.id === id);
       return rows[0] || null;
     } catch { return null; }
+  },
+  has_role: async (args: any) => {
+    try {
+      const uid = args?._user_id || args?.user_id;
+      const role = args?._role || args?.role;
+      const rows = await queryTable<any>('user_roles', (r: any) => r?.user_id === uid && r?.role === role);
+      return rows.length > 0;
+    } catch { return false; }
+  },
+  get_wallet_balance: async (args: any) => {
+    try {
+      const uid = args?.p_user_id || args?.user_id || args?.p_staff_id;
+      const rows = await queryTable<any>('wallet_transactions', (r: any) => !uid || r?.user_id === uid);
+      return rows.reduce((s: number, r: any) => s + Number(r?.amount || 0), 0);
+    } catch { return 0; }
   },
   get_module_lock_status: async () => null,
   acquire_module_lock: async () => ({ acquired: false, reason: 'offline' }),
