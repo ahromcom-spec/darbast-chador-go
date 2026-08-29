@@ -167,7 +167,6 @@ export default function SiteNotificationsModule() {
   const [search, setSearch] = useState('');
   // انواع اعلانی که مدیر تیکشان را برداشته (پیش‌فرض: هیچ‌کدام → همه نمایش داده می‌شوند)
   const [excludedTypes, setExcludedTypes] = useState<Set<string>>(new Set());
-  const [typesOpen, setTypesOpen] = useState(false);
   const [personFilter, setPersonFilter] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
