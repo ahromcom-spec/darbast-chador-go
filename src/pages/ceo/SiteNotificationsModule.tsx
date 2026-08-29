@@ -23,10 +23,10 @@ import {
   LogIn,
   Filter,
   Search,
+  Check,
   CheckCheck,
   Clock,
   User,
-  ChevronDown,
   Tags,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -35,8 +35,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Checkbox } from '@/components/ui/checkbox';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { supabase } from '@/integrations/supabase/client';
 import { formatPersianDateTime } from '@/lib/dateUtils';
