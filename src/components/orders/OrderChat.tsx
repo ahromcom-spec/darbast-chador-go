@@ -180,6 +180,60 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
     }
   };
 
+  const startEdit = (msg: Message) => {
+    setEditingId(msg.id);
+    setEditingText(msg.message);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingText('');
+  };
+
+  const saveEdit = async (msg: Message) => {
+    const text = editingText.trim();
+    if (!text) return;
+    setSavingEdit(true);
+    try {
+      const { error } = await supabase
+        .from('order_messages')
+        .update({ message: text })
+        .eq('id', msg.id);
+      if (error) throw error;
+      setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, message: text } : m)));
+      cancelEdit();
+      toast({ title: 'پیام ویرایش شد' });
+    } catch (error: any) {
+      toast({ title: 'خطا در ویرایش پیام', description: error.message, variant: 'destructive' });
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    const msg = deleteTarget;
+    if (!msg) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from('order_messages').delete().eq('id', msg.id);
+      if (error) throw error;
+
+      if (msg.audio_path) {
+        await supabase.storage.from('voice-messages').remove([msg.audio_path]).catch(() => {});
+      }
+
+      setMessages((prev) => prev.filter((m) => m.id !== msg.id));
+      setDeleteTarget(null);
+      toast({ title: 'پیام حذف شد' });
+    } catch (error: any) {
+      toast({ title: 'خطا در حذف پیام', description: error.message, variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+
+
   // Check microphone permission status
   const checkMicrophonePermission = useCallback(async (): Promise<'granted' | 'denied' | 'prompt'> => {
     try {
