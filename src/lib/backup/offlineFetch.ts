@@ -623,21 +623,38 @@ async function handleRest(url: URL, init: RequestInit | undefined): Promise<Resp
   }
 
   // GET path — stream via cursor with predicate, never materialise full table.
-  const predicate = buildPredicate(url);
+  const { top, embedded } = buildPredicates(url);
   let filtered: any[];
   try {
-    filtered = await queryTable<any>(table, predicate);
+    filtered = await queryTable<any>(table, top);
   } catch {
-    return jsonResponse({ code: 'OFFLINE', message: `جدول «${table}» در بکاپ آفلاین موجود نیست`, details: null, hint: null }, 404);
+    filtered = [];
   }
 
-  // Order → offset/limit → select
+  const parsedSelect = parseSelect(url.searchParams.get('select'));
+
+  // Embedded resources (joins) → embedded filters → order
+  filtered = await applyEmbeds(table, filtered, parsedSelect);
+  if (embedded) filtered = filtered.filter(embedded);
   filtered = applyOrder(filtered, url);
-  filtered = applyOffsetLimit(filtered, url);
-  filtered = applySelect(filtered, url.searchParams.get('select'));
+
+  const matched = filtered.length;
+
+  // Pagination: PostgREST `Range` header (supabase-js `.range()`) + offset/limit params
+  const headers = new Headers(init?.headers || {});
+  const rangeHeader = headers.get('range') || '';
+  const rangeMatch = rangeHeader.match(/^(\d+)-(\d*)$/);
+  if (rangeMatch) {
+    const from = parseInt(rangeMatch[1], 10);
+    const to = rangeMatch[2] ? parseInt(rangeMatch[2], 10) : undefined;
+    filtered = filtered.slice(from, to !== undefined ? to + 1 : undefined);
+  } else {
+    filtered = applyOffsetLimit(filtered, url);
+  }
+
+  filtered = applyProjection(filtered, parsedSelect);
 
   // Single-object mode
-  const headers = new Headers(init?.headers || {});
   const accept = headers.get('accept') || '';
   if (accept.includes('vnd.pgrst.object+json')) {
     if (filtered.length === 0) {
@@ -646,12 +663,11 @@ async function handleRest(url: URL, init: RequestInit | undefined): Promise<Resp
     return jsonResponse(filtered[0]);
   }
 
-  // Count header
+  // Count header — must reflect the filtered total so paginated loops terminate
   const prefer = headers.get('prefer') || '';
   const extra: Record<string, string> = {};
   if (/count=(exact|planned|estimated)/.test(prefer)) {
-    const total = await countTable(table);
-    extra['Content-Range'] = `0-${Math.max(0, filtered.length - 1)}/${total}`;
+    extra['Content-Range'] = `0-${Math.max(0, filtered.length - 1)}/${matched}`;
   }
 
   return jsonResponse(filtered, 200, extra);
