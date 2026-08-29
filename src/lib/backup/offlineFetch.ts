@@ -197,26 +197,68 @@ function parseAndGroup(value: string): Predicate | null {
   return (row) => subs.every((f) => f(row));
 }
 
-/** Build a single AND-combined predicate from all filter params on the URL. */
-function buildPredicate(url: URL): Predicate | undefined {
-  const preds: Predicate[] = [];
+const RESERVED_PARAMS = new Set(['select', 'limit', 'offset', 'order', 'on_conflict', 'columns']);
+
+/** Read a possibly dotted path (`subcategories.code`, `a.b.c`) from a row/embedded tree. */
+function readPath(row: any, path: string): any {
+  const segs = path.split('.');
+  let cur: any = row;
+  for (const s of segs) {
+    if (cur === null || cur === undefined) return undefined;
+    if (Array.isArray(cur)) {
+      // Any element matching is enough — return the array of values
+      cur = cur.map((el) => el?.[s]);
+      continue;
+    }
+    cur = cur[s];
+  }
+  return cur;
+}
+
+/** Predicate over an embedded (dotted) column — arrays match if ANY element matches. */
+function embeddedPredicate(path: string, expr: string): Predicate | null {
+  const base = parseExpression('__v', expr);
+  if (!base) return null;
+  return (row) => {
+    const v = readPath(row, path);
+    if (Array.isArray(v)) return v.some((x) => base({ __v: x }));
+    return base({ __v: v });
+  };
+}
+
+/**
+ * Build predicates from URL filters.
+ * Top-level (plain column) filters run before embedding; dotted filters that
+ * target embedded resources run after embedding.
+ */
+function buildPredicates(url: URL): { top?: Predicate; embedded?: Predicate } {
+  const top: Predicate[] = [];
+  const embedded: Predicate[] = [];
   for (const [key, value] of url.searchParams.entries()) {
-    if (key === 'select' || key === 'limit' || key === 'offset' || key === 'order') continue;
+    if (RESERVED_PARAMS.has(key)) continue;
     if (key === 'or') {
       const p = parseOrGroup(value);
-      if (p) preds.push(p);
+      if (p) top.push(p);
       continue;
     }
     if (key === 'and') {
       const p = parseAndGroup(value);
-      if (p) preds.push(p);
+      if (p) top.push(p);
+      continue;
+    }
+    if (key.includes('.')) {
+      const idx = key.lastIndexOf('.');
+      const p = embeddedPredicate(key.slice(0, idx) + '.' + key.slice(idx + 1), value);
+      if (p) embedded.push(p);
       continue;
     }
     const p = parseExpression(key, value);
-    if (p) preds.push(p);
+    if (p) top.push(p);
   }
-  if (preds.length === 0) return undefined;
-  return (row) => preds.every((f) => f(row));
+  return {
+    top: top.length ? (row) => top.every((f) => f(row)) : undefined,
+    embedded: embedded.length ? (row) => embedded.every((f) => f(row)) : undefined,
+  };
 }
 
 // ==================== Post-processing ====================
