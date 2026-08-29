@@ -14,6 +14,13 @@ export async function importBackup(
 ): Promise<BackupMeta> {
   onProgress?.({ phase: 'reading', message: 'در حال باز کردن فایل بکاپ...' });
 
+  // Ask the browser to keep this data (prevents eviction of large offline backups)
+  try {
+    if (navigator.storage?.persist && !(await navigator.storage.persisted())) {
+      await navigator.storage.persist();
+    }
+  } catch {}
+
   const zip = await JSZip.loadAsync(file);
   const manifestFile = zip.file('manifest.json');
   if (!manifestFile) throw new Error('فایل manifest.json یافت نشد — بکاپ نامعتبر است');
