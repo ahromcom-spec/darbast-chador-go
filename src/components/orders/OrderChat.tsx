@@ -16,6 +16,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatPersianDateTime } from '@/lib/dateUtils';
+
 
 interface Message {
   id: string;
@@ -24,7 +26,9 @@ interface Message {
   message: string;
   is_staff: boolean;
   created_at: string;
+  edited_at?: string | null;
   audio_path?: string;
+
   profiles?: {
     full_name: string;
   };
@@ -706,6 +710,14 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
                         day: 'numeric'
                       })}
                     </span>
+
+                    {msg.edited_at && (
+                      <span className="inline-flex items-center gap-1 text-[11px] text-amber-600">
+                        <Pencil className="h-3 w-3" />
+                        ویرایش شده در {formatPersianDateTime(msg.edited_at)}
+                      </span>
+                    )}
+
 
                     {msg.user_id === user?.id && !msg.audio_path && editingId !== msg.id && (
                       <button

@@ -46,6 +46,8 @@ interface NotificationRow {
 
 const EVENT_META: Record<string, { label: string; icon: typeof Bell; className: string }> = {
   order_message: { label: 'پیام در سفارش', icon: MessageSquare, className: 'bg-sky-500/10 text-sky-600 border-sky-500/30' },
+  order_message_edited: { label: 'ویرایش پیام سفارش', icon: StickyNote, className: 'bg-orange-500/10 text-orange-600 border-orange-500/30' },
+
   new_order: { label: 'ثبت سفارش جدید', icon: ShoppingCart, className: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' },
   repair_request: { label: 'درخواست تعمیر', icon: Wrench, className: 'bg-amber-500/10 text-amber-600 border-amber-500/30' },
   collection_request: { label: 'درخواست جمع‌آوری', icon: PackageOpen, className: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30' },
