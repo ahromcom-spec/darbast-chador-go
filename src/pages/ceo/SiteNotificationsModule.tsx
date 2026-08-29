@@ -255,7 +255,7 @@ export default function SiteNotificationsModule() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm text-muted-foreground">
-              هر پیام سفارش، ثبت سفارش جدید، درخواست تعمیر، جمع‌آوری و تمدید به‌صورت یک پاپ‌آپ در این ماژول ثبت می‌شود.
+              پیام سفارش، سفارش جدید، تعمیر، جمع‌آوری، تمدید، انتقال سفارش، همکاری، تغییر مرحله سفارش و ورود کاربران به‌صورت پاپ‌آپ در این ماژول ثبت می‌شود.
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -264,6 +264,66 @@ export default function SiteNotificationsModule() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                <Filter className="h-4 w-4 text-primary" />
+                فیلتر اعلان‌ها
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                <Select value={eventFilter} onValueChange={setEventFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="نوع اعلان" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">همه انواع اعلان</SelectItem>
+                    {Object.entries(EVENT_META).map(([key, meta]) => (
+                      <SelectItem key={key} value={key}>
+                        {meta.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Input
+                  placeholder="نام یا شماره شخص"
+                  value={personFilter}
+                  onChange={(e) => setPersonFilter(e.target.value)}
+                />
+
+                <PersianDatePicker
+                  value={fromDate}
+                  onChange={setFromDate}
+                  timeMode="none"
+                  placeholder="از تاریخ"
+                />
+                <PersianDatePicker
+                  value={toDate}
+                  onChange={setToDate}
+                  timeMode="none"
+                  placeholder="تا تاریخ"
+                />
+              </div>
+
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">{filtered.length} اعلان نمایش داده می‌شود</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEventFilter('all');
+                    setPersonFilter('');
+                    setFromDate('');
+                    setToDate('');
+                    setSearch('');
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                  حذف فیلترها
+                </Button>
+              </div>
+            </div>
+
 
             <Tabs value={tab} onValueChange={setTab}>
               <TabsList className="w-full">
