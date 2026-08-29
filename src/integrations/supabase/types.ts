@@ -2482,6 +2482,7 @@ export type Database = {
         Row: {
           audio_path: string | null
           created_at: string | null
+          edited_at: string | null
           id: string
           is_staff: boolean | null
           message: string
@@ -2492,6 +2493,7 @@ export type Database = {
         Insert: {
           audio_path?: string | null
           created_at?: string | null
+          edited_at?: string | null
           id?: string
           is_staff?: boolean | null
           message: string
@@ -2502,6 +2504,7 @@ export type Database = {
         Update: {
           audio_path?: string | null
           created_at?: string | null
+          edited_at?: string | null
           id?: string
           is_staff?: boolean | null
           message?: string
