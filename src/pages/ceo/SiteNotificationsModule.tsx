@@ -22,8 +22,12 @@ import {
   GitBranch,
   LogIn,
   Filter,
+  Search,
+  CheckCheck,
+  Clock,
+  User,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -35,7 +39,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatPersianDateTime } from '@/lib/dateUtils';
 import { toast } from '@/hooks/use-toast';
 import { SITE_NOTIF_SOUND_KEY } from '@/components/notifications/SiteNotificationSound';
-
+import { cn } from '@/lib/utils';
 
 interface NotificationRow {
   id: string;
@@ -52,20 +56,108 @@ interface NotificationRow {
   created_at: string;
 }
 
-const EVENT_META: Record<string, { label: string; icon: typeof Bell; className: string }> = {
-  order_message: { label: 'پیام در سفارش', icon: MessageSquare, className: 'bg-sky-500/10 text-sky-600 border-sky-500/30' },
-  order_message_edited: { label: 'ویرایش پیام سفارش', icon: StickyNote, className: 'bg-orange-500/10 text-orange-600 border-orange-500/30' },
+const READ_KEY = 'siteNotificationsReadIds';
 
-  new_order: { label: 'ثبت سفارش جدید', icon: ShoppingCart, className: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' },
-  repair_request: { label: 'درخواست تعمیر', icon: Wrench, className: 'bg-amber-500/10 text-amber-600 border-amber-500/30' },
-  collection_request: { label: 'درخواست جمع‌آوری', icon: PackageOpen, className: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30' },
-  renewal_request: { label: 'درخواست تمدید', icon: CalendarClock, className: 'bg-purple-500/10 text-purple-600 border-purple-500/30' },
-  order_transfer: { label: 'انتقال سفارش', icon: ArrowLeftRight, className: 'bg-teal-500/10 text-teal-600 border-teal-500/30' },
-  order_collaborator: { label: 'همکاری در سفارش', icon: Users, className: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/30' },
-  order_stage_change: { label: 'تغییر مرحله سفارش', icon: GitBranch, className: 'bg-blue-500/10 text-blue-600 border-blue-500/30' },
-  user_visit: { label: 'ورود/بازدید کاربر', icon: LogIn, className: 'bg-slate-500/10 text-slate-600 border-slate-500/30' },
+const loadReadIds = (): Set<string> => {
+  try {
+    const raw = localStorage.getItem(READ_KEY);
+    return new Set<string>(raw ? JSON.parse(raw) : []);
+  } catch {
+    return new Set<string>();
+  }
 };
 
+const persistReadIds = (ids: Set<string>) => {
+  try {
+    localStorage.setItem(READ_KEY, JSON.stringify([...ids].slice(-2000)));
+  } catch {
+    /* ignore */
+  }
+};
+
+const EVENT_META: Record<
+  string,
+  { label: string; icon: typeof Bell; badge: string; edge: string; iconWrap: string }
+> = {
+  order_message: {
+    label: 'پیام در سفارش',
+    icon: MessageSquare,
+    badge: 'bg-sky-500/10 text-sky-600 border-sky-500/30',
+    edge: 'bg-sky-500',
+    iconWrap: 'bg-sky-500/10 text-sky-600',
+  },
+  order_message_edited: {
+    label: 'ویرایش پیام سفارش',
+    icon: StickyNote,
+    badge: 'bg-orange-500/10 text-orange-600 border-orange-500/30',
+    edge: 'bg-orange-500',
+    iconWrap: 'bg-orange-500/10 text-orange-600',
+  },
+  new_order: {
+    label: 'ثبت سفارش جدید',
+    icon: ShoppingCart,
+    badge: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
+    edge: 'bg-emerald-500',
+    iconWrap: 'bg-emerald-500/10 text-emerald-600',
+  },
+  repair_request: {
+    label: 'درخواست تعمیر',
+    icon: Wrench,
+    badge: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
+    edge: 'bg-amber-500',
+    iconWrap: 'bg-amber-500/10 text-amber-600',
+  },
+  collection_request: {
+    label: 'درخواست جمع‌آوری',
+    icon: PackageOpen,
+    badge: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30',
+    edge: 'bg-indigo-500',
+    iconWrap: 'bg-indigo-500/10 text-indigo-600',
+  },
+  renewal_request: {
+    label: 'درخواست تمدید',
+    icon: CalendarClock,
+    badge: 'bg-purple-500/10 text-purple-600 border-purple-500/30',
+    edge: 'bg-purple-500',
+    iconWrap: 'bg-purple-500/10 text-purple-600',
+  },
+  order_transfer: {
+    label: 'انتقال سفارش',
+    icon: ArrowLeftRight,
+    badge: 'bg-teal-500/10 text-teal-600 border-teal-500/30',
+    edge: 'bg-teal-500',
+    iconWrap: 'bg-teal-500/10 text-teal-600',
+  },
+  order_collaborator: {
+    label: 'همکاری در سفارش',
+    icon: Users,
+    badge: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/30',
+    edge: 'bg-yellow-500',
+    iconWrap: 'bg-yellow-500/10 text-yellow-700',
+  },
+  order_stage_change: {
+    label: 'تغییر مرحله سفارش',
+    icon: GitBranch,
+    badge: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+    edge: 'bg-blue-500',
+    iconWrap: 'bg-blue-500/10 text-blue-600',
+  },
+  user_visit: {
+    label: 'ورود/بازدید کاربر',
+    icon: LogIn,
+    badge: 'bg-slate-500/10 text-slate-600 border-slate-500/30',
+    edge: 'bg-slate-400',
+    iconWrap: 'bg-slate-500/10 text-slate-600',
+  },
+};
+
+const FALLBACK_META = {
+  label: 'اعلان',
+  icon: Bell,
+  badge: 'bg-muted text-muted-foreground border-border',
+  edge: 'bg-muted-foreground/50',
+  iconWrap: 'bg-muted text-muted-foreground',
+};
 
 export default function SiteNotificationsModule() {
   const navigate = useNavigate();
@@ -76,6 +168,7 @@ export default function SiteNotificationsModule() {
   const [personFilter, setPersonFilter] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [readIds, setReadIds] = useState<Set<string>>(() => loadReadIds());
 
   const [tab, setTab] = useState('active');
   const [noteOpenId, setNoteOpenId] = useState<string | null>(null);
@@ -120,6 +213,15 @@ export default function SiteNotificationsModule() {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  const markRead = (ids: string[]) => {
+    setReadIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.add(id));
+      persistReadIds(next);
+      return next;
+    });
+  };
 
   const toggleImportant = async (row: NotificationRow) => {
     const next = !row.is_important;
@@ -176,6 +278,15 @@ export default function SiteNotificationsModule() {
     }
   };
 
+  const personSuggestions = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach((r) => {
+      if (r.customer_name) set.add(r.customer_name);
+      if (r.customer_phone) set.add(r.customer_phone);
+    });
+    return [...set].slice(0, 60);
+  }, [rows]);
+
   const filtered = useMemo(() => {
     const q = search.trim();
     const person = personFilter.trim();
@@ -207,28 +318,59 @@ export default function SiteNotificationsModule() {
     });
   }, [rows, search, tab, eventFilter, personFilter, fromDate, toDate]);
 
-
   const counts = useMemo(
     () => ({
       active: rows.filter((r) => !r.is_dismissed).length,
       important: rows.filter((r) => r.is_important && !r.is_dismissed).length,
       dismissed: rows.filter((r) => r.is_dismissed).length,
+      unread: rows.filter((r) => !r.is_dismissed && !readIds.has(r.id)).length,
     }),
-    [rows]
+    [rows, readIds]
   );
 
+  const hasFilters =
+    !!search || !!personFilter || !!fromDate || !!toDate || eventFilter !== 'all';
+
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-b from-muted/40 to-background p-3 md:p-6" dir="rtl">
       <div className="mx-auto max-w-6xl space-y-4">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-bold md:text-xl">ماژول گزارشات و اعلانات سایت</h1>
+        {/* Header */}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card/80 p-4 shadow-sm backdrop-blur">
+          <div className="flex items-center gap-3">
+            <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Bell className="h-5 w-5" />
+              {counts.unread > 0 && (
+                <span className="absolute -top-1 -left-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+                  {counts.unread}
+                </span>
+              )}
+            </div>
+            <div>
+              <h1 className="text-base font-bold md:text-xl">ماژول گزارشات و اعلانات سایت</h1>
+              <p className="text-xs text-muted-foreground">
+                {counts.active} اعلان فعال · {counts.unread} خوانده‌نشده
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
+              className="rounded-xl"
+              onClick={() => {
+                markRead(rows.filter((r) => !r.is_dismissed).map((r) => r.id));
+                toast({ title: 'همه اعلان‌ها خوانده‌شده علامت خوردند' });
+              }}
+              disabled={counts.unread === 0}
+            >
+              <CheckCheck className="h-4 w-4" />
+              خواندن همه
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-xl"
               onClick={() => {
                 const next = !soundEnabled;
                 setSoundEnabled(next);
@@ -240,137 +382,202 @@ export default function SiteNotificationsModule() {
               {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
               {soundEnabled ? 'صدا روشن' : 'صدا خاموش'}
             </Button>
-            <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+            <Button variant="outline" size="sm" className="rounded-xl" onClick={load} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               بروزرسانی
             </Button>
-
-            <Button variant="outline" size="sm" onClick={() => navigate('/profile?tab=modules')}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-xl"
+              onClick={() => navigate('/profile?tab=modules')}
+            >
               بازگشت
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm text-muted-foreground">
-              پیام سفارش، سفارش جدید، تعمیر، جمع‌آوری، تمدید، انتقال سفارش، همکاری، تغییر مرحله سفارش و ورود کاربران به‌صورت پاپ‌آپ در این ماژول ثبت می‌شود.
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        {/* Filters */}
+        <div className="rounded-2xl border bg-card p-4 shadow-sm">
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+            <Filter className="h-4 w-4 text-primary" />
+            فیلتر پیشرفته اعلان‌ها
+          </div>
+
+          <div className="relative mb-3">
+            <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
+              className="rounded-xl pr-9"
               placeholder="جستجو در شماره سفارش، نام مشتری، متن پیام..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+          </div>
 
-            <div className="rounded-lg border bg-muted/30 p-3">
-              <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                <Filter className="h-4 w-4 text-primary" />
-                فیلتر اعلان‌ها
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                <Select value={eventFilter} onValueChange={setEventFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="نوع اعلان" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">همه انواع اعلان</SelectItem>
-                    {Object.entries(EVENT_META).map(([key, meta]) => (
-                      <SelectItem key={key} value={key}>
-                        {meta.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <Select value={eventFilter} onValueChange={setEventFilter}>
+              <SelectTrigger className="rounded-xl">
+                <SelectValue placeholder="نوع اعلان" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">همه انواع اعلان</SelectItem>
+                {Object.entries(EVENT_META).map(([key, meta]) => (
+                  <SelectItem key={key} value={key}>
+                    {meta.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-                <Input
-                  placeholder="نام یا شماره شخص"
-                  value={personFilter}
-                  onChange={(e) => setPersonFilter(e.target.value)}
-                />
-
-                <PersianDatePicker
-                  value={fromDate}
-                  onChange={setFromDate}
-                  timeMode="none"
-                  placeholder="از تاریخ"
-                />
-                <PersianDatePicker
-                  value={toDate}
-                  onChange={setToDate}
-                  timeMode="none"
-                  placeholder="تا تاریخ"
-                />
-              </div>
-
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <span className="text-xs text-muted-foreground">{filtered.length} اعلان نمایش داده می‌شود</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setEventFilter('all');
-                    setPersonFilter('');
-                    setFromDate('');
-                    setToDate('');
-                    setSearch('');
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                  حذف فیلترها
-                </Button>
-              </div>
+            <div className="relative">
+              <User className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="rounded-xl pr-9"
+                list="site-notif-persons"
+                placeholder="نام یا شماره شخص"
+                value={personFilter}
+                onChange={(e) => setPersonFilter(e.target.value)}
+              />
+              <datalist id="site-notif-persons">
+                {personSuggestions.map((p) => (
+                  <option key={p} value={p} />
+                ))}
+              </datalist>
             </div>
 
+            <PersianDatePicker value={fromDate} onChange={setFromDate} timeMode="none" placeholder="از تاریخ" />
+            <PersianDatePicker value={toDate} onChange={setToDate} timeMode="none" placeholder="تا تاریخ" />
+          </div>
 
-            <Tabs value={tab} onValueChange={setTab}>
-              <TabsList className="w-full">
-                <TabsTrigger value="active" className="flex-1">
-                  فعال ({counts.active})
-                </TabsTrigger>
-                <TabsTrigger value="important" className="flex-1">
-                  مهم ({counts.important})
-                </TabsTrigger>
-                <TabsTrigger value="dismissed" className="flex-1">
-                  حذف‌شده ({counts.dismissed})
-                </TabsTrigger>
-              </TabsList>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs text-muted-foreground">
+              {filtered.length} اعلان نمایش داده می‌شود
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-xl"
+              disabled={!hasFilters}
+              onClick={() => {
+                setEventFilter('all');
+                setPersonFilter('');
+                setFromDate('');
+                setToDate('');
+                setSearch('');
+              }}
+            >
+              <X className="h-4 w-4" />
+              حذف فیلترها
+            </Button>
+          </div>
+        </div>
 
-              <TabsContent value={tab} className="mt-4">
-                {loading ? (
-                  <div className="flex justify-center py-10">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  </div>
-                ) : filtered.length === 0 ? (
-                  <p className="py-10 text-center text-sm text-muted-foreground">اعلانی برای نمایش وجود ندارد</p>
-                ) : (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {filtered.map((row) => {
-                      const meta = EVENT_META[row.event_type] || {
-                        label: row.event_type,
-                        icon: Bell,
-                        className: 'bg-muted text-muted-foreground border-border',
-                      };
-                      const Icon = meta.icon;
-                      return (
-                        <Card
-                          key={row.id}
-                          className={`relative border shadow-sm transition-shadow hover:shadow-md ${
-                            row.is_important ? 'border-yellow-500/60 ring-1 ring-yellow-500/30' : ''
-                          }`}
-                        >
-                          <div className="absolute top-2 left-2 flex items-center gap-1">
+        {/* Tabs + list */}
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList className="h-auto w-full rounded-2xl bg-muted/60 p-1">
+            {[
+              { key: 'active', label: 'فعال', count: counts.active },
+              { key: 'important', label: 'مهم', count: counts.important },
+              { key: 'dismissed', label: 'حذف‌شده', count: counts.dismissed },
+            ].map((t) => (
+              <TabsTrigger
+                key={t.key}
+                value={t.key}
+                className="flex-1 gap-2 rounded-xl py-2 text-xs data-[state=active]:shadow-sm sm:text-sm"
+              >
+                {t.label}
+                <span className="rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-bold">
+                  {t.count}
+                </span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          <TabsContent value={tab} className="mt-4">
+            {loading ? (
+              <div className="flex justify-center py-16">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed bg-card/60 py-16">
+                <Bell className="h-8 w-8 text-muted-foreground/50" />
+                <p className="text-sm text-muted-foreground">اعلانی برای نمایش وجود ندارد</p>
+              </div>
+            ) : (
+              <div className="grid gap-3 lg:grid-cols-2">
+                {filtered.map((row) => {
+                  const meta = EVENT_META[row.event_type] || {
+                    ...FALLBACK_META,
+                    label: row.event_type,
+                  };
+                  const Icon = meta.icon;
+                  const unread = !row.is_dismissed && !readIds.has(row.id);
+
+                  return (
+                    <Card
+                      key={row.id}
+                      onMouseEnter={() => unread && markRead([row.id])}
+                      className={cn(
+                        'group relative overflow-hidden rounded-2xl border shadow-sm transition-all duration-200',
+                        'hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg',
+                        row.is_important && 'border-yellow-500/60 ring-1 ring-yellow-500/25',
+                        unread && 'bg-primary/[0.035]'
+                      )}
+                    >
+                      <span className={cn('absolute inset-y-0 right-0 w-1.5', meta.edge)} />
+
+                      <CardContent className="space-y-3 p-4 pr-5">
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex min-w-0 items-start gap-3">
+                            <div
+                              className={cn(
+                                'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl',
+                                meta.iconWrap
+                              )}
+                            >
+                              <Icon className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0 space-y-1">
+                              <div className="flex items-center gap-2">
+                                {unread && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />}
+                                <h3 className="truncate text-sm font-bold">{row.title}</h3>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <Badge variant="outline" className={cn('gap-1 text-[10px]', meta.badge)}>
+                                  {meta.label}
+                                </Badge>
+                                {row.order_code && (
+                                  <Badge variant="secondary" className="font-mono text-[10px]">
+                                    سفارش {row.order_code}
+                                  </Badge>
+                                )}
+                                {row.is_important && (
+                                  <Badge className="bg-yellow-500 text-[10px] text-yellow-950 hover:bg-yellow-500">
+                                    مهم
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex shrink-0 items-center gap-0.5 opacity-70 transition-opacity group-hover:opacity-100">
                             {row.is_dismissed ? (
                               <>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" title="بازگردانی" onClick={() => restore(row)}>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 rounded-lg"
+                                  title="بازگردانی"
+                                  onClick={() => restore(row)}
+                                >
                                   <RefreshCw className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7 text-destructive"
+                                  className="h-7 w-7 rounded-lg text-destructive"
                                   title="حذف کامل"
                                   onClick={() => removeForever(row)}
                                 >
@@ -382,20 +589,23 @@ export default function SiteNotificationsModule() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7"
+                                  className="h-7 w-7 rounded-lg"
                                   title={row.is_important ? 'حذف نشان مهم' : 'علامت‌گذاری به عنوان مهم'}
                                   onClick={() => toggleImportant(row)}
                                 >
                                   <Star
-                                    className={`h-4 w-4 ${
-                                      row.is_important ? 'fill-yellow-500 text-yellow-500' : 'text-muted-foreground'
-                                    }`}
+                                    className={cn(
+                                      'h-4 w-4',
+                                      row.is_important
+                                        ? 'fill-yellow-500 text-yellow-500'
+                                        : 'text-muted-foreground'
+                                    )}
                                   />
                                 </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7"
+                                  className="h-7 w-7 rounded-lg"
                                   title="افزودن توضیحات"
                                   onClick={() => {
                                     setNoteOpenId(noteOpenId === row.id ? null : row.id);
@@ -407,7 +617,7 @@ export default function SiteNotificationsModule() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-7 w-7 text-destructive"
+                                  className="h-7 w-7 rounded-lg text-destructive"
                                   title="حذف پاپ‌آپ"
                                   onClick={() => dismiss(row)}
                                 >
@@ -416,84 +626,81 @@ export default function SiteNotificationsModule() {
                               </>
                             )}
                           </div>
+                        </div>
 
-                          <CardContent className="space-y-2 p-4 pt-10">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Badge variant="outline" className={`gap-1 ${meta.className}`}>
-                                <Icon className="h-3 w-3" />
-                                {meta.label}
-                              </Badge>
-                              {row.order_code && (
-                                <Badge variant="secondary" className="font-mono text-xs">
-                                  سفارش {row.order_code}
-                                </Badge>
-                              )}
-                              {row.is_important && (
-                                <Badge className="bg-yellow-500 text-yellow-950 hover:bg-yellow-500">مهم</Badge>
-                              )}
-                            </div>
+                        {/* Body */}
+                        {row.body && (
+                          <p className="whitespace-pre-wrap rounded-xl bg-muted/60 p-2.5 text-sm leading-relaxed">
+                            {row.body}
+                          </p>
+                        )}
 
-                            <div className="text-sm font-semibold">{row.title}</div>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t pt-2 text-xs text-muted-foreground">
+                          {row.customer_name && (
+                            <span className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              {row.customer_name}
+                            </span>
+                          )}
+                          {row.customer_phone && <span className="font-mono">{row.customer_phone}</span>}
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {formatPersianDateTime(row.created_at)}
+                          </span>
+                        </div>
 
-                            {row.body && (
-                              <p className="whitespace-pre-wrap rounded-md bg-muted/50 p-2 text-sm leading-relaxed">
-                                {row.body}
-                              </p>
-                            )}
+                        {row.admin_note && noteOpenId !== row.id && (
+                          <p className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-2 text-xs">
+                            توضیحات: {row.admin_note}
+                          </p>
+                        )}
 
-                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                              {row.customer_name && <span>مشتری: {row.customer_name}</span>}
-                              {row.customer_phone && <span className="font-mono">{row.customer_phone}</span>}
-                              <span>{formatPersianDateTime(row.created_at)}</span>
-                            </div>
-
-                            {row.admin_note && noteOpenId !== row.id && (
-                              <p className="rounded-md border border-dashed border-primary/40 bg-primary/5 p-2 text-xs">
-                                توضیحات: {row.admin_note}
-                              </p>
-                            )}
-
-                            {noteOpenId === row.id && (
-                              <div className="space-y-2">
-                                <Textarea
-                                  value={noteDraft}
-                                  onChange={(e) => setNoteDraft(e.target.value)}
-                                  placeholder="توضیحات خود را برای این اعلان بنویسید..."
-                                  rows={3}
-                                />
-                                <div className="flex gap-2">
-                                  <Button size="sm" onClick={() => saveNote(row)}>
-                                    <Save className="h-4 w-4" />
-                                    ذخیره
-                                  </Button>
-                                  <Button size="sm" variant="ghost" onClick={() => setNoteOpenId(null)}>
-                                    انصراف
-                                  </Button>
-                                </div>
-                              </div>
-                            )}
-
-                            {row.order_id && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full"
-                                onClick={() => navigate(`/user/orders/${row.order_id}`)}
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                                مشاهده سفارش
+                        {noteOpenId === row.id && (
+                          <div className="space-y-2">
+                            <Textarea
+                              value={noteDraft}
+                              onChange={(e) => setNoteDraft(e.target.value)}
+                              placeholder="توضیحات خود را برای این اعلان بنویسید..."
+                              rows={3}
+                              className="rounded-xl"
+                            />
+                            <div className="flex gap-2">
+                              <Button size="sm" className="rounded-xl" onClick={() => saveNote(row)}>
+                                <Save className="h-4 w-4" />
+                                ذخیره
                               </Button>
-                            )}
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="rounded-xl"
+                                onClick={() => setNoteOpenId(null)}
+                              >
+                                انصراف
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Footer */}
+                        {row.order_id && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full rounded-xl"
+                            onClick={() => navigate(`/user/orders/${row.order_id}`)}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            مشاهده سفارش
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
