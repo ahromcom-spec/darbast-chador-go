@@ -178,16 +178,35 @@ export default function SiteNotificationsModule() {
 
   const filtered = useMemo(() => {
     const q = search.trim();
+    const person = personFilter.trim();
+    const fromTs = fromDate ? new Date(new Date(fromDate).setHours(0, 0, 0, 0)).getTime() : null;
+    const toTs = toDate ? new Date(new Date(toDate).setHours(23, 59, 59, 999)).getTime() : null;
+
     return rows.filter((r) => {
       if (tab === 'active' && r.is_dismissed) return false;
       if (tab === 'important' && (!r.is_important || r.is_dismissed)) return false;
       if (tab === 'dismissed' && !r.is_dismissed) return false;
+
+      if (eventFilter !== 'all' && r.event_type !== eventFilter) return false;
+
+      if (person) {
+        const hay = [r.customer_name, r.customer_phone].filter(Boolean).join(' ');
+        if (!hay.includes(person)) return false;
+      }
+
+      if (fromTs || toTs) {
+        const ts = new Date(r.created_at).getTime();
+        if (fromTs && ts < fromTs) return false;
+        if (toTs && ts > toTs) return false;
+      }
+
       if (!q) return true;
       return [r.order_code, r.customer_name, r.customer_phone, r.title, r.body, r.admin_note]
         .filter(Boolean)
         .some((v) => String(v).includes(q));
     });
-  }, [rows, search, tab]);
+  }, [rows, search, tab, eventFilter, personFilter, fromDate, toDate]);
+
 
   const counts = useMemo(
     () => ({
