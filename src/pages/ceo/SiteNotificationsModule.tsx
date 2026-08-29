@@ -427,121 +427,104 @@ export default function SiteNotificationsModule() {
             فیلتر پیشرفته اعلان‌ها
           </div>
 
-          <div className="relative mb-3">
-            <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="rounded-xl pr-9"
-              placeholder="جستجو در شماره سفارش، نام مشتری، متن پیام..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <Popover open={typesOpen} onOpenChange={setTypesOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={typesOpen}
-                  className="h-10 w-full justify-between rounded-xl px-3 font-normal"
-                >
-                  <span className="flex min-w-0 items-center gap-2">
-                    <Tags className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="truncate text-sm">
-                      {excludedTypes.size === 0
-                        ? 'همه انواع اعلان'
-                        : activeTypeCount === 0
-                          ? 'هیچ نوعی انتخاب نشده'
-                          : `${activeTypeCount} نوع از ${allEventKeys.length}`}
-                    </span>
-                  </span>
-                  <ChevronDown
-                    className={cn(
-                      'h-4 w-4 shrink-0 text-muted-foreground transition-transform',
-                      typesOpen && 'rotate-180'
-                    )}
-                  />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-72 rounded-2xl p-0" dir="rtl">
-                <div className="flex items-center justify-between border-b px-3 py-2.5">
-                  <span className="text-xs font-semibold">انواع اعلان‌ها</span>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 rounded-lg px-2 text-[11px]"
-                      onClick={() => setExcludedTypes(new Set())}
-                      disabled={excludedTypes.size === 0}
-                    >
-                      انتخاب همه
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 rounded-lg px-2 text-[11px]"
-                      onClick={() => setExcludedTypes(new Set(allEventKeys))}
-                      disabled={activeTypeCount === 0}
-                    >
-                      حذف همه
-                    </Button>
-                  </div>
-                </div>
-                <div className="max-h-72 overflow-y-auto p-1.5">
-                  {Object.entries(EVENT_META).map(([key, meta]) => {
-                    const checked = !excludedTypes.has(key);
-                    const Icon = meta.icon;
-                    return (
-                      <label
-                        key={key}
-                        className={cn(
-                          'flex cursor-pointer items-center gap-2.5 rounded-xl px-2 py-2 transition-colors hover:bg-accent',
-                          !checked && 'opacity-50'
-                        )}
-                      >
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={() => toggleType(key)}
-                          className="rounded-md"
-                        />
-                        <span
-                          className={cn(
-                            'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg',
-                            meta.iconWrap
-                          )}
-                        >
-                          <Icon className="h-3.5 w-3.5" />
-                        </span>
-                        <span className="flex-1 truncate text-sm">{meta.label}</span>
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold tabular-nums">
-                          {typeCounts[key] || 0}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </PopoverContent>
-            </Popover>
-
+          <div className="space-y-3">
             <div className="relative">
-              <User className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 className="rounded-xl pr-9"
-                list="site-notif-persons"
-                placeholder="نام یا شماره شخص"
-                value={personFilter}
-                onChange={(e) => setPersonFilter(e.target.value)}
+                placeholder="جستجو در شماره سفارش، نام مشتری، متن پیام..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
               />
-              <datalist id="site-notif-persons">
-                {personSuggestions.map((p) => (
-                  <option key={p} value={p} />
-                ))}
-              </datalist>
             </div>
 
-            <PersianDatePicker value={fromDate} onChange={setFromDate} timeMode="none" placeholder="از تاریخ" />
-            <PersianDatePicker value={toDate} onChange={setToDate} timeMode="none" placeholder="تا تاریخ" />
+            <div>
+              <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                <Tags className="h-3.5 w-3.5" />
+                انواع اعلانات
+                <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px]">
+                  {activeTypeCount}/{allEventKeys.length}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(EVENT_META).map(([key, meta]) => {
+                  const checked = !excludedTypes.has(key);
+                  const Icon = meta.icon;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => toggleType(key)}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[11px] transition-all',
+                        checked
+                          ? 'border-primary/40 bg-primary/10 text-foreground shadow-sm'
+                          : 'border-muted bg-muted/40 text-muted-foreground opacity-70'
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'flex h-5 w-5 items-center justify-center rounded-md',
+                          meta.iconWrap
+                        )}
+                      >
+                        <Icon className="h-3 w-3" />
+                      </span>
+                      <span className="font-medium">{meta.label}</span>
+                      <span className="rounded-full bg-background/80 px-1 py-0 text-[10px] font-bold">
+                        {typeCounts[key] || 0}
+                      </span>
+                      {checked ? (
+                        <Check className="h-3 w-3 shrink-0 text-primary" />
+                      ) : (
+                        <span className="h-3 w-3 shrink-0 rounded-full border border-muted-foreground/40" />
+                      )}
+                    </button>
+                  );
+                })}
+                <div className="ms-auto flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 rounded-lg px-2 text-[11px]"
+                    onClick={() => setExcludedTypes(new Set())}
+                    disabled={excludedTypes.size === 0}
+                  >
+                    انتخاب همه
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 rounded-lg px-2 text-[11px]"
+                    onClick={() => setExcludedTypes(new Set(allEventKeys))}
+                    disabled={activeTypeCount === 0}
+                  >
+                    حذف همه
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="relative">
+                <User className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="rounded-xl pr-9"
+                  list="site-notif-persons"
+                  placeholder="نام یا شماره شخص"
+                  value={personFilter}
+                  onChange={(e) => setPersonFilter(e.target.value)}
+                />
+                <datalist id="site-notif-persons">
+                  {personSuggestions.map((p) => (
+                    <option key={p} value={p} />
+                  ))}
+                </datalist>
+              </div>
+
+              <PersianDatePicker value={fromDate} onChange={setFromDate} timeMode="none" placeholder="از تاریخ" />
+              <PersianDatePicker value={toDate} onChange={setToDate} timeMode="none" placeholder="تا تاریخ" />
+            </div>
           </div>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
