@@ -52,7 +52,12 @@ const EVENT_META: Record<string, { label: string; icon: typeof Bell; className: 
   repair_request: { label: 'درخواست تعمیر', icon: Wrench, className: 'bg-amber-500/10 text-amber-600 border-amber-500/30' },
   collection_request: { label: 'درخواست جمع‌آوری', icon: PackageOpen, className: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30' },
   renewal_request: { label: 'درخواست تمدید', icon: CalendarClock, className: 'bg-purple-500/10 text-purple-600 border-purple-500/30' },
+  order_transfer: { label: 'انتقال سفارش', icon: ArrowLeftRight, className: 'bg-teal-500/10 text-teal-600 border-teal-500/30' },
+  order_collaborator: { label: 'همکاری در سفارش', icon: Users, className: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/30' },
+  order_stage_change: { label: 'تغییر مرحله سفارش', icon: GitBranch, className: 'bg-blue-500/10 text-blue-600 border-blue-500/30' },
+  user_visit: { label: 'ورود/بازدید کاربر', icon: LogIn, className: 'bg-slate-500/10 text-slate-600 border-slate-500/30' },
 };
+
 
 export default function SiteNotificationsModule() {
   const navigate = useNavigate();
