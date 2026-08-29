@@ -707,6 +707,14 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
                       })}
                     </span>
 
+                    {msg.edited_at && (
+                      <span className="inline-flex items-center gap-1 text-[11px] text-amber-600">
+                        <Pencil className="h-3 w-3" />
+                        ویرایش شده در {formatPersianDateTime(msg.edited_at)}
+                      </span>
+                    )}
+
+
                     {msg.user_id === user?.id && !msg.audio_path && editingId !== msg.id && (
                       <button
                         type="button"
