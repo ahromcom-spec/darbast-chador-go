@@ -4,7 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Send, MessageCircle, User, UserCheck, Mic, Square, Loader2 } from 'lucide-react';
+import { Send, MessageCircle, User, UserCheck, Mic, Square, Loader2, Pencil, Trash2, Check, X } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Message {
@@ -33,6 +43,13 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Edit / delete state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Message | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -75,7 +92,7 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'order_messages',
           filter: `order_id=eq.${orderId}`
@@ -162,6 +179,60 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       sendMessage();
     }
   };
+
+  const startEdit = (msg: Message) => {
+    setEditingId(msg.id);
+    setEditingText(msg.message);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingText('');
+  };
+
+  const saveEdit = async (msg: Message) => {
+    const text = editingText.trim();
+    if (!text) return;
+    setSavingEdit(true);
+    try {
+      const { error } = await supabase
+        .from('order_messages')
+        .update({ message: text })
+        .eq('id', msg.id);
+      if (error) throw error;
+      setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, message: text } : m)));
+      cancelEdit();
+      toast({ title: 'پیام ویرایش شد' });
+    } catch (error: any) {
+      toast({ title: 'خطا در ویرایش پیام', description: error.message, variant: 'destructive' });
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    const msg = deleteTarget;
+    if (!msg) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from('order_messages').delete().eq('id', msg.id);
+      if (error) throw error;
+
+      if (msg.audio_path) {
+        await supabase.storage.from('voice-messages').remove([msg.audio_path]).catch(() => {});
+      }
+
+      setMessages((prev) => prev.filter((m) => m.id !== msg.id));
+      setDeleteTarget(null);
+      toast({ title: 'پیام حذف شد' });
+    } catch (error: any) {
+      toast({ title: 'خطا در حذف پیام', description: error.message, variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+
 
   // Check microphone permission status
   const checkMicrophonePermission = useCallback(async (): Promise<'granted' | 'denied' | 'prompt'> => {
@@ -602,18 +673,63 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
                           </div>
                         )}
                       </div>
+                    ) : editingId === msg.id ? (
+                      <div className="space-y-2">
+                        <Textarea
+                          value={editingText}
+                          onChange={(e) => setEditingText(e.target.value)}
+                          className="min-h-[70px] resize-none text-sm text-foreground bg-background"
+                          disabled={savingEdit}
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <Button size="sm" variant="secondary" onClick={() => saveEdit(msg)} disabled={savingEdit || !editingText.trim()}>
+                            {savingEdit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                            <span className="ms-1">ذخیره</span>
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={cancelEdit} disabled={savingEdit}>
+                            <X className="h-3.5 w-3.5" />
+                            <span className="ms-1">انصراف</span>
+                          </Button>
+                        </div>
+                      </div>
                     ) : (
                       <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
                     )}
                   </div>
-                  <div className="text-xs text-muted-foreground mt-1 px-1">
-                    {new Date(msg.created_at).toLocaleString('fa-IR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      year: 'numeric',
-                      month: 'numeric',
-                      day: 'numeric'
-                    })}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 px-1">
+                    <span>
+                      {new Date(msg.created_at).toLocaleString('fa-IR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        year: 'numeric',
+                        month: 'numeric',
+                        day: 'numeric'
+                      })}
+                    </span>
+
+                    {msg.user_id === user?.id && !msg.audio_path && editingId !== msg.id && (
+                      <button
+                        type="button"
+                        onClick={() => startEdit(msg)}
+                        className="inline-flex items-center gap-1 hover:text-foreground"
+                        aria-label="ویرایش پیام"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        ویرایش
+                      </button>
+                    )}
+
+                    {(msg.user_id === user?.id || isStaff) && (
+                      <button
+                        type="button"
+                        onClick={() => setDeleteTarget(msg)}
+                        className="inline-flex items-center gap-1 hover:text-destructive"
+                        aria-label="حذف پیام"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        حذف
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -688,6 +804,23 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
           برای ارسال پیام متنی، Enter را فشار دهید. برای ارسال پیام صوتی، روی آیکون میکروفون کلیک کنید.
         </p>
       </CardContent>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف پیام</AlertDialogTitle>
+            <AlertDialogDescription>
+              آیا از حذف این پیام مطمئن هستید؟ این عمل قابل بازگشت نیست.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>انصراف</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); confirmDelete(); }} disabled={deleting}>
+              {deleting ? 'در حال حذف...' : 'حذف'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
