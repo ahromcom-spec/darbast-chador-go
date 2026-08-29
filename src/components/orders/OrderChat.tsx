@@ -44,6 +44,13 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Edit / delete state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Message | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
