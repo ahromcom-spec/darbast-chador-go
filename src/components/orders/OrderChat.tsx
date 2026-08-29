@@ -85,7 +85,7 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'order_messages',
           filter: `order_id=eq.${orderId}`
