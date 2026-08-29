@@ -24,7 +24,9 @@ interface Message {
   message: string;
   is_staff: boolean;
   created_at: string;
+  edited_at?: string | null;
   audio_path?: string;
+
   profiles?: {
     full_name: string;
   };
