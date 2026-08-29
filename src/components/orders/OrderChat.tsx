@@ -673,18 +673,63 @@ export default function OrderChat({ orderId, orderStatus }: OrderChatProps) {
                           </div>
                         )}
                       </div>
+                    ) : editingId === msg.id ? (
+                      <div className="space-y-2">
+                        <Textarea
+                          value={editingText}
+                          onChange={(e) => setEditingText(e.target.value)}
+                          className="min-h-[70px] resize-none text-sm text-foreground bg-background"
+                          disabled={savingEdit}
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <Button size="sm" variant="secondary" onClick={() => saveEdit(msg)} disabled={savingEdit || !editingText.trim()}>
+                            {savingEdit ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                            <span className="ms-1">ذخیره</span>
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={cancelEdit} disabled={savingEdit}>
+                            <X className="h-3.5 w-3.5" />
+                            <span className="ms-1">انصراف</span>
+                          </Button>
+                        </div>
+                      </div>
                     ) : (
                       <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
                     )}
                   </div>
-                  <div className="text-xs text-muted-foreground mt-1 px-1">
-                    {new Date(msg.created_at).toLocaleString('fa-IR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      year: 'numeric',
-                      month: 'numeric',
-                      day: 'numeric'
-                    })}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 px-1">
+                    <span>
+                      {new Date(msg.created_at).toLocaleString('fa-IR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        year: 'numeric',
+                        month: 'numeric',
+                        day: 'numeric'
+                      })}
+                    </span>
+
+                    {msg.user_id === user?.id && !msg.audio_path && editingId !== msg.id && (
+                      <button
+                        type="button"
+                        onClick={() => startEdit(msg)}
+                        className="inline-flex items-center gap-1 hover:text-foreground"
+                        aria-label="ویرایش پیام"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        ویرایش
+                      </button>
+                    )}
+
+                    {(msg.user_id === user?.id || isStaff) && (
+                      <button
+                        type="button"
+                        onClick={() => setDeleteTarget(msg)}
+                        className="inline-flex items-center gap-1 hover:text-destructive"
+                        aria-label="حذف پیام"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        حذف
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
