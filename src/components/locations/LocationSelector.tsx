@@ -3,7 +3,8 @@ import { useLocations, Location } from '@/hooks/useLocations';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Plus, MapPin, Loader2 } from 'lucide-react';
+import { Plus, MapPin, Loader2, Pencil } from 'lucide-react';
+import { Location as LocationType } from '@/hooks/useLocations';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { NewLocationForm } from './NewLocationForm';
@@ -156,6 +157,7 @@ export const LocationSelector = ({ onLocationSelected, serviceTypeName }: Locati
   }, [visibleLocations, selectedLocationId, locationCountsReady]);
 
   const [showNewLocationDialog, setShowNewLocationDialog] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
 
   // Auto-open the address dialog for guest users (they have no saved addresses)
   useEffect(() => {
