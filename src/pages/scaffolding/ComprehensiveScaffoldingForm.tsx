@@ -1865,7 +1865,9 @@ export default function ComprehensiveScaffoldingForm({
     if (canAddCurrentScaffold()) {
       allItems.push({
         id: 'current',
-        label: `داربست #${savedScaffolds.length + 1} (در حال ویرایش)`,
+        label: editingScaffold
+          ? `داربست #${editingScaffold.index + 1} (در حال ویرایش)`
+          : `داربست #${savedScaffolds.length + 1} (در حال تکمیل)`,
         snapshot: null as any,
         fullPrice: priceData.total,
         baseNoDistance: priceDataNoDistance.total,
