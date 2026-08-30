@@ -777,6 +777,8 @@ export default function ComprehensiveScaffoldingForm({
 
 
     let conditionsAppliedToUnitPrice = false;
+    // فی مؤثر ماهانه هر متر (پس از اعمال ضرایب/حداقل‌ها/تخفیف‌ها) برای نمایش شفاف به کارفرما
+    let effectiveMonthlyUnitFee: number | null = null;
 
     if (activeService === 'facade') {
       if (area <= 50) {
