@@ -236,8 +236,16 @@ const App = () => {
               } />
               <Route path="/globe" element={<GlobeMap />} />
 
-              <Route path="/scaffolding/form" element={<ScaffoldingForm />} />
-              <Route path="/scaffolding/rental-form" element={<ScaffoldingRentalForm />} />
+              <Route path="/scaffolding/form" element={
+                <ProtectedRoute>
+                  <ScaffoldingForm />
+                </ProtectedRoute>
+              } />
+              <Route path="/scaffolding/rental-form" element={
+                <ProtectedRoute>
+                  <ScaffoldingRentalForm />
+                </ProtectedRoute>
+              } />
               <Route path="/custom-service/form" element={
                 <ProtectedRoute>
                   <CustomServiceForm />
