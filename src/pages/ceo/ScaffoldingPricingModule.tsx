@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Save, RefreshCw, DollarSign, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseLocalizedNumber } from '@/lib/numberParsing';
+import { useScaffoldingPricingConditions } from '@/hooks/useScaffoldingPricingConditions';
+import { CategoryConditionsBox } from '@/components/pricing/CategoryConditionsBox';
 
 const CATEGORY_LABELS: Record<string, string> = {
   facade: 'داربست سطحی نما',
@@ -45,6 +47,7 @@ export default function ScaffoldingPricingModule() {
   const { items, isLoading, refetch } = useScaffoldingPricing();
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const { map: conditionsMap, saveCondition } = useScaffoldingPricingConditions('scaffolding_pricing_config');
 
   useEffect(() => {
     // sync draft with loaded items
@@ -197,6 +200,12 @@ export default function ScaffoldingPricingModule() {
                   </div>
                 );
               })}
+              <CategoryConditionsBox
+                category={cat}
+                categoryLabel={CATEGORY_LABELS[cat] || cat}
+                value={conditionsMap[cat] || ''}
+                onSave={saveCondition}
+              />
             </CardContent>
           </Card>
         ))}
