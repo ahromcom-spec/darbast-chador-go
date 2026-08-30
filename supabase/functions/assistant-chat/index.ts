@@ -623,6 +623,15 @@ async function estimateServicePrice(supabase: any, args: any) {
         .select("key,category,label,value,unit,description,sort_order")
         .order("sort_order", { ascending: true });
 
+      // شروط و «اگر و اما»های ثبت‌شده توسط مدیریت برای هر بخش قیمت‌گذاری
+      const { data: condRows } = await supabase
+        .from("scaffolding_pricing_conditions")
+        .select("category,conditions")
+        .eq("config_table", table);
+      const pricingConditions = (condRows || [])
+        .filter((c: any) => String(c.conditions || "").trim().length > 0)
+        .map((c: any) => ({ category: c.category, conditions: String(c.conditions).trim() }));
+
       if (cfg && cfg.length > 0) {
         const P = (key: string) => Number(cfg.find((c: any) => c.key === key)?.value) || 0;
         const workTypeRaw = String(args?.work_type || "facade").toLowerCase();
@@ -676,7 +685,11 @@ async function estimateServicePrice(supabase: any, args: any) {
           note:
             "مقدار estimated_total_toman قیمت نهایی محاسبه‌شده با پیش‌فرض‌های سایت است؛ همین عدد را به تومان به کاربر اعلام کن و هرگز خودت دوباره محاسبه نکن و هرگز صفر نگو. " +
             "اگر کاربر ارتفاع پای کار، فاصله یا فاصله خودرو را گفت، درصدهای مربوطه از items را روی همین عدد اعمال کن. " +
-            "هرگز نگو قیمت باید توسط کارشناس اعلام شود.",
+            "هرگز نگو قیمت باید توسط کارشناس اعلام شود. " +
+            (pricingConditions.length
+              ? "شروط و «اگر و اما»های ثبت‌شده مدیریت در pricing_conditions آمده است؛ این شروط را روی قیمت محاسبه‌شده اعمال کن و اگر شرطی قیمت را تغییر می‌دهد، عدد نهایی اصلاح‌شده را اعلام کن و دلیل آن را کوتاه توضیح بده."
+              : ""),
+          pricing_conditions: pricingConditions,
           items: cfg.map((i: any) => ({
             key: i.key,
             label: i.label,
