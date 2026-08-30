@@ -2086,7 +2086,8 @@ export default function ComprehensiveScaffoldingForm({
                     جمع این داربست: <span className="text-primary">{it.finalPrice.toLocaleString('fa-IR')}</span> تومان
                   </div>
                 </div>
-              ))}
+                );
+              })}
 
 
               <div className="border-t pt-3 space-y-1 text-sm">
