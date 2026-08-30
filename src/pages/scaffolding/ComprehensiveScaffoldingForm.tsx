@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { sendPushNotification, notifyManagers } from '@/lib/notifications';
 import { reportActivity } from '@/lib/activityReporter';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Trash2, AlertCircle, ChevronDown, ClipboardList, HelpCircle, FileText, Box, MapPin, ArrowRight } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, ChevronDown, ClipboardList, HelpCircle, FileText, Box, MapPin, ArrowRight, Pencil } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
