@@ -331,9 +331,21 @@ const App = () => {
                   <OrderDetail />
                 </ProtectedRoute>
               } />
-              <Route path="/user/new-location" element={<NewLocation />} />
-              <Route path="/user/select-service" element={<ServiceSelection />} />
-              <Route path="/select-location" element={<SelectLocation />} />
+              <Route path="/user/new-location" element={
+                <ProtectedRoute>
+                  <NewLocation />
+                </ProtectedRoute>
+              } />
+              <Route path="/user/select-service" element={
+                <ProtectedRoute>
+                  <ServiceSelection />
+                </ProtectedRoute>
+              } />
+              <Route path="/select-location" element={
+                <ProtectedRoute>
+                  <SelectLocation />
+                </ProtectedRoute>
+              } />
 
               <Route path="/tickets" element={<TicketList />} />
               <Route path="/tickets/new" element={<NewTicket />} />
