@@ -3,7 +3,7 @@ import { useLocations, Location } from '@/hooks/useLocations';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Plus, MapPin, Loader2 } from 'lucide-react';
+import { Plus, MapPin, Loader2, Pencil } from 'lucide-react';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { NewLocationForm } from './NewLocationForm';
@@ -156,6 +156,7 @@ export const LocationSelector = ({ onLocationSelected, serviceTypeName }: Locati
   }, [visibleLocations, selectedLocationId, locationCountsReady]);
 
   const [showNewLocationDialog, setShowNewLocationDialog] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
 
   // Auto-open the address dialog for guest users (they have no saved addresses)
   useEffect(() => {
@@ -215,6 +216,27 @@ export const LocationSelector = ({ onLocationSelected, serviceTypeName }: Locati
         </DialogContent>
       </Dialog>
 
+      {/* دیالوگ مشاهده و ویرایش آدرس */}
+      <Dialog open={!!editingLocation} onOpenChange={(open) => !open && setEditingLocation(null)}>
+        <DialogContent className="max-w-[min(84rem,95vw)] w-[95vw] sm:w-auto max-h-[92vh] overflow-y-auto p-4 sm:p-5 text-sm">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-base sm:text-lg">مشاهده و ویرایش آدرس</DialogTitle>
+          </DialogHeader>
+          {editingLocation && (
+            <NewLocationForm
+              key={editingLocation.id}
+              initialData={editingLocation}
+              serviceTypeName={serviceTypeName}
+              onSuccess={async () => {
+                setEditingLocation(null);
+                await refetch();
+                toast.success('آدرس با موفقیت به‌روزرسانی شد');
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       {!locationCountsReady ? (
         <LoadingSpinner />
       ) : visibleLocations.length === 0 ? (
@@ -270,6 +292,19 @@ export const LocationSelector = ({ onLocationSelected, serviceTypeName }: Locati
                         </svg>
                       </div>
                     )}
+                  </div>
+
+                  {/* کلید مشاهده و ویرایش آدرس */}
+                  <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setEditingLocation(location)}
+                    >
+                      <Pencil className="w-3.5 h-3.5 ml-1.5" />
+                      مشاهده و ویرایش
+                    </Button>
                   </div>
                   
                   {/* دکمه تایید داخل کارت انتخاب‌شده */}
