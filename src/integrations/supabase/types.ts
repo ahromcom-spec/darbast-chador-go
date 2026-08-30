@@ -4275,6 +4275,33 @@ export type Database = {
         }
         Relationships: []
       }
+      scaffolding_pricing_conditions: {
+        Row: {
+          category: string
+          conditions: string
+          config_table: string
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          conditions?: string
+          config_table: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          conditions?: string
+          config_table?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       scaffolding_pricing_config: {
         Row: {
           category: string
