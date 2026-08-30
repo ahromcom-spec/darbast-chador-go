@@ -2829,7 +2829,7 @@ export default function ComprehensiveScaffoldingForm({
           {loading 
             ? 'در حال ثبت...' 
             : multiOrderMode
-              ? `ثبت همه سفارشات (${savedScaffolds.length + (canAddCurrentScaffold() ? 1 : 0)} داربست)`
+              ? `ثبت همه سفارشات (${savedScaffolds.length + (!editingScaffold && canAddCurrentScaffold() ? 1 : 0)} داربست)`
               : recipientData 
                 ? `ثبت سفارش برای ${recipientData.fullName || recipientData.phoneNumber}`
                 : 'ثبت درخواست'
