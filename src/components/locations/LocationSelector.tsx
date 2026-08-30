@@ -4,7 +4,6 @@ import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Plus, MapPin, Loader2, Pencil } from 'lucide-react';
-import { Location as LocationType } from '@/hooks/useLocations';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { NewLocationForm } from './NewLocationForm';
