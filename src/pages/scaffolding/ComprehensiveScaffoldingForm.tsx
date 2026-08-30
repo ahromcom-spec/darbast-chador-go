@@ -1751,15 +1751,27 @@ export default function ComprehensiveScaffoldingForm({
     return !dimensions.some(d => !d.length || !d.width || !d.height);
   };
 
+  const relabel = (list: SavedScaffold[]) => list.map((s, i) => ({ ...s, label: `داربست #${i + 1}` }));
+
+  const resetScaffoldFields = () => {
+    setScaffoldType('');
+    setActiveService('');
+    setCeilingSubType('');
+    setDimensions([{ id: '1', length: '', width: '', height: '' }]);
+    setIsFacadeWidth2m(false);
+    setColumnHeight('');
+    setLocationPurpose('');
+  };
+
   const addCurrentScaffoldToList = () => {
     if (!canAddCurrentScaffold()) {
       toast({ variant: 'destructive', title: 'فرم ناقص است', description: 'لطفاً ابعاد و نوع داربست را کامل کنید.' });
       return;
     }
-    const idx = savedScaffolds.length + 1;
+    const isEditing = !!editingScaffold;
     const item: SavedScaffold = {
-      id: `${Date.now()}-${idx}`,
-      label: `داربست #${idx}`,
+      id: editingScaffold?.id || `${Date.now()}-${savedScaffolds.length + 1}`,
+      label: `داربست #${(editingScaffold?.index ?? savedScaffolds.length) + 1}`,
       snapshot: {
         scaffoldType,
         activeService,
@@ -1777,24 +1789,73 @@ export default function ComprehensiveScaffoldingForm({
       breakdown: [...priceData.breakdown],
       totalArea: calculateTotalArea(),
     };
-    setSavedScaffolds(prev => [...prev, item]);
+    setSavedScaffolds(prev => {
+      const next = [...prev];
+      if (isEditing) {
+        const at = Math.min(editingScaffold!.index, next.length);
+        next.splice(at, 0, item);
+      } else {
+        next.push(item);
+      }
+      return relabel(next);
+    });
+    setEditingScaffold(null);
     // ریست فقط فیلدهای مربوط به مشخصات داربست (آدرس/فاصله حفظ می‌شود)
-    setScaffoldType('');
-    setActiveService('');
-    setCeilingSubType('');
-    setDimensions([{ id: '1', length: '', width: '', height: '' }]);
-    setIsFacadeWidth2m(false);
-    setColumnHeight('');
-    setLocationPurpose('');
-    toast({ title: `✓ ${item.label} اضافه شد`, description: 'می‌توانید داربست بعدی را وارد کنید.' });
+    resetScaffoldFields();
+    toast({
+      title: isEditing ? `✓ ${item.label} ویرایش شد` : `✓ ${item.label} اضافه شد`,
+      description: isEditing ? 'تغییرات این داربست ذخیره شد.' : 'می‌توانید داربست بعدی را وارد کنید.',
+    });
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const removeSavedScaffold = (id: string) => {
-    setSavedScaffolds(prev => prev.filter(s => s.id !== id));
+    setSavedScaffolds(prev => relabel(prev.filter(s => s.id !== id)));
+    if (editingScaffold?.id === id) setEditingScaffold(null);
   };
+
+  // بارگذاری یک داربست ذخیره‌شده در فرم برای ویرایش
+  const startEditSavedScaffold = (id: string) => {
+    const idx = savedScaffolds.findIndex(s => s.id === id);
+    if (idx < 0) return;
+    if (editingScaffold) {
+      toast({ variant: 'destructive', title: 'ویرایش در جریان است', description: 'ابتدا داربست در حال ویرایش را ذخیره یا لغو کنید.' });
+      return;
+    }
+    const sn = savedScaffolds[idx].snapshot as any;
+    if (!sn || !sn.scaffoldType) {
+      toast({ variant: 'destructive', title: 'قابل ویرایش نیست', description: 'جزئیات فنی این داربست در دسترس نیست.' });
+      return;
+    }
+    setScaffoldType(sn.scaffoldType || '');
+    setActiveService(sn.activeService || '');
+    setCeilingSubType(sn.ceilingSubType || '');
+    setDimensions(Array.isArray(sn.dimensions) && sn.dimensions.length > 0
+      ? JSON.parse(JSON.stringify(sn.dimensions))
+      : [{ id: '1', length: '', width: '', height: '' }]);
+    setIsFacadeWidth2m(!!sn.isFacadeWidth2m);
+    setColumnHeight(sn.columnHeight || '');
+    if (typeof sn.onGround === 'boolean') setOnGround(sn.onGround);
+    if (typeof sn.vehicleReachesSite === 'boolean') setVehicleReachesSite(sn.vehicleReachesSite);
+    if (sn.conditions && Object.keys(sn.conditions).length > 0) {
+      setConditions((prev: any) => ({ ...prev, ...sn.conditions }));
+    }
+    setLocationPurpose(sn.locationPurpose || '');
+    setSavedScaffolds(prev => prev.filter(s => s.id !== id));
+    setEditingScaffold({ id, index: idx });
+    toast({ title: 'در حال ویرایش', description: 'مشخصات این داربست در فرم بارگذاری شد. پس از اصلاح، ذخیره کنید.' });
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 300, behavior: 'smooth' });
+    }
+  };
+
+  const cancelEditSavedScaffold = () => {
+    setEditingScaffold(null);
+    resetScaffoldFields();
+  };
+
 
   // محاسبه‌ی خلاصه چند داربست (حمل و نقل مشترک، یکبار محاسبه و تقسیم بین داربست‌ها)
   const computeMultiSummary = () => {
