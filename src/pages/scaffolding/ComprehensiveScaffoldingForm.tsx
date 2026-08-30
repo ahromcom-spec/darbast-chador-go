@@ -946,8 +946,8 @@ export default function ComprehensiveScaffoldingForm({
     // فی نهایی هر متر (شامل ضرایب فاصله/ارتفاع/تخفیف اجاره و تخفیف رتبه همکاری)
     if (effectiveMonthlyUnitFee !== null && effectiveMonthlyUnitFee > 0) {
       pricePerMeter = Math.round(effectiveMonthlyUnitFee * (1 - (cooperationDiscountPct || 0) / 100));
-      breakdown.unshift(`✅ فی نهایی هر متر برای این داربست: ${pricePerMeter.toLocaleString('fa-IR')} تومان (ماهانه)`);
       breakdown.unshift('— ادامه روند محاسبه قیمت —');
+      breakdown.unshift(`✅ فی نهایی هر متر برای این داربست: ${pricePerMeter.toLocaleString('fa-IR')} تومان (ماهانه)`);
     }
 
     return { total: finalizePrice(basePrice), pricePerMeter, breakdown };
