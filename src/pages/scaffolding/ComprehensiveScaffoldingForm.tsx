@@ -2718,18 +2718,34 @@ export default function ComprehensiveScaffoldingForm({
       )}
 
         {multiOrderMode && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={addCurrentScaffoldToList}
-            disabled={loading || !canAddCurrentScaffold()}
-            className="w-full border-2 border-emerald-500 text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950"
-            size="lg"
-          >
-            <Plus className="h-5 w-5 ml-2" />
-            افزودن این داربست به لیست و وارد کردن داربست بعدی
-          </Button>
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={addCurrentScaffoldToList}
+              disabled={loading || !canAddCurrentScaffold()}
+              className="w-full border-2 border-emerald-500 text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950"
+              size="lg"
+            >
+              <Plus className="h-5 w-5 ml-2" />
+              {editingScaffold
+                ? `ذخیره تغییرات داربست #${editingScaffold.index + 1}`
+                : 'افزودن این داربست به لیست و وارد کردن داربست بعدی'}
+            </Button>
+            {editingScaffold && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={cancelEditSavedScaffold}
+                disabled={loading}
+                className="w-full text-destructive hover:text-destructive"
+              >
+                لغو ویرایش این داربست
+              </Button>
+            )}
+          </div>
         )}
+
 
         <Button 
           onClick={onSubmit}
