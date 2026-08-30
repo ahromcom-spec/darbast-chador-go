@@ -276,6 +276,8 @@ export default function ComprehensiveScaffoldingForm({
     totalArea: number;
   };
   const [savedScaffolds, setSavedScaffolds] = useState<SavedScaffold[]>([]);
+  // داربستی که در حال ویرایش مجدد است (از لیست خارج شده و در فرم بارگذاری شده)
+  const [editingScaffold, setEditingScaffold] = useState<{ id: string; index: number } | null>(null);
   
   // دریافت isManagerEdit از query param نیز
   const isManagerEditMode = isManagerEdit || searchParams.get('managerEdit') === 'true';
