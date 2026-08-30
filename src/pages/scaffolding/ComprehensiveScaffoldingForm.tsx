@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { sendPushNotification, notifyManagers } from '@/lib/notifications';
 import { reportActivity } from '@/lib/activityReporter';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Trash2, AlertCircle, ChevronDown, ClipboardList, HelpCircle, FileText, Box, MapPin, ArrowRight } from 'lucide-react';
+import { Plus, Trash2, AlertCircle, ChevronDown, ClipboardList, HelpCircle, FileText, Box, MapPin, ArrowRight, Pencil } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -276,6 +276,8 @@ export default function ComprehensiveScaffoldingForm({
     totalArea: number;
   };
   const [savedScaffolds, setSavedScaffolds] = useState<SavedScaffold[]>([]);
+  // داربستی که در حال ویرایش مجدد است (از لیست خارج شده و در فرم بارگذاری شده)
+  const [editingScaffold, setEditingScaffold] = useState<{ id: string; index: number } | null>(null);
   
   // دریافت isManagerEdit از query param نیز
   const isManagerEditMode = isManagerEdit || searchParams.get('managerEdit') === 'true';
@@ -1749,15 +1751,27 @@ export default function ComprehensiveScaffoldingForm({
     return !dimensions.some(d => !d.length || !d.width || !d.height);
   };
 
+  const relabel = (list: SavedScaffold[]) => list.map((s, i) => ({ ...s, label: `داربست #${i + 1}` }));
+
+  const resetScaffoldFields = () => {
+    setScaffoldType('');
+    setActiveService('');
+    setCeilingSubType('');
+    setDimensions([{ id: '1', length: '', width: '', height: '' }]);
+    setIsFacadeWidth2m(false);
+    setColumnHeight('');
+    setLocationPurpose('');
+  };
+
   const addCurrentScaffoldToList = () => {
     if (!canAddCurrentScaffold()) {
       toast({ variant: 'destructive', title: 'فرم ناقص است', description: 'لطفاً ابعاد و نوع داربست را کامل کنید.' });
       return;
     }
-    const idx = savedScaffolds.length + 1;
+    const isEditing = !!editingScaffold;
     const item: SavedScaffold = {
-      id: `${Date.now()}-${idx}`,
-      label: `داربست #${idx}`,
+      id: editingScaffold?.id || `${Date.now()}-${savedScaffolds.length + 1}`,
+      label: `داربست #${(editingScaffold?.index ?? savedScaffolds.length) + 1}`,
       snapshot: {
         scaffoldType,
         activeService,
@@ -1775,24 +1789,73 @@ export default function ComprehensiveScaffoldingForm({
       breakdown: [...priceData.breakdown],
       totalArea: calculateTotalArea(),
     };
-    setSavedScaffolds(prev => [...prev, item]);
+    setSavedScaffolds(prev => {
+      const next = [...prev];
+      if (isEditing) {
+        const at = Math.min(editingScaffold!.index, next.length);
+        next.splice(at, 0, item);
+      } else {
+        next.push(item);
+      }
+      return relabel(next);
+    });
+    setEditingScaffold(null);
     // ریست فقط فیلدهای مربوط به مشخصات داربست (آدرس/فاصله حفظ می‌شود)
-    setScaffoldType('');
-    setActiveService('');
-    setCeilingSubType('');
-    setDimensions([{ id: '1', length: '', width: '', height: '' }]);
-    setIsFacadeWidth2m(false);
-    setColumnHeight('');
-    setLocationPurpose('');
-    toast({ title: `✓ ${item.label} اضافه شد`, description: 'می‌توانید داربست بعدی را وارد کنید.' });
+    resetScaffoldFields();
+    toast({
+      title: isEditing ? `✓ ${item.label} ویرایش شد` : `✓ ${item.label} اضافه شد`,
+      description: isEditing ? 'تغییرات این داربست ذخیره شد.' : 'می‌توانید داربست بعدی را وارد کنید.',
+    });
     if (typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const removeSavedScaffold = (id: string) => {
-    setSavedScaffolds(prev => prev.filter(s => s.id !== id));
+    setSavedScaffolds(prev => relabel(prev.filter(s => s.id !== id)));
+    if (editingScaffold?.id === id) setEditingScaffold(null);
   };
+
+  // بارگذاری یک داربست ذخیره‌شده در فرم برای ویرایش
+  const startEditSavedScaffold = (id: string) => {
+    const idx = savedScaffolds.findIndex(s => s.id === id);
+    if (idx < 0) return;
+    if (editingScaffold) {
+      toast({ variant: 'destructive', title: 'ویرایش در جریان است', description: 'ابتدا داربست در حال ویرایش را ذخیره یا لغو کنید.' });
+      return;
+    }
+    const sn = savedScaffolds[idx].snapshot as any;
+    if (!sn || !sn.scaffoldType) {
+      toast({ variant: 'destructive', title: 'قابل ویرایش نیست', description: 'جزئیات فنی این داربست در دسترس نیست.' });
+      return;
+    }
+    setScaffoldType(sn.scaffoldType || '');
+    setActiveService(sn.activeService || '');
+    setCeilingSubType(sn.ceilingSubType || '');
+    setDimensions(Array.isArray(sn.dimensions) && sn.dimensions.length > 0
+      ? JSON.parse(JSON.stringify(sn.dimensions))
+      : [{ id: '1', length: '', width: '', height: '' }]);
+    setIsFacadeWidth2m(!!sn.isFacadeWidth2m);
+    setColumnHeight(sn.columnHeight || '');
+    if (typeof sn.onGround === 'boolean') setOnGround(sn.onGround);
+    if (typeof sn.vehicleReachesSite === 'boolean') setVehicleReachesSite(sn.vehicleReachesSite);
+    if (sn.conditions && Object.keys(sn.conditions).length > 0) {
+      setConditions((prev: any) => ({ ...prev, ...sn.conditions }));
+    }
+    setLocationPurpose(sn.locationPurpose || '');
+    setSavedScaffolds(prev => prev.filter(s => s.id !== id));
+    setEditingScaffold({ id, index: idx });
+    toast({ title: 'در حال ویرایش', description: 'مشخصات این داربست در فرم بارگذاری شد. پس از اصلاح، ذخیره کنید.' });
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 300, behavior: 'smooth' });
+    }
+  };
+
+  const cancelEditSavedScaffold = () => {
+    setEditingScaffold(null);
+    resetScaffoldFields();
+  };
+
 
   // محاسبه‌ی خلاصه چند داربست (حمل و نقل مشترک، یکبار محاسبه و تقسیم بین داربست‌ها)
   const computeMultiSummary = () => {
@@ -1802,7 +1865,9 @@ export default function ComprehensiveScaffoldingForm({
     if (canAddCurrentScaffold()) {
       allItems.push({
         id: 'current',
-        label: `داربست #${savedScaffolds.length + 1} (در حال ویرایش)`,
+        label: editingScaffold
+          ? `داربست #${editingScaffold.index + 1} (در حال ویرایش)`
+          : `داربست #${savedScaffolds.length + 1} (در حال تکمیل)`,
         snapshot: null as any,
         fullPrice: priceData.total,
         baseNoDistance: priceDataNoDistance.total,
@@ -1929,8 +1994,15 @@ export default function ComprehensiveScaffoldingForm({
       )}
 
       {/* لیست داربست‌های افزوده‌شده و خلاصه قیمت چندتایی */}
-      {multiOrderMode && savedScaffolds.length > 0 && (() => {
+      {multiOrderMode && (savedScaffolds.length > 0 || !!editingScaffold) && (() => {
         const summary = computeMultiSummary();
+        const describeDims = (sn: any): string => {
+          if (!sn || !Array.isArray(sn.dimensions)) return '';
+          return sn.dimensions
+            .filter((d: any) => d && (d.length || d.width || d.height))
+            .map((d: any) => [d.length, d.width, d.height].filter(Boolean).join('×'))
+            .join(' | ');
+        };
         return (
           <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2 border-emerald-500">
             <CardHeader>
@@ -1938,25 +2010,49 @@ export default function ComprehensiveScaffoldingForm({
                 داربست‌های افزوده شده ({summary.count})
               </CardTitle>
               <CardDescription>
-                هزینه حمل و نقل مشترک به‌صورت یکجا برای کل سفر محاسبه و بین داربست‌ها تقسیم می‌شود.
+                هزینه حمل و نقل مشترک به‌صورت یکجا برای کل سفر محاسبه و بین داربست‌ها تقسیم می‌شود. برای اصلاح ابعاد یا توضیحات هر داربست، دکمه «ویرایش» را بزنید.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {summary.items.map((it) => (
-                <div key={it.id} className="border rounded-lg p-3 bg-muted/40">
+                <div key={it.id} className={`border rounded-lg p-3 ${it.id === 'current' ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-400' : 'bg-muted/40'}`}>
                   <div className="flex items-center justify-between gap-2">
                     <div className="font-semibold text-sm">{it.label}</div>
                     {it.id !== 'current' && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeSavedScaffold(it.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => startEditSavedScaffold(it.id)}
+                          disabled={loading || !!editingScaffold}
+                          className="text-primary hover:text-primary gap-1"
+                        >
+                          <Pencil className="h-4 w-4" />
+                          <span className="text-xs">ویرایش</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeSavedScaffold(it.id)}
+                          disabled={loading}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     )}
                   </div>
+                  {it.id !== 'current' && describeDims(it.snapshot) && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      ابعاد: <span className="font-medium text-foreground" dir="ltr">{describeDims(it.snapshot)}</span>
+                      {it.totalArea > 0 && <span className="mr-2">— مساحت/حجم: {it.totalArea.toLocaleString('fa-IR')}</span>}
+                    </div>
+                  )}
+                  {it.id !== 'current' && (it.snapshot as any)?.locationPurpose && (
+                    <div className="text-xs text-muted-foreground">
+                      توضیحات: <span className="text-foreground">{(it.snapshot as any).locationPurpose}</span>
+                    </div>
+                  )}
                   <div className="text-xs text-muted-foreground mt-1">
                     قیمت اجرا (بدون حمل): <span className="font-medium text-foreground">{it.baseNoDistance.toLocaleString('fa-IR')}</span> تومان
                   </div>
@@ -1968,6 +2064,7 @@ export default function ComprehensiveScaffoldingForm({
                   </div>
                 </div>
               ))}
+
 
               <div className="border-t pt-3 space-y-1 text-sm">
                 <div className="flex justify-between"><span>جمع قیمت اجرا (بدون حمل):</span><span className="font-medium">{summary.baseSum.toLocaleString('fa-IR')} تومان</span></div>
@@ -2655,18 +2752,34 @@ export default function ComprehensiveScaffoldingForm({
       )}
 
         {multiOrderMode && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={addCurrentScaffoldToList}
-            disabled={loading || !canAddCurrentScaffold()}
-            className="w-full border-2 border-emerald-500 text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950"
-            size="lg"
-          >
-            <Plus className="h-5 w-5 ml-2" />
-            افزودن این داربست به لیست و وارد کردن داربست بعدی
-          </Button>
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={addCurrentScaffoldToList}
+              disabled={loading || !canAddCurrentScaffold()}
+              className="w-full border-2 border-emerald-500 text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950"
+              size="lg"
+            >
+              <Plus className="h-5 w-5 ml-2" />
+              {editingScaffold
+                ? `ذخیره تغییرات داربست #${editingScaffold.index + 1}`
+                : 'افزودن این داربست به لیست و وارد کردن داربست بعدی'}
+            </Button>
+            {editingScaffold && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={cancelEditSavedScaffold}
+                disabled={loading}
+                className="w-full text-destructive hover:text-destructive"
+              >
+                لغو ویرایش این داربست
+              </Button>
+            )}
+          </div>
         )}
+
 
         <Button 
           onClick={onSubmit}
