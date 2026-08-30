@@ -273,6 +273,19 @@ export const LocationSelector = ({ onLocationSelected, serviceTypeName }: Locati
                       </div>
                     )}
                   </div>
+
+                  {/* کلید مشاهده و ویرایش آدرس */}
+                  <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setEditingLocation(location)}
+                    >
+                      <Pencil className="w-3.5 h-3.5 ml-1.5" />
+                      مشاهده و ویرایش
+                    </Button>
+                  </div>
                   
                   {/* دکمه تایید داخل کارت انتخاب‌شده */}
                   {isSelected && (
