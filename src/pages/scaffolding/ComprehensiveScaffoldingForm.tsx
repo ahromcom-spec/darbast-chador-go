@@ -803,6 +803,9 @@ export default function ComprehensiveScaffoldingForm({
         }
 
         if (topUp > 0) { basePrice += topUp; }
+        if (pricePerMeter !== null && area > 0) {
+          effectiveMonthlyUnitFee = Math.round(basePrice / area);
+        }
       }
 
     } else if (activeService === 'formwork') {
@@ -827,6 +830,9 @@ export default function ComprehensiveScaffoldingForm({
         }
 
         if (topUp > 0) { basePrice += topUp; }
+        if (pricePerMeter !== null && area > 0) {
+          effectiveMonthlyUnitFee = Math.round(basePrice / area);
+        }
       }
 
     } else if (activeService === 'ceiling-beam-yonolit' || activeService === 'ceiling-beam-ceramic') {
@@ -851,6 +857,9 @@ export default function ComprehensiveScaffoldingForm({
         }
 
         if (topUp > 0) { basePrice += topUp; }
+        if (pricePerMeter !== null && area > 0) {
+          effectiveMonthlyUnitFee = Math.round(basePrice / area);
+        }
       }
 
     } else if (activeService === 'ceiling-slab') {
@@ -875,6 +884,9 @@ export default function ComprehensiveScaffoldingForm({
         }
 
         if (topUp > 0) { basePrice += topUp; }
+        if (pricePerMeter !== null && area > 0) {
+          effectiveMonthlyUnitFee = Math.round(basePrice / area);
+        }
       }
 
     }
