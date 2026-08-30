@@ -1792,8 +1792,13 @@ export default function ComprehensiveScaffoldingForm({
     setSavedScaffolds(prev => {
       const next = [...prev];
       if (isEditing) {
-        const at = Math.min(editingScaffold!.index, next.length);
-        next.splice(at, 0, item);
+        // جایگزینی همان داربست در جای قبلی‌اش — بقیه داربست‌ها دست نخورده می‌مانند
+        const at = next.findIndex(s => s.id === editingScaffold!.id);
+        if (at >= 0) {
+          next[at] = item;
+        } else {
+          next.splice(Math.min(editingScaffold!.index, next.length), 0, item);
+        }
       } else {
         next.push(item);
       }
@@ -1843,7 +1848,8 @@ export default function ComprehensiveScaffoldingForm({
       setConditions((prev: any) => ({ ...prev, ...sn.conditions }));
     }
     setLocationPurpose(sn.locationPurpose || '');
-    setSavedScaffolds(prev => prev.filter(s => s.id !== id));
+    // داربست در لیست باقی می‌ماند و فقط به حالت «در حال ویرایش» می‌رود؛
+    // با لغو ویرایش، نسخه قبلی بدون هیچ تغییری حفظ می‌شود.
     setEditingScaffold({ id, index: idx });
     toast({ title: 'در حال ویرایش', description: 'مشخصات این داربست در فرم بارگذاری شد. پس از اصلاح، ذخیره کنید.' });
     if (typeof window !== 'undefined') {
@@ -1860,14 +1866,25 @@ export default function ComprehensiveScaffoldingForm({
   // محاسبه‌ی خلاصه چند داربست (حمل و نقل مشترک، یکبار محاسبه و تقسیم بین داربست‌ها)
   const computeMultiSummary = () => {
     const items: Array<SavedScaffold & { transportShare: number; finalPrice: number }> = [];
-    const allItems = [...savedScaffolds];
-    // اگر کاربر در حال پر کردن داربست فعلی است، آن را هم در پیش‌نمایش قرار بده
-    if (canAddCurrentScaffold()) {
+    const allItems: SavedScaffold[] = savedScaffolds.map(s => {
+      // داربستی که در حال ویرایش است با مقادیر زنده فرم به‌روز نمایش داده می‌شود
+      if (editingScaffold && s.id === editingScaffold.id && canAddCurrentScaffold()) {
+        return {
+          ...s,
+          label: `داربست #${editingScaffold.index + 1} (در حال ویرایش)`,
+          fullPrice: priceData.total,
+          baseNoDistance: priceDataNoDistance.total,
+          breakdown: [...priceData.breakdown],
+          totalArea: calculateTotalArea(),
+        };
+      }
+      return s;
+    });
+    // اگر کاربر در حال پر کردن داربست جدیدی است (نه ویرایش)، آن را هم در پیش‌نمایش قرار بده
+    if (!editingScaffold && canAddCurrentScaffold()) {
       allItems.push({
         id: 'current',
-        label: editingScaffold
-          ? `داربست #${editingScaffold.index + 1} (در حال ویرایش)`
-          : `داربست #${savedScaffolds.length + 1} (در حال تکمیل)`,
+        label: `داربست #${savedScaffolds.length + 1} (در حال تکمیل)`,
         snapshot: null as any,
         fullPrice: priceData.total,
         baseNoDistance: priceDataNoDistance.total,
@@ -2014,11 +2031,17 @@ export default function ComprehensiveScaffoldingForm({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {summary.items.map((it) => (
-                <div key={it.id} className={`border rounded-lg p-3 ${it.id === 'current' ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-400' : 'bg-muted/40'}`}>
+              {summary.items.map((it) => {
+                const isEditingThisRow = !!editingScaffold && it.id === editingScaffold.id;
+                const isLiveRow = it.id === 'current' || (isEditingThisRow && canAddCurrentScaffold());
+                return (
+                <div key={it.id} className={`border rounded-lg p-3 ${isLiveRow ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-400' : isEditingThisRow ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-300' : 'bg-muted/40'}`}>
                   <div className="flex items-center justify-between gap-2">
-                    <div className="font-semibold text-sm">{it.label}</div>
-                    {it.id !== 'current' && (
+                    <div className="font-semibold text-sm">
+                      {it.label}
+                      {isEditingThisRow && !canAddCurrentScaffold() && ' (در حال ویرایش)'}
+                    </div>
+                    {it.id !== 'current' && !isEditingThisRow && (
                       <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
@@ -2063,7 +2086,8 @@ export default function ComprehensiveScaffoldingForm({
                     جمع این داربست: <span className="text-primary">{it.finalPrice.toLocaleString('fa-IR')}</span> تومان
                   </div>
                 </div>
-              ))}
+                );
+              })}
 
 
               <div className="border-t pt-3 space-y-1 text-sm">
@@ -2805,7 +2829,7 @@ export default function ComprehensiveScaffoldingForm({
           {loading 
             ? 'در حال ثبت...' 
             : multiOrderMode
-              ? `ثبت همه سفارشات (${savedScaffolds.length + (canAddCurrentScaffold() ? 1 : 0)} داربست)`
+              ? `ثبت همه سفارشات (${savedScaffolds.length + (!editingScaffold && canAddCurrentScaffold() ? 1 : 0)} داربست)`
               : recipientData 
                 ? `ثبت سفارش برای ${recipientData.fullName || recipientData.phoneNumber}`
                 : 'ثبت درخواست'
