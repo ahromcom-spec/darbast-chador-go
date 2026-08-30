@@ -1792,8 +1792,13 @@ export default function ComprehensiveScaffoldingForm({
     setSavedScaffolds(prev => {
       const next = [...prev];
       if (isEditing) {
-        const at = Math.min(editingScaffold!.index, next.length);
-        next.splice(at, 0, item);
+        // جایگزینی همان داربست در جای قبلی‌اش — بقیه داربست‌ها دست نخورده می‌مانند
+        const at = next.findIndex(s => s.id === editingScaffold!.id);
+        if (at >= 0) {
+          next[at] = item;
+        } else {
+          next.splice(Math.min(editingScaffold!.index, next.length), 0, item);
+        }
       } else {
         next.push(item);
       }
@@ -1843,7 +1848,8 @@ export default function ComprehensiveScaffoldingForm({
       setConditions((prev: any) => ({ ...prev, ...sn.conditions }));
     }
     setLocationPurpose(sn.locationPurpose || '');
-    setSavedScaffolds(prev => prev.filter(s => s.id !== id));
+    // داربست در لیست باقی می‌ماند و فقط به حالت «در حال ویرایش» می‌رود؛
+    // با لغو ویرایش، نسخه قبلی بدون هیچ تغییری حفظ می‌شود.
     setEditingScaffold({ id, index: idx });
     toast({ title: 'در حال ویرایش', description: 'مشخصات این داربست در فرم بارگذاری شد. پس از اصلاح، ذخیره کنید.' });
     if (typeof window !== 'undefined') {
