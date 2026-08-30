@@ -925,6 +925,10 @@ export default function ComprehensiveScaffoldingForm({
       if (discount > 0) {
         const discountedMonthlyPrice = basePrice * (1 - discount);
         const totalWithDiscount = discountedMonthlyPrice * monthsPlan;
+        if (effectiveMonthlyUnitFee !== null) {
+          effectiveMonthlyUnitFee = Math.round(effectiveMonthlyUnitFee * (1 - discount));
+          breakdown.push(`فی هر متر پس از تخفیف اجاره: ${effectiveMonthlyUnitFee.toLocaleString('fa-IR')} تومان`);
+        }
         breakdown.push(`قیمت هر ماه با تخفیف: ${Math.round(discountedMonthlyPrice).toLocaleString('fa-IR')} تومان`);
         breakdown.push(`مجموع ${monthsPlan} ماه: ${Math.round(totalWithDiscount).toLocaleString('fa-IR')} تومان`);
         basePrice = totalWithDiscount;
@@ -937,6 +941,13 @@ export default function ComprehensiveScaffoldingForm({
       const additionalCost = basePrice * extraFactor * additionalMonths;
       breakdown.push(`ماه‌های اضافی (${additionalMonths} ماه): ${additionalCost.toLocaleString('fa-IR')} تومان`);
       basePrice += additionalCost;
+    }
+
+    // فی نهایی هر متر (شامل ضرایب فاصله/ارتفاع/تخفیف اجاره و تخفیف رتبه همکاری)
+    if (effectiveMonthlyUnitFee !== null && effectiveMonthlyUnitFee > 0) {
+      pricePerMeter = Math.round(effectiveMonthlyUnitFee * (1 - (cooperationDiscountPct || 0) / 100));
+      breakdown.unshift(`✅ فی نهایی هر متر برای این داربست: ${pricePerMeter.toLocaleString('fa-IR')} تومان (ماهانه)`);
+      breakdown.unshift('— ادامه روند محاسبه قیمت —');
     }
 
     return { total: finalizePrice(basePrice), pricePerMeter, breakdown };
