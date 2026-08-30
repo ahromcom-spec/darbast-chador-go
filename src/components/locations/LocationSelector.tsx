@@ -207,7 +207,7 @@ export const LocationSelector = ({ onLocationSelected, serviceTypeName }: Locati
             افزودن آدرس جدید
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-[min(42rem,95vw)] w-[95vw] sm:w-auto max-h-[92vh] overflow-y-auto p-4 sm:p-5 text-sm">
+        <DialogContent className="max-w-[min(84rem,95vw)] w-[95vw] sm:w-auto max-h-[92vh] overflow-y-auto p-4 sm:p-5 text-sm">
           <DialogHeader className="pb-2">
             <DialogTitle className="text-base sm:text-lg">ثبت آدرس جدید</DialogTitle>
           </DialogHeader>
