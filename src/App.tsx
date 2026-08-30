@@ -236,8 +236,16 @@ const App = () => {
               } />
               <Route path="/globe" element={<GlobeMap />} />
 
-              <Route path="/scaffolding/form" element={<ScaffoldingForm />} />
-              <Route path="/scaffolding/rental-form" element={<ScaffoldingRentalForm />} />
+              <Route path="/scaffolding/form" element={
+                <ProtectedRoute>
+                  <ScaffoldingForm />
+                </ProtectedRoute>
+              } />
+              <Route path="/scaffolding/rental-form" element={
+                <ProtectedRoute>
+                  <ScaffoldingRentalForm />
+                </ProtectedRoute>
+              } />
               <Route path="/custom-service/form" element={
                 <ProtectedRoute>
                   <CustomServiceForm />
@@ -323,9 +331,21 @@ const App = () => {
                   <OrderDetail />
                 </ProtectedRoute>
               } />
-              <Route path="/user/new-location" element={<NewLocation />} />
-              <Route path="/user/select-service" element={<ServiceSelection />} />
-              <Route path="/select-location" element={<SelectLocation />} />
+              <Route path="/user/new-location" element={
+                <ProtectedRoute>
+                  <NewLocation />
+                </ProtectedRoute>
+              } />
+              <Route path="/user/select-service" element={
+                <ProtectedRoute>
+                  <ServiceSelection />
+                </ProtectedRoute>
+              } />
+              <Route path="/select-location" element={
+                <ProtectedRoute>
+                  <SelectLocation />
+                </ProtectedRoute>
+              } />
 
               <Route path="/tickets" element={<TicketList />} />
               <Route path="/tickets/new" element={<NewTicket />} />
