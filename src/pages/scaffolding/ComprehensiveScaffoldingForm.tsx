@@ -2104,6 +2104,23 @@ export default function ComprehensiveScaffoldingForm({
                   <span className="text-emerald-700 dark:text-emerald-300">{summary.grandTotal.toLocaleString('fa-IR')} تومان</span>
                 </div>
               </div>
+
+              {!editingScaffold && savedScaffolds.length > 0 && (
+                <Button
+                  type="button"
+                  onClick={onSubmit}
+                  disabled={
+                    loading ||
+                    (!editOrderId && !selectedLocationId && !initialLocationId && !prefilledAddress && !address && !navState?.locationAddress)
+                  }
+                  className="w-full"
+                  size="lg"
+                >
+                  {loading
+                    ? 'در حال ثبت...'
+                    : `ثبت همه سفارشات (${savedScaffolds.length} داربست)`}
+                </Button>
+              )}
             </CardContent>
           </Card>
         );
