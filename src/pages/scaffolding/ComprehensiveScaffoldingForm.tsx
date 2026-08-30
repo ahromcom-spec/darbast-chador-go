@@ -1866,14 +1866,25 @@ export default function ComprehensiveScaffoldingForm({
   // محاسبه‌ی خلاصه چند داربست (حمل و نقل مشترک، یکبار محاسبه و تقسیم بین داربست‌ها)
   const computeMultiSummary = () => {
     const items: Array<SavedScaffold & { transportShare: number; finalPrice: number }> = [];
-    const allItems = [...savedScaffolds];
-    // اگر کاربر در حال پر کردن داربست فعلی است، آن را هم در پیش‌نمایش قرار بده
-    if (canAddCurrentScaffold()) {
+    const allItems: SavedScaffold[] = savedScaffolds.map(s => {
+      // داربستی که در حال ویرایش است با مقادیر زنده فرم به‌روز نمایش داده می‌شود
+      if (editingScaffold && s.id === editingScaffold.id && canAddCurrentScaffold()) {
+        return {
+          ...s,
+          label: `داربست #${editingScaffold.index + 1} (در حال ویرایش)`,
+          fullPrice: priceData.total,
+          baseNoDistance: priceDataNoDistance.total,
+          breakdown: [...priceData.breakdown],
+          totalArea: calculateTotalArea(),
+        };
+      }
+      return s;
+    });
+    // اگر کاربر در حال پر کردن داربست جدیدی است (نه ویرایش)، آن را هم در پیش‌نمایش قرار بده
+    if (!editingScaffold && canAddCurrentScaffold()) {
       allItems.push({
         id: 'current',
-        label: editingScaffold
-          ? `داربست #${editingScaffold.index + 1} (در حال ویرایش)`
-          : `داربست #${savedScaffolds.length + 1} (در حال تکمیل)`,
+        label: `داربست #${savedScaffolds.length + 1} (در حال تکمیل)`,
         snapshot: null as any,
         fullPrice: priceData.total,
         baseNoDistance: priceDataNoDistance.total,
