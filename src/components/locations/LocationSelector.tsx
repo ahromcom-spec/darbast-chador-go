@@ -218,7 +218,7 @@ export const LocationSelector = ({ onLocationSelected, serviceTypeName }: Locati
 
       {/* دیالوگ مشاهده و ویرایش آدرس */}
       <Dialog open={!!editingLocation} onOpenChange={(open) => !open && setEditingLocation(null)}>
-        <DialogContent className="max-w-[min(84rem,95vw)] w-[95vw] sm:w-auto max-h-[92vh] overflow-y-auto p-4 sm:p-5 text-sm">
+        <DialogContent className="!max-w-[min(84rem,95vw)] w-[95vw] max-h-[92vh] overflow-y-auto p-4 sm:p-5 text-sm">
           <DialogHeader className="pb-2">
             <DialogTitle className="text-base sm:text-lg">مشاهده و ویرایش آدرس</DialogTitle>
           </DialogHeader>
