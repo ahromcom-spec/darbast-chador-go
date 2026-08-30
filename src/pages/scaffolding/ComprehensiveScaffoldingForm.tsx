@@ -1994,8 +1994,15 @@ export default function ComprehensiveScaffoldingForm({
       )}
 
       {/* لیست داربست‌های افزوده‌شده و خلاصه قیمت چندتایی */}
-      {multiOrderMode && savedScaffolds.length > 0 && (() => {
+      {multiOrderMode && (savedScaffolds.length > 0 || !!editingScaffold) && (() => {
         const summary = computeMultiSummary();
+        const describeDims = (sn: any): string => {
+          if (!sn || !Array.isArray(sn.dimensions)) return '';
+          return sn.dimensions
+            .filter((d: any) => d && (d.length || d.width || d.height))
+            .map((d: any) => [d.length, d.width, d.height].filter(Boolean).join('×'))
+            .join(' | ');
+        };
         return (
           <Card className="shadow-2xl bg-card/95 backdrop-blur-md border-2 border-emerald-500">
             <CardHeader>
@@ -2003,25 +2010,49 @@ export default function ComprehensiveScaffoldingForm({
                 داربست‌های افزوده شده ({summary.count})
               </CardTitle>
               <CardDescription>
-                هزینه حمل و نقل مشترک به‌صورت یکجا برای کل سفر محاسبه و بین داربست‌ها تقسیم می‌شود.
+                هزینه حمل و نقل مشترک به‌صورت یکجا برای کل سفر محاسبه و بین داربست‌ها تقسیم می‌شود. برای اصلاح ابعاد یا توضیحات هر داربست، دکمه «ویرایش» را بزنید.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {summary.items.map((it) => (
-                <div key={it.id} className="border rounded-lg p-3 bg-muted/40">
+                <div key={it.id} className={`border rounded-lg p-3 ${it.id === 'current' ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-400' : 'bg-muted/40'}`}>
                   <div className="flex items-center justify-between gap-2">
                     <div className="font-semibold text-sm">{it.label}</div>
                     {it.id !== 'current' && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeSavedScaffold(it.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => startEditSavedScaffold(it.id)}
+                          disabled={loading || !!editingScaffold}
+                          className="text-primary hover:text-primary gap-1"
+                        >
+                          <Pencil className="h-4 w-4" />
+                          <span className="text-xs">ویرایش</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeSavedScaffold(it.id)}
+                          disabled={loading}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     )}
                   </div>
+                  {it.id !== 'current' && describeDims(it.snapshot) && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      ابعاد: <span className="font-medium text-foreground" dir="ltr">{describeDims(it.snapshot)}</span>
+                      {it.totalArea > 0 && <span className="mr-2">— مساحت/حجم: {it.totalArea.toLocaleString('fa-IR')}</span>}
+                    </div>
+                  )}
+                  {it.id !== 'current' && (it.snapshot as any)?.locationPurpose && (
+                    <div className="text-xs text-muted-foreground">
+                      توضیحات: <span className="text-foreground">{(it.snapshot as any).locationPurpose}</span>
+                    </div>
+                  )}
                   <div className="text-xs text-muted-foreground mt-1">
                     قیمت اجرا (بدون حمل): <span className="font-medium text-foreground">{it.baseNoDistance.toLocaleString('fa-IR')}</span> تومان
                   </div>
@@ -2033,6 +2064,7 @@ export default function ComprehensiveScaffoldingForm({
                   </div>
                 </div>
               ))}
+
 
               <div className="border-t pt-3 space-y-1 text-sm">
                 <div className="flex justify-between"><span>جمع قیمت اجرا (بدون حمل):</span><span className="font-medium">{summary.baseSum.toLocaleString('fa-IR')} تومان</span></div>
