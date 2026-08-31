@@ -507,6 +507,54 @@ export function RepairRequestDialog({
     }
   };
 
+  // ارسال پیام (نوتیفیکیشن درون‌سایتی + پوش) به کارفرما در هر مرحله از تعمیر
+  const notifyCustomerRepairStage = async (stage: string, cost?: number | null) => {
+    try {
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('user_id')
+        .eq('id', customerId)
+        .maybeSingle();
+
+      const userId = (customer as any)?.user_id as string | undefined;
+      if (!userId) return;
+
+      const costText = cost && cost > 0 ? ` هزینه تعمیر: ${cost.toLocaleString('fa-IR')} تومان.` : '';
+      const messages: Record<string, { title: string; body: string }> = {
+        pending: {
+          title: '🔧 درخواست تعمیر ثبت شد',
+          body: `درخواست تعمیر داربست سفارش ${orderCode} ثبت شد و در انتظار تایید مدیریت است.`,
+        },
+        approved: {
+          title: '✅ درخواست تعمیر تایید شد',
+          body: `درخواست تعمیر داربست سفارش ${orderCode} توسط مدیریت تایید شد.${costText}`,
+        },
+        awaiting_repair: {
+          title: '⏳ در انتظار تعمیر داربست',
+          body: `سفارش ${orderCode} در مرحله «در انتظار تعمیر داربست» قرار گرفت و به‌زودی تیم اجرایی اقدام می‌کند.`,
+        },
+        repaired: {
+          title: '🎉 تعمیر داربست انجام شد',
+          body: `تعمیر داربست سفارش ${orderCode} با موفقیت انجام شد.${costText}`,
+        },
+      };
+
+      const message = messages[stage];
+      if (!message) return;
+
+      await sendPushNotification({
+        user_id: userId,
+        title: message.title,
+        body: message.body,
+        link: `/orders/${orderId}`,
+        order_id: orderId,
+        type: 'repair-stage',
+      });
+    } catch (err) {
+      console.error('Error notifying customer about repair stage:', err);
+    }
+  };
+
   const handleApproveRepair = async () => {
     if (!existingRequest || !isManager) return;
 
@@ -535,7 +583,9 @@ export function RepairRequestDialog({
         approved_at: new Date().toISOString(),
         final_cost: finalCost,
       });
+      setRequests(requests.map(r => r.id === existingRequest.id ? { ...r, status: 'approved', final_cost: finalCost } : r));
       onRepairCostChange?.(finalCost);
+      notifyCustomerRepairStage('approved', finalCost);
 
       toast({
         title: '✓ موفق',
@@ -553,16 +603,51 @@ export function RepairRequestDialog({
     }
   };
 
+  // مرحله بعد از تایید: انتقال به «در انتظار تعمیر داربست»
+  const handleMoveToAwaitingRepair = async () => {
+    if (!existingRequest || !isManager) return;
+
+    setMovingToAwaiting(true);
+    try {
+      const { error } = await supabase
+        .from('repair_requests')
+        .update({ status: 'awaiting_repair' })
+        .eq('id', existingRequest.id);
+
+      if (error) throw error;
+
+      setExistingRequest({ ...existingRequest, status: 'awaiting_repair' });
+      setRequests(requests.map(r => r.id === existingRequest.id ? { ...r, status: 'awaiting_repair' } : r));
+      notifyCustomerRepairStage('awaiting_repair');
+
+      toast({
+        title: '✓ موفق',
+        description: 'درخواست تعمیر به مرحله «در انتظار تعمیر داربست» منتقل شد',
+      });
+    } catch (error: any) {
+      console.error('Error moving repair to awaiting:', error);
+      toast({
+        title: 'خطا',
+        description: 'خطا در انتقال مرحله تعمیر',
+        variant: 'destructive',
+      });
+    } finally {
+      setMovingToAwaiting(false);
+    }
+  };
+
   const handleCompleteRepair = async () => {
     if (!existingRequest || !isManager) return;
 
     setCompletingRepair(true);
     try {
+      const now = new Date().toISOString();
       const { error } = await supabase
         .from('repair_requests')
         .update({
-          status: 'completed',
-          completed_at: new Date().toISOString(),
+          status: 'repaired',
+          completed_at: now,
+          repaired_at: now,
         })
         .eq('id', existingRequest.id);
 
@@ -570,12 +655,14 @@ export function RepairRequestDialog({
 
       setExistingRequest({
         ...existingRequest,
-        status: 'completed',
+        status: 'repaired',
       });
+      setRequests(requests.map(r => r.id === existingRequest.id ? { ...r, status: 'repaired' } : r));
+      notifyCustomerRepairStage('repaired', existingRequest.final_cost);
 
       toast({
         title: '✓ موفق',
-        description: 'تعمیر به عنوان تکمیل‌شده ثبت شد. مشتری می‌تواند هزینه را پرداخت کند.',
+        description: 'تعمیر داربست انجام شد و به کارفرما اطلاع داده شد.',
       });
     } catch (error: any) {
       console.error('Error completing repair:', error);
@@ -588,6 +675,7 @@ export function RepairRequestDialog({
       setCompletingRepair(false);
     }
   };
+
 
   // ویرایش توضیحات درخواست تعمیر (مدیر همیشه، مشتری تا زمان تایید)
   const canEditRequest = !!existingRequest && (isManager || existingRequest.status === 'pending');
