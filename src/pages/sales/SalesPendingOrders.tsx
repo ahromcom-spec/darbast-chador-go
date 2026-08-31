@@ -261,7 +261,9 @@ export default function SalesPendingOrders() {
     
     // برای سفارشات کارشناسی قیمت، بعد از تعیین قیمت توسط کارشناس، سفارش قابل تایید است
     // (بدون نیاز به تایید دستی مشتری - تایید خودکار انجام می‌شود)
-    const canApprove = !isExpertPricingRequest || (priceSetByManager && hasPaymentAmount);
+    // تایید سفارش حتی بدون قیمت یا متراژ مجاز است (قیمت در مراحل بعد تعیین می‌شود)
+    const canApprove = true;
+
 
     return (
       <Card className="hover:shadow-md transition-shadow">
