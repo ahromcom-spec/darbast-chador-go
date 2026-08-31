@@ -1407,7 +1407,7 @@ export default function ExecutiveOrders() {
             // (بدون نیاز به تایید مشتری - تایید خودکار انجام می‌شود)
             // اگر payment_amount تنظیم شده باشد، حتی بدون price_set_by_manager هم قابل تایید است
             // همچنین قیمت محاسبه‌شده خودکار سایت هم سفارش را قابل تایید می‌کند
-            const canApprove = !isExpertPricingRequest || hasPaymentAmount || siteEstimatedPrice > 0;
+            const canApprove = true;
 
             const serviceLabel = getOrderServiceLabel(notesObj);
             const isExecutionWithMaterialsOrder = order.subcategory_id === SUBCATEGORY_SCAFFOLD_EXECUTION_WITH_MATERIALS;
