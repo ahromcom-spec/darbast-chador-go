@@ -720,33 +720,9 @@ export default function ExecutiveOrders() {
         .eq('id', orderId)
         .single();
 
-      // جلوگیری از تایید سفارش «درخواست قیمت کارشناسی» قبل از ثبت قیمت
-      if (newStage === 'pending_execution') {
-        const notesObj =
-          (orderData as any)?.notes && typeof (orderData as any).notes === 'object'
-            ? (orderData as any).notes
-            : parseOrderNotes(((orderData as any)?.notes ?? null) as any);
+      // تایید سفارش بدون نیاز به ثبت قیمت یا متراژ مجاز است؛
+      // قیمت و متراژ می‌توانند در مراحل بعدی تعیین شوند.
 
-        const isExpertPricingRequest = notesObj?.is_expert_pricing_request === true;
-        if (isExpertPricingRequest) {
-          const priceSetByManager = notesObj?.price_set_by_manager === true;
-          const amountRaw = (orderData as any)?.payment_amount ?? notesObj?.manager_set_price;
-          const amountNumber = typeof amountRaw === 'number' ? amountRaw : Number(amountRaw);
-          const hasPaymentAmount = Number.isFinite(amountNumber) && amountNumber > 0;
-
-          // بعد از تعیین قیمت، سفارش قابل تایید است (بدون نیاز به تایید مشتری)
-          const canApprove = hasPaymentAmount;
-          if (!canApprove) {
-            toast({
-              variant: 'destructive',
-              title: 'امکان تایید سفارش نیست',
-              description:
-                'این سفارش «درخواست قیمت کارشناسی» است؛ ابتدا قیمت را ثبت کنید.'
-            });
-            return;
-          }
-        }
-      }
 
       // به‌روزرسانی status و execution_stage با مقادیر صحیح
       const updateData: Record<string, any> = {
@@ -1431,7 +1407,7 @@ export default function ExecutiveOrders() {
             // (بدون نیاز به تایید مشتری - تایید خودکار انجام می‌شود)
             // اگر payment_amount تنظیم شده باشد، حتی بدون price_set_by_manager هم قابل تایید است
             // همچنین قیمت محاسبه‌شده خودکار سایت هم سفارش را قابل تایید می‌کند
-            const canApprove = !isExpertPricingRequest || hasPaymentAmount || siteEstimatedPrice > 0;
+            const canApprove = true;
 
             const serviceLabel = getOrderServiceLabel(notesObj);
             const isExecutionWithMaterialsOrder = order.subcategory_id === SUBCATEGORY_SCAFFOLD_EXECUTION_WITH_MATERIALS;
