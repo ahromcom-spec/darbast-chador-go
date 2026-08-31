@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronLeft, ChevronRight, Eye, Trash2, Plus, Camera, ZoomIn, ZoomOut } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Eye, Trash2, Plus, Camera, ZoomIn, ZoomOut, Wrench } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { ServiceTypeSelectionDialog } from './ServiceTypeSelectionDialog';
 import { extractOrderDescription } from '@/lib/orderDescription';
+import { RepairRequestDialog } from '@/components/orders/RepairRequestDialog';
 
 const formatToman = (n: number) => new Intl.NumberFormat('fa-IR').format(Math.round(n || 0));
 
@@ -322,22 +323,66 @@ export function MobileProjectPanel({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('projects_v3')
-        .select('id, total_price, total_paid, notes, payment_confirmed_at')
+        .select('id, total_price, total_paid, notes, payment_confirmed_at, customer_id')
         .in('id', orderIds);
       if (error) throw error;
-      const map: Record<string, { total_price: number; total_paid: number; notes: string | null; settled: boolean }> = {};
+      const map: Record<string, { total_price: number; total_paid: number; notes: string | null; settled: boolean; customer_id: string | null }> = {};
       (data || []).forEach((r: any) => {
         map[r.id] = {
           total_price: Number(r.total_price) || 0,
           total_paid: Number(r.total_paid) || 0,
           notes: r.notes || null,
           settled: !!r.payment_confirmed_at,
+          customer_id: r.customer_id || null,
         };
       });
       return map;
     },
     staleTime: 30_000,
   });
+
+  // درخواست‌های تعمیر داربست هر سفارش برای نمایش مرحله تعمیر روی نقشه
+  const { data: repairsByOrder, refetch: refetchRepairs } = useQuery({
+    queryKey: ['mobile-panel-order-repairs', orderIds],
+    enabled: orderIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('repair_requests')
+        .select('id, order_id, status, final_cost, estimated_cost, created_at')
+        .in('order_id', orderIds)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      const map: Record<string, any[]> = {};
+      (data || []).forEach((r: any) => {
+        if (!map[r.order_id]) map[r.order_id] = [];
+        map[r.order_id].push(r);
+      });
+      return map;
+    },
+    staleTime: 15_000,
+  });
+
+  const [repairDialog, setRepairDialog] = useState<{ orderId: string; orderCode: string; customerId: string } | null>(null);
+
+  const REPAIR_STAGE_LABELS: Record<string, string> = {
+    pending: 'در انتظار تایید تعمیر',
+    approved: 'تعمیر تایید شد',
+    awaiting_repair: 'در انتظار تعمیر داربست',
+    repaired: 'تعمیر شد',
+    completed: 'تعمیر شد',
+    rejected: 'تعمیر رد شد',
+    paid: 'هزینه تعمیر پرداخت شد',
+  };
+
+  const REPAIR_STAGE_CLASSES: Record<string, string> = {
+    pending: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
+    approved: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+    awaiting_repair: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+    repaired: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+    completed: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+    rejected: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+    paid: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
+  };
 
   // گروه‌بندی سفارشات بر اساس هر پروژه/نوع خدمات تا دکمه «سفارش جدید» همان پروژه و همان فرم کامل را باز کند
   const serviceTypeGroups = projectsToUse
@@ -812,9 +857,34 @@ export function MobileProjectPanel({
                         );
                       })()}
 
+                      {/* مراحل تعمیر داربست */}
+                      {(() => {
+                        const repairs = repairsByOrder?.[order.id] || [];
+                        if (repairs.length === 0) return null;
+                        return (
+                          <div className="px-3 py-2.5 border-b border-border bg-amber-50/60 dark:bg-amber-950/20 space-y-2">
+                            <div className="flex items-center gap-2 text-xs font-bold text-amber-800 dark:text-amber-300">
+                              <Wrench className="w-3.5 h-3.5" />
+                              نیاز به تعمیر داربست ({repairs.length} درخواست)
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {repairs.map((r: any, idx: number) => (
+                                <span
+                                  key={r.id}
+                                  className={`text-[10px] px-2 py-1 rounded-full font-medium ${REPAIR_STAGE_CLASSES[r.status] || 'bg-muted text-foreground'}`}
+                                >
+                                  #{repairs.length - idx} · {REPAIR_STAGE_LABELS[r.status] || r.status}
+                                  {!hideFinancials && r.final_cost > 0 ? ` · ${formatToman(Number(r.final_cost))} ت` : ''}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                       {/* Action Buttons */}
 
-                      <div className="p-3 flex gap-2">
+                      <div className="p-3 flex flex-wrap gap-2">
                         <Button
                           variant="default"
                           size="sm"
@@ -823,6 +893,18 @@ export function MobileProjectPanel({
                         >
                           <Eye className="w-4 h-4 ml-2" />
                           مشاهده جزئیات
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 border-amber-400 text-amber-700 hover:bg-amber-50 dark:text-amber-300"
+                          onClick={() => {
+                            const cid = orderSummaries?.[order.id]?.customer_id || '';
+                            setRepairDialog({ orderId: order.id, orderCode: order.code, customerId: cid });
+                          }}
+                        >
+                          <Wrench className="w-4 h-4 ml-2" />
+                          {(repairsByOrder?.[order.id]?.length || 0) > 0 ? 'مدیریت تعمیرات' : 'نیاز به تعمیر'}
                         </Button>
                         {/* دکمه حذف فقط برای سفارش‌های در انتظار تایید */}
                         {order.status === 'pending' && (
@@ -863,6 +945,23 @@ export function MobileProjectPanel({
         </div>
       </ScrollArea>
       </div>
+
+      {/* دیالوگ درخواست و مراحل تعمیر داربست */}
+      {repairDialog && (
+        <RepairRequestDialog
+          open={!!repairDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              setRepairDialog(null);
+              refetchRepairs();
+            }
+          }}
+          orderId={repairDialog.orderId}
+          orderCode={repairDialog.orderCode}
+          customerId={repairDialog.customerId}
+          isManager
+        />
+      )}
 
       {/* دیالوگ انتخاب نوع خدمات */}
       <ServiceTypeSelectionDialog

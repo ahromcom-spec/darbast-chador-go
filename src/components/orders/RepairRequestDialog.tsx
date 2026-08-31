@@ -340,6 +340,7 @@ export function RepairRequestDialog({
       setExistingRequest(request);
       setShowNewForm(false);
       onRepairCostChange?.(1500000);
+      notifyCustomerRepairStage('pending');
       fetchRepairRequest(request.id);
     } catch (error: any) {
       console.error('Error submitting repair request:', error);
