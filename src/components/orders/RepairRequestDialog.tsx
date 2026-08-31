@@ -44,6 +44,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { formatPersianDateTime } from "@/lib/dateUtils";
+import { sendPushNotification } from "@/lib/notifications";
 
 interface RepairRequest {
   id: string;
@@ -106,6 +107,7 @@ export function RepairRequestDialog({
   const [updatingCost, setUpdatingCost] = useState(false);
   const [approvingRepair, setApprovingRepair] = useState(false);
   const [completingRepair, setCompletingRepair] = useState(false);
+  const [movingToAwaiting, setMovingToAwaiting] = useState(false);
   const [editingDescription, setEditingDescription] = useState(false);
   const [descriptionDraft, setDescriptionDraft] = useState("");
   const [savingDescription, setSavingDescription] = useState(false);
@@ -758,13 +760,16 @@ export function RepairRequestDialog({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" /> در انتظار بررسی</Badge>;
+        return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" /> در انتظار تایید</Badge>;
       case 'approved':
         return <Badge variant="default" className="gap-1 bg-blue-600"><CheckCircle className="h-3 w-3" /> تایید شده</Badge>;
       case 'rejected':
         return <Badge variant="destructive" className="gap-1"><AlertCircle className="h-3 w-3" /> رد شده</Badge>;
+      case 'awaiting_repair':
+        return <Badge variant="default" className="gap-1 bg-amber-500"><Clock className="h-3 w-3" /> در انتظار تعمیر داربست</Badge>;
+      case 'repaired':
       case 'completed':
-        return <Badge variant="default" className="gap-1 bg-green-600"><CheckCircle className="h-3 w-3" /> انجام شده</Badge>;
+        return <Badge variant="default" className="gap-1 bg-green-600"><CheckCircle className="h-3 w-3" /> تعمیر شد</Badge>;
       case 'paid':
         return <Badge variant="default" className="gap-1 bg-purple-600"><CreditCard className="h-3 w-3" /> پرداخت شده</Badge>;
       default:
@@ -937,8 +942,26 @@ export function RepairRequestDialog({
                 </div>
               )}
               
-              {/* Manager complete repair button */}
+              {/* Manager: move approved request to awaiting repair */}
               {isManager && existingRequest.status === 'approved' && (
+                <div className="pt-3 mt-3 border-t border-primary/20">
+                  <Button
+                    onClick={handleMoveToAwaitingRepair}
+                    disabled={movingToAwaiting}
+                    className="w-full gap-2 bg-amber-500 hover:bg-amber-600 text-white"
+                  >
+                    {movingToAwaiting ? (
+                      <Clock className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Clock className="h-4 w-4" />
+                    )}
+                    انتقال به مرحله «در انتظار تعمیر داربست»
+                  </Button>
+                </div>
+              )}
+
+              {/* Manager complete repair button */}
+              {isManager && (existingRequest.status === 'awaiting_repair' || existingRequest.status === 'approved') && (
                 <div className="pt-3 mt-3 border-t border-primary/20">
                   <Button
                     onClick={handleCompleteRepair}
@@ -950,7 +973,7 @@ export function RepairRequestDialog({
                     ) : (
                       <CheckCircle className="h-4 w-4" />
                     )}
-                    تعمیر انجام شد
+                    تعمیر شد
                   </Button>
                 </div>
               )}
