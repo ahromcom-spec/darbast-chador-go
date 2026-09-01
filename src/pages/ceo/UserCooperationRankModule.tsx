@@ -172,7 +172,7 @@ export default function UserCooperationRankModule() {
                   return (
                     <div
                       key={row.user_id}
-                      className={`grid grid-cols-1 md:grid-cols-[1.5fr_1fr_140px_120px_auto] gap-3 items-center p-3 ${
+                      className={`grid grid-cols-1 md:grid-cols-[1.5fr_1fr_190px_120px_auto] gap-3 items-center p-3 ${
                         isDirty ? 'bg-amber-50/40' : ''
                       }`}
                     >
