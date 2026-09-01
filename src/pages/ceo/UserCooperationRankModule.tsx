@@ -6,9 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Save, Search, Users, Star } from 'lucide-react';
+import { Loader2, Save, Search, Users, Star, Plus, Minus } from 'lucide-react';
 import { toast } from 'sonner';
 import { rankToDiscountPercent } from '@/lib/cooperationDiscount';
+import { toEnglishDigits } from '@/lib/numberParsing';
+
 
 interface UserRow {
   user_id: string;
