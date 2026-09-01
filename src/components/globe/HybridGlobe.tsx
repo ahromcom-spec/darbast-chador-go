@@ -1036,6 +1036,34 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
     }
   }, [projects, activeExecutionOnly, companyOrders]);
 
+  // دریافت درخواست‌های تعمیر باز برای سفارش‌های نمایش‌داده‌شده روی نقشه
+  useEffect(() => {
+    const orderIds = projectsWithMedia.flatMap(p => (p.orders || []).map(o => o.id));
+    if (orderIds.length === 0) {
+      setRepairOrders({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('repair_requests')
+        .select('order_id, status, created_at')
+        .in('order_id', orderIds)
+        .in('status', ['pending', 'approved', 'awaiting_repair'])
+        .order('created_at', { ascending: false });
+      if (cancelled || error) return;
+      const map: Record<string, string> = {};
+      (data || []).forEach((r: any) => {
+        // اولویت نمایش: در انتظار تعمیر > تایید شده > در انتظار تایید
+        const rank: Record<string, number> = { pending: 1, approved: 2, awaiting_repair: 3 };
+        const prev = map[r.order_id];
+        if (!prev || (rank[r.status] || 0) > (rank[prev] || 0)) map[r.order_id] = r.status;
+      });
+      setRepairOrders(map);
+    })();
+    return () => { cancelled = true; };
+  }, [projectsWithMedia]);
+
   // آدرس‌های بدون پروژه دیگر روی نقشه نمایش داده نمی‌شوند - این قسمت حذف شده است
 
   // پروژه از پلتفرم نقشه ایرانی نشان استفاده می‌کند؛ نیازی به توکن Mapbox نیست.
