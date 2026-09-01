@@ -247,7 +247,10 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
           closed_at: s.closed_at,
           total_amount,
           total_paid,
+          total_paid_actual,
+          overpaid: Math.max(total_paid_actual - total_amount, 0),
           total_remaining: Math.max(total_amount - total_paid, 0),
+
           subcategory_name: serviceTypes[0] || null,
           address: s.address || myOrders[0]?.raw?.address || null,
           detailed_address: s.detailed_address || myOrders[0]?.raw?.detailed_address || null,
