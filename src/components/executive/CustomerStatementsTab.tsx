@@ -205,6 +205,11 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
 
         const total_amount = myOrders.reduce((a, o) => a + o.total, 0);
         const total_paid = myOrders.reduce((a, o) => a + o.paid, 0);
+        // مجموع واقعی واریزی کارفرما (بدون سقف مبلغ سفارش) برای نمایش اضافه‌پرداخت
+        const total_paid_actual = (orders || [])
+          .filter((o: any) => o.statement_id === s.id)
+          .reduce((a: number, o: any) => a + (Number(o.total_paid) || 0), 0);
+
 
         // Helper: join address + detailed_address without duplicating when one contains the other
         const joinAddr = (a?: string | null, d?: string | null) => {
