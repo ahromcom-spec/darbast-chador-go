@@ -40,7 +40,10 @@ interface Statement {
   closed_at: string | null;
   total_amount: number;
   total_paid: number;
+  total_paid_actual: number;
+  overpaid: number;
   total_remaining: number;
+
   subcategory_name: string | null;
   address: string | null;
   detailed_address: string | null;
@@ -202,6 +205,11 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
 
         const total_amount = myOrders.reduce((a, o) => a + o.total, 0);
         const total_paid = myOrders.reduce((a, o) => a + o.paid, 0);
+        // مجموع واقعی واریزی کارفرما (بدون سقف مبلغ سفارش) برای نمایش اضافه‌پرداخت
+        const total_paid_actual = (orders || [])
+          .filter((o: any) => o.statement_id === s.id)
+          .reduce((a: number, o: any) => a + (Number(o.total_paid) || 0), 0);
+
 
         // Helper: join address + detailed_address without duplicating when one contains the other
         const joinAddr = (a?: string | null, d?: string | null) => {
@@ -239,7 +247,10 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
           closed_at: s.closed_at,
           total_amount,
           total_paid,
+          total_paid_actual,
+          overpaid: Math.max(total_paid_actual - total_amount, 0),
           total_remaining: Math.max(total_amount - total_paid, 0),
+
           subcategory_name: serviceTypes[0] || null,
           address: s.address || myOrders[0]?.raw?.address || null,
           detailed_address: s.detailed_address || myOrders[0]?.raw?.detailed_address || null,
