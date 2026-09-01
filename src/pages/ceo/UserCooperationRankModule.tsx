@@ -186,15 +186,44 @@ export default function UserCooperationRankModule() {
                           {row.cooperation_rank}
                         </Badge>
                       </div>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={10}
-                        value={current}
-                        onChange={(e) => handleChange(row.user_id, parseInt(e.target.value, 10))}
-                        dir="ltr"
-                        className="text-center"
-                      />
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-10 w-10 shrink-0"
+                          aria-label="کاهش رتبه"
+                          disabled={current <= 1}
+                          onClick={() => handleChange(row.user_id, current - 1)}
+                        >
+                          <Minus className="w-4 h-4" />
+                        </Button>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={String(current)}
+                          onChange={(e) => {
+                            const raw = toEnglishDigits(e.target.value).replace(/[^\d]/g, '');
+                            if (raw === '') return;
+                            handleChange(row.user_id, parseInt(raw, 10));
+                          }}
+                          dir="ltr"
+                          className="text-center h-10"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-10 w-10 shrink-0"
+                          aria-label="افزایش رتبه"
+                          disabled={current >= 10}
+                          onClick={() => handleChange(row.user_id, current + 1)}
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+
                       <div className="text-xs">
                         تخفیف:{' '}
                         <span className="font-bold text-emerald-700">{pct}٪</span>
