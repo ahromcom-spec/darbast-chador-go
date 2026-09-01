@@ -6,9 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Save, Search, Users, Star } from 'lucide-react';
+import { Loader2, Save, Search, Users, Star, Plus, Minus } from 'lucide-react';
 import { toast } from 'sonner';
 import { rankToDiscountPercent } from '@/lib/cooperationDiscount';
+import { toEnglishDigits } from '@/lib/numberParsing';
+
 
 interface UserRow {
   user_id: string;
@@ -170,7 +172,7 @@ export default function UserCooperationRankModule() {
                   return (
                     <div
                       key={row.user_id}
-                      className={`grid grid-cols-1 md:grid-cols-[1.5fr_1fr_140px_120px_auto] gap-3 items-center p-3 ${
+                      className={`grid grid-cols-1 md:grid-cols-[1.5fr_1fr_190px_120px_auto] gap-3 items-center p-3 ${
                         isDirty ? 'bg-amber-50/40' : ''
                       }`}
                     >
@@ -186,15 +188,44 @@ export default function UserCooperationRankModule() {
                           {row.cooperation_rank}
                         </Badge>
                       </div>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={10}
-                        value={current}
-                        onChange={(e) => handleChange(row.user_id, parseInt(e.target.value, 10))}
-                        dir="ltr"
-                        className="text-center"
-                      />
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-10 w-10 shrink-0"
+                          aria-label="کاهش رتبه"
+                          disabled={current <= 1}
+                          onClick={() => handleChange(row.user_id, current - 1)}
+                        >
+                          <Minus className="w-4 h-4" />
+                        </Button>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={String(current)}
+                          onChange={(e) => {
+                            const raw = toEnglishDigits(e.target.value).replace(/[^\d]/g, '');
+                            if (raw === '') return;
+                            handleChange(row.user_id, parseInt(raw, 10));
+                          }}
+                          dir="ltr"
+                          className="text-center h-10"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-10 w-10 shrink-0"
+                          aria-label="افزایش رتبه"
+                          disabled={current >= 10}
+                          onClick={() => handleChange(row.user_id, current + 1)}
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+
                       <div className="text-xs">
                         تخفیف:{' '}
                         <span className="font-bold text-emerald-700">{pct}٪</span>
