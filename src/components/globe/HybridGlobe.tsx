@@ -143,6 +143,8 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
   // حالت اجرایی: همه سفارش‌های شرکت (نه فقط سفارش‌های کاربر جاری)
   const [companyProjects, setCompanyProjects] = useState<ProjectHierarchy[]>([]);
   const [companyOrders, setCompanyOrders] = useState<any[]>([]);
+  // سفارش‌هایی که درخواست تعمیر باز دارند (برای نمایش نشان «نیاز به تعمیر» روی نقشه)
+  const [repairOrders, setRepairOrders] = useState<Record<string, string>>({});
 
   const fetchCompanyExecutionData = useCallback(async () => {
     try {
@@ -1034,6 +1036,34 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
     }
   }, [projects, activeExecutionOnly, companyOrders]);
 
+  // دریافت درخواست‌های تعمیر باز برای سفارش‌های نمایش‌داده‌شده روی نقشه
+  useEffect(() => {
+    const orderIds = projectsWithMedia.flatMap(p => (p.orders || []).map(o => o.id));
+    if (orderIds.length === 0) {
+      setRepairOrders({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('repair_requests')
+        .select('order_id, status, created_at')
+        .in('order_id', orderIds)
+        .in('status', ['pending', 'approved', 'awaiting_repair'])
+        .order('created_at', { ascending: false });
+      if (cancelled || error) return;
+      const map: Record<string, string> = {};
+      (data || []).forEach((r: any) => {
+        // اولویت نمایش: در انتظار تعمیر > تایید شده > در انتظار تایید
+        const rank: Record<string, number> = { pending: 1, approved: 2, awaiting_repair: 3 };
+        const prev = map[r.order_id];
+        if (!prev || (rank[r.status] || 0) > (rank[prev] || 0)) map[r.order_id] = r.status;
+      });
+      setRepairOrders(map);
+    })();
+    return () => { cancelled = true; };
+  }, [projectsWithMedia]);
+
   // آدرس‌های بدون پروژه دیگر روی نقشه نمایش داده نمی‌شوند - این قسمت حذف شده است
 
   // پروژه از پلتفرم نقشه ایرانی نشان استفاده می‌کند؛ نیازی به توکن Mapbox نیست.
@@ -1819,30 +1849,73 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
         // عنوان موقعیت برای نمایش بالای مارکر (عنوان آدرس؛ نه آدرس کامل)
         const addressTitle = getMarkerLocationTitle(project).substring(0, 20);
 
+        // وضعیت تعمیر این پروژه (بر اساس سفارش‌هایش)
+        const repairStatuses = (project.orders || [])
+          .map(o => repairOrders[o.id])
+          .filter(Boolean) as string[];
+        const repairRank: Record<string, number> = { pending: 1, approved: 2, awaiting_repair: 3 };
+        const topRepairStatus = repairStatuses.sort(
+          (a, b) => (repairRank[b] || 0) - (repairRank[a] || 0)
+        )[0];
+        const repairLabels: Record<string, string> = {
+          pending: 'تعمیر: در انتظار تایید',
+          approved: 'تعمیر: تایید شده',
+          awaiting_repair: 'در انتظار تعمیر داربست',
+        };
+        const repairColors: Record<string, string> = {
+          pending: 'rgba(234,179,8,0.95)',
+          approved: 'rgba(37,99,235,0.95)',
+          awaiting_repair: 'rgba(249,115,22,0.97)',
+        };
+        const repairBadgeHtml = topRepairStatus
+          ? `<div style="
+              background:${repairColors[topRepairStatus]};
+              color:#fff;
+              padding:3px 7px;
+              border-radius:6px;
+              font-family:Vazirmatn, sans-serif;
+              font-size:9px;
+              font-weight:700;
+              white-space:nowrap;
+              text-align:center;
+              box-shadow:0 2px 8px rgba(0,0,0,0.3);
+              margin-bottom:3px;
+              direction:rtl;
+            ">🔧 ${repairLabels[topRepairStatus]}</div>`
+          : '';
+
         const addressLabelHtml = `
           <div style="
             position:absolute;
             bottom:100%;
             left:50%;
             transform:translateX(-50%);
-            background:linear-gradient(135deg, rgba(59,130,246,0.95) 0%, rgba(37,99,235,0.95) 100%);
-            color:white;
-            padding:4px 8px;
-            border-radius:6px;
-            font-family:Vazirmatn, sans-serif;
-            font-size:10px;
-            font-weight:600;
-            white-space:nowrap;
-            max-width:120px;
-            overflow:hidden;
-            text-overflow:ellipsis;
-            text-align:center;
-            box-shadow:0 2px 8px rgba(0,0,0,0.25);
+            display:flex;
+            flex-direction:column;
+            align-items:center;
             margin-bottom:4px;
             z-index:10;
-            direction:rtl;
-          ">${addressTitle}</div>
+          ">
+            ${repairBadgeHtml}
+            <div style="
+              background:linear-gradient(135deg, rgba(59,130,246,0.95) 0%, rgba(37,99,235,0.95) 100%);
+              color:white;
+              padding:4px 8px;
+              border-radius:6px;
+              font-family:Vazirmatn, sans-serif;
+              font-size:10px;
+              font-weight:600;
+              white-space:nowrap;
+              max-width:120px;
+              overflow:hidden;
+              text-overflow:ellipsis;
+              text-align:center;
+              box-shadow:0 2px 8px rgba(0,0,0,0.25);
+              direction:rtl;
+            ">${addressTitle}</div>
+          </div>
         `;
+
         
         if (firstOrderVideo) {
           // اگر ویدیو وجود دارد، ویدیو را روی مارکر نمایش بده
@@ -3016,7 +3089,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
     } else {
       console.warn('[HybridGlobe] No markers to display on map');
     }
-  }, [projectsWithMedia, loading, mapReady, navigate, selectedProject, expandedClusters]);
+  }, [projectsWithMedia, loading, mapReady, navigate, selectedProject, expandedClusters, repairOrders]);
 
   // تغییر نمای نقشه بین استاندارد و ماهواره‌ای
   useEffect(() => {

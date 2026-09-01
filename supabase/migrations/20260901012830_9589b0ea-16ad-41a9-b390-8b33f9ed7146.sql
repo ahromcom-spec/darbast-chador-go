@@ -1,0 +1,2 @@
+ALTER TABLE public.repair_requests DROP CONSTRAINT IF EXISTS repair_requests_status_check;
+ALTER TABLE public.repair_requests ADD CONSTRAINT repair_requests_status_check CHECK (status = ANY (ARRAY['pending'::text, 'approved'::text, 'awaiting_repair'::text, 'repaired'::text, 'rejected'::text, 'completed'::text, 'paid'::text]));
