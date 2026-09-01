@@ -143,6 +143,8 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
   // حالت اجرایی: همه سفارش‌های شرکت (نه فقط سفارش‌های کاربر جاری)
   const [companyProjects, setCompanyProjects] = useState<ProjectHierarchy[]>([]);
   const [companyOrders, setCompanyOrders] = useState<any[]>([]);
+  // سفارش‌هایی که درخواست تعمیر باز دارند (برای نمایش نشان «نیاز به تعمیر» روی نقشه)
+  const [repairOrders, setRepairOrders] = useState<Record<string, string>>({});
 
   const fetchCompanyExecutionData = useCallback(async () => {
     try {
