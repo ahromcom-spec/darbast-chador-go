@@ -40,7 +40,10 @@ interface Statement {
   closed_at: string | null;
   total_amount: number;
   total_paid: number;
+  total_paid_actual: number;
+  overpaid: number;
   total_remaining: number;
+
   subcategory_name: string | null;
   address: string | null;
   detailed_address: string | null;
