@@ -3089,7 +3089,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
     } else {
       console.warn('[HybridGlobe] No markers to display on map');
     }
-  }, [projectsWithMedia, loading, mapReady, navigate, selectedProject, expandedClusters]);
+  }, [projectsWithMedia, loading, mapReady, navigate, selectedProject, expandedClusters, repairOrders]);
 
   // تغییر نمای نقشه بین استاندارد و ماهواره‌ای
   useEffect(() => {
