@@ -272,7 +272,9 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
         const visible = g.statements.filter(s => s.orders.length > 0 || (s as any).is_manual === true);
         const total_amount = visible.reduce((a, s) => a + s.total_amount, 0);
         const total_remaining = visible.reduce((a, s) => a + s.total_remaining, 0);
-        return { ...g, statements: visible, total_amount, total_remaining };
+        const total_paid_actual = visible.reduce((a, s) => a + (s.total_paid_actual || 0), 0);
+        return { ...g, statements: visible, total_amount, total_remaining, total_paid_actual, overpaid: Math.max(total_paid_actual - total_amount, 0) };
+
       }).filter(g => g.statements.length > 0);
 
       result.sort((a, b) => b.total_remaining - a.total_remaining);
