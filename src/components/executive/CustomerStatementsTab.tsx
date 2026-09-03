@@ -184,7 +184,10 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
             statements: [],
             total_remaining: 0,
             total_amount: 0,
+            total_paid_actual: 0,
+            overpaid: 0,
           });
+
         }
         const myOrders: OrderRow[] = (orders || [])
           .filter((o: any) => o.statement_id === s.id)
