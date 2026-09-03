@@ -473,6 +473,10 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                   <div className="flex items-center gap-3 flex-wrap text-xs">
                                     <span>کل: <b>{formatPrice(s.total_amount)}</b></span>
                                     <span className="text-green-600">پرداختی: {formatPrice(s.total_paid)}</span>
+                                    {s.overpaid > 0 && (
+                                      <span className="text-amber-700">اضافه‌پرداخت: {formatPrice(s.overpaid)}</span>
+                                    )}
+
                                     <span className="text-red-600">مانده: {formatPrice(s.total_remaining)}</span>
                                     <div onClick={(e) => e.stopPropagation()} className="inline-block">
                                       <StatementInvoiceDialog
