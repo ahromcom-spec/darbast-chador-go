@@ -60,7 +60,10 @@ interface CustomerGroup {
   statements: Statement[];
   total_remaining: number;
   total_amount: number;
+  total_paid_actual: number;
+  overpaid: number;
 }
+
 
 const formatPrice = (n: number) => new Intl.NumberFormat('fa-IR').format(Math.round(n || 0)) + ' تومان';
 
@@ -181,7 +184,10 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
             statements: [],
             total_remaining: 0,
             total_amount: 0,
+            total_paid_actual: 0,
+            overpaid: 0,
           });
+
         }
         const myOrders: OrderRow[] = (orders || [])
           .filter((o: any) => o.statement_id === s.id)
@@ -266,7 +272,9 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
         const visible = g.statements.filter(s => s.orders.length > 0 || (s as any).is_manual === true);
         const total_amount = visible.reduce((a, s) => a + s.total_amount, 0);
         const total_remaining = visible.reduce((a, s) => a + s.total_remaining, 0);
-        return { ...g, statements: visible, total_amount, total_remaining };
+        const total_paid_actual = visible.reduce((a, s) => a + (s.total_paid_actual || 0), 0);
+        return { ...g, statements: visible, total_amount, total_remaining, total_paid_actual, overpaid: Math.max(total_paid_actual - total_amount, 0) };
+
       }).filter(g => g.statements.length > 0);
 
       result.sort((a, b) => b.total_remaining - a.total_remaining);
@@ -295,8 +303,10 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
         .map(g => {
           const total_amount = g.statements.reduce((a, s) => a + s.total_amount, 0);
           const total_remaining = g.statements.reduce((a, s) => a + s.total_remaining, 0);
-          return { ...g, total_amount, total_remaining };
+          const total_paid_actual = g.statements.reduce((a, s) => a + (s.total_paid_actual || 0), 0);
+          return { ...g, total_amount, total_remaining, total_paid_actual, overpaid: Math.max(total_paid_actual - total_amount, 0) };
         });
+
     }
     const q = search.trim().toLowerCase();
     if (!q) return list;
@@ -397,7 +407,14 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                           </Badge>
                         )}
                         <span className="text-sm">کل: <b>{formatPrice(g.total_amount)}</b></span>
+                        <span className="text-sm text-emerald-700">واریز کامل کارفرما: <b>{formatPrice(g.total_paid_actual)}</b></span>
+                        {g.overpaid > 0 && (
+                          <Badge className="bg-amber-500/20 text-amber-700 border border-amber-500/40">
+                            اضافه‌پرداخت: {formatPrice(g.overpaid)}
+                          </Badge>
+                        )}
                         <span className="text-sm text-red-600">مانده: <b>{formatPrice(g.total_remaining)}</b></span>
+
                         <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 flex-wrap">
                           <Button
                             size="sm"
@@ -456,6 +473,10 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                   <div className="flex items-center gap-3 flex-wrap text-xs">
                                     <span>کل: <b>{formatPrice(s.total_amount)}</b></span>
                                     <span className="text-green-600">پرداختی: {formatPrice(s.total_paid)}</span>
+                                    {s.overpaid > 0 && (
+                                      <span className="text-amber-700">اضافه‌پرداخت: {formatPrice(s.overpaid)}</span>
+                                    )}
+
                                     <span className="text-red-600">مانده: {formatPrice(s.total_remaining)}</span>
                                     <div onClick={(e) => e.stopPropagation()} className="inline-block">
                                       <StatementInvoiceDialog
