@@ -303,8 +303,10 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
         .map(g => {
           const total_amount = g.statements.reduce((a, s) => a + s.total_amount, 0);
           const total_remaining = g.statements.reduce((a, s) => a + s.total_remaining, 0);
-          return { ...g, total_amount, total_remaining };
+          const total_paid_actual = g.statements.reduce((a, s) => a + (s.total_paid_actual || 0), 0);
+          return { ...g, total_amount, total_remaining, total_paid_actual, overpaid: Math.max(total_paid_actual - total_amount, 0) };
         });
+
     }
     const q = search.trim().toLowerCase();
     if (!q) return list;
