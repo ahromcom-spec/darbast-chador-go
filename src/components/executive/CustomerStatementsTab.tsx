@@ -60,7 +60,10 @@ interface CustomerGroup {
   statements: Statement[];
   total_remaining: number;
   total_amount: number;
+  total_paid_actual: number;
+  overpaid: number;
 }
+
 
 const formatPrice = (n: number) => new Intl.NumberFormat('fa-IR').format(Math.round(n || 0)) + ' تومان';
 
