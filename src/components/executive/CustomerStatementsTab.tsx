@@ -407,7 +407,14 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                           </Badge>
                         )}
                         <span className="text-sm">کل: <b>{formatPrice(g.total_amount)}</b></span>
+                        <span className="text-sm text-emerald-700">واریز کامل کارفرما: <b>{formatPrice(g.total_paid_actual)}</b></span>
+                        {g.overpaid > 0 && (
+                          <Badge className="bg-amber-500/20 text-amber-700 border border-amber-500/40">
+                            اضافه‌پرداخت: {formatPrice(g.overpaid)}
+                          </Badge>
+                        )}
                         <span className="text-sm text-red-600">مانده: <b>{formatPrice(g.total_remaining)}</b></span>
+
                         <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 flex-wrap">
                           <Button
                             size="sm"
