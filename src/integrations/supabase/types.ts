@@ -2533,6 +2533,7 @@ export type Database = {
           paid_by: string
           payment_date: string | null
           payment_method: string | null
+          receipt_image_url: string | null
           receipt_number: string | null
         }
         Insert: {
@@ -2545,6 +2546,7 @@ export type Database = {
           paid_by: string
           payment_date?: string | null
           payment_method?: string | null
+          receipt_image_url?: string | null
           receipt_number?: string | null
         }
         Update: {
@@ -2557,6 +2559,7 @@ export type Database = {
           paid_by?: string
           payment_date?: string | null
           payment_method?: string | null
+          receipt_image_url?: string | null
           receipt_number?: string | null
         }
         Relationships: [
@@ -2868,6 +2871,93 @@ export type Database = {
           verified?: boolean | null
         }
         Relationships: []
+      }
+      payment_submissions: {
+        Row: {
+          amount: number
+          bank_card_id: string | null
+          cheque_due_date: string | null
+          cheque_id: string | null
+          cheque_serial: string | null
+          created_at: string
+          customer_id: string | null
+          id: string
+          image_path: string | null
+          kind: string
+          notes: string | null
+          order_id: string | null
+          order_payment_ids: string[] | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          statement_id: string | null
+          status: string
+          submitted_by: string
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          bank_card_id?: string | null
+          cheque_due_date?: string | null
+          cheque_id?: string | null
+          cheque_serial?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          image_path?: string | null
+          kind?: string
+          notes?: string | null
+          order_id?: string | null
+          order_payment_ids?: string[] | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          statement_id?: string | null
+          status?: string
+          submitted_by: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          bank_card_id?: string | null
+          cheque_due_date?: string | null
+          cheque_id?: string | null
+          cheque_serial?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          image_path?: string | null
+          kind?: string
+          notes?: string | null
+          order_id?: string | null
+          order_payment_ids?: string[] | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          statement_id?: string | null
+          status?: string
+          submitted_by?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_submissions_bank_card_id_fkey"
+            columns: ["bank_card_id"]
+            isOneToOne: false
+            referencedRelation: "bank_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_submissions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payments: {
         Row: {
@@ -6374,6 +6464,7 @@ export type Database = {
         Args: { _module_key: string; _user_id: string }
         Returns: boolean
       }
+      is_payment_reviewer: { Args: { _uid: string }; Returns: boolean }
       log_audit:
         | {
             Args: {
