@@ -46,12 +46,12 @@ export default function PaymentProofDialog({
 
   const submit = async () => {
     if (numericAmount <= 0) { toast.error('مبلغ واریزی را وارد کنید'); return; }
-    if (!file) { toast.error('عکس فیش یا چک را انتخاب کنید'); return; }
+    if (!file && !notes.trim()) { toast.error('عکس فیش را انتخاب کنید یا توضیحات پرداخت را بنویسید'); return; }
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('ابتدا وارد حساب شوید');
-      const imagePath = await uploadPaymentImage(file, user.id);
+      const imagePath = file ? await uploadPaymentImage(file, user.id) : null;
       const { error } = await supabase.from('payment_submissions').insert({
         order_id: orderId || null,
         statement_id: statementId || null,
@@ -117,7 +117,7 @@ export default function PaymentProofDialog({
             )}
 
             <div className="space-y-1">
-              <Label>عکس {kind === 'cheque' ? 'چک' : 'فیش واریزی'}</Label>
+              <Label>عکس {kind === 'cheque' ? 'چک' : 'فیش واریزی'} (اختیاری)</Label>
               <Input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
               {file && (
                 <p className="text-xs text-emerald-600 flex items-center gap-1">
@@ -127,7 +127,7 @@ export default function PaymentProofDialog({
             </div>
 
             <div className="space-y-1">
-              <Label>توضیحات</Label>
+              <Label>توضیحات {file ? '' : '(در صورت نداشتن عکس، الزامی)'}</Label>
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="مثلا: کارت به کارت به حساب شرکت در تاریخ ..." />
             </div>
           </div>
