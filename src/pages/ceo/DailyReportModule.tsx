@@ -5364,18 +5364,57 @@ export default function DailyReportModule() {
                                     onReportCreated={(id) => setExistingReportId(id)}
                                   />
                                 </TableCell>
-                                <TableCell className="border border-blue-200">
-                                  {!effectiveReadOnly && (
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => removeOrderRow(index)}
-                                      className="text-destructive hover:text-destructive"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  )}
-                                </TableCell>
+                                 <TableCell className="border border-blue-200">
+                                   {!effectiveReadOnly && (
+                                     <div className="flex items-center gap-1">
+                                       <div className="flex flex-col">
+                                         <Button
+                                           variant="ghost"
+                                           size="icon"
+                                           className="h-6 w-6"
+                                           title="انتقال به سطر بالا"
+                                           aria-label="انتقال به سطر بالا"
+                                           disabled={index === 0}
+                                           onClick={() => moveOrderRow(index, 'up')}
+                                         >
+                                           <ChevronUp className="h-4 w-4" />
+                                         </Button>
+                                         <Button
+                                           variant="ghost"
+                                           size="icon"
+                                           className="h-6 w-6"
+                                           title="انتقال به سطر پایین"
+                                           aria-label="انتقال به سطر پایین"
+                                           disabled={index === orderReports.length - 1}
+                                           onClick={() => moveOrderRow(index, 'down')}
+                                         >
+                                           <ChevronDown className="h-4 w-4" />
+                                         </Button>
+                                       </div>
+                                       <Button
+                                         variant="ghost"
+                                         size="icon"
+                                         className="h-8 w-8 text-blue-600 hover:text-blue-700"
+                                         title="انتقال این سفارش به گزارش روز بعد"
+                                         aria-label="انتقال به روز بعد"
+                                         disabled={transferringRowIndex === index}
+                                         onClick={() => transferOrderRowToNextDay(index)}
+                                       >
+                                         {transferringRowIndex === index
+                                           ? <Loader2 className="h-4 w-4 animate-spin" />
+                                           : <CalendarPlus className="h-4 w-4" />}
+                                       </Button>
+                                       <Button
+                                         variant="ghost"
+                                         size="icon"
+                                         onClick={() => removeOrderRow(index)}
+                                         className="text-destructive hover:text-destructive"
+                                       >
+                                         <Trash2 className="h-4 w-4" />
+                                       </Button>
+                                     </div>
+                                   )}
+                                 </TableCell>
                               </TableRow>
                             ))}
                         </TableBody>
