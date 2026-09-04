@@ -229,6 +229,14 @@ const AVAILABLE_MODULES: Module[] = [
     bgColor: 'bg-rose-50',
   },
   {
+    key: 'documents_archive',
+    name: 'ماژول آرشیو و دانلود اسناد',
+    description: 'دانلود فاکتور سفارش‌ها، صورتحساب‌ها و گزارشات روزانه به صورت PDF در یک فایل زیپ با فیلتر تاریخ، نوع سند و جستجو',
+    href: '/documents-archive',
+    color: 'text-amber-600',
+    bgColor: 'bg-amber-50',
+  },
+  {
     key: 'ratings_management',
     name: 'ماژول مدیریت امتیازدهی',
     description: 'مشاهده و مدیریت امتیازهای مشتریان به عملکرد پیمانکار/اجرایی و مدیریت، پیگیری و زمان‌بندی سفارش‌ها',
