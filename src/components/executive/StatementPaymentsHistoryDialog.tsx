@@ -10,6 +10,7 @@ import { Banknote, CreditCard, History, Pencil, Trash2, Check, X, FileCheck } fr
 import { useToast } from '@/hooks/use-toast';
 import { BankCardSelect } from '@/components/bank-cards/BankCardSelect';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
+import { signPaymentImages } from '@/lib/paymentSubmissions';
 import { parseLocalizedNumber } from '@/lib/numberParsing';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
@@ -94,6 +95,7 @@ export function StatementPaymentsHistoryDialog({
 
   const { user } = useAuth();
   const { toast } = useToast();
+  const [receiptImages, setReceiptImages] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [groups, setGroups] = useState<PaymentGroup[]>([]);
   const [editing, setEditing] = useState<string | null>(null);
@@ -217,6 +219,9 @@ export function StatementPaymentsHistoryDialog({
       }
       arr.sort((a, b) => (b.rows[0]?.created_at || '').localeCompare(a.rows[0]?.created_at || ''));
       setGroups(arr);
+      setReceiptImages(await signPaymentImages(
+        (pays || []).map((p: any) => p.receipt_image_url as string | null)
+      ));
     } catch (err: any) {
       console.error(err);
       toast({ title: 'خطا', description: err?.message || 'بارگذاری پرداخت‌ها با خطا مواجه شد', variant: 'destructive' });
