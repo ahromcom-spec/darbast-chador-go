@@ -3134,17 +3134,25 @@ export default function DailyReportModule() {
       setOrderReports(next);
       markCurrentDateDirty();
 
-      toast.success('ردیف به گزارش روز بعد منتقل شد');
+      toast.success(`ردیف به گزارش ${format(new Date(`${targetDateStr}T00:00:00`), 'yyyy/MM/dd')} منتقل شد`);
     } catch (err) {
-      console.error('Error transferring row to next day:', err);
-      toast.error('انتقال ردیف به روز بعد با خطا مواجه شد');
+      console.error('Error transferring row to date:', err);
+      toast.error('انتقال ردیف با خطا مواجه شد');
     } finally {
       setTransferringRowIndex(null);
+      setTransferPopoverIndex(null);
       setTimeout(() => {
         isDeletingRowRef.current = false;
       }, 300);
     }
   }, [user, reportDate, activeModuleKey, markCurrentDateDirty]);
+
+  // انتقال با تعداد روز نسبی (مثلاً +3 یا -1)
+  const transferOrderRowByOffset = useCallback((index: number, offsetDays: number) => {
+    const target = new Date(reportDate);
+    target.setDate(target.getDate() + offsetDays);
+    transferOrderRowToDate(index, toLocalDateString(target));
+  }, [reportDate, transferOrderRowToDate]);
 
 
 
