@@ -588,7 +588,7 @@ const handler = async (req: Request): Promise<Response> => {
           .eq("phone", normalizedPhone)
           .eq("order_code", orderCode)
           .eq("status_key", status)
-          .in("state", ["pending", "sending"])
+          .eq("state", "pending")
           .limit(1)
           .maybeSingle();
 
