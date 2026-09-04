@@ -220,6 +220,11 @@ export default function SmsManagementModule() {
     return () => clearInterval(t);
   }, []);
 
+  const getQueueMessage = (row: ScheduledSms): string => {
+    const p = row.payload || {};
+    return p.message || p.text || p.body || p.resendMessage || "";
+  };
+
 
   const merged = (item: SmsTemplate): SmsTemplate => ({ ...item, ...(drafts[item.id] || {}) });
   const setDraft = (id: string, patch: Partial<SmsTemplate>) =>
@@ -554,6 +559,7 @@ export default function SmsManagementModule() {
                       <TableHead>گیرنده</TableHead>
                       <TableHead>کلید</TableHead>
                       <TableHead>کد سفارش</TableHead>
+                      <TableHead className="min-w-[260px]">متن پیامک</TableHead>
                       <TableHead>تلاش</TableHead>
                       <TableHead>آخرین خطا</TableHead>
                       <TableHead>لغو</TableHead>
@@ -561,7 +567,7 @@ export default function SmsManagementModule() {
                   </TableHeader>
                   <TableBody>
                     {queue.length === 0 && (
-                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                         پیامکی در انتظار ارسال نیست.
                       </TableCell></TableRow>
                     )}
@@ -573,6 +579,9 @@ export default function SmsManagementModule() {
                         <TableCell className="font-mono text-xs">{row.phone}</TableCell>
                         <TableCell><Badge variant="outline" className="font-mono text-[10px]">{row.status_key}</Badge></TableCell>
                         <TableCell className="font-mono text-xs">{row.order_code || "—"}</TableCell>
+                        <TableCell className="text-xs whitespace-pre-wrap max-w-[320px]" title={getQueueMessage(row)}>
+                          {getQueueMessage(row) || <span className="text-muted-foreground">—</span>}
+                        </TableCell>
                         <TableCell className="text-xs">
                           {Number(row.payload?.retryCount ?? 0) > 0
                             ? `تلاش مجدد ${row.payload?.retryCount}`
