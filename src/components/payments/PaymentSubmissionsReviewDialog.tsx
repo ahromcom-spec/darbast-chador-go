@@ -92,11 +92,15 @@ export default function PaymentSubmissionsReviewDialog({
   };
 
   const remove = async (sub: PaymentSubmission) => {
-    if (!window.confirm('این تراکنش اعلام‌شده حذف شود؟')) return;
+    const msg = sub.status === 'approved'
+      ? 'این تراکنش تاییدشده حذف شود؟ مبلغ از سفارش و تراکنش کارت بانکی نیز برگردانده می‌شود.'
+      : 'این تراکنش اعلام‌شده حذف شود؟';
+    if (!window.confirm(msg)) return;
     setBusy(sub.id);
     try {
-      await deletePaymentSubmission(sub);
+      await deletePaymentSubmission(sub, { allowApproved: true });
       toast.success('تراکنش حذف شد');
+
       await load();
       onChanged?.();
     } catch (e: any) {
@@ -198,8 +202,15 @@ export default function PaymentSubmissionsReviewDialog({
                       </div>
                     </div>
                   ) : (
-                    r.review_notes && <p className="text-xs text-muted-foreground">یادداشت مدیریت: {r.review_notes}</p>
+                    <div className="space-y-1">
+                      {r.review_notes && <p className="text-xs text-muted-foreground">یادداشت مدیریت: {r.review_notes}</p>}
+                      <Button size="sm" variant="outline" className="gap-1 text-destructive h-7"
+                        disabled={busy === r.id} onClick={() => remove(r)}>
+                        <Trash2 className="h-3.5 w-3.5" /> حذف تراکنش
+                      </Button>
+                    </div>
                   )}
+
                 </div>
               );
             })}
