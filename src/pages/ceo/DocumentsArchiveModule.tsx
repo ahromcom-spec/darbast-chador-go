@@ -242,11 +242,20 @@ export default function DocumentsArchiveModule() {
             فقط سفارش‌های پرداخت‌شده
           </label>
 
-          <div className="flex flex-wrap gap-2 pt-1">
+          <div className="flex flex-wrap items-center gap-2 pt-1">
             <Button onClick={load} disabled={loading || zipping} className="gap-2">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               آماده‌سازی فهرست اسناد
             </Button>
+            <Select value={zipFormat} onValueChange={(v) => setZipFormat(v as ArchiveFormat)}>
+              <SelectTrigger className="w-[230px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="html">قابل چاپ و مشاهده (سریع)</SelectItem>
+                <SelectItem value="pdf">فایل PDF (کند، حداکثر ۶۰ سند)</SelectItem>
+              </SelectContent>
+            </Select>
             <Button
               onClick={downloadZip}
               disabled={zipping || loading || !selectedDocs.length}
@@ -260,9 +269,13 @@ export default function DocumentsArchiveModule() {
 
           {progress && (
             <div className="text-xs text-muted-foreground">
-              در حال ساخت PDF: {faNum(progress.done)} از {faNum(progress.total)} — {progress.current}
+              در حال آماده‌سازی: {faNum(progress.done)} از {faNum(progress.total)} — {progress.current}
             </div>
           )}
+          <div className="text-xs text-muted-foreground">
+            در حالت «قابل چاپ» فایل‌ها بسیار سریع آماده می‌شوند؛ هر فایل را با مرورگر باز کنید و در صورت
+            نیاز با گزینه چاپ به PDF ذخیره کنید.
+          </div>
         </CardContent>
       </Card>
 
