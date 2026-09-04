@@ -208,7 +208,7 @@ export default function SiteNotificationsModule() {
 
   const load = async () => {
     setLoading(true);
-    const [notifRes, smsRes] = await Promise.all([
+    const [notifRes, smsRes, queueRes] = await Promise.all([
       supabase
         .from('site_notifications')
         .select('*')
@@ -217,6 +217,11 @@ export default function SiteNotificationsModule() {
       supabase
         .from('sms_logs')
         .select('id, message, recipient, status, order_id, order_code, template_key, created_at')
+        .order('created_at', { ascending: false })
+        .limit(300),
+      supabase
+        .from('scheduled_sms')
+        .select('id, phone, payload, state, status_key, order_id, order_code, last_error, attempts, send_after, sent_at, created_at')
         .order('created_at', { ascending: false })
         .limit(300),
     ]);
@@ -228,45 +233,82 @@ export default function SiteNotificationsModule() {
 
     const notifRows = (notifRes.data || []) as NotificationRow[];
 
-    let smsRows: NotificationRow[] = [];
-    if (smsRes.error) {
-      console.error('Error loading sms logs:', smsRes.error);
-    } else {
-      const logs = smsRes.data || [];
-      const phones = [...new Set(logs.map((l: any) => l.recipient).filter(Boolean))];
-      const nameByPhone: Record<string, string> = {};
-      if (phones.length) {
-        const { data: profs } = await supabase
-          .from('profiles')
-          .select('phone_number, full_name')
-          .in('phone_number', phones);
-        (profs || []).forEach((p: any) => {
-          if (p.phone_number && p.full_name) nameByPhone[p.phone_number] = p.full_name;
-        });
-      }
-      smsRows = logs.map((l: any) => ({
-        id: `sms-${l.id}`,
-        event_type: 'sms_sent',
-        title: `پیامک به ${nameByPhone[l.recipient] || l.recipient}`,
-        body: l.message,
-        order_id: l.order_id,
-        order_code: l.order_code,
-        customer_name: nameByPhone[l.recipient] || null,
-        customer_phone: l.recipient,
-        is_important: false,
-        is_dismissed: false,
-        admin_note: null,
-        created_at: l.created_at,
-        is_sms: true,
-        sms_status: l.status,
-      }));
+    const logs = smsRes.error ? [] : smsRes.data || [];
+    const queue = queueRes.error ? [] : queueRes.data || [];
+    if (smsRes.error) console.error('Error loading sms logs:', smsRes.error);
+    if (queueRes.error) console.error('Error loading sms queue:', queueRes.error);
+
+    const phones = [
+      ...new Set([
+        ...logs.map((l: any) => l.recipient).filter(Boolean),
+        ...queue.map((q: any) => q.phone).filter(Boolean),
+      ]),
+    ];
+    const nameByPhone: Record<string, string> = {};
+    if (phones.length) {
+      const { data: profs } = await supabase
+        .from('profiles')
+        .select('phone_number, full_name')
+        .in('phone_number', phones);
+      (profs || []).forEach((p: any) => {
+        if (p.phone_number && p.full_name) nameByPhone[p.phone_number] = p.full_name;
+      });
     }
 
+    const isOk = (s?: string | null) => s === 'sent' || s === 'success';
+
+    const smsRows: NotificationRow[] = logs.map((l: any) => ({
+      id: `sms-${l.id}`,
+      event_type: isOk(l.status) ? 'sms_sent' : 'sms_failed',
+      title: `${isOk(l.status) ? 'پیامک به' : 'پیامک ناموفق به'} ${nameByPhone[l.recipient] || l.recipient}`,
+      body: l.message,
+      order_id: l.order_id,
+      order_code: l.order_code,
+      customer_name: nameByPhone[l.recipient] || null,
+      customer_phone: l.recipient,
+      is_important: false,
+      is_dismissed: false,
+      admin_note: null,
+      created_at: l.created_at,
+      is_sms: true,
+      sms_status: l.status,
+    }));
+
+    const queueRows: NotificationRow[] = queue
+      .filter((q: any) => q.state !== 'sent')
+      .map((q: any) => {
+        const failed = q.state === 'failed' || q.state === 'error' || q.state === 'canceled';
+        const text =
+          (q.payload && (q.payload.message || q.payload.text || q.payload.body)) ||
+          `پیامک ${q.status_key || ''}`.trim();
+        return {
+          id: `smsq-${q.id}`,
+          event_type: failed ? 'sms_failed' : 'sms_pending',
+          title: `${failed ? 'پیامک ناموفق به' : 'پیامک در انتظار ارسال به'} ${
+            nameByPhone[q.phone] || q.phone
+          }`,
+          body: [text, q.last_error ? `خطا: ${q.last_error}` : null]
+            .filter(Boolean)
+            .join('\n'),
+          order_id: q.order_id,
+          order_code: q.order_code,
+          customer_name: nameByPhone[q.phone] || null,
+          customer_phone: q.phone,
+          is_important: false,
+          is_dismissed: false,
+          admin_note: null,
+          created_at: q.created_at,
+          is_sms: true,
+          sms_status: failed ? q.state : `در انتظار ارسال (${q.attempts || 0} تلاش)`,
+        } as NotificationRow;
+      });
+
     setRows(
-      [...notifRows, ...smsRows].sort(
+      [...notifRows, ...smsRows, ...queueRows].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       )
     );
+
     setLoading(false);
   };
 
