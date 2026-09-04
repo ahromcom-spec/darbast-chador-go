@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { calculateTotalFromDimensions } from '@/lib/dimensionCalculations';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard, RotateCcw, AlertTriangle, Clock, Lock, Unlock, Printer, ZoomIn, ZoomOut } from 'lucide-react';
+import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard, RotateCcw, AlertTriangle, Clock, Lock, Unlock, Printer, ZoomIn, ZoomOut, ChevronUp, ChevronDown, CalendarPlus } from 'lucide-react';
 import { openOrderSheet } from '@/lib/orderExecutionSheet';
 
 import { useDateFinalizationLock } from '@/hooks/useDateFinalizationLock';
