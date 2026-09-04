@@ -526,7 +526,10 @@ export const CustomerInvoice = () => {
                             </TableRow>
                           </TableFooter>
                         </Table>
-                      )}
+                       )}
+                      <div className="px-4 pb-4">
+                        <PaymentSubmissionsList statementId={s.id} refreshKey={proofRefreshKey} />
+                      </div>
                     </CardContent>
                   </CollapsibleContent>
                 </Card>
