@@ -756,16 +756,19 @@ export default function SiteNotificationsModule() {
                                     variant="outline"
                                     className={cn(
                                       'text-[10px]',
-                                      row.sms_status === 'sent' || row.sms_status === 'success'
+                                      row.event_type === 'sms_sent'
                                         ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600'
+                                        : row.event_type === 'sms_pending'
+                                        ? 'border-amber-500/40 bg-amber-500/10 text-amber-600'
                                         : 'border-destructive/40 bg-destructive/10 text-destructive'
                                     )}
                                   >
-                                    {row.sms_status === 'sent' || row.sms_status === 'success'
+                                    {row.event_type === 'sms_sent'
                                       ? 'ارسال شد'
                                       : `وضعیت: ${row.sms_status || '—'}`}
                                   </Badge>
                                 )}
+
                               </div>
                             </div>
                           </div>
