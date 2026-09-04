@@ -46,3 +46,11 @@ export function buildGroupPaymentSummary({
     : `${kindText} ${fmtAmount(totalAmount)} تومان`;
   return `${head}${dateText ? ` در تاریخ ${dateText}` : ''}${stmtText} است`;
 }
+
+/** حذف جمله‌ی خلاصه از انتهای توضیحات (برای جلوگیری از تکرار در ویرایش) */
+export function stripGroupPaymentSummary(notes?: string | null): string {
+  if (!notes) return '';
+  return notes
+    .replace(/\s*—\s*(?:این مبلغ|واریز|چک|پرداخت نقدی)[^—]*?است\s*$/u, '')
+    .trim();
+}
