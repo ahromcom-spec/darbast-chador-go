@@ -3023,16 +3023,21 @@ export default function DailyReportModule() {
     }
   }, [markCurrentDateDirty]);
 
-  // انتقال ردیف سفارش به روز بعد
+  // انتقال ردیف سفارش به روز دیگر (جلو یا عقب)
   const [transferringRowIndex, setTransferringRowIndex] = useState<number | null>(null);
+  const [transferPopoverIndex, setTransferPopoverIndex] = useState<number | null>(null);
 
-  const transferOrderRowToNextDay = useCallback(async (index: number) => {
+  const transferOrderRowToDate = useCallback(async (index: number, targetDateStr: string) => {
     if (!user) return;
     const rows = orderReportsRef.current;
     const row = rows[index];
     if (!row) return;
     if (!row.order_id && !row.activity_description?.trim() && !row.service_details?.trim() && !row.team_name?.trim() && !row.notes?.trim()) {
       toast.error('این ردیف خالی است و چیزی برای انتقال ندارد');
+      return;
+    }
+    if (targetDateStr === toLocalDateString(reportDate)) {
+      toast.error('تاریخ مقصد با تاریخ همین گزارش یکسان است');
       return;
     }
 
@@ -3044,9 +3049,7 @@ export default function DailyReportModule() {
     }
 
     try {
-      const nextDate = new Date(reportDate);
-      nextDate.setDate(nextDate.getDate() + 1);
-      const nextDateStr = toLocalDateString(nextDate);
+      const nextDateStr = targetDateStr;
 
       // یافتن یا ساخت گزارش روز بعد برای همین ماژول
       let nextReportId: string | null = null;
