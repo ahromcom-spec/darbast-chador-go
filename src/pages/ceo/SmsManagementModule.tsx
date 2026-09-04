@@ -220,6 +220,11 @@ export default function SmsManagementModule() {
     return () => clearInterval(t);
   }, []);
 
+  const getQueueMessage = (row: ScheduledSms): string => {
+    const p = row.payload || {};
+    return p.message || p.text || p.body || p.resendMessage || "";
+  };
+
 
   const merged = (item: SmsTemplate): SmsTemplate => ({ ...item, ...(drafts[item.id] || {}) });
   const setDraft = (id: string, patch: Partial<SmsTemplate>) =>
