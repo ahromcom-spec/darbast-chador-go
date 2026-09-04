@@ -93,11 +93,19 @@ export default function DocumentsArchiveModule() {
       toast.error('هیچ سندی انتخاب نشده است');
       return;
     }
+    if (zipFormat === 'pdf' && selectedDocs.length > 60) {
+      toast.error(
+        'برای تعداد بالای اسناد، حالت «قابل چاپ (سریع)» را انتخاب کنید یا تعداد اسناد را کمتر از ۶۰ کنید',
+      );
+      return;
+    }
     setZipping(true);
     setProgress({ done: 0, total: selectedDocs.length, current: '' });
     try {
-      const blob = await buildArchiveZip(selectedDocs, (done, total, current) =>
-        setProgress({ done, total, current }),
+      const blob = await buildArchiveZip(
+        selectedDocs,
+        (done, total, current) => setProgress({ done, total, current }),
+        zipFormat,
       );
       const stamp = formatPersianDate(new Date()).replace(/\//g, '-');
       downloadBlob(blob, `اسناد-اهرم-${stamp}.zip`);
