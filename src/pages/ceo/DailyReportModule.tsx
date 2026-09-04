@@ -850,19 +850,30 @@ export default function DailyReportModule() {
   const cachedIsManagerRef = useRef<boolean | null>(null);
   // Race condition prevention: track the expected date to discard stale fetch results
   const expectedDateRef = useRef<string>('');
-  // Ensure tables start from the right side in RTL by scrolling to the rightmost (selection) column
+  // Ensure tables start from the right side in RTL (anchor column) — only once per load,
+  // and without moving the page vertically or fighting the user's own scrolling.
+  const didAnchorTablesRef = useRef(false);
   useEffect(() => {
-    if (loading) return;
+    if (loading) {
+      didAnchorTablesRef.current = false;
+      return;
+    }
+    if (didAnchorTablesRef.current) return;
+    if (document.activeElement instanceof HTMLElement && document.activeElement.closest('input, textarea, [contenteditable="true"]')) return;
+    didAnchorTablesRef.current = true;
 
     const scrollToAnchor = (container: HTMLDivElement | null, anchor: 'order' | 'staff') => {
       if (!container) return;
       const el = container.querySelector<HTMLElement>(`[data-scroll-anchor="${anchor}"]`);
-      el?.scrollIntoView({ block: 'nearest', inline: 'start' });
+      if (!el) return;
+      const delta = el.getBoundingClientRect().left - container.getBoundingClientRect().left;
+      container.scrollLeft += delta;
     };
 
     scrollToAnchor(orderTableScrollRef.current, 'order');
     scrollToAnchor(staffTableScrollRef.current, 'staff');
-  }, [loading, orderReports.length, staffReports.length]);
+  }, [loading]);
+
 
   // LocalStorage key for backup - includes module key for isolation
   const getLocalStorageKey = useCallback(() => {
