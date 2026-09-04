@@ -24,6 +24,7 @@ import { formatPersianDate } from '@/lib/dateUtils';
 import {
   ArchiveDoc,
   ArchiveFilters,
+  ArchiveFormat,
   DAILY_REPORT_MODULES,
   DOC_KIND_LABEL,
   buildArchiveZip,
@@ -53,6 +54,7 @@ export default function DocumentsArchiveModule() {
   const [zipping, setZipping] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number; current: string } | null>(null);
   const [singleBusy, setSingleBusy] = useState<string | null>(null);
+  const [zipFormat, setZipFormat] = useState<ArchiveFormat>('html');
 
   const set = <K extends keyof ArchiveFilters>(k: K, v: ArchiveFilters[K]) =>
     setFilters((p) => ({ ...p, [k]: v }));
@@ -91,11 +93,19 @@ export default function DocumentsArchiveModule() {
       toast.error('هیچ سندی انتخاب نشده است');
       return;
     }
+    if (zipFormat === 'pdf' && selectedDocs.length > 60) {
+      toast.error(
+        'برای تعداد بالای اسناد، حالت «قابل چاپ (سریع)» را انتخاب کنید یا تعداد اسناد را کمتر از ۶۰ کنید',
+      );
+      return;
+    }
     setZipping(true);
     setProgress({ done: 0, total: selectedDocs.length, current: '' });
     try {
-      const blob = await buildArchiveZip(selectedDocs, (done, total, current) =>
-        setProgress({ done, total, current }),
+      const blob = await buildArchiveZip(
+        selectedDocs,
+        (done, total, current) => setProgress({ done, total, current }),
+        zipFormat,
       );
       const stamp = formatPersianDate(new Date()).replace(/\//g, '-');
       downloadBlob(blob, `اسناد-اهرم-${stamp}.zip`);
@@ -232,11 +242,20 @@ export default function DocumentsArchiveModule() {
             فقط سفارش‌های پرداخت‌شده
           </label>
 
-          <div className="flex flex-wrap gap-2 pt-1">
+          <div className="flex flex-wrap items-center gap-2 pt-1">
             <Button onClick={load} disabled={loading || zipping} className="gap-2">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               آماده‌سازی فهرست اسناد
             </Button>
+            <Select value={zipFormat} onValueChange={(v) => setZipFormat(v as ArchiveFormat)}>
+              <SelectTrigger className="w-[230px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="html">قابل چاپ و مشاهده (سریع)</SelectItem>
+                <SelectItem value="pdf">فایل PDF (کند، حداکثر ۶۰ سند)</SelectItem>
+              </SelectContent>
+            </Select>
             <Button
               onClick={downloadZip}
               disabled={zipping || loading || !selectedDocs.length}
@@ -250,9 +269,13 @@ export default function DocumentsArchiveModule() {
 
           {progress && (
             <div className="text-xs text-muted-foreground">
-              در حال ساخت PDF: {faNum(progress.done)} از {faNum(progress.total)} — {progress.current}
+              در حال آماده‌سازی: {faNum(progress.done)} از {faNum(progress.total)} — {progress.current}
             </div>
           )}
+          <div className="text-xs text-muted-foreground">
+            در حالت «قابل چاپ» فایل‌ها بسیار سریع آماده می‌شوند؛ هر فایل را با مرورگر باز کنید و در صورت
+            نیاز با گزینه چاپ به PDF ذخیره کنید.
+          </div>
         </CardContent>
       </Card>
 

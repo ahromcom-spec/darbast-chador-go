@@ -382,23 +382,53 @@ export function safeFileName(s: string) {
   return s.replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim().slice(0, 90);
 }
 
+export type ArchiveFormat = 'html' | 'pdf';
+
+const yieldToBrowser = () => new Promise((r) => setTimeout(r, 0));
+
+function standaloneHtml(doc: ArchiveDoc) {
+  return `<!DOCTYPE html>
+<html lang="fa" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(doc.title)}</title>
+<style>
+  body{margin:0;background:#f3f4f6;}
+  .page{max-width:820px;margin:0 auto;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.12);}
+  @media print{body{background:#fff;}.page{box-shadow:none;max-width:none;}}
+</style></head>
+<body><div class="page">${doc.html}</div></body></html>`;
+}
+
 export async function buildArchiveZip(
   docs: ArchiveDoc[],
   onProgress?: (done: number, total: number, current: string) => void,
+  format: ArchiveFormat = 'html',
 ): Promise<Blob> {
   const zip = new JSZip();
   const index: string[] = [];
+  const failed: string[] = [];
   let done = 0;
   for (const d of docs) {
     onProgress?.(done, docs.length, d.title);
-    const blob = await htmlToPdfBlob(d.html);
-    const name = `${KIND_FOLDER[d.kind]}/${safeFileName(d.title)}.pdf`;
-    zip.file(name, blob);
-    index.push(`${DOC_KIND_LABEL[d.kind]} | ${d.title} | ${d.date ? formatPersianDate(d.date) : '-'}`);
+    const base = `${KIND_FOLDER[d.kind]}/${safeFileName(d.title)}`;
+    try {
+      if (format === 'pdf') {
+        const blob = await htmlToPdfBlob(d.html);
+        zip.file(`${base}.pdf`, blob);
+      } else {
+        zip.file(`${base}.html`, standaloneHtml(d));
+      }
+      index.push(`${DOC_KIND_LABEL[d.kind]} | ${d.title} | ${d.date ? formatPersianDate(d.date) : '-'}`);
+    } catch (e) {
+      console.error('archive doc failed', d.title, e);
+      failed.push(d.title);
+    }
     done++;
     onProgress?.(done, docs.length, d.title);
+    await yieldToBrowser();
   }
   zip.file('فهرست.txt', index.join('\n'));
+  if (failed.length) zip.file('اسناد-ناموفق.txt', failed.join('\n'));
   return zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
 }
 
