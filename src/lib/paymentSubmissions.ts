@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
 import { compressImage, isImageFile } from '@/lib/imageOptimizer';
+import { buildGroupPaymentSummary } from '@/lib/paymentNoteFormat';
 
 export const PAYMENT_RECEIPTS_BUCKET = 'payment-receipts';
 
