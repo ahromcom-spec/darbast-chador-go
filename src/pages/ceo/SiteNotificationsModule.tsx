@@ -152,7 +152,15 @@ const EVENT_META: Record<
     edge: 'bg-slate-400',
     iconWrap: 'bg-slate-500/10 text-slate-600',
   },
+  sms_sent: {
+    label: 'پیامک ارسالی',
+    icon: Send,
+    badge: 'bg-rose-500/10 text-rose-600 border-rose-500/30',
+    edge: 'bg-rose-500',
+    iconWrap: 'bg-rose-500/10 text-rose-600',
+  },
 };
+
 
 const FALLBACK_META = {
   label: 'اعلان',
