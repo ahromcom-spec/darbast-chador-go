@@ -10,6 +10,7 @@ import { Banknote, CreditCard, FileCheck, Image as ImageIcon, X, Upload } from '
 import { useToast } from '@/hooks/use-toast';
 import { BankCardSelect } from '@/components/bank-cards/BankCardSelect';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
+import { uploadPaymentImage } from '@/lib/paymentSubmissions';
 import { parseLocalizedNumber } from '@/lib/numberParsing';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
@@ -55,6 +56,7 @@ export function StatementManualPaymentDialog({
   const [bankCardId, setBankCardId] = useState<string | null>(null);
   const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString());
   const [receipt, setReceipt] = useState('');
+  const [receiptImageFile, setReceiptImageFile] = useState<File | null>(null);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -206,6 +208,17 @@ export function StatementManualPaymentDialog({
       const affectedCards = new Set<string>();
       const insertedPaymentIds: string[] = [];
 
+      // آپلود عکس فیش واریزی (حالت نقدی/کارت به کارت)
+      let receiptImagePath: string | null = null;
+      if (!isCheque && receiptImageFile) {
+        setUploadingImage(true);
+        try {
+          receiptImagePath = await uploadPaymentImage(receiptImageFile, user.id);
+        } finally {
+          setUploadingImage(false);
+        }
+      }
+
       for (const { order, portion } of allocations) {
         const { data: ins, error: insErr } = await supabase
           .from('order_payments')
@@ -218,6 +231,7 @@ export function StatementManualPaymentDialog({
             paid_by: user.id,
             bank_card_id: null,
             payment_date: effectiveDate,
+            receipt_image_url: receiptImagePath,
           } as any)
           .select('id')
           .single();
@@ -557,6 +571,29 @@ export function StatementManualPaymentDialog({
               <Input id="manual-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="اختیاری" className="mt-1" />
             </div>
           </div>
+
+          {mode === 'cash' && (
+            <div>
+              <Label htmlFor="manual-receipt-image">عکس فیش واریزی (اختیاری)</Label>
+              <Input
+                id="manual-receipt-image"
+                type="file"
+                accept="image/*"
+                className="mt-1"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] || null;
+                  if (f && f.size > 15 * 1024 * 1024) {
+                    showError('حجم تصویر زیاد است', 'حداکثر حجم مجاز ۱۵ مگابایت است');
+                    return;
+                  }
+                  setReceiptImageFile(f);
+                }}
+              />
+              {receiptImageFile && (
+                <p className="text-[11px] text-emerald-600 mt-1">{receiptImageFile.name}</p>
+              )}
+            </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2">
