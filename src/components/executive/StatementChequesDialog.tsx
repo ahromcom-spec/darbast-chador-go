@@ -127,10 +127,7 @@ export function StatementChequesDialog({ open, onOpenChange, statementId, statem
           if (ord && Number(ord.total_paid) >= Number(ord.total_price || 0) && !ord.payment_confirmed_at) {
             const upd: any = { payment_confirmed_at: nowIso, payment_confirmed_by: user.id };
             if (ord.status !== 'closed') upd.status = 'paid';
-            if (ord.execution_stage === 'awaiting_payment') {
-              upd.execution_stage = 'awaiting_collection';
-              upd.execution_stage_updated_at = nowIso;
-            }
+            // مرحله اجرایی خودکار جلو نمی‌رود
             await supabase.from('projects_v3').update(upd).eq('id', oid);
           }
         }
