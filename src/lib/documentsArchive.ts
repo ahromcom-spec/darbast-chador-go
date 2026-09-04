@@ -125,49 +125,136 @@ export async function fetchArchiveDocs(f: ArchiveFilters): Promise<ArchiveDoc[]>
     let q = supabase
       .from('projects_v3')
       .select(
-        'id, code, customer_name, customer_phone, address, detailed_address, total_price, total_paid, created_at, status, execution_stage, notes, subcategory_id, statement_id',
+        'id, code, customer_name, customer_phone, address, detailed_address, total_price, total_paid, payment_amount, created_at, status, execution_stage, notes, subcategory_id, province_id, statement_id, rental_start_date, customer_completion_date',
       )
       .order('created_at', { ascending: false })
       .limit(500);
     if (f.fromDate) q = q.gte('created_at', f.fromDate);
     if (f.toDate) q = q.lte('created_at', f.toDate);
     if (f.onlyPaidOrders) q = q.not('payment_confirmed_at', 'is', null);
-    const { data: orders, error } = await q;
+    const { data: allOrders, error } = await q;
     if (error) throw error;
 
-    const subIds = Array.from(new Set((orders || []).map((o: any) => o.subcategory_id).filter(Boolean)));
-    const subMap: Record<string, string> = {};
-    if (subIds.length) {
-      const { data: subs } = await supabase.from('subcategories').select('id, name').in('id', subIds);
-      (subs || []).forEach((x: any) => (subMap[x.id] = x.name));
-    }
-
-    for (const o of orders || []) {
+    const orders = (allOrders || []).filter((o: any) => {
+      if (!s) return true;
       const label = `${o.code || ''} ${o.customer_name || ''} ${o.customer_phone || ''} ${o.address || ''}`;
-      if (s && !label.includes(s)) continue;
+      return label.includes(s);
+    });
+    const orderIds = orders.map((o: any) => o.id);
+
+    // Batch-load everything the printable invoice needs (one query per table).
+    const subIds = Array.from(new Set(orders.map((o: any) => o.subcategory_id).filter(Boolean)));
+    const provIds = Array.from(new Set(orders.map((o: any) => o.province_id).filter(Boolean)));
+    const phones = Array.from(new Set(orders.map((o: any) => o.customer_phone).filter(Boolean)));
+
+    const chunks = <T,>(arr: T[], size = 200): T[][] => {
+      const out: T[][] = [];
+      for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+      return out;
+    };
+    const fetchAll = async (fn: (ids: string[]) => any) => {
+      const rows: any[] = [];
+      for (const part of chunks(orderIds)) {
+        const { data } = await fn(part);
+        rows.push(...(data || []));
+      }
+      return rows;
+    };
+
+    const [subs, provs, profs, repairRows, renewalRows, collectionRows, paymentRows] = await Promise.all([
+      subIds.length
+        ? supabase.from('subcategories').select('id, name').in('id', subIds).then((r) => r.data || [])
+        : Promise.resolve([]),
+      provIds.length
+        ? supabase.from('provinces').select('id, name').in('id', provIds).then((r) => r.data || [])
+        : Promise.resolve([]),
+      phones.length
+        ? supabase
+            .from('profiles')
+            .select('phone_number, customer_code')
+            .in('phone_number', phones)
+            .then((r) => r.data || [])
+        : Promise.resolve([]),
+      orderIds.length
+        ? fetchAll((ids) =>
+            supabase
+              .from('repair_requests')
+              .select('id, order_id, description, estimated_cost, final_cost, status, created_at')
+              .in('order_id', ids)
+              .order('created_at', { ascending: true }),
+          )
+        : Promise.resolve([]),
+      orderIds.length
+        ? fetchAll((ids) =>
+            supabase
+              .from('order_renewals')
+              .select('id, order_id, renewal_number, status, renewal_price, new_start_date, new_end_date')
+              .in('order_id', ids)
+              .eq('status', 'approved')
+              .order('renewal_number', { ascending: true }),
+          )
+        : Promise.resolve([]),
+      orderIds.length
+        ? fetchAll((ids) =>
+            supabase
+              .from('collection_requests')
+              .select('order_id, requested_date, confirmed_date, completed_at, status, created_at')
+              .in('order_id', ids)
+              .order('created_at', { ascending: false }),
+          )
+        : Promise.resolve([]),
+      orderIds.length
+        ? fetchAll((ids) =>
+            supabase
+              .from('order_payments')
+              .select('id, order_id, amount, payment_method, receipt_number, notes, payment_date, created_at')
+              .in('order_id', ids)
+              .order('payment_date', { ascending: true }),
+          )
+        : Promise.resolve([]),
+    ]);
+
+    const subMap: Record<string, string> = {};
+    (subs as any[]).forEach((x: any) => (subMap[x.id] = x.name));
+    const provMap: Record<string, string> = {};
+    (provs as any[]).forEach((x: any) => (provMap[x.id] = x.name));
+    const codeByPhone: Record<string, string> = {};
+    (profs as any[]).forEach((x: any) => (codeByPhone[x.phone_number] = x.customer_code || ''));
+    const group = <T extends { order_id: string }>(rows: T[]) => {
+      const m: Record<string, T[]> = {};
+      rows.forEach((r) => ((m[r.order_id] ||= []).push(r)));
+      return m;
+    };
+    const repairsBy = group(repairRows as any[]);
+    const renewalsBy = group(renewalRows as any[]);
+    const collectionsBy = group(collectionRows as any[]);
+    const paymentsBy = group(paymentRows as any[]);
+
+    for (const o of orders) {
       const total = Number(o.total_price) || 0;
-      const paid = Number(o.total_paid) || 0;
-      const body =
-        summaryBox([
-          { label: 'مبلغ کل', value: `${fa(total)} تومان` },
-          { label: 'پرداخت شده', value: `${fa(paid)} تومان` },
-          { label: 'باقیمانده', value: `${fa(Math.max(total - paid, 0))} تومان` },
-        ]) +
-        table(
-          ['عنوان', 'مقدار'],
-          [
-            ['کد سفارش', o.code || '-'],
-            ['کارفرما', o.customer_name || '-'],
-            ['شماره تماس', o.customer_phone || '-'],
-            ['خدمت', subMap[o.subcategory_id] || '-'],
-            ['آدرس', o.address || '-'],
-            ['آدرس دقیق', o.detailed_address || '-'],
-            ['تاریخ ثبت', formatPersianDate(o.created_at, { showTime: true })],
-            ['وضعیت', String(o.status || '-')],
-            ['مرحله اجرا', String(o.execution_stage || '-')],
-            ['توضیحات', o.notes || '-'],
-          ],
-        );
+      const collection = (collectionsBy[o.id] || [])[0];
+      const extras: InvoiceExtras = {
+        ...emptyInvoiceExtras(),
+        provinceName: provMap[o.province_id] || '',
+        subcategoryName: subMap[o.subcategory_id] || '',
+        repairRequests: (repairsBy[o.id] || []) as any,
+        renewals: (renewalsBy[o.id] || []) as any,
+        freshFinancials: {
+          payment_amount: o.payment_amount ?? null,
+          total_price: o.total_price ?? null,
+          total_paid: o.total_paid ?? null,
+        },
+        collectionRequestDate: collection?.requested_date || null,
+        collectionConfirmedDate:
+          collection?.confirmed_date ||
+          collection?.completed_at ||
+          o.customer_completion_date ||
+          (['approved', 'completed'].includes(collection?.status || '') ? collection?.requested_date : null) ||
+          null,
+        customerCode: codeByPhone[o.customer_phone] || '',
+        payments: (paymentsBy[o.id] || []) as any,
+      };
+
       docs.push({
         id: `order-${o.id}`,
         kind: 'order',
@@ -175,14 +262,13 @@ export async function fetchArchiveDocs(f: ArchiveFilters): Promise<ArchiveDoc[]>
         subtitle: `${o.customer_name || 'بدون نام'} — ${o.address || ''}`,
         date: o.created_at,
         amount: total,
-        html: docShell(
-          `فاکتور سفارش ${o.code || ''}`,
-          [`کارفرما: ${o.customer_name || '-'}`, `تاریخ: ${formatPersianDate(o.created_at)}`],
-          body,
-        ),
+        fileName: `فاکتور سفارش ${o.code || ''} - ${o.customer_name || 'بدون نام'}`,
+        styles: getInvoiceStyles(),
+        html: buildOrderInvoiceHtml(o as any, extras),
       });
     }
   }
+
 
   if (f.includeStatements) {
     let q = supabase
