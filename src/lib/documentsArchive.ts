@@ -429,7 +429,9 @@ export async function buildArchiveZip(
   }
   zip.file('فهرست.txt', index.join('\n'));
   if (failed.length) zip.file('اسناد-ناموفق.txt', failed.join('\n'));
-  return zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+  // HTML files are already small. STORE avoids a long, memory-heavy compression
+  // step that can make large archives appear stuck on mobile browsers.
+  return zip.generateAsync({ type: 'blob', compression: 'STORE', mimeType: 'application/zip' });
 }
 
 export function downloadBlob(blob: Blob, filename: string) {
@@ -440,5 +442,7 @@ export function downloadBlob(blob: Blob, filename: string) {
   document.body.appendChild(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  // Some mobile browsers start reading the object URL after the click handler
+  // has finished, so keep it alive long enough for the download to begin.
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
