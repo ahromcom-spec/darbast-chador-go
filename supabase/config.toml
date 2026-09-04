@@ -49,3 +49,5 @@ project_id = "gclbltatkbwbqxqqrcea"
     verify_jwt = false
   [functions.track-visit]
     verify_jwt = false
+  [functions.admin-customer-order]
+    verify_jwt = true
