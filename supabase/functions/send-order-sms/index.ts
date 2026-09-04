@@ -258,6 +258,25 @@ const handler = async (req: Request): Promise<Response> => {
             const waitMinutes = cur < startMin ? startMin - cur : 1440 - cur + startMin;
             const sendAfter = new Date(Date.now() + waitMinutes * 60_000).toISOString();
 
+            // اگر همین پیامک از قبل در صف است، رکورد تکراری ساخته نشود
+            const { data: alreadyQueued } = await supabase
+              .from("scheduled_sms")
+              .select("id")
+              .eq("phone", normalizedPhone)
+              .eq("order_code", orderCode)
+              .eq("status_key", status)
+              .in("state", ["pending", "sending"])
+              .limit(1)
+              .maybeSingle();
+
+            if (alreadyQueued) {
+              console.log("[send-order-sms] Duplicate queue request ignored");
+              return new Response(
+                JSON.stringify({ success: true, scheduled: true, message: "این پیامک قبلاً در صف ارسال است" }),
+                { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+              );
+            }
+
             const { error: queueError } = await supabase.from("scheduled_sms").insert({
               phone: normalizedPhone,
               order_code: orderCode,
@@ -266,6 +285,7 @@ const handler = async (req: Request): Promise<Response> => {
               payload: { serviceType, address, amount, customerName, description, resendMessage },
               send_after: sendAfter,
             });
+
 
             if (!queueError) {
               console.log(`[send-order-sms] Outside allowed window — queued for ${sendAfter}`);
