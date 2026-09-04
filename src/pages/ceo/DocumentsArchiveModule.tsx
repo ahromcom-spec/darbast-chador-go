@@ -24,6 +24,7 @@ import { formatPersianDate } from '@/lib/dateUtils';
 import {
   ArchiveDoc,
   ArchiveFilters,
+  ArchiveFormat,
   DAILY_REPORT_MODULES,
   DOC_KIND_LABEL,
   buildArchiveZip,
