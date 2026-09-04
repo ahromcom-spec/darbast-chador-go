@@ -580,9 +580,30 @@ const handler = async (req: Request): Promise<Response> => {
     if (attemptNo < MAX_AUTO_RETRIES) {
       try {
         const sendAfter = new Date(Date.now() + randomRetryDelayMs()).toISOString();
+
+        // اگر برای همین سفارش و همین مرحله تلاش مجددی در صف است، رکورد جدید ساخته نشود
+        const { data: pendingRetry } = await supabase
+          .from("scheduled_sms")
+          .select("id")
+          .eq("phone", normalizedPhone)
+          .eq("order_code", orderCode)
+          .eq("status_key", status)
+          .in("state", ["pending", "sending"])
+          .limit(1)
+          .maybeSingle();
+
+        if (pendingRetry) {
+          console.log("[send-order-sms] Retry already queued, skipping duplicate retry");
+          return new Response(
+            JSON.stringify({ success: false, error: "خطا در ارسال پیامک", retryAlreadyQueued: true }),
+            { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+
         const { error: retryError } = await supabase.from("scheduled_sms").insert({
           phone: normalizedPhone,
           order_code: orderCode,
+
           order_id: orderId ?? null,
           status_key: status,
           payload: {
