@@ -161,7 +161,22 @@ const EVENT_META: Record<
     edge: 'bg-rose-500',
     iconWrap: 'bg-rose-500/10 text-rose-600',
   },
+  sms_pending: {
+    label: 'پیامک در انتظار ارسال',
+    icon: Send,
+    badge: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
+    edge: 'bg-amber-500',
+    iconWrap: 'bg-amber-500/10 text-amber-600',
+  },
+  sms_failed: {
+    label: 'پیامک ناموفق',
+    icon: Send,
+    badge: 'bg-destructive/10 text-destructive border-destructive/30',
+    edge: 'bg-destructive',
+    iconWrap: 'bg-destructive/10 text-destructive',
+  },
 };
+
 
 
 const FALLBACK_META = {
