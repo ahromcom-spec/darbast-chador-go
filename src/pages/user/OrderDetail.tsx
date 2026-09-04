@@ -2345,7 +2345,7 @@ export default function OrderDetail() {
                           </p>
                           <PaymentProofDialog
                             orderId={order.id}
-                            customerId={order.user_id || user?.id}
+                            customerId={user?.id}
                             defaultAmount={remainingAmount}
                             className="w-full gap-2"
                             onSubmitted={() => setProofRefreshKey((k) => k + 1)}
