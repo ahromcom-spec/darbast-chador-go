@@ -694,12 +694,28 @@ export default function SiteNotificationsModule() {
                                     مهم
                                   </Badge>
                                 )}
+                                {row.is_sms && (
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      'text-[10px]',
+                                      row.sms_status === 'sent' || row.sms_status === 'success'
+                                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600'
+                                        : 'border-destructive/40 bg-destructive/10 text-destructive'
+                                    )}
+                                  >
+                                    {row.sms_status === 'sent' || row.sms_status === 'success'
+                                      ? 'ارسال شد'
+                                      : `وضعیت: ${row.sms_status || '—'}`}
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           </div>
 
                           <div className="flex shrink-0 items-center gap-0.5 opacity-70 transition-opacity group-hover:opacity-100">
-                            {row.is_dismissed ? (
+                            {row.is_sms ? null : row.is_dismissed ? (
+
                               <>
                                 <Button
                                   variant="ghost"
