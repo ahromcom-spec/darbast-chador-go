@@ -21,7 +21,7 @@ function escapeHtml(value: unknown): string {
     .replace(/'/g, '&#39;');
 }
 
-import { getInvoiceStyles, buildOrderInvoiceHtml, escapeHtml } from '@/lib/orderInvoicePrint';
+import { getInvoiceStyles, buildOrderInvoiceHtml } from '@/lib/orderInvoicePrint';
 
 interface ManagerOrderInvoiceProps {
   order: {
