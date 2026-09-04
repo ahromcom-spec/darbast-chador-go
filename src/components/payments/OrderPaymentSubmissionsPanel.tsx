@@ -199,13 +199,12 @@ export default function OrderPaymentSubmissionsPanel({ orderId, statementId, cus
             ) : (
               <div className="space-y-1">
                 {r.review_notes && <p className="text-xs text-muted-foreground">یادداشت مدیریت: {r.review_notes}</p>}
-                {r.status === 'rejected' && (
-                  <Button size="sm" variant="outline" className="gap-1 text-destructive h-7"
-                    disabled={busy === r.id} onClick={() => remove(r)}>
-                    <Trash2 className="h-3.5 w-3.5" /> حذف تراکنش
-                  </Button>
-                )}
+                <Button size="sm" variant="outline" className="gap-1 text-destructive h-7"
+                  disabled={busy === r.id} onClick={() => remove(r)}>
+                  <Trash2 className="h-3.5 w-3.5" /> حذف تراکنش
+                </Button>
               </div>
+
             )}
 
           </div>
