@@ -53,6 +53,7 @@ export default function DocumentsArchiveModule() {
   const [zipping, setZipping] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number; current: string } | null>(null);
   const [singleBusy, setSingleBusy] = useState<string | null>(null);
+  const [zipFormat, setZipFormat] = useState<ArchiveFormat>('html');
 
   const set = <K extends keyof ArchiveFilters>(k: K, v: ArchiveFilters[K]) =>
     setFilters((p) => ({ ...p, [k]: v }));
