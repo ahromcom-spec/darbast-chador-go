@@ -189,6 +189,15 @@ const AVAILABLE_MODULES: Module[] = [
     bgColor: 'bg-sky-50',
   },
   {
+    key: 'customer_order_entry',
+    name: 'ماژول ثبت سفارش برای مشتری',
+    description: 'جستجوی مشتری با شماره موبایل، مشاهده آدرس‌ها و سفارش‌های ثبت‌شده و ثبت سفارش جدید بدون ورود به حساب مشتری',
+    href: '/customer-order-entry',
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50',
+  },
+
+  {
     key: 'dynamic_services_management',
     name: 'ماژول مدیریت خدمات داینامیک',
     description: 'مدیریت درختی نوع خدمات و زیرشاخه‌های نمایش‌داده‌شده در لیست کشویی صفحه اصلی و مسیر فرم هر برگ',

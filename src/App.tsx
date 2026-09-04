@@ -49,6 +49,8 @@ const ContractorVerifications = lazy(() => import("@/pages/ceo/ContractorVerific
 const ContractorsModule = lazy(() => import("@/pages/ceo/ContractorsModule"));
 const ContractorOrderDispatch = lazy(() => import("@/pages/ceo/ContractorOrderDispatch"));
 const SmsManagementModule = lazy(() => import("@/pages/ceo/SmsManagementModule"));
+const CustomerOrderEntryModule = lazy(() => import("@/pages/ceo/CustomerOrderEntryModule"));
+
 const OrderTransfersModule = lazy(() => import("@/pages/ceo/OrderTransfersModule"));
 const RatingsModule = lazy(() => import("@/pages/ceo/RatingsModule"));
 const SiteNotificationsModule = lazy(() => import("@/pages/ceo/SiteNotificationsModule"));
@@ -445,6 +447,14 @@ const App = () => {
                   <SmsManagementModule />
                 </ProtectedRoute>
               } />
+
+              {/* مسیر مستقل برای ماژول ثبت سفارش برای مشتری */}
+              <Route path="/customer-order-entry" element={
+                <ProtectedRoute>
+                  <CustomerOrderEntryModule />
+                </ProtectedRoute>
+              } />
+
 
               {/* مسیر جداگانه برای ماژول گزارش روزانه - بدون ناوبری CEO */}
               <Route path="/daily-report" element={
