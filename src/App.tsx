@@ -446,6 +446,14 @@ const App = () => {
                 </ProtectedRoute>
               } />
 
+              {/* مسیر مستقل برای ماژول ثبت سفارش برای مشتری */}
+              <Route path="/customer-order-entry" element={
+                <ProtectedRoute>
+                  <CustomerOrderEntryModule />
+                </ProtectedRoute>
+              } />
+
+
               {/* مسیر جداگانه برای ماژول گزارش روزانه - بدون ناوبری CEO */}
               <Route path="/daily-report" element={
                 <ProtectedRoute>
