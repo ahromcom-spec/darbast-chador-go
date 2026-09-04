@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ModuleHeader } from '@/components/common/ModuleHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,6 +55,13 @@ export default function DocumentsArchiveModule() {
   const [progress, setProgress] = useState<{ done: number; total: number; current: string } | null>(null);
   const [singleBusy, setSingleBusy] = useState<string | null>(null);
   const [zipFormat, setZipFormat] = useState<ArchiveFormat>('html');
+  const [readyZip, setReadyZip] = useState<{ url: string; filename: string; size: number } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (readyZip?.url) URL.revokeObjectURL(readyZip.url);
+    };
+  }, [readyZip]);
 
   const set = <K extends keyof ArchiveFilters>(k: K, v: ArchiveFilters[K]) =>
     setFilters((p) => ({ ...p, [k]: v }));
@@ -65,6 +72,7 @@ export default function DocumentsArchiveModule() {
       return;
     }
     setLoading(true);
+    setReadyZip(null);
     try {
       const list = await fetchArchiveDocs(filters);
       setDocs(list);
@@ -100,6 +108,7 @@ export default function DocumentsArchiveModule() {
       return;
     }
     setZipping(true);
+    setReadyZip(null);
     setProgress({ done: 0, total: selectedDocs.length, current: '' });
     try {
       const blob = await buildArchiveZip(
@@ -108,8 +117,11 @@ export default function DocumentsArchiveModule() {
         zipFormat,
       );
       const stamp = formatPersianDate(new Date()).replace(/\//g, '-');
-      downloadBlob(blob, `اسناد-اهرم-${stamp}.zip`);
-      toast.success('فایل زیپ دانلود شد');
+      if (!blob.size) throw new Error('فایل زیپ خالی ساخته شد');
+      const filename = `اسناد-اهرم-${stamp}.zip`;
+      const url = URL.createObjectURL(blob);
+      setReadyZip({ url, filename, size: blob.size });
+      toast.success('فایل زیپ آماده است؛ روی «ذخیره فایل زیپ» بزنید');
     } catch (e: any) {
       console.error(e);
       toast.error(e.message || 'خطا در ساخت فایل زیپ');
@@ -265,6 +277,14 @@ export default function DocumentsArchiveModule() {
               {zipping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               دانلود زیپ ({faNum(selectedDocs.length)})
             </Button>
+            {readyZip && (
+              <Button asChild variant="outline" className="gap-2 border-primary text-primary">
+                <a href={readyZip.url} download={readyZip.filename}>
+                  <FileDown className="h-4 w-4" />
+                  ذخیره فایل زیپ ({faNum(Math.max(1, Math.ceil(readyZip.size / 1024)))} کیلوبایت)
+                </a>
+              </Button>
+            )}
           </div>
 
           {progress && (
