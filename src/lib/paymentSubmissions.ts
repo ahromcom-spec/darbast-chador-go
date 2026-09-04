@@ -111,6 +111,8 @@ export interface ApproveOptions {
   reviewerId: string;
   reviewNotes?: string;
   customerName?: string | null;
+  /** مبلغ نهایی تاییدشده توسط مدیریت (در صورت ویرایش مبلغ اعلامی مشتری) */
+  amountOverride?: number | null;
 }
 
 /**
@@ -119,14 +121,15 @@ export interface ApproveOptions {
  * the selected card and — for cheques — create the cheque record.
  */
 export async function approvePaymentSubmission({
-  submission, bankCardId, reviewerId, reviewNotes, customerName,
+  submission, bankCardId, reviewerId, reviewNotes, customerName, amountOverride,
 }: ApproveOptions): Promise<void> {
   const orders = await loadTargetOrders(submission);
   if (orders.length === 0) throw new Error('سفارش مرتبط با این فیش پیدا نشد');
 
   const isCheque = submission.kind === 'cheque';
-  const amount = Math.round(Number(submission.amount) || 0);
+  const amount = Math.round(Number(amountOverride ?? submission.amount) || 0);
   if (amount <= 0) throw new Error('مبلغ فیش نامعتبر است');
+
 
   // Waterfall allocation: fill oldest orders first, remainder lands on the last order
   let remaining = amount;
