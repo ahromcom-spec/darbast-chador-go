@@ -283,15 +283,85 @@ export async function rejectPaymentSubmission(submissionId: string, reviewerId: 
   if (error) throw error;
 }
 
-/** حذف تراکنش اعلام‌شده (فقط تا وقتی تایید نشده است) */
-export async function deletePaymentSubmission(sub: PaymentSubmission) {
-  if (sub.status === 'approved') throw new Error('تراکنش تاییدشده قابل حذف نیست');
+/**
+ * برگرداندن اثرات یک تراکنش تاییدشده: حذف پرداخت‌های سفارش، کاهش مبلغ پرداختی سفارش،
+ * حذف تراکنش کارت بانکی و حذف رکورد چک.
+ */
+async function reverseApprovedSubmission(sub: PaymentSubmission) {
+  const paymentIds = (sub.order_payment_ids || []).filter(Boolean);
+  let payments: { id: string; order_id: string; amount: number }[] = [];
+
+  if (paymentIds.length > 0) {
+    const { data } = await supabase
+      .from('order_payments')
+      .select('id, order_id, amount')
+      .in('id', paymentIds);
+    payments = (data || []) as any;
+  }
+  if (payments.length === 0) {
+    // سازگاری با رکوردهای قدیمی: تشخیص از طریق برچسب [SUB:id] در یادداشت
+    const { data } = await supabase
+      .from('order_payments')
+      .select('id, order_id, amount')
+      .like('notes', `%[SUB:${sub.id}]%`);
+    payments = (data || []) as any;
+  }
+
+  // حذف چک مرتبط
+  if (sub.cheque_id) {
+    await supabase.from('cheques').delete().eq('id', sub.cheque_id);
+  }
+
+  // حذف تراکنش کارت بانکی
+  if (sub.transaction_id) {
+    await supabase.from('bank_card_transactions').delete().eq('id', sub.transaction_id);
+  } else {
+    await supabase.from('bank_card_transactions').delete()
+      .eq('reference_id', sub.id)
+      .in('reference_type', ['customer_receipt', 'cheque_pending']);
+  }
+
+  // حذف پرداخت‌ها و اصلاح مبلغ پرداختی سفارش
+  for (const p of payments) {
+    await supabase.from('order_payments').delete().eq('id', p.id);
+    const { data: order } = await supabase
+      .from('projects_v3')
+      .select('total_price, total_paid')
+      .eq('id', p.order_id)
+      .maybeSingle();
+    if (!order) continue;
+    const total = Number((order as any).total_price) || 0;
+    const newPaid = Math.max(0, (Number((order as any).total_paid) || 0) - (Number(p.amount) || 0));
+    const payload: Record<string, any> = { total_paid: newPaid, updated_at: new Date().toISOString() };
+    if (!(total > 0 && newPaid >= total)) {
+      payload.payment_confirmed_at = null;
+      payload.payment_confirmed_by = null;
+    }
+    await supabase.from('projects_v3').update(payload).eq('id', p.order_id);
+  }
+
+  if (sub.bank_card_id) {
+    await recalculateBankCardBalance(sub.bank_card_id);
+    window.dispatchEvent(new CustomEvent('bank-card-balance-updated'));
+  }
+}
+
+/**
+ * حذف تراکنش اعلام‌شده. مشتری فقط تا قبل از تایید می‌تواند حذف کند،
+ * مدیریت با `allowApproved` می‌تواند تراکنش تاییدشده را هم حذف و اثراتش را برگرداند.
+ */
+export async function deletePaymentSubmission(sub: PaymentSubmission, options?: { allowApproved?: boolean }) {
+  if (sub.status === 'approved') {
+    if (!options?.allowApproved) throw new Error('تراکنش تاییدشده قابل حذف نیست');
+    await reverseApprovedSubmission(sub);
+  }
   const { error } = await supabase.from('payment_submissions').delete().eq('id', sub.id);
   if (error) throw error;
   if (sub.image_path) {
     try { await supabase.storage.from(PAYMENT_RECEIPTS_BUCKET).remove([sub.image_path]); } catch { /* ignore */ }
   }
 }
+
 
 export interface UpdateSubmissionPayload {
   amount?: number;
