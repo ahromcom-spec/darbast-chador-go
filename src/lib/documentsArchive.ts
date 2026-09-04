@@ -342,6 +342,7 @@ export async function fetchArchiveDocs(f: ArchiveFilters): Promise<ArchiveDoc[]>
         subtitle: `${customer} — ${st.address || ''}`,
         date: st.created_at,
         amount: total,
+        fileName: `صورتحساب ${st.statement_number} - ${customer.replace(/\s*\(.*\)\s*$/, '') || 'مشتری'}`,
         html: docShell(
           `فاکتور صورتحساب شماره ${st.statement_number}`,
           [`مشتری: ${customer}`, `آدرس: ${st.address || '-'}`, `تاریخ: ${formatPersianDate(st.created_at)}`],
@@ -444,14 +445,14 @@ export async function fetchArchiveDocs(f: ArchiveFilters): Promise<ArchiveDoc[]>
 
 /* ----------------------------------- pdf ---------------------------------- */
 
-export async function htmlToPdfBlob(html: string): Promise<Blob> {
+export async function htmlToPdfBlob(html: string, styles = ''): Promise<Blob> {
   const html2canvas = (await import('html2canvas')).default;
   const { jsPDF } = await import('jspdf');
 
   const holder = document.createElement('div');
   holder.style.cssText =
     'position:fixed;top:0;left:-10000px;width:794px;background:#ffffff;z-index:-1;';
-  holder.innerHTML = html;
+  holder.innerHTML = `${styles.replace(/<\/?style>/g, (m) => m)}${html}`;
   document.body.appendChild(holder);
 
   try {
@@ -488,6 +489,8 @@ function standaloneHtml(doc: ArchiveDoc) {
 <html lang="fa" dir="rtl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(doc.title)}</title>
+<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+${doc.styles || ''}
 <style>
   body{margin:0;background:#f3f4f6;}
   .page{max-width:820px;margin:0 auto;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.12);}
@@ -507,10 +510,10 @@ export async function buildArchiveZip(
   let done = 0;
   for (const d of docs) {
     onProgress?.(done, docs.length, d.title);
-    const base = `${KIND_FOLDER[d.kind]}/${safeFileName(d.title)}`;
+    const base = `${KIND_FOLDER[d.kind]}/${safeFileName(d.fileName || d.title)}`;
     try {
       if (format === 'pdf') {
-        const blob = await htmlToPdfBlob(d.html);
+        const blob = await htmlToPdfBlob(d.html, d.styles);
         zip.file(`${base}.pdf`, blob);
       } else {
         zip.file(`${base}.html`, standaloneHtml(d));
