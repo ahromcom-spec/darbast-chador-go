@@ -17,6 +17,8 @@ import { BankCardSelect } from '@/components/bank-cards/BankCardSelect';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
+import OrderPaymentSubmissionsPanel from '@/components/payments/OrderPaymentSubmissionsPanel';
+
 
 interface Payment {
   id: string;
