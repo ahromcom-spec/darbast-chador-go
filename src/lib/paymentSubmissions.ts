@@ -177,13 +177,10 @@ export async function approvePaymentSubmission({
       updatePayload.payment_confirmed_by = reviewerId;
       const { data: cur } = await supabase
         .from('projects_v3')
-        .select('execution_stage, status')
+        .select('status')
         .eq('id', order.id)
         .maybeSingle();
-      if (cur?.execution_stage === 'awaiting_payment') {
-        updatePayload.execution_stage = 'awaiting_collection';
-        updatePayload.execution_stage_updated_at = nowIso;
-      }
+      // مرحله اجرایی خودکار به «در انتظار جمع‌آوری» نمی‌رود
       if (cur?.status !== 'closed') updatePayload.status = 'paid';
     }
     const { error: updErr } = await supabase.from('projects_v3').update(updatePayload).eq('id', order.id);
