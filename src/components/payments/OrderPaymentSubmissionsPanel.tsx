@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle2, XCircle, Eye, Loader2, Inbox } from 'lucide-react';
+import { CheckCircle2, XCircle, Eye, Loader2, Inbox, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useBankCards } from '@/hooks/useBankCards';
+import { toEnglishDigits } from '@/lib/numberParsing';
 import {
-  approvePaymentSubmission, kindLabels, rejectPaymentSubmission, signPaymentImages,
-  submissionStatusLabels, type PaymentSubmission,
+  approvePaymentSubmission, deletePaymentSubmission, kindLabels, rejectPaymentSubmission,
+  signPaymentImages, submissionStatusLabels, type PaymentSubmission,
 } from '@/lib/paymentSubmissions';
 
 interface Props {
@@ -31,6 +32,7 @@ export default function OrderPaymentSubmissionsPanel({ orderId, statementId, cus
   const [images, setImages] = useState<Record<string, string>>({});
   const [cardBySub, setCardBySub] = useState<Record<string, string>>({});
   const [noteBySub, setNoteBySub] = useState<Record<string, string>>({});
+  const [amountBySub, setAmountBySub] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const { cards } = useBankCards();
 
@@ -41,20 +43,26 @@ export default function OrderPaymentSubmissionsPanel({ orderId, statementId, cus
     const { data } = await q;
     const list = (data || []) as unknown as PaymentSubmission[];
     setRows(list);
+    setAmountBySub(Object.fromEntries(list.map(r => [r.id, String(Math.round(Number(r.amount) || 0))])));
     setImages(await signPaymentImages(list.map(r => r.image_path)));
   }, [orderId, statementId]);
 
   useEffect(() => { load(); }, [load]);
 
+  const editedAmount = (sub: PaymentSubmission) =>
+    Number(toEnglishDigits(amountBySub[sub.id] ?? '').replace(/[^\d]/g, '')) || 0;
+
   const approve = async (sub: PaymentSubmission) => {
     const cardId = cardBySub[sub.id] || null;
+    const amount = editedAmount(sub);
+    if (amount <= 0) { toast.error('مبلغ تراکنش را وارد کنید'); return; }
     setBusy(sub.id);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('احراز هویت نشده');
       await approvePaymentSubmission({
         submission: sub, bankCardId: cardId, reviewerId: user.id,
-        reviewNotes: noteBySub[sub.id], customerName,
+        reviewNotes: noteBySub[sub.id], customerName, amountOverride: amount,
       });
       toast.success('تراکنش تایید و برای سفارش ثبت شد');
       await load();
@@ -82,7 +90,23 @@ export default function OrderPaymentSubmissionsPanel({ orderId, statementId, cus
     }
   };
 
+  const remove = async (sub: PaymentSubmission) => {
+    if (!window.confirm('این تراکنش اعلام‌شده حذف شود؟')) return;
+    setBusy(sub.id);
+    try {
+      await deletePaymentSubmission(sub);
+      toast.success('تراکنش حذف شد');
+      await load();
+      onChanged?.();
+    } catch (e: any) {
+      toast.error(e?.message || 'خطا در حذف تراکنش');
+    } finally {
+      setBusy(null);
+    }
+  };
+
   if (rows.length === 0) return null;
+
 
   const pending = rows.filter(r => r.status === 'pending').length;
 
@@ -132,6 +156,13 @@ export default function OrderPaymentSubmissionsPanel({ orderId, statementId, cus
             {r.status === 'pending' ? (
               <div className="grid gap-2 md:grid-cols-3 items-end">
                 <div className="space-y-1">
+                  <Label className="text-xs">مبلغ تاییدشده (تومان)</Label>
+                  <Input className="h-9 text-center" dir="ltr" inputMode="numeric"
+                    value={amountBySub[r.id] ?? ''}
+                    onChange={(e) => setAmountBySub(p => ({ ...p, [r.id]: e.target.value }))} />
+                  <p className="text-[11px] text-muted-foreground">اعلام مشتری: {fmt(r.amount)}</p>
+                </div>
+                <div className="space-y-1">
                   <Label className="text-xs">کارت بانکی مقصد (اختیاری)</Label>
                   <Select value={cardBySub[r.id] || ''} onValueChange={(v) => setCardBySub(p => ({ ...p, [r.id]: v }))}>
                     <SelectTrigger className="h-9"><SelectValue placeholder="انتخاب کارت" /></SelectTrigger>
@@ -146,7 +177,7 @@ export default function OrderPaymentSubmissionsPanel({ orderId, statementId, cus
                   <Label className="text-xs">یادداشت بررسی</Label>
                   <Input className="h-9" value={noteBySub[r.id] || ''} onChange={(e) => setNoteBySub(p => ({ ...p, [r.id]: e.target.value }))} />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 md:col-span-3 flex-wrap">
                   <Button size="sm" className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
                     disabled={busy === r.id} onClick={() => approve(r)}>
                     {busy === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
@@ -155,11 +186,24 @@ export default function OrderPaymentSubmissionsPanel({ orderId, statementId, cus
                   <Button size="sm" variant="destructive" className="gap-1" disabled={busy === r.id} onClick={() => reject(r)}>
                     <XCircle className="h-4 w-4" /> رد
                   </Button>
+                  <Button size="sm" variant="outline" className="gap-1 text-destructive"
+                    disabled={busy === r.id} onClick={() => remove(r)}>
+                    <Trash2 className="h-4 w-4" /> حذف
+                  </Button>
                 </div>
               </div>
             ) : (
-              r.review_notes && <p className="text-xs text-muted-foreground">یادداشت مدیریت: {r.review_notes}</p>
+              <div className="space-y-1">
+                {r.review_notes && <p className="text-xs text-muted-foreground">یادداشت مدیریت: {r.review_notes}</p>}
+                {r.status === 'rejected' && (
+                  <Button size="sm" variant="outline" className="gap-1 text-destructive h-7"
+                    disabled={busy === r.id} onClick={() => remove(r)}>
+                    <Trash2 className="h-3.5 w-3.5" /> حذف تراکنش
+                  </Button>
+                )}
+              </div>
             )}
+
           </div>
         );
       })}

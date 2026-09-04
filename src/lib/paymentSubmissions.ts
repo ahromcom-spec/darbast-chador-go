@@ -111,6 +111,8 @@ export interface ApproveOptions {
   reviewerId: string;
   reviewNotes?: string;
   customerName?: string | null;
+  /** مبلغ نهایی تاییدشده توسط مدیریت (در صورت ویرایش مبلغ اعلامی مشتری) */
+  amountOverride?: number | null;
 }
 
 /**
@@ -119,14 +121,15 @@ export interface ApproveOptions {
  * the selected card and — for cheques — create the cheque record.
  */
 export async function approvePaymentSubmission({
-  submission, bankCardId, reviewerId, reviewNotes, customerName,
+  submission, bankCardId, reviewerId, reviewNotes, customerName, amountOverride,
 }: ApproveOptions): Promise<void> {
   const orders = await loadTargetOrders(submission);
   if (orders.length === 0) throw new Error('سفارش مرتبط با این فیش پیدا نشد');
 
   const isCheque = submission.kind === 'cheque';
-  const amount = Math.round(Number(submission.amount) || 0);
+  const amount = Math.round(Number(amountOverride ?? submission.amount) || 0);
   if (amount <= 0) throw new Error('مبلغ فیش نامعتبر است');
+
 
   // Waterfall allocation: fill oldest orders first, remainder lands on the last order
   let remaining = amount;
@@ -254,6 +257,7 @@ export async function approvePaymentSubmission({
 
   await supabase.from('payment_submissions').update({
     status: 'approved',
+    amount,
     reviewed_by: reviewerId,
     reviewed_at: nowIso,
     review_notes: reviewNotes || null,
@@ -278,3 +282,35 @@ export async function rejectPaymentSubmission(submissionId: string, reviewerId: 
   } as any).eq('id', submissionId);
   if (error) throw error;
 }
+
+/** حذف تراکنش اعلام‌شده (فقط تا وقتی تایید نشده است) */
+export async function deletePaymentSubmission(sub: PaymentSubmission) {
+  if (sub.status === 'approved') throw new Error('تراکنش تاییدشده قابل حذف نیست');
+  const { error } = await supabase.from('payment_submissions').delete().eq('id', sub.id);
+  if (error) throw error;
+  if (sub.image_path) {
+    try { await supabase.storage.from(PAYMENT_RECEIPTS_BUCKET).remove([sub.image_path]); } catch { /* ignore */ }
+  }
+}
+
+export interface UpdateSubmissionPayload {
+  amount?: number;
+  notes?: string | null;
+  cheque_serial?: string | null;
+  cheque_due_date?: string | null;
+  image_path?: string | null;
+}
+
+/** ویرایش تراکنش اعلام‌شده تا زمانی که تایید نشده باشد */
+export async function updatePaymentSubmission(sub: PaymentSubmission, payload: UpdateSubmissionPayload) {
+  if (sub.status === 'approved') throw new Error('تراکنش تاییدشده قابل ویرایش نیست');
+  if (payload.amount !== undefined && (!payload.amount || payload.amount <= 0)) {
+    throw new Error('مبلغ نامعتبر است');
+  }
+  const { error } = await supabase
+    .from('payment_submissions')
+    .update(payload as any)
+    .eq('id', sub.id);
+  if (error) throw error;
+}
+
