@@ -28,6 +28,8 @@ import {
   Clock,
   User,
   Tags,
+  Send,
+
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -55,6 +57,8 @@ interface NotificationRow {
   is_dismissed: boolean;
   admin_note: string | null;
   created_at: string;
+  is_sms?: boolean;
+  sms_status?: string | null;
 }
 
 const READ_KEY = 'siteNotificationsReadIds';
@@ -150,7 +154,15 @@ const EVENT_META: Record<
     edge: 'bg-slate-400',
     iconWrap: 'bg-slate-500/10 text-slate-600',
   },
+  sms_sent: {
+    label: 'پیامک ارسالی',
+    icon: Send,
+    badge: 'bg-rose-500/10 text-rose-600 border-rose-500/30',
+    edge: 'bg-rose-500',
+    iconWrap: 'bg-rose-500/10 text-rose-600',
+  },
 };
+
 
 const FALLBACK_META = {
   label: 'اعلان',
@@ -181,21 +193,68 @@ export default function SiteNotificationsModule() {
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('site_notifications')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(300);
+    const [notifRes, smsRes] = await Promise.all([
+      supabase
+        .from('site_notifications')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(300),
+      supabase
+        .from('sms_logs')
+        .select('id, message, recipient, status, order_id, order_code, template_key, created_at')
+        .order('created_at', { ascending: false })
+        .limit(300),
+    ]);
 
-    if (error) {
-      console.error('Error loading site notifications:', error);
+    if (notifRes.error) {
+      console.error('Error loading site notifications:', notifRes.error);
       toast({ title: 'خطا در بارگذاری اعلانات', variant: 'destructive' });
-      setRows([]);
-    } else {
-      setRows((data || []) as NotificationRow[]);
     }
+
+    const notifRows = (notifRes.data || []) as NotificationRow[];
+
+    let smsRows: NotificationRow[] = [];
+    if (smsRes.error) {
+      console.error('Error loading sms logs:', smsRes.error);
+    } else {
+      const logs = smsRes.data || [];
+      const phones = [...new Set(logs.map((l: any) => l.recipient).filter(Boolean))];
+      const nameByPhone: Record<string, string> = {};
+      if (phones.length) {
+        const { data: profs } = await supabase
+          .from('profiles')
+          .select('phone_number, full_name')
+          .in('phone_number', phones);
+        (profs || []).forEach((p: any) => {
+          if (p.phone_number && p.full_name) nameByPhone[p.phone_number] = p.full_name;
+        });
+      }
+      smsRows = logs.map((l: any) => ({
+        id: `sms-${l.id}`,
+        event_type: 'sms_sent',
+        title: `پیامک به ${nameByPhone[l.recipient] || l.recipient}`,
+        body: l.message,
+        order_id: l.order_id,
+        order_code: l.order_code,
+        customer_name: nameByPhone[l.recipient] || null,
+        customer_phone: l.recipient,
+        is_important: false,
+        is_dismissed: false,
+        admin_note: null,
+        created_at: l.created_at,
+        is_sms: true,
+        sms_status: l.status,
+      }));
+    }
+
+    setRows(
+      [...notifRows, ...smsRows].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+    );
     setLoading(false);
   };
+
 
   useEffect(() => {
     load();
@@ -635,12 +694,28 @@ export default function SiteNotificationsModule() {
                                     مهم
                                   </Badge>
                                 )}
+                                {row.is_sms && (
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      'text-[10px]',
+                                      row.sms_status === 'sent' || row.sms_status === 'success'
+                                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600'
+                                        : 'border-destructive/40 bg-destructive/10 text-destructive'
+                                    )}
+                                  >
+                                    {row.sms_status === 'sent' || row.sms_status === 'success'
+                                      ? 'ارسال شد'
+                                      : `وضعیت: ${row.sms_status || '—'}`}
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           </div>
 
                           <div className="flex shrink-0 items-center gap-0.5 opacity-70 transition-opacity group-hover:opacity-100">
-                            {row.is_dismissed ? (
+                            {row.is_sms ? null : row.is_dismissed ? (
+
                               <>
                                 <Button
                                   variant="ghost"
