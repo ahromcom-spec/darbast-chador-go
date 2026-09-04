@@ -2334,6 +2334,23 @@ export default function OrderDetail() {
                           })()}
                         </div>
 
+                        {/* ارسال فیش واریزی / عکس چک برای تایید مدیریت */}
+                        <div className="rounded-xl border border-dashed border-emerald-400/60 bg-white/60 dark:bg-emerald-950/20 p-3">
+                          <p className="text-xs text-muted-foreground mb-2">
+                            اگر پرداخت را به‌صورت کارت‌به‌کارت یا چک انجام داده‌اید، عکس فیش یا چک را همراه مبلغ ارسال کنید؛ پس از تایید مدیریت برای این سفارش ثبت می‌شود.
+                          </p>
+                          <PaymentProofDialog
+                            orderId={order.id}
+                            customerId={order.user_id || user?.id}
+                            defaultAmount={remainingAmount}
+                            className="w-full gap-2"
+                            onSubmitted={() => setProofRefreshKey((k) => k + 1)}
+                          />
+                          <PaymentSubmissionsList orderId={order.id} refreshKey={proofRefreshKey} />
+                        </div>
+
+
+
                         {/* اسلایدر پرداخت علی‌الحساب */}
                         {showAdvancePayment && paidAmount === 0 && (() => {
                           // حداقل ۲ میلیون تومان برای علی‌الحساب
