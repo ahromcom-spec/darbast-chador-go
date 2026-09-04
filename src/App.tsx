@@ -49,6 +49,8 @@ const ContractorVerifications = lazy(() => import("@/pages/ceo/ContractorVerific
 const ContractorsModule = lazy(() => import("@/pages/ceo/ContractorsModule"));
 const ContractorOrderDispatch = lazy(() => import("@/pages/ceo/ContractorOrderDispatch"));
 const SmsManagementModule = lazy(() => import("@/pages/ceo/SmsManagementModule"));
+const CustomerOrderEntryModule = lazy(() => import("@/pages/ceo/CustomerOrderEntryModule"));
+
 const OrderTransfersModule = lazy(() => import("@/pages/ceo/OrderTransfersModule"));
 const RatingsModule = lazy(() => import("@/pages/ceo/RatingsModule"));
 const SiteNotificationsModule = lazy(() => import("@/pages/ceo/SiteNotificationsModule"));
