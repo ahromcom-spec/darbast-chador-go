@@ -605,7 +605,15 @@ export function MultiPaymentDialog({
 
             <Separator />
 
+            {/* فیش‌ها و چک‌های اعلام‌شده توسط کارفرما */}
+            <OrderPaymentSubmissionsPanel
+              orderId={orderId}
+              customerName={customerName}
+              onChanged={() => { fetchPayments(); onPaymentSuccess?.(); }}
+            />
+
             {/* Payment History */}
+
             <div className="space-y-3">
               <h4 className="text-sm font-medium flex items-center gap-2">
                 <History className="h-4 w-4" />
