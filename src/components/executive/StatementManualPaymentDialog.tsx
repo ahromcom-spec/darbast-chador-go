@@ -247,17 +247,9 @@ export function StatementManualPaymentDialog({
         };
         const fullySettled = order.total > 0 && newOrderPaid >= order.total;
         if (fullySettled && !isCheque) {
+          // مرحله اجرایی خودکار تغییر نمی‌کند
           updatePayload.payment_confirmed_at = nowIso;
           updatePayload.payment_confirmed_by = user.id;
-          const { data: cur } = await supabase
-            .from('projects_v3')
-            .select('execution_stage')
-            .eq('id', order.id)
-            .maybeSingle();
-          if (cur?.execution_stage === 'awaiting_payment') {
-            updatePayload.execution_stage = 'awaiting_collection';
-            updatePayload.execution_stage_updated_at = nowIso;
-          }
         }
         await supabase.from('projects_v3').update(updatePayload).eq('id', order.id);
       }
