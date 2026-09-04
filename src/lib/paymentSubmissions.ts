@@ -43,7 +43,7 @@ export const submissionStatusLabels: Record<PaymentSubmissionStatus, { label: st
 
 /** Upload a receipt/cheque image into the private receipts bucket. Returns the storage path. */
 export async function uploadPaymentImage(file: File, userId: string): Promise<string> {
-  const prepared = isImageFile(file) ? await compressImage(file, { maxWidth: 1800, quality: 0.8 }) : file;
+  const prepared = isImageFile(file) ? await compressImage(file, { maxDimension: 1800, quality: 0.8 }) : file;
   const ext = (prepared.name.split('.').pop() || 'jpg').toLowerCase();
   const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const { error } = await supabase.storage
