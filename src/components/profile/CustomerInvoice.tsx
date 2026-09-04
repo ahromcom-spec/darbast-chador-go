@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import PaymentProofDialog from '@/components/payments/PaymentProofDialog';
+import PaymentSubmissionsList from '@/components/payments/PaymentSubmissionsList';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -77,6 +79,7 @@ const formatPrice = (n: number) => new Intl.NumberFormat('fa-IR').format(Math.ro
 
 export const CustomerInvoice = () => {
   const { user } = useAuth();
+  const [proofRefreshKey, setProofRefreshKey] = useState(0);
   const { toast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -437,6 +440,14 @@ export const CustomerInvoice = () => {
                                 پرداخت آنلاین
                               </Button>
                             )}
+                            <PaymentProofDialog
+                              statementId={s.id}
+                              customerId={user?.id}
+                              defaultAmount={s.total_remaining}
+                              buttonLabel="ارسال فیش / چک"
+                              className="h-7 text-xs gap-1"
+                              onSubmitted={() => setProofRefreshKey((k) => k + 1)}
+                            />
                             <StatementInvoiceDialog
                               statementNumber={s.statement_number}
                               statementStatus={s.status}
