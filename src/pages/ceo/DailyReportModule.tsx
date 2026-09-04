@@ -3026,6 +3026,7 @@ export default function DailyReportModule() {
   // انتقال ردیف سفارش به روز دیگر (جلو یا عقب)
   const [transferringRowIndex, setTransferringRowIndex] = useState<number | null>(null);
   const [transferPopoverIndex, setTransferPopoverIndex] = useState<number | null>(null);
+  const [transferCustomDate, setTransferCustomDate] = useState<string>('');
 
   const transferOrderRowToDate = useCallback(async (index: number, targetDateStr: string) => {
     if (!user) return;
