@@ -13,6 +13,7 @@ import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { uploadPaymentImage } from '@/lib/paymentSubmissions';
 import { parseLocalizedNumber } from '@/lib/numberParsing';
 import { formatPersianDate } from '@/lib/dateUtils';
+import { buildGroupPaymentSummary } from '@/lib/paymentNoteFormat';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
 
 interface OrderLite {
