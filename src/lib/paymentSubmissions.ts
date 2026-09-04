@@ -165,7 +165,7 @@ export async function approvePaymentSubmission({
         amount: portion,
         payment_method: paymentMethod,
         receipt_number: submission.cheque_serial || null,
-        notes: note,
+        notes: `${note} — ${summary} [SUB:${submission.id}]`,
         paid_by: reviewerId,
         bank_card_id: bankCardId,
         payment_date: effectiveDate,
