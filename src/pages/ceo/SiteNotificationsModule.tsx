@@ -55,6 +55,8 @@ interface NotificationRow {
   is_dismissed: boolean;
   admin_note: string | null;
   created_at: string;
+  is_sms?: boolean;
+  sms_status?: string | null;
 }
 
 const READ_KEY = 'siteNotificationsReadIds';
