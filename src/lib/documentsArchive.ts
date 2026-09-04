@@ -452,7 +452,7 @@ export async function htmlToPdfBlob(html: string, styles = ''): Promise<Blob> {
   const holder = document.createElement('div');
   holder.style.cssText =
     'position:fixed;top:0;left:-10000px;width:794px;background:#ffffff;z-index:-1;';
-  holder.innerHTML = `${styles.replace(/<\/?style>/g, (m) => m)}${html}`;
+  holder.innerHTML = `${styles}${html}`;
   document.body.appendChild(holder);
 
   try {
