@@ -257,6 +257,7 @@ export async function approvePaymentSubmission({
 
   await supabase.from('payment_submissions').update({
     status: 'approved',
+    amount,
     reviewed_by: reviewerId,
     reviewed_at: nowIso,
     review_notes: reviewNotes || null,
@@ -281,3 +282,35 @@ export async function rejectPaymentSubmission(submissionId: string, reviewerId: 
   } as any).eq('id', submissionId);
   if (error) throw error;
 }
+
+/** حذف تراکنش اعلام‌شده (فقط تا وقتی تایید نشده است) */
+export async function deletePaymentSubmission(sub: PaymentSubmission) {
+  if (sub.status === 'approved') throw new Error('تراکنش تاییدشده قابل حذف نیست');
+  const { error } = await supabase.from('payment_submissions').delete().eq('id', sub.id);
+  if (error) throw error;
+  if (sub.image_path) {
+    try { await supabase.storage.from(PAYMENT_RECEIPTS_BUCKET).remove([sub.image_path]); } catch { /* ignore */ }
+  }
+}
+
+export interface UpdateSubmissionPayload {
+  amount?: number;
+  notes?: string | null;
+  cheque_serial?: string | null;
+  cheque_due_date?: string | null;
+  image_path?: string | null;
+}
+
+/** ویرایش تراکنش اعلام‌شده تا زمانی که تایید نشده باشد */
+export async function updatePaymentSubmission(sub: PaymentSubmission, payload: UpdateSubmissionPayload) {
+  if (sub.status === 'approved') throw new Error('تراکنش تاییدشده قابل ویرایش نیست');
+  if (payload.amount !== undefined && (!payload.amount || payload.amount <= 0)) {
+    throw new Error('مبلغ نامعتبر است');
+  }
+  const { error } = await supabase
+    .from('payment_submissions')
+    .update(payload as any)
+    .eq('id', sub.id);
+  if (error) throw error;
+}
+
