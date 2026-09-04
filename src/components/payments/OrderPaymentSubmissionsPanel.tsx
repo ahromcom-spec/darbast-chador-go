@@ -156,6 +156,13 @@ export default function OrderPaymentSubmissionsPanel({ orderId, statementId, cus
             {r.status === 'pending' ? (
               <div className="grid gap-2 md:grid-cols-3 items-end">
                 <div className="space-y-1">
+                  <Label className="text-xs">مبلغ تاییدشده (تومان)</Label>
+                  <Input className="h-9 text-center" dir="ltr" inputMode="numeric"
+                    value={amountBySub[r.id] ?? ''}
+                    onChange={(e) => setAmountBySub(p => ({ ...p, [r.id]: e.target.value }))} />
+                  <p className="text-[11px] text-muted-foreground">اعلام مشتری: {fmt(r.amount)}</p>
+                </div>
+                <div className="space-y-1">
                   <Label className="text-xs">کارت بانکی مقصد (اختیاری)</Label>
                   <Select value={cardBySub[r.id] || ''} onValueChange={(v) => setCardBySub(p => ({ ...p, [r.id]: v }))}>
                     <SelectTrigger className="h-9"><SelectValue placeholder="انتخاب کارت" /></SelectTrigger>
@@ -170,7 +177,7 @@ export default function OrderPaymentSubmissionsPanel({ orderId, statementId, cus
                   <Label className="text-xs">یادداشت بررسی</Label>
                   <Input className="h-9" value={noteBySub[r.id] || ''} onChange={(e) => setNoteBySub(p => ({ ...p, [r.id]: e.target.value }))} />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 md:col-span-3 flex-wrap">
                   <Button size="sm" className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
                     disabled={busy === r.id} onClick={() => approve(r)}>
                     {busy === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
@@ -179,11 +186,24 @@ export default function OrderPaymentSubmissionsPanel({ orderId, statementId, cus
                   <Button size="sm" variant="destructive" className="gap-1" disabled={busy === r.id} onClick={() => reject(r)}>
                     <XCircle className="h-4 w-4" /> رد
                   </Button>
+                  <Button size="sm" variant="outline" className="gap-1 text-destructive"
+                    disabled={busy === r.id} onClick={() => remove(r)}>
+                    <Trash2 className="h-4 w-4" /> حذف
+                  </Button>
                 </div>
               </div>
             ) : (
-              r.review_notes && <p className="text-xs text-muted-foreground">یادداشت مدیریت: {r.review_notes}</p>
+              <div className="space-y-1">
+                {r.review_notes && <p className="text-xs text-muted-foreground">یادداشت مدیریت: {r.review_notes}</p>}
+                {r.status === 'rejected' && (
+                  <Button size="sm" variant="outline" className="gap-1 text-destructive h-7"
+                    disabled={busy === r.id} onClick={() => remove(r)}>
+                    <Trash2 className="h-3.5 w-3.5" /> حذف تراکنش
+                  </Button>
+                )}
+              </div>
             )}
+
           </div>
         );
       })}
