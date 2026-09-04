@@ -48,6 +48,7 @@ interface PaymentRow {
   bank_card_id: string | null;
   payment_date: string | null;
   created_at: string;
+  receipt_image_url?: string | null;
 }
 
 interface ChequeInfo {
@@ -699,6 +700,19 @@ export function StatementPaymentsHistoryDialog({
                         <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                           <div>تاریخ: <span className="text-foreground">{dateLabel}</span></div>
                           <div>شماره رسید: <span className="text-foreground">{g.receiptNumber || '—'}</span></div>
+                          {(() => {
+                            const path = g.rows.find(r => r.receipt_image_url)?.receipt_image_url;
+                            if (!path) return null;
+                            const url = receiptImages[path];
+                            if (!url) return null;
+                            return (
+                              <div className="col-span-2">
+                                <a href={url} target="_blank" rel="noreferrer" className="inline-block">
+                                  <img src={url} alt="تصویر فیش واریزی" className="max-h-40 rounded-md border object-contain" />
+                                </a>
+                              </div>
+                            );
+                          })()}
                           <div className="col-span-2">توضیح: <span className="text-foreground">{g.baseNote || '—'}</span></div>
                           <div className="col-span-2">
                             تخصیص: {g.rows.map(r => {
