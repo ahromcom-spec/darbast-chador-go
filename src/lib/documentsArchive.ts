@@ -1,6 +1,12 @@
 import JSZip from 'jszip';
 import { supabase } from '@/integrations/supabase/client';
 import { formatPersianDate } from '@/lib/dateUtils';
+import {
+  buildOrderInvoiceHtml,
+  emptyInvoiceExtras,
+  getInvoiceStyles,
+  type InvoiceExtras,
+} from '@/lib/orderInvoicePrint';
 
 export type DocKind = 'order' | 'statement' | 'daily_report';
 
@@ -12,7 +18,12 @@ export interface ArchiveDoc {
   date: string | null;
   amount?: number;
   html: string;
+  /** File name used inside the zip (includes the employer name). */
+  fileName?: string;
+  /** Extra <style> block needed by this document (printable invoices). */
+  styles?: string;
 }
+
 
 export interface ArchiveFilters {
   includeOrders: boolean;
