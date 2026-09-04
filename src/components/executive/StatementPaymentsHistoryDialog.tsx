@@ -12,6 +12,7 @@ import { BankCardSelect } from '@/components/bank-cards/BankCardSelect';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { signPaymentImages } from '@/lib/paymentSubmissions';
 import { parseLocalizedNumber } from '@/lib/numberParsing';
+import { buildGroupPaymentSummary, stripGroupPaymentSummary } from '@/lib/paymentNoteFormat';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
 
@@ -82,7 +83,7 @@ const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0
 
 function stripTag(s: string | null): string {
   if (!s) return '';
-  return s
+  return stripGroupPaymentSummary(s)
     .replace(/\s*\[STMT-GRP:[^\]]+\]\s*/g, '')
     .replace(/\s*\[CHEQUE:[^\]]+\]\s*/g, '')
     .replace(/\s*—\s*صورتحساب\s+\d+\s*$/g, '')
@@ -557,7 +558,13 @@ export function StatementPaymentsHistoryDialog({
             amount: a.portion,
             payment_method: paymentMethod,
             receipt_number: editReceipt || (isCheque ? editChequeSerial : null),
-            notes: `${baseNote}${noteSuffix}${groupTag}${chequeTag}`,
+            notes: `${baseNote}${noteSuffix} — ${buildGroupPaymentSummary({
+              totalAmount: newAmount,
+              portion: a.portion,
+              date: appliedPaymentDate,
+              statementNumber: g.isOrderLevel ? null : statementNumber,
+              method: isCheque ? 'cheque' : (editCardId ? 'card' : 'cash'),
+            })}${groupTag}${chequeTag}`,
 
             paid_by: user.id,
             bank_card_id: null,

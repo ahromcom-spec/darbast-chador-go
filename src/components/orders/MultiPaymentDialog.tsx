@@ -12,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
 import { sendOrderSms, sendCeoNotificationSms, buildOrderSmsAddress } from '@/lib/orderSms';
 import { sendPushNotification, notifyCEOPayment } from '@/lib/notifications';
+import { displayPaymentNote } from '@/lib/paymentNoteFormat';
 import { BankCardSelect } from '@/components/bank-cards/BankCardSelect';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
@@ -275,7 +276,7 @@ export function MultiPaymentDialog({
     setEditingPaymentId(payment.id);
     setEditAmount(payment.amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','));
     setEditReceiptNumber(payment.receipt_number || '');
-    setEditNotes(payment.notes || '');
+    setEditNotes(displayPaymentNote(payment.notes));
     setEditBankCardId(payment.bank_card_id || null);
     setEditPaymentDate(payment.payment_date || payment.created_at);
   };
@@ -705,7 +706,7 @@ export function MultiPaymentDialog({
                                 </div>
                               )}
                               {payment.notes && (
-                                <p className="text-xs text-muted-foreground">{payment.notes}</p>
+                                <p className="text-xs text-muted-foreground">{displayPaymentNote(payment.notes)}</p>
                               )}
                             </div>
                             <div className="flex gap-1 mr-2 shrink-0">

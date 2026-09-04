@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
 import { compressImage, isImageFile } from '@/lib/imageOptimizer';
+import { buildGroupPaymentSummary } from '@/lib/paymentNoteFormat';
 
 export const PAYMENT_RECEIPTS_BUCKET = 'payment-receipts';
 
@@ -148,10 +149,16 @@ export async function approvePaymentSubmission({
   const baseNote = isCheque
     ? `چک مشتری${submission.cheque_serial ? ` شماره ${submission.cheque_serial}` : ''} (تاییدشده توسط مدیریت)`
     : 'فیش واریزی مشتری (تاییدشده توسط مدیریت)';
-  const note = `${baseNote}${submission.notes ? ` — ${submission.notes}` : ''} [SUB:${submission.id}]`;
+  const note = `${baseNote}${submission.notes ? ` — ${submission.notes}` : ''}`;
 
   const insertedPaymentIds: string[] = [];
   for (const { order, portion } of allocations) {
+    const summary = buildGroupPaymentSummary({
+      totalAmount: amount,
+      portion,
+      date: effectiveDate,
+      method: isCheque ? 'cheque' : (bankCardId ? 'card' : 'cash'),
+    });
     const { data: ins, error: insErr } = await supabase
       .from('order_payments')
       .insert({
@@ -159,7 +166,7 @@ export async function approvePaymentSubmission({
         amount: portion,
         payment_method: paymentMethod,
         receipt_number: submission.cheque_serial || null,
-        notes: note,
+        notes: `${note} — ${summary} [SUB:${submission.id}]`,
         paid_by: reviewerId,
         bank_card_id: bankCardId,
         payment_date: effectiveDate,

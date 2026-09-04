@@ -13,6 +13,7 @@ import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { uploadPaymentImage } from '@/lib/paymentSubmissions';
 import { parseLocalizedNumber } from '@/lib/numberParsing';
 import { formatPersianDate } from '@/lib/dateUtils';
+import { buildGroupPaymentSummary } from '@/lib/paymentNoteFormat';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
 
 interface OrderLite {
@@ -227,7 +228,13 @@ export function StatementManualPaymentDialog({
             amount: portion,
             payment_method: paymentMethod,
             receipt_number: receipt || (isCheque ? chequeSerial : null),
-            notes: `${baseNote} — صورتحساب ${statementNumber}${groupTag}${chequeTag}`,
+            notes: `${baseNote} — ${buildGroupPaymentSummary({
+              totalAmount: amount,
+              portion,
+              date: effectiveDate,
+              statementNumber,
+              method: isCheque ? 'cheque' : (bankCardId ? 'card' : 'cash'),
+            })}${groupTag}${chequeTag}`,
             paid_by: user.id,
             bank_card_id: null,
             payment_date: effectiveDate,
