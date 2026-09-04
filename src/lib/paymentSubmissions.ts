@@ -148,10 +148,16 @@ export async function approvePaymentSubmission({
   const baseNote = isCheque
     ? `چک مشتری${submission.cheque_serial ? ` شماره ${submission.cheque_serial}` : ''} (تاییدشده توسط مدیریت)`
     : 'فیش واریزی مشتری (تاییدشده توسط مدیریت)';
-  const note = `${baseNote}${submission.notes ? ` — ${submission.notes}` : ''} [SUB:${submission.id}]`;
+  const note = `${baseNote}${submission.notes ? ` — ${submission.notes}` : ''}`;
 
   const insertedPaymentIds: string[] = [];
   for (const { order, portion } of allocations) {
+    const summary = buildGroupPaymentSummary({
+      totalAmount: amount,
+      portion,
+      date: effectiveDate,
+      method: isCheque ? 'cheque' : (bankCardId ? 'card' : 'cash'),
+    });
     const { data: ins, error: insErr } = await supabase
       .from('order_payments')
       .insert({
