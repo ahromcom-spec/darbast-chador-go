@@ -75,6 +75,8 @@ import { formatPersianDate, formatPersianDateTime, formatPersianDateTimeFull } f
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { EditExpertPricingDialog } from "@/components/orders/EditExpertPricingDialog";
 import { applyFixedPriceToBreakdown } from "@/lib/priceBreakdown";
+import PaymentProofDialog from "@/components/payments/PaymentProofDialog";
+import PaymentSubmissionsList from "@/components/payments/PaymentSubmissionsList";
 
 const PAYMENT_GATEWAY_UNAVAILABLE_MESSAGE = 'درگاه پرداخت زرین‌پال در حال حاضر در دسترس نیست. لطفاً چند دقیقه دیگر دوباره تلاش کنید.';
 
@@ -254,6 +256,8 @@ export default function OrderDetail() {
   const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
   // اگر کاربر فعلی «همکار» این سفارش باشد، سطح دسترسی او اینجا نگه‌داری می‌شود
   const [myCollabPerms, setMyCollabPerms] = useState<{ can_view_financials: boolean; can_manage_order: boolean } | null>(null);
+
+  const [proofRefreshKey, setProofRefreshKey] = useState(0);
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -2333,6 +2337,23 @@ export default function OrderDetail() {
                             );
                           })()}
                         </div>
+
+                        {/* ارسال فیش واریزی / عکس چک برای تایید مدیریت */}
+                        <div className="rounded-xl border border-dashed border-emerald-400/60 bg-white/60 dark:bg-emerald-950/20 p-3">
+                          <p className="text-xs text-muted-foreground mb-2">
+                            اگر پرداخت را به‌صورت کارت‌به‌کارت یا چک انجام داده‌اید، عکس فیش یا چک را همراه مبلغ ارسال کنید؛ پس از تایید مدیریت برای این سفارش ثبت می‌شود.
+                          </p>
+                          <PaymentProofDialog
+                            orderId={order.id}
+                            customerId={user?.id}
+                            defaultAmount={remainingAmount}
+                            className="w-full gap-2"
+                            onSubmitted={() => setProofRefreshKey((k) => k + 1)}
+                          />
+                          <PaymentSubmissionsList orderId={order.id} refreshKey={proofRefreshKey} />
+                        </div>
+
+
 
                         {/* اسلایدر پرداخت علی‌الحساب */}
                         {showAdvancePayment && paidAmount === 0 && (() => {

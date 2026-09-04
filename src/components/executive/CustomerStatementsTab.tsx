@@ -15,6 +15,7 @@ import ManagerOrderInvoice from '@/components/orders/ManagerOrderInvoice';
 import { StatementInvoiceDialog } from '@/components/executive/StatementInvoiceDialog';
 import { StatementManualPaymentDialog } from '@/components/executive/StatementManualPaymentDialog';
 import { StatementPaymentsHistoryDialog } from '@/components/executive/StatementPaymentsHistoryDialog';
+import PaymentSubmissionsReviewDialog from '@/components/payments/PaymentSubmissionsReviewDialog';
 import { StatementChequesDialog } from '@/components/executive/StatementChequesDialog';
 import { TransferOrderStatementDialog } from '@/components/executive/TransferOrderStatementDialog';
 import { extractOrderDescription } from '@/lib/orderDescription';
@@ -492,6 +493,13 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                         detailedAddress={s.detailed_address}
                                         addresses={s.addresses}
                                         orders={s.orders}
+                                      />
+                                    </div>
+                                    <div onClick={(e) => e.stopPropagation()} className="inline-block">
+                                      <PaymentSubmissionsReviewDialog
+                                        statementId={s.id}
+                                        customerName={g.full_name}
+                                        onChanged={() => load()}
                                       />
                                     </div>
                                     {s.orders.length > 0 && (

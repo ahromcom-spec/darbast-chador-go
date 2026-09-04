@@ -10,6 +10,7 @@ import { Banknote, CreditCard, History, Pencil, Trash2, Check, X, FileCheck } fr
 import { useToast } from '@/hooks/use-toast';
 import { BankCardSelect } from '@/components/bank-cards/BankCardSelect';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
+import { signPaymentImages } from '@/lib/paymentSubmissions';
 import { parseLocalizedNumber } from '@/lib/numberParsing';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
@@ -48,6 +49,7 @@ interface PaymentRow {
   bank_card_id: string | null;
   payment_date: string | null;
   created_at: string;
+  receipt_image_url?: string | null;
 }
 
 interface ChequeInfo {
@@ -93,6 +95,7 @@ export function StatementPaymentsHistoryDialog({
 
   const { user } = useAuth();
   const { toast } = useToast();
+  const [receiptImages, setReceiptImages] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [groups, setGroups] = useState<PaymentGroup[]>([]);
   const [editing, setEditing] = useState<string | null>(null);
@@ -216,6 +219,9 @@ export function StatementPaymentsHistoryDialog({
       }
       arr.sort((a, b) => (b.rows[0]?.created_at || '').localeCompare(a.rows[0]?.created_at || ''));
       setGroups(arr);
+      setReceiptImages(await signPaymentImages(
+        (pays || []).map((p: any) => p.receipt_image_url as string | null)
+      ));
     } catch (err: any) {
       console.error(err);
       toast({ title: 'خطا', description: err?.message || 'بارگذاری پرداخت‌ها با خطا مواجه شد', variant: 'destructive' });
@@ -699,6 +705,19 @@ export function StatementPaymentsHistoryDialog({
                         <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                           <div>تاریخ: <span className="text-foreground">{dateLabel}</span></div>
                           <div>شماره رسید: <span className="text-foreground">{g.receiptNumber || '—'}</span></div>
+                          {(() => {
+                            const path = g.rows.find(r => r.receipt_image_url)?.receipt_image_url;
+                            if (!path) return null;
+                            const url = receiptImages[path];
+                            if (!url) return null;
+                            return (
+                              <div className="col-span-2">
+                                <a href={url} target="_blank" rel="noreferrer" className="inline-block">
+                                  <img src={url} alt="تصویر فیش واریزی" className="max-h-40 rounded-md border object-contain" />
+                                </a>
+                              </div>
+                            );
+                          })()}
                           <div className="col-span-2">توضیح: <span className="text-foreground">{g.baseNote || '—'}</span></div>
                           <div className="col-span-2">
                             تخصیص: {g.rows.map(r => {
