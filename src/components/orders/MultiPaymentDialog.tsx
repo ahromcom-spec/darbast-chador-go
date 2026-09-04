@@ -144,30 +144,13 @@ export function MultiPaymentDialog({
       updated_at: nowIso,
     };
 
+    // مرحله اجرایی به‌صورت خودکار جلو نمی‌رود؛ فقط مدیر یا تایید درخواست جمع‌آوری آن را تغییر می‌دهد
     if (isSettledNow) {
       updatePayload.payment_confirmed_at = nowIso;
       updatePayload.payment_confirmed_by = user?.id;
-      const { data: currentOrder } = await supabase
-        .from('projects_v3')
-        .select('execution_stage')
-        .eq('id', orderId)
-        .maybeSingle();
-      if (currentOrder?.execution_stage === 'awaiting_payment') {
-        updatePayload.execution_stage = 'awaiting_collection';
-        updatePayload.execution_stage_updated_at = nowIso;
-      }
     } else {
       updatePayload.payment_confirmed_at = null;
       updatePayload.payment_confirmed_by = null;
-      const { data: currentOrder } = await supabase
-        .from('projects_v3')
-        .select('execution_stage')
-        .eq('id', orderId)
-        .maybeSingle();
-      if (currentOrder?.execution_stage === 'awaiting_collection') {
-        updatePayload.execution_stage = 'awaiting_payment';
-        updatePayload.execution_stage_updated_at = nowIso;
-      }
     }
 
     await supabase.from('projects_v3').update(updatePayload).eq('id', orderId);
