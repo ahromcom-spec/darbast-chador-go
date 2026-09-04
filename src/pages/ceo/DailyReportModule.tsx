@@ -5402,19 +5402,82 @@ export default function DailyReportModule() {
                                            <ChevronDown className="h-4 w-4" />
                                          </Button>
                                        </div>
-                                       <Button
-                                         variant="ghost"
-                                         size="icon"
-                                         className="h-8 w-8 text-blue-600 hover:text-blue-700"
-                                         title="انتقال این سفارش به گزارش روز بعد"
-                                         aria-label="انتقال به روز بعد"
-                                         disabled={transferringRowIndex === index}
-                                         onClick={() => transferOrderRowToNextDay(index)}
+                                       <Popover
+                                         open={transferPopoverIndex === index}
+                                         onOpenChange={(o) => {
+                                           setTransferPopoverIndex(o ? index : null);
+                                           setTransferCustomDate('');
+                                         }}
                                        >
-                                         {transferringRowIndex === index
-                                           ? <Loader2 className="h-4 w-4 animate-spin" />
-                                           : <CalendarPlus className="h-4 w-4" />}
-                                       </Button>
+                                         <PopoverTrigger asChild>
+                                           <Button
+                                             variant="ghost"
+                                             size="icon"
+                                             className="h-8 w-8 text-blue-600 hover:text-blue-700"
+                                             title="انتقال این سفارش به روز دیگر (جلو یا عقب)"
+                                             aria-label="انتقال به روز دیگر"
+                                             disabled={transferringRowIndex === index}
+                                           >
+                                             {transferringRowIndex === index
+                                               ? <Loader2 className="h-4 w-4 animate-spin" />
+                                               : <CalendarPlus className="h-4 w-4" />}
+                                           </Button>
+                                         </PopoverTrigger>
+                                         <PopoverContent className="w-72 space-y-3" align="start" dir="rtl">
+                                           <div className="text-sm font-medium">انتقال این سفارش به روز دیگر</div>
+                                           <div>
+                                             <div className="text-xs text-muted-foreground mb-1">جلو انداختن</div>
+                                             <div className="flex gap-1">
+                                               {[1, 2, 3].map((d) => (
+                                                 <Button
+                                                   key={`f-${d}`}
+                                                   variant="outline"
+                                                   size="sm"
+                                                   className="flex-1"
+                                                   onClick={() => transferOrderRowByOffset(index, d)}
+                                                 >
+                                                   {d} روز بعد
+                                                 </Button>
+                                               ))}
+                                             </div>
+                                           </div>
+                                           <div>
+                                             <div className="text-xs text-muted-foreground mb-1">عقب بردن</div>
+                                             <div className="flex gap-1">
+                                               {[1, 2, 3].map((d) => (
+                                                 <Button
+                                                   key={`b-${d}`}
+                                                   variant="outline"
+                                                   size="sm"
+                                                   className="flex-1"
+                                                   onClick={() => transferOrderRowByOffset(index, -d)}
+                                                 >
+                                                   {d} روز قبل
+                                                 </Button>
+                                               ))}
+                                             </div>
+                                           </div>
+                                           <div className="space-y-1">
+                                             <div className="text-xs text-muted-foreground">یا انتخاب تاریخ دلخواه</div>
+                                             <PersianDatePicker
+                                               value={transferCustomDate || undefined}
+                                               onChange={(date) => setTransferCustomDate(date || '')}
+                                               timeMode="none"
+                                             />
+                                             <Button
+                                               size="sm"
+                                               className="w-full"
+                                               disabled={!transferCustomDate}
+                                               onClick={() => {
+                                                 if (!transferCustomDate) return;
+                                                 transferOrderRowToDate(index, toLocalDateString(new Date(transferCustomDate)));
+                                               }}
+                                             >
+                                               انتقال به این تاریخ
+                                             </Button>
+                                           </div>
+                                         </PopoverContent>
+                                       </Popover>
                                        <Button
                                          variant="ghost"
                                          size="icon"
