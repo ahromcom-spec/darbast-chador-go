@@ -490,7 +490,42 @@ const handler = async (req: Request): Promise<Response> => {
       signature: apiKey,
     });
 
+    // === جلوگیری از ارسال پیام تکراری: اگر همین متن در ۳۰ دقیقه گذشته با موفقیت رفته، ارسال نشود ===
+    try {
+      const since = new Date(Date.now() - 30 * 60_000).toISOString();
+      const { data: recentSent } = await supabase
+        .from("sms_logs")
+        .select("id")
+        .eq("recipient", normalizedPhone)
+        .eq("message", message)
+        .eq("status", "sent")
+        .gte("created_at", since)
+        .limit(1)
+        .maybeSingle();
+
+      if (recentSent) {
+        console.log("[send-order-sms] Duplicate message detected, skipping send");
+        await supabase.from("sms_logs").insert({
+          template_key: status,
+          scope: dbTpl?.scope,
+          recipient: normalizedPhone,
+          message: "",
+          status: "skipped",
+          provider_response: "duplicate within 30m",
+          order_code: orderCode,
+          order_id: orderId ?? null,
+        });
+        return new Response(
+          JSON.stringify({ success: true, duplicate: true, message: "این پیامک قبلاً ارسال شده است" }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+    } catch (e) {
+      console.warn("[send-order-sms] Duplicate check failed:", e);
+    }
+
     console.log(`[send-order-sms] Calling ParsGreen URLService for phone: ${normalizedPhone}`);
+
 
     const smsResponse = await fetch(`${apiUrl}?${params.toString()}`, { method: "GET" });
     const responseText = (await smsResponse.text()).trim();
