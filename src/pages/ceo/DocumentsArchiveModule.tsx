@@ -134,8 +134,9 @@ export default function DocumentsArchiveModule() {
   const singlePdf = async (doc: ArchiveDoc, mode: 'download' | 'view') => {
     setSingleBusy(doc.id);
     try {
-      const blob = await htmlToPdfBlob(doc.html);
-      if (mode === 'download') downloadBlob(blob, `${safeFileName(doc.title)}.pdf`);
+      const blob = await htmlToPdfBlob(doc.html, doc.styles);
+      if (mode === 'download') downloadBlob(blob, `${safeFileName(doc.fileName || doc.title)}.pdf`);
+
       else {
         const url = URL.createObjectURL(blob);
         window.open(url, '_blank');
