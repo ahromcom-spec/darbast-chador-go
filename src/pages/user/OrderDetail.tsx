@@ -75,6 +75,8 @@ import { formatPersianDate, formatPersianDateTime, formatPersianDateTimeFull } f
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { EditExpertPricingDialog } from "@/components/orders/EditExpertPricingDialog";
 import { applyFixedPriceToBreakdown } from "@/lib/priceBreakdown";
+import PaymentProofDialog from "@/components/payments/PaymentProofDialog";
+import PaymentSubmissionsList from "@/components/payments/PaymentSubmissionsList";
 
 const PAYMENT_GATEWAY_UNAVAILABLE_MESSAGE = 'درگاه پرداخت زرین‌پال در حال حاضر در دسترس نیست. لطفاً چند دقیقه دیگر دوباره تلاش کنید.';
 
@@ -254,6 +256,8 @@ export default function OrderDetail() {
   const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
   // اگر کاربر فعلی «همکار» این سفارش باشد، سطح دسترسی او اینجا نگه‌داری می‌شود
   const [myCollabPerms, setMyCollabPerms] = useState<{ can_view_financials: boolean; can_manage_order: boolean } | null>(null);
+
+  const [proofRefreshKey, setProofRefreshKey] = useState(0);
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
