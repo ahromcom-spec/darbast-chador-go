@@ -258,6 +258,25 @@ const handler = async (req: Request): Promise<Response> => {
             const waitMinutes = cur < startMin ? startMin - cur : 1440 - cur + startMin;
             const sendAfter = new Date(Date.now() + waitMinutes * 60_000).toISOString();
 
+            // اگر همین پیامک از قبل در صف است، رکورد تکراری ساخته نشود
+            const { data: alreadyQueued } = await supabase
+              .from("scheduled_sms")
+              .select("id")
+              .eq("phone", normalizedPhone)
+              .eq("order_code", orderCode)
+              .eq("status_key", status)
+              .in("state", ["pending", "sending"])
+              .limit(1)
+              .maybeSingle();
+
+            if (alreadyQueued) {
+              console.log("[send-order-sms] Duplicate queue request ignored");
+              return new Response(
+                JSON.stringify({ success: true, scheduled: true, message: "این پیامک قبلاً در صف ارسال است" }),
+                { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+              );
+            }
+
             const { error: queueError } = await supabase.from("scheduled_sms").insert({
               phone: normalizedPhone,
               order_code: orderCode,
@@ -266,6 +285,7 @@ const handler = async (req: Request): Promise<Response> => {
               payload: { serviceType, address, amount, customerName, description, resendMessage },
               send_after: sendAfter,
             });
+
 
             if (!queueError) {
               console.log(`[send-order-sms] Outside allowed window — queued for ${sendAfter}`);
@@ -470,7 +490,42 @@ const handler = async (req: Request): Promise<Response> => {
       signature: apiKey,
     });
 
+    // === جلوگیری از ارسال پیام تکراری: اگر همین متن در ۳۰ دقیقه گذشته با موفقیت رفته، ارسال نشود ===
+    try {
+      const since = new Date(Date.now() - 30 * 60_000).toISOString();
+      const { data: recentSent } = await supabase
+        .from("sms_logs")
+        .select("id")
+        .eq("recipient", normalizedPhone)
+        .eq("message", message)
+        .eq("status", "sent")
+        .gte("created_at", since)
+        .limit(1)
+        .maybeSingle();
+
+      if (recentSent) {
+        console.log("[send-order-sms] Duplicate message detected, skipping send");
+        await supabase.from("sms_logs").insert({
+          template_key: status,
+          scope: dbTpl?.scope,
+          recipient: normalizedPhone,
+          message: "",
+          status: "skipped",
+          provider_response: "duplicate within 30m",
+          order_code: orderCode,
+          order_id: orderId ?? null,
+        });
+        return new Response(
+          JSON.stringify({ success: true, duplicate: true, message: "این پیامک قبلاً ارسال شده است" }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+    } catch (e) {
+      console.warn("[send-order-sms] Duplicate check failed:", e);
+    }
+
     console.log(`[send-order-sms] Calling ParsGreen URLService for phone: ${normalizedPhone}`);
+
 
     const smsResponse = await fetch(`${apiUrl}?${params.toString()}`, { method: "GET" });
     const responseText = (await smsResponse.text()).trim();
@@ -525,9 +580,30 @@ const handler = async (req: Request): Promise<Response> => {
     if (attemptNo < MAX_AUTO_RETRIES) {
       try {
         const sendAfter = new Date(Date.now() + randomRetryDelayMs()).toISOString();
+
+        // اگر برای همین سفارش و همین مرحله تلاش مجددی در صف است، رکورد جدید ساخته نشود
+        const { data: pendingRetry } = await supabase
+          .from("scheduled_sms")
+          .select("id")
+          .eq("phone", normalizedPhone)
+          .eq("order_code", orderCode)
+          .eq("status_key", status)
+          .eq("state", "pending")
+          .limit(1)
+          .maybeSingle();
+
+        if (pendingRetry) {
+          console.log("[send-order-sms] Retry already queued, skipping duplicate retry");
+          return new Response(
+            JSON.stringify({ success: false, error: "خطا در ارسال پیامک", retryAlreadyQueued: true }),
+            { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+
         const { error: retryError } = await supabase.from("scheduled_sms").insert({
           phone: normalizedPhone,
           order_code: orderCode,
+
           order_id: orderId ?? null,
           status_key: status,
           payload: {
