@@ -429,6 +429,13 @@ const App = () => {
                 </ProtectedRoute>
               } />
 
+              {/* مسیر مستقل برای ماژول آرشیو و دانلود اسناد */}
+              <Route path="/documents-archive" element={
+                <ProtectedRoute>
+                  <DocumentsArchiveModule />
+                </ProtectedRoute>
+              } />
+
 
 
               {/* مسیر مستقل برای ماژول مدیریت پیامک‌ها */}
