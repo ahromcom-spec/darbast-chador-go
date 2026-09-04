@@ -17,6 +17,8 @@ import { BankCardSelect } from '@/components/bank-cards/BankCardSelect';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
+import OrderPaymentSubmissionsPanel from '@/components/payments/OrderPaymentSubmissionsPanel';
+
 
 interface Payment {
   id: string;
@@ -605,7 +607,15 @@ export function MultiPaymentDialog({
 
             <Separator />
 
+            {/* فیش‌ها و چک‌های اعلام‌شده توسط کارفرما */}
+            <OrderPaymentSubmissionsPanel
+              orderId={orderId}
+              customerName={customerName}
+              onChanged={() => { fetchPayments(); onPaymentSuccess?.(); }}
+            />
+
             {/* Payment History */}
+
             <div className="space-y-3">
               <h4 className="text-sm font-medium flex items-center gap-2">
                 <History className="h-4 w-4" />
