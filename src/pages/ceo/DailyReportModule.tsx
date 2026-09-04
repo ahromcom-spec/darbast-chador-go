@@ -2988,6 +2988,163 @@ export default function DailyReportModule() {
     });
   }, [markCurrentDateDirty]);
 
+  // جابجایی ردیف سفارش به بالا یا پایین
+  const moveOrderRow = useCallback(async (index: number, direction: 'up' | 'down') => {
+    const target = direction === 'up' ? index - 1 : index + 1;
+    const prev = orderReportsRef.current;
+    if (target < 0 || target >= prev.length) return;
+
+    const next = [...prev];
+    [next[index], next[target]] = [next[target], next[index]];
+    orderReportsRef.current = next;
+    setOrderReports(next);
+    setIsSaved(false);
+    markCurrentDateDirty();
+
+    // جابجایی شماره ردیف رسانه‌ها تا عکس/فیلم هر ردیف با خودش جابجا شود
+    const reportId = existingReportIdRef.current;
+    if (reportId) {
+      try {
+        await supabase.from('daily_report_order_media')
+          .update({ row_index: -1 })
+          .eq('daily_report_id', reportId)
+          .eq('row_index', index);
+        await supabase.from('daily_report_order_media')
+          .update({ row_index: index })
+          .eq('daily_report_id', reportId)
+          .eq('row_index', target);
+        await supabase.from('daily_report_order_media')
+          .update({ row_index: target })
+          .eq('daily_report_id', reportId)
+          .eq('row_index', -1);
+      } catch (err) {
+        console.error('Error swapping media row_index:', err);
+      }
+    }
+  }, [markCurrentDateDirty]);
+
+  // انتقال ردیف سفارش به روز بعد
+  const [transferringRowIndex, setTransferringRowIndex] = useState<number | null>(null);
+
+  const transferOrderRowToNextDay = useCallback(async (index: number) => {
+    if (!user) return;
+    const rows = orderReportsRef.current;
+    const row = rows[index];
+    if (!row) return;
+    if (!row.order_id && !row.activity_description?.trim() && !row.service_details?.trim() && !row.team_name?.trim() && !row.notes?.trim()) {
+      toast.error('این ردیف خالی است و چیزی برای انتقال ندارد');
+      return;
+    }
+
+    setTransferringRowIndex(index);
+    isDeletingRowRef.current = true;
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = null;
+    }
+
+    try {
+      const nextDate = new Date(reportDate);
+      nextDate.setDate(nextDate.getDate() + 1);
+      const nextDateStr = toLocalDateString(nextDate);
+
+      // یافتن یا ساخت گزارش روز بعد برای همین ماژول
+      let nextReportId: string | null = null;
+      const { data: existingNext } = await supabase
+        .from('daily_reports')
+        .select('id')
+        .eq('report_date', nextDateStr)
+        .eq('module_key', activeModuleKey)
+        .order('created_at', { ascending: true })
+        .limit(1);
+      nextReportId = existingNext?.[0]?.id ?? null;
+
+      if (!nextReportId) {
+        const { data: created, error: createErr } = await supabase
+          .from('daily_reports')
+          .insert({
+            report_date: nextDateStr,
+            created_by: user.id,
+            module_key: activeModuleKey,
+            updated_at: new Date().toISOString(),
+          })
+          .select('id')
+          .single();
+        if (createErr) throw createErr;
+        nextReportId = created.id;
+      }
+
+      // شماره ردیف جدید در روز بعد
+      const { data: nextRows } = await supabase
+        .from('daily_report_orders')
+        .select('id')
+        .eq('daily_report_id', nextReportId);
+      const newRowIndex = (nextRows?.length ?? 0);
+
+      const { data: insertedRow, error: insertErr } = await supabase
+        .from('daily_report_orders')
+        .insert({
+          daily_report_id: nextReportId,
+          order_id: row.order_id || null,
+          activity_description: row.activity_description || '',
+          service_details: row.service_details || '',
+          team_name: row.team_name || '',
+          notes: row.notes || '',
+          row_color: row.row_color || 'yellow',
+        })
+        .select('id')
+        .single();
+      if (insertErr) throw insertErr;
+
+      // انتقال رسانه‌های همان ردیف به روز بعد
+      const currentReportId = existingReportIdRef.current;
+      if (currentReportId) {
+        if (row.id) {
+          await supabase.from('daily_report_order_media')
+            .update({ daily_report_id: nextReportId, daily_report_order_id: insertedRow.id, row_index: newRowIndex })
+            .eq('daily_report_order_id', row.id);
+        }
+        await supabase.from('daily_report_order_media')
+          .update({ daily_report_id: nextReportId, daily_report_order_id: insertedRow.id, row_index: newRowIndex })
+          .eq('daily_report_id', currentReportId)
+          .eq('row_index', index)
+          .is('daily_report_order_id', null);
+      }
+
+      // حذف ردیف از روز جاری
+      if (row.id) {
+        await supabase.from('daily_report_orders').delete().eq('id', row.id);
+      }
+
+      let next = rows.filter((_, i) => i !== index);
+      if (next.length === 0) {
+        next = [{
+          order_id: '',
+          activity_description: '',
+          service_details: '',
+          team_name: '',
+          notes: '',
+          row_color: ROW_COLORS[0].value,
+        }];
+      }
+      orderReportsRef.current = next;
+      setOrderReports(next);
+      markCurrentDateDirty();
+
+      toast.success('ردیف به گزارش روز بعد منتقل شد');
+    } catch (err) {
+      console.error('Error transferring row to next day:', err);
+      toast.error('انتقال ردیف به روز بعد با خطا مواجه شد');
+    } finally {
+      setTransferringRowIndex(null);
+      setTimeout(() => {
+        isDeletingRowRef.current = false;
+      }, 300);
+    }
+  }, [user, reportDate, activeModuleKey, markCurrentDateDirty]);
+
+
+
   // Sync row media to project_media when order is selected
   const syncRowMediaToProject = async (orderId: string, reportId: string, rowId?: string) => {
     try {
