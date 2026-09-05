@@ -11,6 +11,7 @@ import { CentralizedVideoPlayer } from '@/components/media/CentralizedVideoPlaye
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useImageModeration } from '@/hooks/useImageModeration';
+import { buildMediaFingerprint, findDuplicateProjectMedia, mediaDedupeKey } from '@/lib/mediaFingerprint';
 import {
   AlertDialog,
   AlertDialogAction,
