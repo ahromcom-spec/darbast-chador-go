@@ -1069,12 +1069,23 @@ export function RepairRequestDialog({
                     return (
                       <div key={m.id} className="relative aspect-square rounded-lg overflow-hidden border group">
                         {m.file_type === 'image' ? (
-                          <img src={data.publicUrl} alt="" className="w-full h-full object-cover" />
+                          <img
+                            src={data.publicUrl}
+                            alt=""
+                            className="w-full h-full object-cover cursor-zoom-in"
+                            onClick={() => setViewerMedia({ url: data.publicUrl, type: 'image' })}
+                          />
                         ) : (
-                          <div className="w-full h-full bg-muted flex items-center justify-center">
-                            <Film className="h-8 w-8 text-muted-foreground" />
-                          </div>
+                          <video
+                            src={data.publicUrl}
+                            className="w-full h-full object-cover bg-black"
+                            controls
+                            playsInline
+                            preload="metadata"
+                            onDoubleClick={() => setViewerMedia({ url: data.publicUrl, type: 'video' })}
+                          />
                         )}
+
                         {(isManager || existingRequest.status === 'pending') && (
                           <Button
                             variant="destructive"
