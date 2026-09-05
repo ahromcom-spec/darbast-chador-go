@@ -194,13 +194,24 @@ export const EditExpertPricingDialog = ({
           continue;
         }
 
+        const fp = await buildMediaFingerprint(file, fileType === 'video' ? 'video' : 'image');
+        const dup = await findDuplicateProjectMedia(orderId, {
+          contentHash: fp.contentHash,
+          durationSeconds: fp.durationSeconds,
+          fileSize: file.size,
+          fileType,
+        });
+        if (dup) continue;
+
         await supabase.from('project_media').insert({
           project_id: orderId,
           user_id: user.id,
           file_path: storagePath,
           file_type: fileType,
           file_size: file.size,
-          mime_type: contentType
+          mime_type: contentType,
+          content_hash: fp.contentHash,
+          duration_seconds: fp.durationSeconds,
         });
       } catch (error) {
         console.error('Error uploading file:', error);
