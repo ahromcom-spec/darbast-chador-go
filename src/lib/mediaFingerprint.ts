@@ -128,6 +128,5 @@ export function mediaDedupeKey(m: {
   if (m.file_type === 'video' && m.duration_seconds && m.file_size) {
     return `v:${Math.round(Number(m.duration_seconds) * 10)}:${m.file_size}`;
   }
-  if (m.file_size && m.file_type) return `s:${m.file_type}:${m.file_size}`;
   return `p:${m.file_path || Math.random()}`;
 }
