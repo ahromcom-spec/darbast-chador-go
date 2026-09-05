@@ -173,12 +173,12 @@ export function OrderMediaSection({
     try {
       const { data, error } = await supabase
         .from('project_media')
-        .select('id, file_path, file_type, mime_type, thumbnail_path, created_at')
+        .select('id, file_path, file_type, mime_type, thumbnail_path, created_at, file_size, content_hash, duration_seconds')
         .eq('project_id', orderId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setMediaFiles(data || []);
+      setMediaFiles(dedupeMedia((data || []) as MediaFile[]));
     } catch (err) {
       console.error('Error fetching media:', err);
     } finally {
