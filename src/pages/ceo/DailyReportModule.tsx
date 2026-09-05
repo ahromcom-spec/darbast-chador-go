@@ -3173,7 +3173,7 @@ export default function DailyReportModule() {
     try {
       let query = supabase
         .from('daily_report_order_media')
-        .select('id, file_path, file_type, file_size, mime_type')
+        .select('id, file_path, file_type, file_size, mime_type, content_hash, duration_seconds')
         .eq('daily_report_id', reportId)
         .eq('synced_to_project_media', false);
       if (rowId) query = query.eq('daily_report_order_id', rowId);
@@ -3183,6 +3183,21 @@ export default function DailyReportModule() {
 
       const dateStr = toLocalDateString(reportDate);
       for (const m of unsynced) {
+        // جلوگیری از ثبت رسانه تکراری برای یک سفارش
+        const duplicate = await findDuplicateProjectMedia(orderId, {
+          contentHash: (m as any).content_hash ?? null,
+          durationSeconds: (m as any).duration_seconds ?? null,
+          fileSize: m.file_size,
+          fileType: m.file_type,
+          filePath: m.file_path,
+        });
+        if (duplicate) {
+          await supabase.from('daily_report_order_media')
+            .update({ order_id: orderId, synced_to_project_media: true })
+            .eq('id', m.id);
+          continue;
+        }
+
         const { error: insertErr } = await supabase.from('project_media').insert({
           project_id: orderId,
           user_id: user!.id,
@@ -3191,6 +3206,8 @@ export default function DailyReportModule() {
           file_size: m.file_size,
           mime_type: m.mime_type,
           created_at: `${dateStr}T12:00:00+03:30`,
+          content_hash: (m as any).content_hash ?? null,
+          duration_seconds: (m as any).duration_seconds ?? null,
         });
         if (!insertErr) {
           await supabase.from('daily_report_order_media')
