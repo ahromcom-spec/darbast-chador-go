@@ -1232,10 +1232,16 @@ export function RepairRequestDialog({
                       {preview.type === 'image' ? (
                         <img src={preview.url} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full bg-muted flex items-center justify-center">
-                          <Film className="h-8 w-8 text-muted-foreground" />
-                        </div>
+                        <video
+                          src={preview.url}
+                          className="w-full h-full object-cover bg-black"
+                          controls
+                          playsInline
+                          preload="metadata"
+                          muted
+                        />
                       )}
+
                       <Button
                         variant="destructive"
                         size="icon"
