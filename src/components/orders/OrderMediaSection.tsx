@@ -264,11 +264,26 @@ export function OrderMediaSection({
       // آپلود موازی حداکثر 3 فایل همزمان
       const CONCURRENT_UPLOADS = 3;
       let successCount = 0;
+      let duplicateCount = 0;
 
       const uploadFile = async (file: File, index: number): Promise<boolean> => {
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}_${index}.${fileExt}`;
         const filePath = `${user.id}/${fileName}`;
+
+        // تشخیص تکراری بودن قبل از آپلود
+        const fp = await buildMediaFingerprint(file, 'image');
+        const dup = await findDuplicateProjectMedia(orderId, {
+          contentHash: fp.contentHash,
+          durationSeconds: fp.durationSeconds,
+          fileSize: file.size,
+          fileType: 'image',
+        });
+        if (dup) {
+          duplicateCount++;
+          progressMap[index] = file.size;
+          return false;
+        }
 
         const success = await uploadFileWithProgress(
           file,
@@ -290,7 +305,9 @@ export function OrderMediaSection({
               file_type: 'image',
               file_size: file.size,
               mime_type: file.type,
-              user_id: user.id
+              user_id: user.id,
+              content_hash: fp.contentHash,
+              duration_seconds: fp.durationSeconds,
             });
           
           if (!dbError) return true;
@@ -306,6 +323,11 @@ export function OrderMediaSection({
         );
         successCount += results.filter(Boolean).length;
       }
+
+      if (duplicateCount > 0) {
+        toast({ title: 'تکراری', description: `${duplicateCount} عکس تکراری بود و ثبت نشد` });
+      }
+
 
       setImageUploadProgress(100);
 
