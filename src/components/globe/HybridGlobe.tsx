@@ -63,9 +63,14 @@ interface HybridGlobeProps {
 }
 
 /** آیا سفارش در یکی از چهار وضعیت اجرایی است؟ */
-const isActiveExecutionOrder = (o: any) => {
+const OPEN_REPAIR_STATUSES = ['pending', 'approved', 'awaiting_repair'];
+
+const isActiveExecutionOrder = (o: any, repairOrderIds?: Set<string>) => {
   if (!o || o.status === 'rejected') return false;
-  if (o.is_archived || o.is_deep_archived) return false;
+  if (o.is_deep_archived) return false;
+  // سفارش‌هایی که درخواست تعمیر باز دارند همیشه روی نقشه بمانند
+  if (repairOrderIds?.has(o.id)) return true;
+  if (o.is_archived) return false;
   if (o.execution_stage) {
     return o.execution_stage === 'awaiting_collection' || o.execution_stage === 'in_collection';
   }
@@ -156,7 +161,23 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
 
       if (error) throw error;
 
-      const orders = (ordersData || []).filter(isActiveExecutionOrder).map((o: any) => ({
+      // درخواست‌های تعمیر باز: این سفارش‌ها باید روی نقشه بمانند
+      const { data: repairRows } = await supabase
+        .from('repair_requests')
+        .select('order_id, status, created_at')
+        .in('status', OPEN_REPAIR_STATUSES)
+        .order('created_at', { ascending: false });
+
+      const repairRank: Record<string, number> = { pending: 1, approved: 2, awaiting_repair: 3 };
+      const repairMap: Record<string, string> = {};
+      (repairRows || []).forEach((r: any) => {
+        const prev = repairMap[r.order_id];
+        if (!prev || (repairRank[r.status] || 0) > (repairRank[prev] || 0)) repairMap[r.order_id] = r.status;
+      });
+      setRepairOrders(repairMap);
+      const repairOrderIds = new Set(Object.keys(repairMap));
+
+      const orders = (ordersData || []).filter((o: any) => isActiveExecutionOrder(o, repairOrderIds)).map((o: any) => ({
         ...o,
         hierarchy_project_id: o.hierarchy_project_id || `order:${o.id}`,
       }));
@@ -842,7 +863,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
       const v3OrdersFiltered = v3OrdersAll.filter(o => {
         if (!o.hierarchy_project_id || !projectIds.includes(o.hierarchy_project_id) || o.status === 'rejected') return false;
         if (!activeExecutionOnly) return true;
-        return isActiveExecutionOrder(o);
+        return isActiveExecutionOrder(o, new Set(Object.keys(repairOrders)));
       });
 
 
@@ -1034,10 +1055,11 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
       console.error('خطا در دریافت عکس‌های پروژه:', error);
       setProjectsWithMedia(projects.map(p => ({ ...p, media: [], orders: [] })));
     }
-  }, [projects, activeExecutionOnly, companyOrders]);
+  }, [projects, activeExecutionOnly, companyOrders, repairOrders]);
 
   // دریافت درخواست‌های تعمیر باز برای سفارش‌های نمایش‌داده‌شده روی نقشه
   useEffect(() => {
+    if (activeExecutionOnly) return; // در حالت اجرایی، هنگام دریافت سفارش‌ها گرفته می‌شود
     const orderIds = projectsWithMedia.flatMap(p => (p.orders || []).map(o => o.id));
     if (orderIds.length === 0) {
       setRepairOrders({});
@@ -1062,7 +1084,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
       setRepairOrders(map);
     })();
     return () => { cancelled = true; };
-  }, [projectsWithMedia]);
+  }, [projectsWithMedia, activeExecutionOnly]);
 
   // آدرس‌های بدون پروژه دیگر روی نقشه نمایش داده نمی‌شوند - این قسمت حذف شده است
 
