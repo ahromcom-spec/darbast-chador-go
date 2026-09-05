@@ -1318,6 +1318,20 @@ export function RepairRequestDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!viewerMedia} onOpenChange={(o) => !o && setViewerMedia(null)}>
+        <DialogContent className="max-w-3xl z-[10001] p-2">
+          <DialogHeader>
+            <DialogTitle className="text-sm">نمایش فایل</DialogTitle>
+          </DialogHeader>
+          {viewerMedia?.type === 'image' ? (
+            <img src={viewerMedia.url} alt="" className="w-full max-h-[75vh] object-contain rounded-lg" />
+          ) : viewerMedia ? (
+            <video src={viewerMedia.url} className="w-full max-h-[75vh] rounded-lg bg-black" controls autoPlay playsInline />
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
     </Dialog>
   );
 }
