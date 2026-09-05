@@ -1267,9 +1267,11 @@ export type Database = {
       }
       daily_report_order_media: {
         Row: {
+          content_hash: string | null
           created_at: string | null
           daily_report_id: string
           daily_report_order_id: string | null
+          duration_seconds: number | null
           file_path: string
           file_size: number | null
           file_type: string
@@ -1284,9 +1286,11 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          content_hash?: string | null
           created_at?: string | null
           daily_report_id: string
           daily_report_order_id?: string | null
+          duration_seconds?: number | null
           file_path: string
           file_size?: number | null
           file_type: string
@@ -1301,9 +1305,11 @@ export type Database = {
           user_id: string
         }
         Update: {
+          content_hash?: string | null
           created_at?: string | null
           daily_report_id?: string
           daily_report_order_id?: string | null
+          duration_seconds?: number | null
           file_path?: string
           file_size?: number | null
           file_type?: string
@@ -3264,7 +3270,9 @@ export type Database = {
       }
       project_media: {
         Row: {
+          content_hash: string | null
           created_at: string
+          duration_seconds: number | null
           file_path: string
           file_size: number
           file_type: string
@@ -3276,7 +3284,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          content_hash?: string | null
           created_at?: string
+          duration_seconds?: number | null
           file_path: string
           file_size: number
           file_type: string
@@ -3288,7 +3298,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          content_hash?: string | null
           created_at?: string
+          duration_seconds?: number | null
           file_path?: string
           file_size?: number
           file_type?: string
