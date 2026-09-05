@@ -293,8 +293,8 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled, moduleKe
             staff_name: 'ماهیت شرکت اهرم',
             work_status: 'کارکرده',
             overtime_hours: 0,
-            amount_received: 0,
-            receiving_notes: '',
+            amount_received: amountReceived,
+            receiving_notes: String(r.receiving_notes || r.notes || ''),
             amount_spent: 0,
             spending_notes: '',
             notes: [String(r.spending_notes || ''), String(r.notes || '')].filter(Boolean).join(' - '),
@@ -305,10 +305,12 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled, moduleKe
           };
 
           if (!isCompanyExpense) return [cardRow];
-          if (!card && amountReceived === 0 && amountSpent === 0) return [companyRow];
+          // Pure company-expense row (no company card involved): only the company row,
+          // carrying the expense amount in the «دریافتی» column.
+          if (!card) return [companyRow];
 
-          // The financial amount always belongs to the selectable card row. The
-          // company row is only a descriptive classification and must not duplicate it.
+          // When a company card paid, the withdrawal stays on the card row and the
+          // company row keeps the classification with the same amount in «دریافتی».
           return [cardRow, companyRow];
         })
         .filter(Boolean) as StaffReportRow[];
