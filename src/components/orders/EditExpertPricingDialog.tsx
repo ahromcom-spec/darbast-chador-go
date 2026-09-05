@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { buildMediaFingerprint, findDuplicateProjectMedia } from '@/lib/mediaFingerprint';
 import { useAuth } from '@/contexts/AuthContext';
 import { Calculator, Plus, Trash2, CalendarDays, Image as ImageIcon, Save, Clock, MapPin, Edit } from 'lucide-react';
 import { MediaUploader } from './MediaUploader';
