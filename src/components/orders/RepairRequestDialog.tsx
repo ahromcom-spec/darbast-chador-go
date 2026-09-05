@@ -117,6 +117,8 @@ export function RepairRequestDialog({
   // New form state for single-step submission
   const [pendingMediaFiles, setPendingMediaFiles] = useState<File[]>([]);
   const [pendingMediaPreviews, setPendingMediaPreviews] = useState<{ url: string; type: 'image' | 'video' }[]>([]);
+  const [viewerMedia, setViewerMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null);
+
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pendingMediaInputRef = useRef<HTMLInputElement>(null);
@@ -1069,12 +1071,23 @@ export function RepairRequestDialog({
                     return (
                       <div key={m.id} className="relative aspect-square rounded-lg overflow-hidden border group">
                         {m.file_type === 'image' ? (
-                          <img src={data.publicUrl} alt="" className="w-full h-full object-cover" />
+                          <img
+                            src={data.publicUrl}
+                            alt=""
+                            className="w-full h-full object-cover cursor-zoom-in"
+                            onClick={() => setViewerMedia({ url: data.publicUrl, type: 'image' })}
+                          />
                         ) : (
-                          <div className="w-full h-full bg-muted flex items-center justify-center">
-                            <Film className="h-8 w-8 text-muted-foreground" />
-                          </div>
+                          <video
+                            src={data.publicUrl}
+                            className="w-full h-full object-cover bg-black"
+                            controls
+                            playsInline
+                            preload="metadata"
+                            onDoubleClick={() => setViewerMedia({ url: data.publicUrl, type: 'video' })}
+                          />
                         )}
+
                         {(isManager || existingRequest.status === 'pending') && (
                           <Button
                             variant="destructive"
@@ -1232,10 +1245,16 @@ export function RepairRequestDialog({
                       {preview.type === 'image' ? (
                         <img src={preview.url} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full bg-muted flex items-center justify-center">
-                          <Film className="h-8 w-8 text-muted-foreground" />
-                        </div>
+                        <video
+                          src={preview.url}
+                          className="w-full h-full object-cover bg-black"
+                          controls
+                          playsInline
+                          preload="metadata"
+                          muted
+                        />
                       )}
+
                       <Button
                         variant="destructive"
                         size="icon"
@@ -1299,6 +1318,20 @@ export function RepairRequestDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!viewerMedia} onOpenChange={(o) => !o && setViewerMedia(null)}>
+        <DialogContent className="max-w-3xl z-[10001] p-2">
+          <DialogHeader>
+            <DialogTitle className="text-sm">نمایش فایل</DialogTitle>
+          </DialogHeader>
+          {viewerMedia?.type === 'image' ? (
+            <img src={viewerMedia.url} alt="" className="w-full max-h-[75vh] object-contain rounded-lg" />
+          ) : viewerMedia ? (
+            <video src={viewerMedia.url} className="w-full max-h-[75vh] rounded-lg bg-black" controls autoPlay playsInline />
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
     </Dialog>
   );
 }
