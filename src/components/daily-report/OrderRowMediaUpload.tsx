@@ -508,7 +508,41 @@ export function OrderRowMediaUpload({
         </div>
       )}
 
+      {/* آخرین فیلم ثبت‌شده برای این سفارش */}
+      {lastOrderVideo && !media.some(m => m.file_path === lastOrderVideo.file_path) && (
+        <div className="flex flex-col items-center gap-1 mt-1">
+          <span className="text-[9px] text-muted-foreground">آخرین فیلم سفارش</span>
+          <div
+            className="relative w-24 h-24 rounded border-2 border-dashed border-purple-300 overflow-hidden bg-purple-50 cursor-pointer"
+            onClick={() => setShowLastVideo(true)}
+          >
+            <video
+              src={lastOrderVideo.publicUrl}
+              muted
+              playsInline
+              autoPlay
+              loop
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+      )}
+
+      <Dialog open={showLastVideo} onOpenChange={setShowLastVideo}>
+        <DialogContent className="max-w-[90vw] max-h-[90vh] p-2 sm:p-4 flex flex-col items-center justify-center">
+          {lastOrderVideo && (
+            <video
+              src={lastOrderVideo.publicUrl}
+              controls
+              autoPlay
+              className="max-w-full max-h-[75vh] rounded"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Thumbnails */}
+
       {media.length > 0 && (
         <div className="flex flex-wrap gap-1.5 max-w-[260px]">
           {media.slice(0, 4).map((item, idx) => (
