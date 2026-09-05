@@ -7,6 +7,7 @@ import { Upload, Film, Clock, X, Play, Download, AlertCircle, RefreshCw, Calenda
 import { useToast } from '@/hooks/use-toast';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { compressImages } from '@/lib/imageOptimizer';
+import { buildMediaFingerprint, findDuplicateProjectMedia, mediaDedupeKey } from '@/lib/mediaFingerprint';
 
 
 interface MediaFile {
@@ -16,7 +17,22 @@ interface MediaFile {
   mime_type?: string;
   thumbnail_path?: string;
   created_at: string;
+  file_size?: number | null;
+  content_hash?: string | null;
+  duration_seconds?: number | null;
 }
+
+// حذف رسانه‌های تکراری (همان فایل که از چند ماژول/چند نفر ثبت شده) — قدیمی‌ترین نگه داشته می‌شود
+const dedupeMedia = (items: MediaFile[]): MediaFile[] => {
+  const byKey = new Map<string, MediaFile>();
+  const sorted = [...items].sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+  for (const item of sorted) {
+    const key = mediaDedupeKey(item);
+    if (!byKey.has(key)) byKey.set(key, item);
+  }
+  const keep = new Set(Array.from(byKey.values()).map((m) => m.id));
+  return items.filter((m) => keep.has(m.id));
+};
 
 // گروه‌بندی مدیا بر اساس تاریخ
 interface MediaGroup {
@@ -157,12 +173,12 @@ export function OrderMediaSection({
     try {
       const { data, error } = await supabase
         .from('project_media')
-        .select('id, file_path, file_type, mime_type, thumbnail_path, created_at')
+        .select('id, file_path, file_type, mime_type, thumbnail_path, created_at, file_size, content_hash, duration_seconds')
         .eq('project_id', orderId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setMediaFiles(data || []);
+      setMediaFiles(dedupeMedia((data || []) as MediaFile[]));
     } catch (err) {
       console.error('Error fetching media:', err);
     } finally {
@@ -248,11 +264,26 @@ export function OrderMediaSection({
       // آپلود موازی حداکثر 3 فایل همزمان
       const CONCURRENT_UPLOADS = 3;
       let successCount = 0;
+      let duplicateCount = 0;
 
       const uploadFile = async (file: File, index: number): Promise<boolean> => {
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}_${index}.${fileExt}`;
         const filePath = `${user.id}/${fileName}`;
+
+        // تشخیص تکراری بودن قبل از آپلود
+        const fp = await buildMediaFingerprint(file, 'image');
+        const dup = await findDuplicateProjectMedia(orderId, {
+          contentHash: fp.contentHash,
+          durationSeconds: fp.durationSeconds,
+          fileSize: file.size,
+          fileType: 'image',
+        });
+        if (dup) {
+          duplicateCount++;
+          progressMap[index] = file.size;
+          return false;
+        }
 
         const success = await uploadFileWithProgress(
           file,
@@ -274,7 +305,9 @@ export function OrderMediaSection({
               file_type: 'image',
               file_size: file.size,
               mime_type: file.type,
-              user_id: user.id
+              user_id: user.id,
+              content_hash: fp.contentHash,
+              duration_seconds: fp.durationSeconds,
             });
           
           if (!dbError) return true;
@@ -290,6 +323,11 @@ export function OrderMediaSection({
         );
         successCount += results.filter(Boolean).length;
       }
+
+      if (duplicateCount > 0) {
+        toast({ title: 'تکراری', description: `${duplicateCount} عکس تکراری بود و ثبت نشد` });
+      }
+
 
       setImageUploadProgress(100);
 
@@ -331,11 +369,26 @@ export function OrderMediaSection({
       // ویدیوها را 2 تا 2 آپلود کن (حجم بالاتر)
       const CONCURRENT_UPLOADS = 2;
       let successCount = 0;
+      let duplicateCount = 0;
 
       const uploadVideo = async (file: File, index: number): Promise<boolean> => {
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}_${index}.${fileExt}`;
         const filePath = `${user.id}/${fileName}`;
+
+        // تشخیص فیلم تکراری (hash محتوا یا مدت‌زمان و حجم یکسان) قبل از آپلود
+        const fp = await buildMediaFingerprint(file, 'video');
+        const dup = await findDuplicateProjectMedia(orderId, {
+          contentHash: fp.contentHash,
+          durationSeconds: fp.durationSeconds,
+          fileSize: file.size,
+          fileType: 'video',
+        });
+        if (dup) {
+          duplicateCount++;
+          progressMap[index] = file.size;
+          return false;
+        }
 
         const success = await uploadFileWithProgress(
           file,
@@ -357,7 +410,9 @@ export function OrderMediaSection({
               file_type: 'video',
               file_size: file.size,
               mime_type: file.type,
-              user_id: user.id
+              user_id: user.id,
+              content_hash: fp.contentHash,
+              duration_seconds: fp.durationSeconds,
             });
           
           if (!dbError) return true;
@@ -373,6 +428,11 @@ export function OrderMediaSection({
         );
         successCount += results.filter(Boolean).length;
       }
+
+      if (duplicateCount > 0) {
+        toast({ title: 'تکراری', description: `${duplicateCount} فیلم تکراری بود و ثبت نشد` });
+      }
+
 
       setVideoUploadProgress(100);
 

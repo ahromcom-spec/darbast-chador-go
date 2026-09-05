@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { buildMediaFingerprint, findDuplicateProjectMedia } from '@/lib/mediaFingerprint';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -145,6 +146,15 @@ export default function CustomServiceForm() {
         }
       }
 
+      const fp = await buildMediaFingerprint(file, isVideo ? 'video' : 'image');
+      const dup = await findDuplicateProjectMedia(projectId, {
+        contentHash: fp.contentHash,
+        durationSeconds: fp.durationSeconds,
+        fileSize: file.size,
+        fileType: isVideo ? 'video' : 'image',
+      });
+      if (dup) return;
+
       const { error: dbError } = await supabase.from('project_media').insert({
         project_id: projectId,
         user_id: user.id,
@@ -153,6 +163,8 @@ export default function CustomServiceForm() {
         file_size: file.size,
         mime_type: file.type,
         thumbnail_path: thumbnailPath,
+        content_hash: fp.contentHash,
+        duration_seconds: fp.durationSeconds,
       });
       if (dbError) throw dbError;
     };

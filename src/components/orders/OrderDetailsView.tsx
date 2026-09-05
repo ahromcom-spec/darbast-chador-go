@@ -11,6 +11,7 @@ import { CentralizedVideoPlayer } from '@/components/media/CentralizedVideoPlaye
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useImageModeration } from '@/hooks/useImageModeration';
+import { buildMediaFingerprint, findDuplicateProjectMedia, mediaDedupeKey } from '@/lib/mediaFingerprint';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -80,12 +81,20 @@ export const OrderMediaGallery = ({ orderId, allowEdit = true }: OrderMediaGalle
     try {
       const { data, error } = await supabase
         .from('project_media')
-        .select('id, file_path, file_type, mime_type, user_id')
+        .select('id, file_path, file_type, mime_type, user_id, file_size, content_hash, duration_seconds')
         .eq('project_id', orderId)
         .order('created_at', { ascending: true });
       
       if (error) throw error;
-      setMedia(data || []);
+      // حذف رسانه‌های تکراری (همان فیلم/عکس از چند مسیر) — اولین (قدیمی‌ترین) نگه داشته می‌شود
+      const seen = new Set<string>();
+      const unique = (data || []).filter((m: any) => {
+        const key = mediaDedupeKey(m);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      setMedia(unique);
     } catch (err) {
       console.error('Error fetching media:', err);
     } finally {
@@ -164,6 +173,22 @@ export const OrderMediaGallery = ({ orderId, allowEdit = true }: OrderMediaGalle
         const fileExt = file.name.split('.').pop();
         const fileName = `${user.id}/${orderId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
+        // تشخیص تکراری بودن فایل برای این سفارش
+        const fp = await buildMediaFingerprint(file, type);
+        const dup = await findDuplicateProjectMedia(orderId, {
+          contentHash: fp.contentHash,
+          durationSeconds: fp.durationSeconds,
+          fileSize: file.size,
+          fileType: type,
+        });
+        if (dup) {
+          toast({
+            title: 'تکراری',
+            description: `این ${type === 'image' ? 'عکس' : 'فیلم'} قبلاً برای این سفارش ثبت شده است`,
+          });
+          continue;
+        }
+
         // Upload to storage
         const { error: uploadError } = await supabase.storage
           .from('project-media')
@@ -182,7 +207,9 @@ export const OrderMediaGallery = ({ orderId, allowEdit = true }: OrderMediaGalle
           file_path: fileName,
           file_type: type,
           file_size: file.size,
-          mime_type: file.type
+          mime_type: file.type,
+          content_hash: fp.contentHash,
+          duration_seconds: fp.durationSeconds,
         });
 
         if (dbError) {
