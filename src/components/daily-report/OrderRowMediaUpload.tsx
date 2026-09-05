@@ -44,11 +44,14 @@ export function OrderRowMediaUpload({
   const { user } = useAuth();
   const { toast } = useToast();
   const [media, setMedia] = useState<MediaItem[]>([]);
+  const [lastOrderVideo, setLastOrderVideo] = useState<(MediaItem & { createdAt?: string }) | null>(null);
+  const [showLastVideo, setShowLastVideo] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, fileName: '' });
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+
 
   // Fetch existing media for this row - SCOPED to the specific module
   const fetchMedia = useCallback(async () => {
@@ -142,6 +145,42 @@ export function OrderRowMediaUpload({
   useEffect(() => {
     fetchMedia();
   }, [fetchMedia]);
+
+  // آخرین فیلم ثبت‌شده برای این سفارش (فقط نمایش، بدون ثبت مجدد)
+  useEffect(() => {
+    let cancelled = false;
+    const loadLastVideo = async () => {
+      if (!isValidUuid(orderId)) {
+        setLastOrderVideo(null);
+        return;
+      }
+      const { data } = await supabase
+        .from('project_media')
+        .select('id, file_path, file_type, created_at')
+        .eq('project_id', orderId!)
+        .eq('file_type', 'video')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (data?.file_path) {
+        const { data: urlData } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(data.file_path);
+        setLastOrderVideo({
+          id: data.id,
+          file_path: data.file_path,
+          file_type: 'video',
+          publicUrl: urlData.publicUrl,
+          createdAt: data.created_at,
+        });
+      } else {
+        setLastOrderVideo(null);
+      }
+    };
+    loadLastVideo();
+    return () => { cancelled = true; };
+  }, [orderId, media.length]);
+
 
   // Realtime subscription: sync media changes from other users instantly
   useEffect(() => {
@@ -469,7 +508,41 @@ export function OrderRowMediaUpload({
         </div>
       )}
 
+      {/* آخرین فیلم ثبت‌شده برای این سفارش */}
+      {lastOrderVideo && !media.some(m => m.file_path === lastOrderVideo.file_path) && (
+        <div className="flex flex-col items-center gap-1 mt-1">
+          <span className="text-[9px] text-muted-foreground">آخرین فیلم سفارش</span>
+          <div
+            className="relative w-24 h-24 rounded border-2 border-dashed border-purple-300 overflow-hidden bg-purple-50 cursor-pointer"
+            onClick={() => setShowLastVideo(true)}
+          >
+            <video
+              src={lastOrderVideo.publicUrl}
+              muted
+              playsInline
+              autoPlay
+              loop
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+      )}
+
+      <Dialog open={showLastVideo} onOpenChange={setShowLastVideo}>
+        <DialogContent className="max-w-[90vw] max-h-[90vh] p-2 sm:p-4 flex flex-col items-center justify-center">
+          {lastOrderVideo && (
+            <video
+              src={lastOrderVideo.publicUrl}
+              controls
+              autoPlay
+              className="max-w-full max-h-[75vh] rounded"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Thumbnails */}
+
       {media.length > 0 && (
         <div className="flex flex-wrap gap-1.5 max-w-[260px]">
           {media.slice(0, 4).map((item, idx) => (
