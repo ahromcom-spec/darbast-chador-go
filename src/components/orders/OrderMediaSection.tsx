@@ -7,6 +7,7 @@ import { Upload, Film, Clock, X, Play, Download, AlertCircle, RefreshCw, Calenda
 import { useToast } from '@/hooks/use-toast';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { compressImages } from '@/lib/imageOptimizer';
+import { buildMediaFingerprint, findDuplicateProjectMedia, mediaDedupeKey } from '@/lib/mediaFingerprint';
 
 
 interface MediaFile {
@@ -16,7 +17,22 @@ interface MediaFile {
   mime_type?: string;
   thumbnail_path?: string;
   created_at: string;
+  file_size?: number | null;
+  content_hash?: string | null;
+  duration_seconds?: number | null;
 }
+
+// حذف رسانه‌های تکراری (همان فایل که از چند ماژول/چند نفر ثبت شده) — قدیمی‌ترین نگه داشته می‌شود
+const dedupeMedia = (items: MediaFile[]): MediaFile[] => {
+  const byKey = new Map<string, MediaFile>();
+  const sorted = [...items].sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+  for (const item of sorted) {
+    const key = mediaDedupeKey(item);
+    if (!byKey.has(key)) byKey.set(key, item);
+  }
+  const keep = new Set(Array.from(byKey.values()).map((m) => m.id));
+  return items.filter((m) => keep.has(m.id));
+};
 
 // گروه‌بندی مدیا بر اساس تاریخ
 interface MediaGroup {
