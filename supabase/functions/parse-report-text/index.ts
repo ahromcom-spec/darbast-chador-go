@@ -414,14 +414,19 @@ serve(async (req) => {
       const amt = Number(amount) || 0;
       const desc = String(description || '').trim();
       if (amt <= 0 && !desc) return;
-      const dup = companyExpenses.find(
-        (e) => e.amount === amt && norm(e.description) === norm(desc),
-      );
-      if (dup) return;
+      // Same amount ⇒ same purchase (the payer row and the company-side note both
+      // describe one expense). Never add it twice, otherwise the company row doubles.
+      const dup = companyExpenses.find((e) => e.amount === amt && amt > 0);
+      if (dup) {
+        if (desc && desc.length > dup.description.length) dup.description = desc;
+        return;
+      }
+      if (companyExpenses.some((e) => norm(e.description) === norm(desc))) return;
       companyExpenses.push({ amount: amt, description: desc });
     };
 
-    for (const e of Array.isArray(parsed.companyExpenseRows) ? parsed.companyExpenseRows : []) {
+    const aiExpenses = Array.isArray(parsed.companyExpenseRows) ? parsed.companyExpenseRows : [];
+    for (const e of aiExpenses) {
       pushExpense(Number(e?.amount) || 0, String(e?.description || ''));
     }
 
@@ -431,7 +436,8 @@ serve(async (req) => {
       'بنزین', 'گازوئیل', 'گازویل', 'سوخت', 'ایاب', 'کرایه', 'تاکسی', 'اسنپ',
       'ابزار', 'لوازم', 'تعمیر خودرو', 'پنچری', 'خرید',
     ].map((k) => norm(k));
-    for (const r of staffRows) {
+    for (const r of aiExpenses.length > 0 ? [] : staffRows) {
+
       const amount = Number(r.amount_spent) || 0;
       if (amount <= 0) continue;
       const text = norm(`${r.spending_notes || ''} ${r.notes || ''}`);
