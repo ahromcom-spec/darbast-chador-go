@@ -173,6 +173,22 @@ export const OrderMediaGallery = ({ orderId, allowEdit = true }: OrderMediaGalle
         const fileExt = file.name.split('.').pop();
         const fileName = `${user.id}/${orderId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
 
+        // تشخیص تکراری بودن فایل برای این سفارش
+        const fp = await buildMediaFingerprint(file, type);
+        const dup = await findDuplicateProjectMedia(orderId, {
+          contentHash: fp.contentHash,
+          durationSeconds: fp.durationSeconds,
+          fileSize: file.size,
+          fileType: type,
+        });
+        if (dup) {
+          toast({
+            title: 'تکراری',
+            description: `این ${type === 'image' ? 'عکس' : 'فیلم'} قبلاً برای این سفارش ثبت شده است`,
+          });
+          continue;
+        }
+
         // Upload to storage
         const { error: uploadError } = await supabase.storage
           .from('project-media')
@@ -191,7 +207,9 @@ export const OrderMediaGallery = ({ orderId, allowEdit = true }: OrderMediaGalle
           file_path: fileName,
           file_type: type,
           file_size: file.size,
-          mime_type: file.type
+          mime_type: file.type,
+          content_hash: fp.contentHash,
+          duration_seconds: fp.durationSeconds,
         });
 
         if (dbError) {
