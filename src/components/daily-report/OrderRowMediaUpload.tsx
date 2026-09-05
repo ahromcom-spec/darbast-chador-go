@@ -146,6 +146,42 @@ export function OrderRowMediaUpload({
     fetchMedia();
   }, [fetchMedia]);
 
+  // آخرین فیلم ثبت‌شده برای این سفارش (فقط نمایش، بدون ثبت مجدد)
+  useEffect(() => {
+    let cancelled = false;
+    const loadLastVideo = async () => {
+      if (!isValidUuid(orderId)) {
+        setLastOrderVideo(null);
+        return;
+      }
+      const { data } = await supabase
+        .from('project_media')
+        .select('id, file_path, file_type, created_at')
+        .eq('project_id', orderId!)
+        .eq('file_type', 'video')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (data?.file_path) {
+        const { data: urlData } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(data.file_path);
+        setLastOrderVideo({
+          id: data.id,
+          file_path: data.file_path,
+          file_type: 'video',
+          publicUrl: urlData.publicUrl,
+          createdAt: data.created_at,
+        });
+      } else {
+        setLastOrderVideo(null);
+      }
+    };
+    loadLastVideo();
+    return () => { cancelled = true; };
+  }, [orderId, media.length]);
+
+
   // Realtime subscription: sync media changes from other users instantly
   useEffect(() => {
     if (!showAllUsers) return;
