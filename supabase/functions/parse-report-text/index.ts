@@ -449,11 +449,15 @@ serve(async (req) => {
       pushExpense(amount, `${String(r.spending_notes || r.notes || '').trim()} - ${String(r.staff_name || '').trim()}`.replace(/^ - | - $/g, ''));
     }
 
-    for (const description of companyDescriptions) {
-      if (!companyExpenses.some((e) => norm(e.description).includes(norm(description)) || norm(description).includes(norm(e.description)))) {
-        pushExpense(0, description);
-      }
+    for (const item of companyDescriptions) {
+      const already = companyExpenses.some(
+        (e) =>
+          norm(e.description).includes(norm(item.description)) ||
+          norm(item.description).includes(norm(e.description)),
+      );
+      if (!already) pushExpense(item.amount, item.description);
     }
+
 
     if (companyExpenses.length > 0) {
       const totalExpense = companyExpenses.reduce((sum, e) => sum + e.amount, 0);
