@@ -284,6 +284,9 @@ export function OrderRowMediaUpload({
           continue;
         }
 
+        // اثر انگشت فایل برای تشخیص تکراری در فرم سفارش
+        const fingerprint = await buildMediaFingerprint(file, type);
+
         // Insert record in daily_report_order_media
         // Only pass dailyReportOrderId if it's a valid UUID (saved row); skip for unsaved rows
         const validOrderRowId = isValidUuid(dailyReportOrderId) ? dailyReportOrderId : null;
@@ -302,6 +305,8 @@ export function OrderRowMediaUpload({
             mime_type: file.type,
             report_date: reportDate,
             row_index: rowIndex,
+            content_hash: fingerprint.contentHash,
+            duration_seconds: fingerprint.durationSeconds,
           })
           .select('id, file_path, file_type')
           .single();
@@ -325,7 +330,7 @@ export function OrderRowMediaUpload({
 
         // If order is selected and valid UUID, also insert into project_media with report date
         if (validOrderId) {
-          await syncMediaToProject(storagePath, type, file.size, file.type, validOrderId, reportDate);
+          await syncMediaToProject(storagePath, type, file.size, file.type, validOrderId, reportDate, fingerprint);
         }
       }
 
@@ -346,10 +351,21 @@ export function OrderRowMediaUpload({
     fileSize: number,
     mimeType: string,
     projectId: string,
-    date: string
+    date: string,
+    fingerprint?: { contentHash: string | null; durationSeconds: number | null }
   ) => {
     if (!user) return;
     try {
+      // اگر همین فایل (یا فیلمی با همان محتوا/مدت‌زمان) قبلاً برای این سفارش ثبت شده، دوباره ثبت نشود
+      const duplicate = await findDuplicateProjectMedia(projectId, {
+        contentHash: fingerprint?.contentHash ?? null,
+        durationSeconds: fingerprint?.durationSeconds ?? null,
+        fileSize,
+        fileType,
+        filePath,
+      });
+      if (duplicate) return;
+
       const { error } = await supabase.from('project_media').insert({
         project_id: projectId,
         user_id: user.id,
@@ -358,6 +374,8 @@ export function OrderRowMediaUpload({
         file_size: fileSize,
         mime_type: mimeType,
         created_at: `${date}T12:00:00+03:30`,
+        content_hash: fingerprint?.contentHash ?? null,
+        duration_seconds: fingerprint?.durationSeconds ?? null,
       });
       if (error) {
         console.error('Sync to project_media error:', error);
