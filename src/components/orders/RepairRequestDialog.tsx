@@ -117,6 +117,8 @@ export function RepairRequestDialog({
   // New form state for single-step submission
   const [pendingMediaFiles, setPendingMediaFiles] = useState<File[]>([]);
   const [pendingMediaPreviews, setPendingMediaPreviews] = useState<{ url: string; type: 'image' | 'video' }[]>([]);
+  const [viewerMedia, setViewerMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null);
+
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pendingMediaInputRef = useRef<HTMLInputElement>(null);
