@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { buildMediaFingerprint, findDuplicateProjectMedia } from '@/lib/mediaFingerprint';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
