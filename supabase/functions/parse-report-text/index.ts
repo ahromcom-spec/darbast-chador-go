@@ -70,8 +70,9 @@ RULES:
 12. CARD ROWS (very important): whenever money is spent/withdrawn FROM a company card (کارت ملت اجرایی/پشتیبانی/مدیریت، کارت شرکت، صندوق شرکت) you MUST also add one row in "cardRows" for that card, with the exact bank_card_id from the directory, amount_spent = the amount taken out of that card, spending_notes = what it was spent on and to whom (e.g. "به حسین محمدی 1,000,000" or "خرید یخ برای شرکت"). Create one cardRows entry per card per purpose; if the same card paid several people/items, you may sum them and keep the breakdown in spending_notes.
    - ONE ROW PER CARD: create a separate cardRows entry for EVERY distinct card used that day (never merge two different cards into one row), and always fill bank_card_id with an exact id from the directory above. Even if the amount came from the company with no card explicitly named, still emit a cardRows entry using the module's card.
    - If the text says the expense belongs to the company itself (ماهیت شرکت اهرم، هزینه شرکت، برای شرکت خرج شد) set "is_company_expense": true on that card row; otherwise false.
-13. Output MUST be valid minified JSON only, no markdown, matching:
-{"staffRows":[{"staff_code":"","staff_name":"","work_status":"کارکرده","overtime_hours":0,"amount_received":0,"receiving_notes":"","amount_spent":0,"spending_notes":"","bank_card_id":"","bank_card_name":"","notes":""}],"cardRows":[{"bank_card_id":"","bank_card_name":"","amount_received":0,"receiving_notes":"","amount_spent":0,"spending_notes":"","is_company_expense":false,"notes":""}],"orderRows":[{"order_id":"","matched_label":"","activity_description":"","service_details":"","team_name":"","notes":""}],"summary":""}
+14. COMPANY EXPENSES (very important): anything bought FOR the company or the work site — نهار/شام/صبحانه/غذا، یخ، آب، بنزین/گازوئیل/سوخت نیسان و خودروها، ایاب‌وذهاب/کرایه/تاکسی، ابزار و لوازم مصرفی، تعمیر خودرو — is a company expense (هزینه شرکت) no matter who paid for it (a staff member out of pocket, the cash box, or a company card). For EVERY such purchase add one entry to "companyExpenseRows" with "amount" = the amount in Toman and "description" = what was bought and who paid (e.g. "خرید نهار توسط داود احمدی"). Still keep the payer's own staff row with amount_spent as usual — companyExpenseRows is only the company-side classification.
+15. Output MUST be valid minified JSON only, no markdown, matching:
+{"staffRows":[{"staff_code":"","staff_name":"","work_status":"کارکرده","overtime_hours":0,"amount_received":0,"receiving_notes":"","amount_spent":0,"spending_notes":"","bank_card_id":"","bank_card_name":"","notes":""}],"cardRows":[{"bank_card_id":"","bank_card_name":"","amount_received":0,"receiving_notes":"","amount_spent":0,"spending_notes":"","is_company_expense":false,"notes":""}],"companyExpenseRows":[{"amount":0,"description":""}],"orderRows":[{"order_id":"","matched_label":"","activity_description":"","service_details":"","team_name":"","notes":""}],"summary":""}
 staff_code must be a code from the directory when matched, otherwise "" and staff_name holds the raw name.
 summary: one short Persian sentence about what was extracted, including how many people and projects.
 ${extra ? `\nEXTRA USER INSTRUCTIONS (highest priority):\n${extra}\n` : ''}`;
@@ -359,7 +360,7 @@ serve(async (req) => {
     // company row so the same amount is never counted twice.
     const normalizedCardRows: any[] = [];
     const cardRowById = new Map<string, any>();
-    const companyDescriptions: string[] = [];
+    const companyDescriptions: { amount: number; description: string }[] = [];
 
     for (const sourceRow of cardRows) {
       const resolved = resolveCard(
@@ -371,8 +372,14 @@ serve(async (req) => {
 
       if (isCompanyExpense) {
         const description = [sourceRow.spending_notes, sourceRow.notes].filter(Boolean).join(' - ');
-        if (description) companyDescriptions.push(description);
+        if (description) {
+          companyDescriptions.push({
+            amount: Number(sourceRow.amount_spent) || 0,
+            description,
+          });
+        }
       }
+
 
       const cardId = resolved?.id || String(sourceRow.bank_card_id || '').trim();
       if (!cardId) continue;
@@ -399,16 +406,74 @@ serve(async (req) => {
       normalizedCardRows.push(normalized);
     }
 
-    if (companyDescriptions.length > 0) {
+    // Company expenses (نهار، یخ، بنزین، ایاب‌وذهاب ...) always belong to the
+    // «ماهیت شرکت اهرم» row: the amount goes in its «دریافتی» column with a note,
+    // no matter who actually paid for it.
+    const companyExpenses: { amount: number; description: string }[] = [];
+    const pushExpense = (amount: number, description: string) => {
+      const amt = Number(amount) || 0;
+      const desc = String(description || '').trim();
+      if (amt <= 0 && !desc) return;
+      const dup = companyExpenses.find(
+        (e) => e.amount === amt && norm(e.description) === norm(desc),
+      );
+      if (dup) return;
+      companyExpenses.push({ amount: amt, description: desc });
+    };
+
+    for (const e of Array.isArray(parsed.companyExpenseRows) ? parsed.companyExpenseRows : []) {
+      pushExpense(Number(e?.amount) || 0, String(e?.description || ''));
+    }
+
+    // Fallback: derive from staff rows that spent money on typical company items.
+    const EXPENSE_KEYWORDS = [
+      'نهار', 'ناهار', 'شام', 'صبحانه', 'غذا', 'یخ', 'اب معدنی', 'آب معدنی',
+      'بنزین', 'گازوئیل', 'گازویل', 'سوخت', 'ایاب', 'کرایه', 'تاکسی', 'اسنپ',
+      'ابزار', 'لوازم', 'تعمیر خودرو', 'پنچری', 'خرید',
+    ].map((k) => norm(k));
+    for (const r of staffRows) {
+      const amount = Number(r.amount_spent) || 0;
+      if (amount <= 0) continue;
+      const text = norm(`${r.spending_notes || ''} ${r.notes || ''}`);
+      if (!text) continue;
+      // Skip person-to-person payments (already mirrored above)
+      if (text.startsWith('به ') || text.includes(' به ')) {
+        const paysPerson = staffRows.some((p) => {
+          if (p === r) return false;
+          const name = norm(p.staff_name);
+          return !!name && text.includes(name);
+        });
+        if (paysPerson) continue;
+      }
+      if (!EXPENSE_KEYWORDS.some((k) => text.includes(k))) continue;
+      pushExpense(amount, `${String(r.spending_notes || r.notes || '').trim()} - ${String(r.staff_name || '').trim()}`.replace(/^ - | - $/g, ''));
+    }
+
+    for (const item of companyDescriptions) {
+      const already = companyExpenses.some(
+        (e) =>
+          norm(e.description).includes(norm(item.description)) ||
+          norm(item.description).includes(norm(e.description)),
+      );
+      if (!already) pushExpense(item.amount, item.description);
+    }
+
+
+    if (companyExpenses.length > 0) {
+      const totalExpense = companyExpenses.reduce((sum, e) => sum + e.amount, 0);
+      const expenseNote = companyExpenses
+        .map((e) => (e.amount > 0 ? `${e.description} ${e.amount.toLocaleString('en-US')}`.trim() : e.description))
+        .filter(Boolean)
+        .join(' - ');
       normalizedCardRows.push({
         bank_card_id: '',
         bank_card_name: '',
-        amount_received: 0,
-        receiving_notes: '',
+        amount_received: totalExpense,
+        receiving_notes: expenseNote,
         amount_spent: 0,
         spending_notes: '',
         is_company_expense: true,
-        notes: companyDescriptions.join(' - '),
+        notes: expenseNote,
       });
     }
 
