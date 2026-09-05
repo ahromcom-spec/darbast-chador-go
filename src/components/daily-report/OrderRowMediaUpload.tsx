@@ -44,11 +44,14 @@ export function OrderRowMediaUpload({
   const { user } = useAuth();
   const { toast } = useToast();
   const [media, setMedia] = useState<MediaItem[]>([]);
+  const [lastOrderVideo, setLastOrderVideo] = useState<(MediaItem & { createdAt?: string }) | null>(null);
+  const [showLastVideo, setShowLastVideo] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, fileName: '' });
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+
 
   // Fetch existing media for this row - SCOPED to the specific module
   const fetchMedia = useCallback(async () => {
