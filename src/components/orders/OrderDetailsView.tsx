@@ -80,12 +80,20 @@ export const OrderMediaGallery = ({ orderId, allowEdit = true }: OrderMediaGalle
     try {
       const { data, error } = await supabase
         .from('project_media')
-        .select('id, file_path, file_type, mime_type, user_id')
+        .select('id, file_path, file_type, mime_type, user_id, file_size, content_hash, duration_seconds')
         .eq('project_id', orderId)
         .order('created_at', { ascending: true });
       
       if (error) throw error;
-      setMedia(data || []);
+      // حذف رسانه‌های تکراری (همان فیلم/عکس از چند مسیر) — اولین (قدیمی‌ترین) نگه داشته می‌شود
+      const seen = new Set<string>();
+      const unique = (data || []).filter((m: any) => {
+        const key = mediaDedupeKey(m);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      setMedia(unique);
     } catch (err) {
       console.error('Error fetching media:', err);
     } finally {
