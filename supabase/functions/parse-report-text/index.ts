@@ -400,16 +400,70 @@ serve(async (req) => {
       normalizedCardRows.push(normalized);
     }
 
-    if (companyDescriptions.length > 0) {
+    // Company expenses (نهار، یخ، بنزین، ایاب‌وذهاب ...) always belong to the
+    // «ماهیت شرکت اهرم» row: the amount goes in its «دریافتی» column with a note,
+    // no matter who actually paid for it.
+    const companyExpenses: { amount: number; description: string }[] = [];
+    const pushExpense = (amount: number, description: string) => {
+      const amt = Number(amount) || 0;
+      const desc = String(description || '').trim();
+      if (amt <= 0 && !desc) return;
+      const dup = companyExpenses.find(
+        (e) => e.amount === amt && norm(e.description) === norm(desc),
+      );
+      if (dup) return;
+      companyExpenses.push({ amount: amt, description: desc });
+    };
+
+    for (const e of Array.isArray(parsed.companyExpenseRows) ? parsed.companyExpenseRows : []) {
+      pushExpense(Number(e?.amount) || 0, String(e?.description || ''));
+    }
+
+    // Fallback: derive from staff rows that spent money on typical company items.
+    const EXPENSE_KEYWORDS = [
+      'نهار', 'ناهار', 'شام', 'صبحانه', 'غذا', 'یخ', 'اب معدنی', 'آب معدنی',
+      'بنزین', 'گازوئیل', 'گازویل', 'سوخت', 'ایاب', 'کرایه', 'تاکسی', 'اسنپ',
+      'ابزار', 'لوازم', 'تعمیر خودرو', 'پنچری', 'خرید',
+    ].map((k) => norm(k));
+    for (const r of staffRows) {
+      const amount = Number(r.amount_spent) || 0;
+      if (amount <= 0) continue;
+      const text = norm(`${r.spending_notes || ''} ${r.notes || ''}`);
+      if (!text) continue;
+      // Skip person-to-person payments (already mirrored above)
+      if (text.startsWith('به ') || text.includes(' به ')) {
+        const paysPerson = staffRows.some((p) => {
+          if (p === r) return false;
+          const name = norm(p.staff_name);
+          return !!name && text.includes(name);
+        });
+        if (paysPerson) continue;
+      }
+      if (!EXPENSE_KEYWORDS.some((k) => text.includes(k))) continue;
+      pushExpense(amount, `${String(r.spending_notes || r.notes || '').trim()} - ${String(r.staff_name || '').trim()}`.replace(/^ - | - $/g, ''));
+    }
+
+    for (const description of companyDescriptions) {
+      if (!companyExpenses.some((e) => norm(e.description).includes(norm(description)) || norm(description).includes(norm(e.description)))) {
+        pushExpense(0, description);
+      }
+    }
+
+    if (companyExpenses.length > 0) {
+      const totalExpense = companyExpenses.reduce((sum, e) => sum + e.amount, 0);
+      const expenseNote = companyExpenses
+        .map((e) => (e.amount > 0 ? `${e.description} ${e.amount.toLocaleString('en-US')}`.trim() : e.description))
+        .filter(Boolean)
+        .join(' - ');
       normalizedCardRows.push({
         bank_card_id: '',
         bank_card_name: '',
-        amount_received: 0,
-        receiving_notes: '',
+        amount_received: totalExpense,
+        receiving_notes: expenseNote,
         amount_spent: 0,
         spending_notes: '',
         is_company_expense: true,
-        notes: companyDescriptions.join(' - '),
+        notes: expenseNote,
       });
     }
 
