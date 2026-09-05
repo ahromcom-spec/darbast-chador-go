@@ -302,7 +302,7 @@ export function RepairRequestDialog({
           const file = pendingMediaFiles[i];
           const fileExt = file.name.split('.').pop();
           const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
-          const filePath = `repair-requests/${request.id}/${fileName}`;
+          const filePath = `${user.id}/repair-requests/${request.id}/${fileName}`;
           const fileType = file.type.startsWith('image/') ? 'image' : 'video';
 
           const { error: uploadError } = await supabase.storage
@@ -311,10 +311,15 @@ export function RepairRequestDialog({
 
           if (uploadError) {
             console.error('Upload error:', uploadError);
+            toast({
+              title: 'خطا در آپلود فایل',
+              description: uploadError.message,
+              variant: 'destructive',
+            });
             continue;
           }
 
-          await supabase
+          const { error: mediaDbError } = await supabase
             .from('repair_request_media')
             .insert({
               repair_request_id: request.id,
@@ -324,6 +329,15 @@ export function RepairRequestDialog({
               mime_type: file.type,
               user_id: user.id,
             });
+
+          if (mediaDbError) {
+            console.error('Repair media insert error:', mediaDbError);
+            toast({
+              title: 'خطا در ثبت فایل',
+              description: mediaDbError.message,
+              variant: 'destructive',
+            });
+          }
         }
       }
 
@@ -368,7 +382,7 @@ export function RepairRequestDialog({
         const file = files[i];
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
-        const filePath = `repair-requests/${existingRequest.id}/${fileName}`;
+        const filePath = `${user.id}/repair-requests/${existingRequest.id}/${fileName}`;
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
 
         const { error: uploadError } = await supabase.storage
