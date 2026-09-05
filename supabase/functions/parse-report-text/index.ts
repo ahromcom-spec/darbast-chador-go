@@ -360,7 +360,7 @@ serve(async (req) => {
     // company row so the same amount is never counted twice.
     const normalizedCardRows: any[] = [];
     const cardRowById = new Map<string, any>();
-    const companyDescriptions: string[] = [];
+    const companyDescriptions: { amount: number; description: string }[] = [];
 
     for (const sourceRow of cardRows) {
       const resolved = resolveCard(
@@ -372,8 +372,14 @@ serve(async (req) => {
 
       if (isCompanyExpense) {
         const description = [sourceRow.spending_notes, sourceRow.notes].filter(Boolean).join(' - ');
-        if (description) companyDescriptions.push(description);
+        if (description) {
+          companyDescriptions.push({
+            amount: Number(sourceRow.amount_spent) || 0,
+            description,
+          });
+        }
       }
+
 
       const cardId = resolved?.id || String(sourceRow.bank_card_id || '').trim();
       if (!cardId) continue;
