@@ -353,7 +353,12 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
           const total_amount = g.statements.reduce((a, s) => a + s.total_amount, 0);
           const total_remaining = g.statements.reduce((a, s) => a + s.total_remaining, 0);
           const total_paid_actual = g.statements.reduce((a, s) => a + (s.total_paid_actual || 0), 0);
-          return { ...g, total_amount, total_remaining, total_paid_actual, overpaid: Math.max(total_paid_actual - total_amount, 0) };
+          const cheque_total = g.statements.reduce((a, s) => a + (s.cheque_total || 0), 0);
+          const cheque_cleared = g.statements.reduce((a, s) => a + (s.cheque_cleared || 0), 0);
+          const cheque_pending = g.statements.reduce((a, s) => a + (s.cheque_pending || 0), 0);
+          const cheque_bounced = g.statements.reduce((a, s) => a + (s.cheque_bounced || 0), 0);
+          return { ...g, total_amount, total_remaining, total_paid_actual, cheque_total, cheque_cleared, cheque_pending, cheque_bounced, overpaid: Math.max(total_paid_actual - total_amount, 0) };
+
         });
 
     }
