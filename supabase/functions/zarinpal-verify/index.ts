@@ -292,7 +292,7 @@ serve(async (req) => {
                   description: `واریز پرداخت آنلاین زرین‌پال سفارش ${ordInfo?.code ?? ''}${ordInfo?.customer_name ? ' - ' + ordInfo.customer_name : ''} - کد پیگیری: ${refID}`,
                   reference_type: 'order_payment',
                   reference_id: d.order_id,
-                  report_date: today,
+                  report_date: settlementDate,
                 });
                 if (txErr) console.error('Failed to insert bank card transaction:', txErr);
               }
