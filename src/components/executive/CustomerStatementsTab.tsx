@@ -462,6 +462,14 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                         )}
                         <span className="text-sm">کل: <b>{formatPrice(g.total_amount)}</b></span>
                         <span className="text-sm text-emerald-700">واریز کامل کارفرما: <b>{formatPrice(g.total_paid_actual)}</b></span>
+                        {g.cheque_total > 0 && (
+                          <span className="text-sm text-indigo-700">
+                            چک: <b>{formatPrice(g.cheque_total)}</b>
+                            {' '}(وصول‌شده: {formatPrice(g.cheque_cleared)} — در جریان: {formatPrice(g.cheque_pending)}
+                            {g.cheque_bounced > 0 ? ` — برگشتی: ${formatPrice(g.cheque_bounced)}` : ''})
+                          </span>
+                        )}
+
                         {g.overpaid > 0 && (
                           <Badge className="bg-amber-500/20 text-amber-700 border border-amber-500/40">
                             اضافه‌پرداخت: {formatPrice(g.overpaid)}
