@@ -220,6 +220,11 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
             total_amount: 0,
             total_paid_actual: 0,
             overpaid: 0,
+            cheque_total: 0,
+            cheque_cleared: 0,
+            cheque_pending: 0,
+            cheque_bounced: 0,
+
           });
 
         }
