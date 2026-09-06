@@ -51,6 +51,8 @@ export function StatementChequesDialog({ open, onOpenChange, statementId, statem
   const [cheques, setCheques] = useState<Cheque[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
