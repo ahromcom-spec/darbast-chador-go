@@ -530,7 +530,6 @@ export function StatementManualPaymentDialog({
                       <input
                         type="file"
                         accept="image/*"
-
                         className="hidden"
                         onChange={(e) => {
                           const f = e.target.files?.[0] || null;
