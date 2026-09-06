@@ -5349,7 +5349,7 @@ export default function DailyReportModule() {
                                 </TableCell>
                                 <TableCell className="border border-blue-200">
                                   {effectiveReadOnly ? (
-                                    <div className="min-h-[50px] min-w-[50ch] bg-background/50 p-2 rounded border text-sm whitespace-pre-wrap">
+                                    <div className="min-h-[48px] min-w-[50ch] bg-background/50 p-2 rounded border text-sm whitespace-pre-wrap">
                                       {row.activity_description || row.service_details || '-'}
                                     </div>
                                   ) : (
@@ -5359,7 +5359,7 @@ export default function DailyReportModule() {
                                         updateOrderRow(index, 'activity_description', e.target.value);
                                         updateOrderRow(index, 'service_details', '');
                                       }}
-                                      className="min-h-[50px] min-w-[50ch] bg-background/50"
+                                      className="min-h-[48px] min-w-[50ch] bg-background/50"
                                       placeholder="شرح فعالیت و ابعاد..."
                                     />
                                   )}
@@ -5380,14 +5380,14 @@ export default function DailyReportModule() {
                                 </TableCell>
                                 <TableCell className="border border-blue-200">
                                   {effectiveReadOnly ? (
-                                    <div className="min-h-[50px] min-w-[40ch] bg-background/50 p-2 rounded border text-sm whitespace-pre-wrap">
+                                    <div className="min-h-[48px] min-w-[40ch] bg-background/50 p-2 rounded border text-sm whitespace-pre-wrap">
                                       {row.notes || '-'}
                                     </div>
                                   ) : (
                                     <AutoResizeTextarea
                                       value={row.notes}
                                       onChange={(e) => updateOrderRow(index, 'notes', e.target.value)}
-                                      className="min-h-[50px] min-w-[40ch] bg-background/50"
+                                      className="min-h-[48px] min-w-[40ch] bg-background/50"
                                       placeholder="توضیحات..."
                                     />
                                   )}
@@ -5844,7 +5844,7 @@ export default function DailyReportModule() {
                               </TableCell>
                               <TableCell className="border border-amber-200">
                                 {effectiveReadOnly ? (
-                                  <div className="min-w-[30ch] min-h-[50px] p-2 bg-background/50 rounded border text-sm whitespace-pre-wrap">
+                                  <div className="min-w-[30ch] min-h-[48px] p-2 bg-background/50 rounded border text-sm whitespace-pre-wrap">
                                     {row.receiving_notes || '-'}
                                   </div>
                                 ) : (
@@ -5856,7 +5856,7 @@ export default function DailyReportModule() {
                                       }
                                     }}
                                     placeholder={isCompanyExpense ? 'توضیحات دریافتی شرکت...' : 'توضیحات...'}
-                                    className="min-w-[30ch] min-h-[50px]"
+                                    className="min-w-[30ch] min-h-[48px]"
                                     maxLength={600}
                                   />
                                 )}
@@ -5881,7 +5881,7 @@ export default function DailyReportModule() {
                               </TableCell>
                               <TableCell className="border border-amber-200">
                                 {effectiveReadOnly ? (
-                                  <div className="min-w-[30ch] min-h-[50px] p-2 bg-background/50 rounded border text-sm whitespace-pre-wrap">
+                                  <div className="min-w-[30ch] min-h-[48px] p-2 bg-background/50 rounded border text-sm whitespace-pre-wrap">
                                     {row.spending_notes || '-'}
                                   </div>
                                 ) : (
@@ -5893,14 +5893,14 @@ export default function DailyReportModule() {
                                       }
                                     }}
                                     placeholder="توضیحات..."
-                                    className="min-w-[30ch] min-h-[50px]"
+                                    className="min-w-[30ch] min-h-[48px]"
                                     maxLength={600}
                                   />
                                 )}
                               </TableCell>
                               <TableCell className="border border-amber-200">
                                 {effectiveReadOnly ? (
-                                  <div className="min-w-[30ch] min-h-[50px] p-2 bg-background/50 rounded border text-sm whitespace-pre-wrap">
+                                  <div className="min-w-[30ch] min-h-[48px] p-2 bg-background/50 rounded border text-sm whitespace-pre-wrap">
                                     {row.notes || '-'}
                                   </div>
                                 ) : (
@@ -5912,7 +5912,7 @@ export default function DailyReportModule() {
                                       }
                                     }}
                                      placeholder={isCompanyExpense ? 'هزینه‌های شرکت (نهار، ایاب‌وذهاب و...)' : 'توضیحات...'}
-                                    className="min-w-[30ch] min-h-[50px]"
+                                    className="min-w-[30ch] min-h-[48px]"
                                     maxLength={600}
                                   />
                                 )}

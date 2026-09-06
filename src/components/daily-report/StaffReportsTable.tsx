@@ -276,7 +276,7 @@ export function StaffReportsTable({
                         }
                       }}
                       placeholder={row.is_company_expense ? "هزینه‌های شرکت (نهار، ایاب‌ذهاب و...)" : "توضیحات..."}
-                       className="w-[24ch]"
+                       className="min-h-[48px] w-[24ch]"
                        maxLength={600}
                      />
                    </TableCell>
@@ -306,7 +306,7 @@ export function StaffReportsTable({
                         }
                       }}
                       placeholder="توضیحات..."
-                       className="w-[24ch]"
+                       className="min-h-[48px] w-[24ch]"
                        maxLength={600}
                      />
                    </TableCell>
@@ -333,7 +333,7 @@ export function StaffReportsTable({
                           }
                         }}
                         placeholder={row.is_company_expense ? "توضیحات دریافتی شرکت..." : "توضیحات..."}
-                         className="w-[24ch]"
+                         className="min-h-[48px] w-[24ch]"
                          maxLength={600}
                         />
                       ) : (
@@ -345,7 +345,7 @@ export function StaffReportsTable({
                             }
                           }}
                           placeholder="توضیحات..."
-                          className="w-[24ch]"
+                          className="min-h-[48px] w-[24ch]"
                          maxLength={600}
                        />
                     )}
