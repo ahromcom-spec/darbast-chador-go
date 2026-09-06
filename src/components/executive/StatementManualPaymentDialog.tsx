@@ -618,5 +618,11 @@ export function StatementManualPaymentDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <ImageZoomModal
+      imageUrl={zoomUrl || ''}
+      isOpen={zoomOpen}
+      onClose={() => { setZoomOpen(false); setZoomUrl(null); }}
+    />
   );
 }
