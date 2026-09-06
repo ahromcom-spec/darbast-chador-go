@@ -9,7 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ChevronDown, ChevronUp, FileText, Lock, Search, User, Phone, Banknote, History, ArrowRightLeft, FileCheck, Eye } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileText, Lock, Unlock, Search, User, Phone, Banknote, History, ArrowRightLeft, FileCheck, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ManagerOrderInvoice from '@/components/orders/ManagerOrderInvoice';
 import { StatementInvoiceDialog } from '@/components/executive/StatementInvoiceDialog';
@@ -108,6 +108,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
   const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
   const [expandedStatements, setExpandedStatements] = useState<Set<string>>(new Set());
   const [closing, setClosing] = useState<Statement | null>(null);
+  const [reopening, setReopening] = useState<Statement | null>(null);
   const [busy, setBusy] = useState(false);
   const [payingStmt, setPayingStmt] = useState<{ statement: Statement; customer: CustomerGroup } | null>(null);
   const [historyStmt, setHistoryStmt] = useState<{ statement: Statement; customer: CustomerGroup } | null>(null);
@@ -402,6 +403,25 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
     }
   };
 
+  const handleReopen = async () => {
+    if (!reopening) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.rpc('reopen_customer_statement' as any, { _statement_id: reopening.id });
+      if (error) throw error;
+      toast({ title: 'انجام شد', description: `صورتحساب شماره ${reopening.statement_number} مجدداً باز شد` });
+      setReopening(null);
+      await load();
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: 'خطا', description: err.message || 'بازگشایی صورتحساب با خطا مواجه شد', variant: 'destructive' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+
+
   if (loading) return <LoadingSpinner />;
 
   return (
@@ -615,6 +635,17 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                         بستن صورتحساب
                                       </Button>
                                     )}
+                                    {s.status === 'closed' && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1 border-blue-400 text-blue-700 hover:bg-blue-50"
+                                        onClick={(e) => { e.stopPropagation(); setReopening(s); }}
+                                      >
+                                        <Unlock className="h-3.5 w-3.5" />
+                                        بازگشایی صورتحساب
+                                      </Button>
+                                    )}
                                     {sOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                   </div>
                                 </div>
@@ -729,7 +760,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
             <AlertDialogTitle>بستن صورتحساب</AlertDialogTitle>
             <AlertDialogDescription>
               صورتحساب شماره {closing && new Intl.NumberFormat('fa-IR').format(closing.statement_number)} بسته خواهد شد و
-              سفارشات بعدی این مشتری به‌طور خودکار وارد صورتحساب جدید (شماره بعدی) می‌شوند. این عملیات غیرقابل بازگشت است.
+              سفارشات بعدی این مشتری به‌طور خودکار وارد صورتحساب جدید (شماره بعدی) می‌شوند. در صورت نیاز می‌توانید بعداً همین صورتحساب را مجدداً باز کنید.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -740,6 +771,25 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={!!reopening} onOpenChange={(o) => !o && setReopening(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>بازگشایی صورتحساب</AlertDialogTitle>
+            <AlertDialogDescription>
+              صورتحساب شماره {reopening && new Intl.NumberFormat('fa-IR').format(reopening.statement_number)} مجدداً باز می‌شود
+              و سفارش‌های جدید این مشتری می‌توانند داخل همین صورتحساب ثبت شوند.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>انصراف</AlertDialogCancel>
+            <AlertDialogAction onClick={handleReopen} disabled={busy}>
+              {busy ? 'در حال بازگشایی...' : 'تایید و بازگشایی'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       {payingStmt && (
         <StatementManualPaymentDialog

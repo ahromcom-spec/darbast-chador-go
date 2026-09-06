@@ -6636,6 +6636,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      reopen_customer_statement: {
+        Args: { _statement_id: string }
+        Returns: string
+      }
       request_contractor_service_exit: {
         Args: { _reason?: string; _service_id: string }
         Returns: undefined
