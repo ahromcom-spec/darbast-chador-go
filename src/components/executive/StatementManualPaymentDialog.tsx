@@ -15,6 +15,7 @@ import { parseLocalizedNumber } from '@/lib/numberParsing';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { buildGroupPaymentSummary } from '@/lib/paymentNoteFormat';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
+import { ImageZoomModal } from '@/components/common/ImageZoomModal';
 
 interface OrderLite {
   id: string;
