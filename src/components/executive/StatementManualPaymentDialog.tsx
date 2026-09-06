@@ -15,6 +15,7 @@ import { parseLocalizedNumber } from '@/lib/numberParsing';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { buildGroupPaymentSummary } from '@/lib/paymentNoteFormat';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
+import { ImageZoomModal } from '@/components/common/ImageZoomModal';
 
 interface OrderLite {
   id: string;
@@ -74,6 +75,8 @@ export function StatementManualPaymentDialog({
   const [chequeImageFile, setChequeImageFile] = useState<File | null>(null);
   const [chequeImagePreview, setChequeImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
 
   const totalRemaining = orders.reduce((a, o) => a + o.remaining, 0);
 
@@ -365,6 +368,7 @@ export function StatementManualPaymentDialog({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -505,11 +509,17 @@ export function StatementManualPaymentDialog({
                 <div className="mt-1">
                   {chequeImagePreview ? (
                     <div className="relative inline-block">
-                      <img
-                        src={chequeImagePreview}
-                        alt="پیش‌نمایش چک"
-                        className="max-h-40 rounded-md border border-border object-contain bg-muted"
-                      />
+                      <button
+                        type="button"
+                        onClick={() => { setZoomUrl(chequeImagePreview); setZoomOpen(true); }}
+                        className="p-0 border-0 bg-transparent"
+                      >
+                        <img
+                          src={chequeImagePreview}
+                          alt="پیش‌نمایش چک"
+                          className="max-h-40 rounded-md border border-border object-contain bg-muted cursor-zoom-in"
+                        />
+                      </button>
                       <button
                         type="button"
                         onClick={() => {
@@ -609,5 +619,12 @@ export function StatementManualPaymentDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <ImageZoomModal
+      imageUrl={zoomUrl || ''}
+      isOpen={zoomOpen}
+      onClose={() => { setZoomOpen(false); setZoomUrl(null); }}
+    />
+    </>
   );
 }

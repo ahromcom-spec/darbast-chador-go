@@ -19,6 +19,7 @@ import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import OrderPaymentSubmissionsPanel from '@/components/payments/OrderPaymentSubmissionsPanel';
 import { formatPersianDate } from '@/lib/dateUtils';
+import { ImageZoomModal } from '@/components/common/ImageZoomModal';
 
 
 interface Payment {
@@ -79,6 +80,8 @@ export function MultiPaymentDialog({
   const [chequeDueDate, setChequeDueDate] = useState<string>(new Date().toISOString());
   const [chequeImageFile, setChequeImageFile] = useState<File | null>(null);
   const [chequeImagePreview, setChequeImagePreview] = useState<string | null>(null);
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
 
   // Edit state
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
@@ -755,7 +758,13 @@ export function MultiPaymentDialog({
                     <div className="mt-1.5">
                       {chequeImagePreview ? (
                         <div className="relative inline-block">
-                          <img src={chequeImagePreview} alt="پیش‌نمایش چک" className="max-h-40 rounded-md border border-border object-contain bg-muted" />
+                          <button
+                            type="button"
+                            onClick={() => { setZoomUrl(chequeImagePreview); setZoomOpen(true); }}
+                            className="p-0 border-0 bg-transparent"
+                          >
+                            <img src={chequeImagePreview} alt="پیش‌نمایش چک" className="max-h-40 rounded-md border border-border object-contain bg-muted cursor-zoom-in" />
+                          </button>
                           <button
                             type="button"
                             onClick={() => {
@@ -998,6 +1007,12 @@ export function MultiPaymentDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ImageZoomModal
+        imageUrl={zoomUrl || ''}
+        isOpen={zoomOpen}
+        onClose={() => { setZoomOpen(false); setZoomUrl(null); }}
+      />
     </>
   );
 }

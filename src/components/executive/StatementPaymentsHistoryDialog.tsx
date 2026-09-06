@@ -15,6 +15,7 @@ import { parseLocalizedNumber } from '@/lib/numberParsing';
 import { buildGroupPaymentSummary, stripGroupPaymentSummary } from '@/lib/paymentNoteFormat';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
+import { ImageZoomModal } from '@/components/common/ImageZoomModal';
 
 interface OrderLite {
   id: string;
@@ -110,6 +111,8 @@ export function StatementPaymentsHistoryDialog({
   const [editChequeSerial, setEditChequeSerial] = useState('');
   const [editChequeReceived, setEditChequeReceived] = useState<string>(new Date().toISOString());
   const [editChequeDue, setEditChequeDue] = useState<string>(new Date().toISOString());
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
 
   const orderById = useMemo(() => {
     const m = new Map<string, OrderLite>();
@@ -719,9 +722,13 @@ export function StatementPaymentsHistoryDialog({
                             if (!url) return null;
                             return (
                               <div className="col-span-2">
-                                <a href={url} target="_blank" rel="noreferrer" className="inline-block">
-                                  <img src={url} alt="تصویر فیش واریزی" className="max-h-40 rounded-md border object-contain" />
-                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() => { setZoomUrl(url); setZoomOpen(true); }}
+                                  className="inline-block p-0 border-0 bg-transparent"
+                                >
+                                  <img src={url} alt="تصویر فیش واریزی" className="max-h-40 rounded-md border object-contain cursor-zoom-in" />
+                                </button>
                               </div>
                             );
                           })()}
@@ -837,6 +844,12 @@ export function StatementPaymentsHistoryDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ImageZoomModal
+        imageUrl={zoomUrl || ''}
+        isOpen={zoomOpen}
+        onClose={() => { setZoomOpen(false); setZoomUrl(null); }}
+      />
     </>
   );
 }
