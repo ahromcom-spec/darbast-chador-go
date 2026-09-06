@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Search, Package, X } from 'lucide-react';
+import { Search, Package, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -59,6 +59,16 @@ export function OrderSearchSelect({
     width: 0,
     maxHeight: dense ? 900 : 800,
   });
+
+  // زوم محلی مخصوص مودال تمام‌صفحه؛ پیش‌فرض ۱۰۰٪ و با زوم‌کردن سفارشات بیشتری در یک نمای دیده می‌شوند
+  const MODAL_ZOOM_LEVELS = [0.75, 0.85, 0.95, 1, 1.1, 1.2] as const;
+  const DEFAULT_MODAL_ZOOM_INDEX = 3;
+  const [modalZoomIndex, setModalZoomIndex] = useState(DEFAULT_MODAL_ZOOM_INDEX);
+  const modalZoom = MODAL_ZOOM_LEVELS[modalZoomIndex];
+
+  const modalZoomIn = () => setModalZoomIndex(i => Math.min(i + 1, MODAL_ZOOM_LEVELS.length - 1));
+  const modalZoomOut = () => setModalZoomIndex(i => Math.max(i - 1, 0));
+  const resetModalZoom = () => setModalZoomIndex(DEFAULT_MODAL_ZOOM_INDEX);
 
   const selectedOrder = orders.find(o => o.id === value);
 
@@ -171,7 +181,10 @@ export function OrderSearchSelect({
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen);
-    if (!nextOpen) setSearch('');
+    if (!nextOpen) {
+      setSearch('');
+      resetModalZoom();
+    }
   };
 
   // On mobile we don't auto-focus the search input (prevents keyboard covering the screen)
@@ -228,7 +241,7 @@ export function OrderSearchSelect({
 
   const renderOrderList = (inModal = false) => (
     <>
-      <div className="p-3 border-b bg-background">
+      <div className={inModal ? 'p-2 border-b bg-background' : 'p-3 border-b bg-background'}>
         <div className="relative">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -237,7 +250,7 @@ export function OrderSearchSelect({
             onChange={(e) => setSearch(e.target.value)}
             placeholder="جستجو با نام مشتری، کد، آدرس، شرح محل..."
             compactFocus
-            className="pr-10 text-sm h-10"
+            className={inModal ? 'pr-10 text-sm h-9' : 'pr-10 text-sm h-10'}
           />
         </div>
       </div>
@@ -363,10 +376,44 @@ export function OrderSearchSelect({
             className="fixed inset-0 z-[200] flex h-screen w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 p-0 sm:inset-0 sm:h-screen sm:w-screen sm:rounded-none"
             style={{ zoom: 'max(1, var(--app-zoom, 1))' } as React.CSSProperties}
           >
-            <DialogHeader className="shrink-0 border-b bg-background p-4 text-right sm:text-right">
-              <DialogTitle className="text-lg font-semibold">انتخاب سفارش</DialogTitle>
+            <DialogHeader className="shrink-0 border-b bg-background py-2 px-3 text-right sm:text-right">
+              <div className="flex items-center justify-between gap-2">
+                <DialogTitle className="text-base font-semibold">انتخاب سفارش</DialogTitle>
+                <div className="flex items-center gap-1" dir="ltr">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={modalZoomIndex === 0}
+                    onClick={modalZoomOut}
+                    aria-label="کوچک‌نمایی"
+                  >
+                    <ZoomOut className="h-4 w-4" />
+                  </Button>
+                  <span className="min-w-[3ch] text-center text-xs text-muted-foreground tabular-nums">
+                    {Math.round(modalZoom * 100)}%
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={modalZoomIndex === MODAL_ZOOM_LEVELS.length - 1}
+                    onClick={modalZoomIn}
+                    aria-label="بزرگ‌نمایی"
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </DialogHeader>
-            {renderOrderList(true)}
+            <div
+              className="flex-1 overflow-hidden origin-top"
+              style={{ transform: `scale(${modalZoom})`, transformOrigin: 'top center' } as React.CSSProperties}
+            >
+              {renderOrderList(true)}
+            </div>
           </DialogContent>
         </Dialog>
       ) : (
