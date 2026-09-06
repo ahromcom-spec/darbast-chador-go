@@ -643,9 +643,31 @@ export function MultiPaymentDialog({
                 <Plus className="h-4 w-4" />
                 ثبت پرداخت جدید
               </h4>
-              
+
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={payMode === 'cash' ? 'default' : 'outline'}
+                  className={payMode === 'cash' ? 'bg-green-600 hover:bg-green-700 text-white gap-2' : 'gap-2'}
+                  onClick={() => setPayMode('cash')}
+                >
+                  <Banknote className="h-4 w-4" />
+                  نقدی / کارت
+                </Button>
+                <Button
+                  type="button"
+                  variant={payMode === 'cheque' ? 'default' : 'outline'}
+                  className={payMode === 'cheque' ? 'bg-amber-600 hover:bg-amber-700 text-white gap-2' : 'gap-2'}
+                  onClick={() => setPayMode('cheque')}
+                >
+                  <FileCheck className="h-4 w-4" />
+                  ثبت چک مشتری
+                </Button>
+              </div>
+
               <div>
-                <Label htmlFor="payment-amount">مبلغ پرداختی (تومان) *</Label>
+                <Label htmlFor="payment-amount">{payMode === 'cheque' ? 'مبلغ چک (تومان) *' : 'مبلغ پرداختی (تومان) *'}</Label>
+
                 <Input
                   id="payment-amount"
                   type="text"
