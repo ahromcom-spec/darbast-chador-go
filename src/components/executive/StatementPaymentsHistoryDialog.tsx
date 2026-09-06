@@ -722,9 +722,13 @@ export function StatementPaymentsHistoryDialog({
                             if (!url) return null;
                             return (
                               <div className="col-span-2">
-                                <a href={url} target="_blank" rel="noreferrer" className="inline-block">
-                                  <img src={url} alt="تصویر فیش واریزی" className="max-h-40 rounded-md border object-contain" />
-                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() => { setZoomUrl(url); setZoomOpen(true); }}
+                                  className="inline-block p-0 border-0 bg-transparent"
+                                >
+                                  <img src={url} alt="تصویر فیش واریزی" className="max-h-40 rounded-md border object-contain cursor-zoom-in" />
+                                </button>
                               </div>
                             );
                           })()}
