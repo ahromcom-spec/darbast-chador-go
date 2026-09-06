@@ -75,6 +75,8 @@ export function StatementManualPaymentDialog({
   const [chequeImageFile, setChequeImageFile] = useState<File | null>(null);
   const [chequeImagePreview, setChequeImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
 
   const totalRemaining = orders.reduce((a, o) => a + o.remaining, 0);
 
