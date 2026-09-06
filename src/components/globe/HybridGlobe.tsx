@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ArrowRight, MapPin, X, Plus, Camera, Video, Search, Satellite, Map as MapIcon } from 'lucide-react';
-import { MapSearchBox } from '@/components/locations/MapSearchBox';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
