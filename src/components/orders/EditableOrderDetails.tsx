@@ -35,6 +35,8 @@ import { OrderMediaSection } from './OrderMediaSection';
 import { ExpertPricingEditDialog } from './ExpertPricingEditDialog';
 import { InvoiceEmployerOverrideDialog } from './InvoiceEmployerOverrideDialog';
 import { applyFixedPriceToBreakdown } from '@/lib/priceBreakdown';
+import { OrderDiscountPanel } from './OrderDiscountPanel';
+
 
 const scaffoldingTypeLabels: Record<string, string> = {
   facade: 'داربست سطحی نما',
@@ -82,6 +84,10 @@ interface EditableOrderDetailsProps {
     rental_start_date?: string | null;
     total_price?: number | null;
     total_paid?: number | null;
+    discount_amount?: number | null;
+    price_before_discount?: number | null;
+    discount_note?: string | null;
+
   };
   onUpdate?: () => void;
   hidePrice?: boolean; // Hide price information (for executive managers in specific modules)
@@ -2072,7 +2078,20 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         </div>
       )}
 
+      {/* تخفیف مدیریتی */}
+      {!hidePrice && (
+        <OrderDiscountPanel
+          orderId={order.id}
+          currentPrice={Number(order.payment_amount || order.total_price || 0)}
+          priceBeforeDiscount={order.price_before_discount ?? null}
+          discountAmount={order.discount_amount ?? 0}
+          discountNote={order.discount_note ?? null}
+          onUpdate={onUpdate}
+        />
+      )}
+
       {!isExpertPricingRequest && !isCustomService && !hidePrice && (
+
 
         <div className="p-4 rounded-lg border bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
           <div className="flex items-center gap-2 mb-2">

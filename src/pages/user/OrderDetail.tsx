@@ -2074,6 +2074,31 @@ export default function OrderDetail() {
                         </div>
                       </div>
 
+                      {/* تخفیف اعمال‌شده توسط مدیریت */}
+                      {Number((order as any).discount_amount || 0) > 0 && (
+                        <div className="rounded-xl border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/20 p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-semibold text-rose-700 dark:text-rose-300">🎉 تخفیف اعمال‌شده</span>
+                            <span className="font-bold text-rose-700 dark:text-rose-300" dir="ltr">
+                              {Number((order as any).discount_amount).toLocaleString('fa-IR')}- تومان
+                            </span>
+                          </div>
+                          {Number((order as any).price_before_discount || 0) > 0 && (
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span>مبلغ قبل از تخفیف:</span>
+                              <span className="line-through">
+                                {Number((order as any).price_before_discount).toLocaleString('fa-IR')} تومان
+                              </span>
+                            </div>
+                          )}
+                          {(order as any).discount_note && (
+                            <p className="text-xs text-muted-foreground italic">علت: {(order as any).discount_note}</p>
+                          )}
+                        </div>
+                      )}
+
+
+
                       {/* نمایش تفکیک قیمت‌ها: پایه + تمدید + تعمیر */}
                       {(approvedRenewalCost > 0 || approvedRepairCost > 0) && (
                         <div className="space-y-2 pt-2 border-t border-emerald-200 dark:border-emerald-800">
