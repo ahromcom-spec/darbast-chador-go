@@ -44,6 +44,14 @@ interface Statement {
   total_paid_actual: number;
   overpaid: number;
   total_remaining: number;
+  /** مجموع چک‌های ثبت‌شده روی این صورتحساب */
+  cheque_total: number;
+  /** چک‌های وصول‌شده */
+  cheque_cleared: number;
+  /** چک‌های در جریان (وصول‌نشده) */
+  cheque_pending: number;
+  /** چک‌های برگشتی */
+  cheque_bounced: number;
 
   subcategory_name: string | null;
   address: string | null;
@@ -63,7 +71,12 @@ interface CustomerGroup {
   total_amount: number;
   total_paid_actual: number;
   overpaid: number;
+  cheque_total: number;
+  cheque_cleared: number;
+  cheque_pending: number;
+  cheque_bounced: number;
 }
+
 
 
 const formatPrice = (n: number) => new Intl.NumberFormat('fa-IR').format(Math.round(n || 0)) + ' تومان';
