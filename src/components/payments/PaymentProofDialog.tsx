@@ -126,15 +126,50 @@ export default function PaymentProofDialog({
               </div>
             )}
 
-            <div className="space-y-1">
+            <div className="space-y-2">
               <Label>عکس {kind === 'cheque' ? 'چک' : 'فیش واریزی'} (اختیاری)</Label>
-              <Input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-              {file && (
-                <p className="text-xs text-emerald-600 flex items-center gap-1">
-                  <FileImage className="h-3 w-3" /> {file.name}
-                </p>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] || null;
+                  if (preview) URL.revokeObjectURL(preview);
+                  setFile(f);
+                  setPreview(f ? URL.createObjectURL(f) : null);
+                  e.target.value = '';
+                }}
+              />
+              {file && preview && (
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setZoomOpen(true)}
+                    className="inline-block relative group p-0 border-0 bg-transparent"
+                  >
+                    <img
+                      src={preview}
+                      alt={kind === 'cheque' ? 'پیش‌نمایش چک' : 'پیش‌نمایش فیش واریزی'}
+                      className="max-h-44 rounded-md border border-border object-contain bg-muted cursor-zoom-in"
+                    />
+                    <span className="absolute top-1 left-1 bg-black/60 text-white rounded p-1">
+                      <ZoomIn className="h-3.5 w-3.5" />
+                    </span>
+                  </button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-xs text-emerald-600 flex items-center gap-1">
+                      <FileImage className="h-3 w-3" /> {file.name}
+                    </p>
+                    <Button type="button" size="sm" variant="destructive" className="h-7 gap-1" onClick={clearFile}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                      حذف عکس
+                    </Button>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">برای دیدن بزرگ‌تر روی عکس بزنید؛ در صورت اشتباه بودن، حذف کنید و عکس دیگری انتخاب نمایید.</p>
+                </div>
               )}
+              <ImageZoomModal imageUrl={preview || ''} isOpen={zoomOpen} onClose={() => setZoomOpen(false)} />
             </div>
+
 
             <div className="space-y-1">
               <Label>توضیحات {file ? '' : '(در صورت نداشتن عکس، الزامی)'}</Label>
