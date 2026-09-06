@@ -321,9 +321,20 @@ export function useBankCards() {
         let effective: string | null = null;
         let displayReportTime: string | null = null;
         if (t.reference_type === 'order_payment' && t.reference_id) {
-          effective = opMap.get(t.reference_id) || t.created_at;
+          const paidAt = opMap.get(t.reference_id) || t.created_at;
+          // If the transaction carries an explicit report_date (e.g. gateway
+          // settlement one day later), that date wins for display/sorting;
+          // keep the payment's time-of-day.
+          const reportDatePart = normalizeDatePart(t.report_date);
+          if (reportDatePart && reportDatePart !== normalizeDatePart(paidAt)) {
+            const timePart = (paidAt || '').slice(11, 16);
+            effective = `${reportDatePart}T${/^\d{2}:\d{2}$/.test(timePart) ? timePart : '00:00'}:00+03:30`;
+          } else {
+            effective = paidAt;
+          }
           displayReportTime = effective;
         } else if (t.reference_type === 'daily_report_staff' && t.reference_id) {
+
           const sourceRows = staffRowsByReport.get(t.reference_id) || [];
           const matchedRow = sourceRows.find((row: any) => {
             const sourceAmount = t.transaction_type === 'deposit' ? row.amount_received : row.amount_spent;
