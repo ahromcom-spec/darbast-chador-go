@@ -526,12 +526,25 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                   </div>
                                   <div className="flex items-center gap-3 flex-wrap text-xs">
                                     <span>کل: <b>{formatPrice(s.total_amount)}</b></span>
-                                    <span className="text-green-600">پرداختی: {formatPrice(s.total_paid)}</span>
+                                    <span className="text-green-600">پرداختی (شامل چک): {formatPrice(s.total_paid)}</span>
+                                    {s.cheque_total > 0 && (
+                                      <>
+                                        <span className="text-indigo-700">
+                                          چک: {formatPrice(s.cheque_total)}
+                                          {' '}(وصول‌شده: {formatPrice(s.cheque_cleared)} — در جریان: {formatPrice(s.cheque_pending)}
+                                          {s.cheque_bounced > 0 ? ` — برگشتی: ${formatPrice(s.cheque_bounced)}` : ''})
+                                        </span>
+                                        <span className="text-orange-700">
+                                          مانده بدون احتساب چک‌های وصول‌نشده: {formatPrice(s.total_remaining + s.cheque_pending)}
+                                        </span>
+                                      </>
+                                    )}
                                     {s.overpaid > 0 && (
                                       <span className="text-amber-700">اضافه‌پرداخت: {formatPrice(s.overpaid)}</span>
                                     )}
 
                                     <span className="text-red-600">مانده: {formatPrice(s.total_remaining)}</span>
+
                                     <div onClick={(e) => e.stopPropagation()} className="inline-block">
                                       <StatementInvoiceDialog
                                         statementNumber={s.statement_number}
