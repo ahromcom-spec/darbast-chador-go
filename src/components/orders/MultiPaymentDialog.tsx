@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Banknote, User, Plus, History, Calendar, FileText, Wallet, CreditCard, Pencil, Trash2, Check, X } from 'lucide-react';
+import { Banknote, User, Plus, History, Calendar, FileText, Wallet, CreditCard, Pencil, Trash2, Check, X, FileCheck, Upload, Image as ImageIcon } from 'lucide-react';
 import { formatPersianDateTimeFull } from '@/lib/dateUtils';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -18,6 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import OrderPaymentSubmissionsPanel from '@/components/payments/OrderPaymentSubmissionsPanel';
+import { formatPersianDate } from '@/lib/dateUtils';
 
 
 interface Payment {
@@ -70,6 +71,14 @@ export function MultiPaymentDialog({
   const [selectedBankCardId, setSelectedBankCardId] = useState<string | null>(null);
   const [totalPaid, setTotalPaid] = useState(0);
   const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString());
+
+  // حالت ثبت: نقدی/کارت یا چک مشتری
+  const [payMode, setPayMode] = useState<'cash' | 'cheque'>('cash');
+  const [chequeSerial, setChequeSerial] = useState('');
+  const [chequeReceivedDate, setChequeReceivedDate] = useState<string>(new Date().toISOString());
+  const [chequeDueDate, setChequeDueDate] = useState<string>(new Date().toISOString());
+  const [chequeImageFile, setChequeImageFile] = useState<File | null>(null);
+  const [chequeImagePreview, setChequeImagePreview] = useState<string | null>(null);
 
   // Edit state
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
@@ -268,6 +277,117 @@ export function MultiPaymentDialog({
     } catch (error: any) {
       console.error('Error adding payment:', error);
       toast({ variant: 'destructive', title: 'خطا در ثبت پرداخت', description: error.message || 'ثبت پرداخت با خطا مواجه شد.' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+
+  /** ثبت چک دریافتی از مشتری برای این سفارش */
+  const handleAddCheque = async () => {
+    const amount = parseFloat(paymentAmount.replace(/,/g, ''));
+    if (!paymentAmount || !amount || amount <= 0) {
+      toast({ variant: 'destructive', title: 'خطا', description: 'لطفاً مبلغ چک را وارد کنید' });
+      return;
+    }
+    if (!chequeSerial.trim()) {
+      toast({ variant: 'destructive', title: 'خطا', description: 'شماره سریال چک را وارد کنید' });
+      return;
+    }
+    if (!user?.id) {
+      toast({ variant: 'destructive', title: 'خطا', description: 'لطفاً ابتدا وارد سیستم شوید' });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      let imagePath: string | null = null;
+      if (chequeImageFile) {
+        const ext = (chequeImageFile.name.split('.').pop() || 'jpg').toLowerCase();
+        const path = `${user.id}/${orderId}/${Date.now()}-${chequeSerial.trim() || 'cheque'}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from('cheque-images')
+          .upload(path, chequeImageFile, { upsert: true, contentType: chequeImageFile.type });
+        if (upErr) throw new Error(`خطا در آپلود تصویر چک: ${upErr.message}`);
+        imagePath = path;
+      }
+
+      const dueLabel = formatPersianDate(chequeDueDate, { dateFormat: 'yyyy/MM/dd' });
+      const { data: insertedPayment, error: paymentError } = await supabase
+        .from('order_payments')
+        .insert({
+          order_id: orderId,
+          amount,
+          payment_method: 'cheque',
+          receipt_number: receiptNumber || chequeSerial,
+          notes: `${notes || `چک شماره ${chequeSerial} — سررسید ${dueLabel} (وصول نشده)`} [CHEQUE:${chequeSerial}]`,
+          paid_by: user.id,
+          bank_card_id: selectedBankCardId || null,
+          payment_date: chequeDueDate,
+        } as any)
+        .select('id')
+        .single();
+      if (paymentError) throw new Error(`خطا در ثبت چک: ${paymentError.message}`);
+
+      const newTotalPaid = totalPaid + amount;
+      await supabase.from('projects_v3').update({ total_paid: newTotalPaid, updated_at: new Date().toISOString() }).eq('id', orderId);
+
+      let createdTransactionId: string | null = null;
+      if (selectedBankCardId) {
+        const { data: cardData } = await supabase
+          .from('bank_cards').select('current_balance').eq('id', selectedBankCardId).single();
+        if (cardData) {
+          const { data: txIns } = await supabase.from('bank_card_transactions').insert({
+            bank_card_id: selectedBankCardId,
+            transaction_type: 'deposit',
+            amount,
+            balance_after: Number(cardData.current_balance) + amount,
+            description: `🟠 چک وصول نشده است — سریال ${chequeSerial} — سفارش ${orderCode} - ${customerName}`,
+            reference_type: 'cheque_pending',
+            reference_id: insertedPayment?.id,
+            created_by: user.id,
+            report_date: chequeDueDate || null,
+            created_at: chequeDueDate || new Date().toISOString(),
+          } as any).select('id').single();
+          createdTransactionId = txIns?.id || null;
+          await recalculateBankCardBalance(selectedBankCardId);
+          window.dispatchEvent(new CustomEvent('bank-card-balance-updated'));
+        }
+      }
+
+      const { error: chequeError } = await supabase.from('cheques').insert({
+        customer_id: customerId || null,
+        bank_card_id: selectedBankCardId || null,
+        transaction_id: createdTransactionId,
+        amount,
+        serial_number: chequeSerial,
+        received_date: chequeReceivedDate,
+        due_date: chequeDueDate,
+        status: 'pending',
+        order_payment_ids: insertedPayment?.id ? [insertedPayment.id] : [],
+        notes: notes || `سفارش ${orderCode}`,
+        image_url: imagePath,
+        created_by: user.id,
+      } as any);
+      if (chequeError) throw new Error(`خطا در ثبت چک: ${chequeError.message}`);
+
+      toast({ title: '✓ چک ثبت شد', description: `چک سریال ${chequeSerial} با مبلغ ${amount.toLocaleString('fa-IR')} تومان در انتظار وصول ثبت شد` });
+
+      setPaymentAmount('');
+      setReceiptNumber('');
+      setNotes('');
+      setSelectedBankCardId(null);
+      setChequeSerial('');
+      setChequeReceivedDate(new Date().toISOString());
+      setChequeDueDate(new Date().toISOString());
+      if (chequeImagePreview) URL.revokeObjectURL(chequeImagePreview);
+      setChequeImageFile(null);
+      setChequeImagePreview(null);
+      fetchPayments();
+      onPaymentSuccess?.();
+    } catch (error: any) {
+      console.error('Error adding cheque:', error);
+      toast({ variant: 'destructive', title: 'خطا در ثبت چک', description: error.message || 'ثبت چک با خطا مواجه شد.' });
     } finally {
       setSubmitting(false);
     }
