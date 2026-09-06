@@ -6,10 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
-import { Receipt, FileImage, Upload, Loader2 } from 'lucide-react';
+import { Receipt, FileImage, Upload, Loader2, Trash2, ZoomIn } from 'lucide-react';
 import { toast } from 'sonner';
 import { uploadPaymentImage, type PaymentSubmissionKind } from '@/lib/paymentSubmissions';
 import { toEnglishDigits } from '@/lib/numberParsing';
+import { ImageZoomModal } from '@/components/common/ImageZoomModal';
+
 
 interface Props {
   orderId?: string | null;
