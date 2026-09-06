@@ -760,7 +760,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
             <AlertDialogTitle>بستن صورتحساب</AlertDialogTitle>
             <AlertDialogDescription>
               صورتحساب شماره {closing && new Intl.NumberFormat('fa-IR').format(closing.statement_number)} بسته خواهد شد و
-              سفارشات بعدی این مشتری به‌طور خودکار وارد صورتحساب جدید (شماره بعدی) می‌شوند. این عملیات غیرقابل بازگشت است.
+              سفارشات بعدی این مشتری به‌طور خودکار وارد صورتحساب جدید (شماره بعدی) می‌شوند. در صورت نیاز می‌توانید بعداً همین صورتحساب را مجدداً باز کنید.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -771,6 +771,25 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={!!reopening} onOpenChange={(o) => !o && setReopening(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>بازگشایی صورتحساب</AlertDialogTitle>
+            <AlertDialogDescription>
+              صورتحساب شماره {reopening && new Intl.NumberFormat('fa-IR').format(reopening.statement_number)} مجدداً باز می‌شود
+              و سفارش‌های جدید این مشتری می‌توانند داخل همین صورتحساب ثبت شوند.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>انصراف</AlertDialogCancel>
+            <AlertDialogAction onClick={handleReopen} disabled={busy}>
+              {busy ? 'در حال بازگشایی...' : 'تایید و بازگشایی'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       {payingStmt && (
         <StatementManualPaymentDialog
