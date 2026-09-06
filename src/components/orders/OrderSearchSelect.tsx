@@ -16,6 +16,7 @@ interface Order {
   address: string;
   subcategory_name?: string;
   activity_description?: string;
+  is_archived?: boolean;
 }
 
 interface OrderSearchSelectProps {
@@ -53,11 +54,18 @@ export function OrderSearchSelect({
 
   const selectedOrder = orders.find(o => o.id === value);
 
+  // سفارشات بایگانی‌شده در لیست انتخاب نمایش داده نمی‌شوند، اما اگر قبلاً در ردیفی
+  // انتخاب شده باشند حفظ می‌شوند تا سابقه گزارش‌ها از بین نرود.
+  const selectableOrders = useMemo(
+    () => orders.filter(o => !o.is_archived || o.id === value),
+    [orders, value]
+  );
+
   const filteredOrders = useMemo(() => {
-    if (!search.trim()) return orders;
+    if (!search.trim()) return selectableOrders;
 
     const searchLower = search.toLowerCase().trim();
-    return orders.filter(order => {
+    return selectableOrders.filter(order => {
       const code = order.code?.toLowerCase() || '';
       const customerName = order.customer_name?.toLowerCase() || '';
       const customerPhone = order.customer_phone?.toLowerCase() || '';
@@ -74,7 +82,7 @@ export function OrderSearchSelect({
         activityDesc.includes(searchLower)
       );
     });
-  }, [orders, search]);
+  }, [selectableOrders, search]);
 
   const handleSelect = (orderId: string) => {
     onValueChange(orderId);
@@ -210,7 +218,7 @@ export function OrderSearchSelect({
       >
         <span className="truncate flex-1 text-right">
           {selectedOrder
-            ? `${selectedOrder.code} - ${selectedOrder.customer_name || selectedOrder.address}`
+            ? `${selectedOrder.code} - ${selectedOrder.customer_name || selectedOrder.address}${selectedOrder.is_archived ? ' (بایگانی)' : ''}`
             : placeholder}
         </span>
         {selectedOrder ? (

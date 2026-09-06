@@ -274,6 +274,7 @@ interface Order {
   address: string;
   subcategory_name?: string;
   activity_description?: string;
+  is_archived?: boolean;
 }
 
 interface StaffMember {
@@ -1877,10 +1878,10 @@ export default function DailyReportModule() {
           address,
           notes,
           subcategory_id,
+          is_archived,
           subcategories!projects_v3_subcategory_id_fkey(name)
         `)
-        // همه سفارشات غیر بایگانی (بدون توجه به وضعیت مرحله‌ای)
-        .not('is_archived', 'is', true)
+        // سفارشات بایگانی‌شده هم بارگذاری می‌شوند تا سابقه گزارش‌های قبلی حفظ شود
         .not('is_deep_archived', 'is', true)
         .order('created_at', { ascending: false });
 
@@ -1905,7 +1906,8 @@ export default function DailyReportModule() {
         customer_phone: o.customer_phone,
         address: o.address,
         subcategory_name: o.subcategories?.name,
-        activity_description: extractActivityDescription(o.notes)
+        activity_description: extractActivityDescription(o.notes),
+        is_archived: o.is_archived === true
       })));
     } catch (error) {
       console.error('Error fetching orders:', error);

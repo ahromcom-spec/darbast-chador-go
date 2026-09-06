@@ -45,6 +45,7 @@ export interface Order {
   address: string;
   subcategory_name?: string;
   activity_description?: string;
+  is_archived?: boolean;
 }
 
 export interface StaffMember {
