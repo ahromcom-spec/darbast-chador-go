@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BadgePercent, Loader2, Save, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { parseLocalizedNumber } from '@/lib/numberParsing';
+import { parseLocalizedNumber, toEnglishDigits } from '@/lib/numberParsing';
 
 interface OrderDiscountPanelProps {
   orderId: string;
@@ -37,13 +37,13 @@ export const OrderDiscountPanel = ({
   const [percent, setPercent] = useState('');
   const [note, setNote] = useState(discountNote || '');
 
-  const discountValue = Math.max(0, Math.round(parseLocalizedNumber(amount)));
+  const discountValue = Math.max(0, Math.round(Number(toEnglishDigits(String(amount)).replace(/[^\d]/g, '')) || 0));
   const finalPrice = Math.max(0, basePrice - discountValue);
   const isChanged = discountValue !== existingDiscount || (note || '') !== (discountNote || '');
 
   const applyPercent = (value: string) => {
     setPercent(value);
-    const p = parseLocalizedNumber(value);
+    const p = parseLocalizedNumber(toEnglishDigits(value).replace(/[^\d.]/g, ''));
     if (p > 0 && basePrice > 0) {
       setAmount(String(Math.round((basePrice * Math.min(p, 100)) / 100)));
     }
@@ -114,7 +114,8 @@ export const OrderDiscountPanel = ({
             value={discountValue > 0 ? discountValue.toLocaleString('fa-IR') : ''}
             onChange={(e) => {
               setPercent('');
-              setAmount(String(Math.round(parseLocalizedNumber(e.target.value))));
+              const digitsOnly = toEnglishDigits(e.target.value).replace(/[^\d]/g, '');
+              setAmount(digitsOnly);
             }}
             placeholder="مبلغ تخفیف"
             className="font-bold"
