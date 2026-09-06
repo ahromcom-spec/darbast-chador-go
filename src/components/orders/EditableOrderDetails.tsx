@@ -82,6 +82,10 @@ interface EditableOrderDetailsProps {
     rental_start_date?: string | null;
     total_price?: number | null;
     total_paid?: number | null;
+    discount_amount?: number | null;
+    price_before_discount?: number | null;
+    discount_note?: string | null;
+
   };
   onUpdate?: () => void;
   hidePrice?: boolean; // Hide price information (for executive managers in specific modules)
