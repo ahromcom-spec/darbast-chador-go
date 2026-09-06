@@ -493,20 +493,21 @@ export default function OrderDetail() {
         supabase.rpc('get_my_projects_v3').eq('id', id).maybeSingle()
       ]);
 
-      if (customerRes.error) throw customerRes.error;
-      if (!customerRes.data) {
-        toast({
-          title: "خطا",
-          description: "اطلاعات مشتری یافت نشد",
-          variant: "destructive"
-        });
-        navigate("/profile?tab=orders");
-        return;
+      if (orderRes.error) throw orderRes.error;
+      let orderData: any = orderRes.data;
+
+      // Fallback: archived / deep-archived orders are excluded from the RPC, and
+      // managers viewing another customer's order are not covered by it either.
+      // RLS on projects_v3 still decides whether the row is visible.
+      if (!orderData) {
+        const { data: directOrder } = await supabase
+          .from('projects_v3')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
+        if (directOrder) orderData = directOrder;
       }
 
-      if (orderRes.error) throw orderRes.error;
-      const orderData = orderRes.data;
-      
       if (!orderData) {
         toast({
           title: "خطا",
@@ -516,6 +517,9 @@ export default function OrderDetail() {
         navigate("/profile?tab=orders");
         return;
       }
+
+      if (customerRes.error) throw customerRes.error;
+
 
       // Fetch all related data in parallel for speed
       const [subcategoryRes, provinceRes, districtRes, mediaRes, approvalsRes, repairRes, collectionRes, renewalsRes, paymentsRes] = await Promise.all([
