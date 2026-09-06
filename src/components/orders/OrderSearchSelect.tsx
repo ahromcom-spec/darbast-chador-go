@@ -181,7 +181,10 @@ export function OrderSearchSelect({
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen);
-    if (!nextOpen) setSearch('');
+    if (!nextOpen) {
+      setSearch('');
+      resetModalZoom();
+    }
   };
 
   // On mobile we don't auto-focus the search input (prevents keyboard covering the screen)
