@@ -699,24 +699,109 @@ export function MultiPaymentDialog({
                 )}
               </div>
 
-              <div>
-                <Label className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  تاریخ واریز
-                </Label>
-                <div className="mt-1.5">
-                  <PersianDatePicker
-                    value={paymentDate}
-                    onChange={(date) => date && setPaymentDate(date)}
-                    disabled={isSettled}
-                  />
+              {payMode === 'cash' ? (
+                <div>
+                  <Label className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    تاریخ واریز
+                  </Label>
+                  <div className="mt-1.5">
+                    <PersianDatePicker
+                      value={paymentDate}
+                      onChange={(date) => date && setPaymentDate(date)}
+                      disabled={isSettled}
+                    />
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-950/20 p-3">
+                  <div>
+                    <Label htmlFor="cheque-serial">شماره سریال چک *</Label>
+                    <Input
+                      id="cheque-serial"
+                      value={chequeSerial}
+                      onChange={(e) => setChequeSerial(e.target.value)}
+                      placeholder="شماره سریال روی چک"
+                      className="mt-1.5"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      تاریخ تحویل گرفتن چک
+                    </Label>
+                    <div className="mt-1.5">
+                      <PersianDatePicker value={chequeReceivedDate} onChange={(d) => d && setChequeReceivedDate(d)} />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      تاریخ سررسید چک
+                    </Label>
+                    <div className="mt-1.5">
+                      <PersianDatePicker value={chequeDueDate} onChange={(d) => d && setChequeDueDate(d)} />
+                    </div>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-1 leading-5">
+                      تاریخ تراکنش کارت بانکی، تاریخ سررسید چک خواهد بود.
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <ImageIcon className="h-4 w-4" />
+                      تصویر چک (اختیاری)
+                    </Label>
+                    <div className="mt-1.5">
+                      {chequeImagePreview ? (
+                        <div className="relative inline-block">
+                          <img src={chequeImagePreview} alt="پیش‌نمایش چک" className="max-h-40 rounded-md border border-border object-contain bg-muted" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (chequeImagePreview) URL.revokeObjectURL(chequeImagePreview);
+                              setChequeImageFile(null);
+                              setChequeImagePreview(null);
+                            }}
+                            className="absolute -top-2 -left-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-1 shadow"
+                            aria-label="حذف تصویر"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex items-center justify-center gap-2 cursor-pointer border-2 border-dashed border-border rounded-md py-3 px-4 hover:bg-muted/50 transition text-sm text-muted-foreground">
+                          <Upload className="h-4 w-4" />
+                          <span>انتخاب عکس چک از گالری یا دوربین</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0] || null;
+                              if (!f) return;
+                              if (f.size > 10 * 1024 * 1024) {
+                                toast({ variant: 'destructive', title: 'حجم تصویر زیاد است', description: 'حداکثر حجم مجاز ۱۰ مگابایت است' });
+                                return;
+                              }
+                              setChequeImageFile(f);
+                              setChequeImagePreview(URL.createObjectURL(f));
+                            }}
+                          />
+                        </label>
+                      )}
+                      <p className="text-[11px] text-muted-foreground mt-1 leading-5">
+                        تصویر چک در «مدیریت چک‌ها» هم قابل مشاهده خواهد بود.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <Label className="flex items-center gap-2">
                   <CreditCard className="h-4 w-4" />
-                  واریز به کارت بانکی (اختیاری)
+                  {payMode === 'cheque' ? 'کارت بانکی مقصد چک (اختیاری)' : 'واریز به کارت بانکی (اختیاری)'}
                 </Label>
                 <div className="mt-1.5">
                   <BankCardSelect
@@ -728,7 +813,7 @@ export function MultiPaymentDialog({
                     showManagementCards={true}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">با انتخاب کارت، مبلغ پرداختی به موجودی آن اضافه می‌شود</p>
+                <p className="text-xs text-muted-foreground mt-1">{payMode === 'cheque' ? 'با انتخاب کارت، مبلغ چک در تاریخ سررسید به موجودی آن اضافه می‌شود' : 'با انتخاب کارت، مبلغ پرداختی به موجودی آن اضافه می‌شود'}</p>
               </div>
 
               <div>
@@ -741,10 +826,17 @@ export function MultiPaymentDialog({
                 <Input id="payment-notes" type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="مثلاً: علی‌الحساب، پرداخت نقدی" className="mt-1.5" />
               </div>
 
-              <Button onClick={handleAddPayment} disabled={submitting || !paymentAmount || isSettled} className="w-full gap-2 bg-green-600 hover:bg-green-700">
-                <Wallet className="h-4 w-4" />
-                {submitting ? 'در حال ثبت...' : 'ثبت پرداخت'}
-              </Button>
+              {payMode === 'cheque' ? (
+                <Button onClick={handleAddCheque} disabled={submitting || !paymentAmount || !chequeSerial.trim() || isSettled} className="w-full gap-2 bg-amber-600 hover:bg-amber-700 text-white">
+                  <FileCheck className="h-4 w-4" />
+                  {submitting ? 'در حال ثبت...' : 'ثبت چک برای این سفارش'}
+                </Button>
+              ) : (
+                <Button onClick={handleAddPayment} disabled={submitting || !paymentAmount || isSettled} className="w-full gap-2 bg-green-600 hover:bg-green-700">
+                  <Wallet className="h-4 w-4" />
+                  {submitting ? 'در حال ثبت...' : 'ثبت پرداخت'}
+                </Button>
+              )}
             </div>
 
             <Separator />
