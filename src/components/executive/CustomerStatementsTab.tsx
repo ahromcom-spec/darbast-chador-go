@@ -9,7 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ChevronDown, ChevronUp, FileText, Lock, Search, User, Phone, Banknote, History, ArrowRightLeft, FileCheck, Eye } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileText, Lock, Unlock, Search, User, Phone, Banknote, History, ArrowRightLeft, FileCheck, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ManagerOrderInvoice from '@/components/orders/ManagerOrderInvoice';
 import { StatementInvoiceDialog } from '@/components/executive/StatementInvoiceDialog';
