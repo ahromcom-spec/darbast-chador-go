@@ -635,6 +635,17 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                         بستن صورتحساب
                                       </Button>
                                     )}
+                                    {s.status === 'closed' && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1 border-blue-400 text-blue-700 hover:bg-blue-50"
+                                        onClick={(e) => { e.stopPropagation(); setReopening(s); }}
+                                      >
+                                        <Unlock className="h-3.5 w-3.5" />
+                                        بازگشایی صورتحساب
+                                      </Button>
+                                    )}
                                     {sOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                   </div>
                                 </div>
