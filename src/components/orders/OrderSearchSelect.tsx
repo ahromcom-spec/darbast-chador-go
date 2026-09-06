@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { createPortal } from 'react-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getCurrentZoom } from '@/lib/zoom';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 
 interface Order {
@@ -29,6 +30,11 @@ interface OrderSearchSelectProps {
    * تا تعداد بیشتری سفارش همزمان قابل مشاهده باشد.
    */
   dense?: boolean;
+  /**
+   * حالت تمام‌صفحه: به جای dropdown کوچک، یک مودال بزرگ باز می‌شود
+   * تا انتخاب سفارش در جاهایی مثل گزارش روزانه راحت‌تر باشد.
+   */
+  fullScreen?: boolean;
 }
 
 export function OrderSearchSelect({
@@ -37,6 +43,7 @@ export function OrderSearchSelect({
   onValueChange,
   placeholder = 'انتخاب سفارش',
   dense = false,
+  fullScreen = false,
 }: OrderSearchSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -44,6 +51,7 @@ export function OrderSearchSelect({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const fullScreenSearchRef = useRef<HTMLInputElement>(null);
   const [position, setPosition] = useState<{ left: number; width: number; maxHeight: number; top?: number; bottom?: number }>({
     top: 0,
     bottom: undefined,
@@ -160,17 +168,29 @@ export function OrderSearchSelect({
       setOpen(true);
     });
   };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (!nextOpen) setSearch('');
+  };
+
   // On mobile we don't auto-focus the search input (prevents keyboard covering the screen)
   useEffect(() => {
     if (!open || isMobile) return;
-    const t = window.setTimeout(() => searchInputRef.current?.focus(), 0);
+    const t = window.setTimeout(() => {
+      if (fullScreen) {
+        fullScreenSearchRef.current?.focus();
+      } else {
+        searchInputRef.current?.focus();
+      }
+    }, 0);
     return () => window.clearTimeout(t);
-  }, [open, isMobile]);
+  }, [open, isMobile, fullScreen]);
 
   // Keep dropdown anchored when outer scroll happens (table/page) and on resize.
   // We ignore scroll events that originate from inside the dropdown itself so the list can scroll smoothly.
   useEffect(() => {
-    if (!open) return;
+    if (!open || fullScreen) return;
 
     const onResize = () => updatePosition();
     const onScroll = (e: Event) => {
@@ -185,11 +205,11 @@ export function OrderSearchSelect({
       window.removeEventListener('resize', onResize);
       window.removeEventListener('scroll', onScroll, true);
     };
-  }, [open]);
+  }, [open, fullScreen]);
 
   // Handle click outside
   useEffect(() => {
-    if (!open) return;
+    if (!open || fullScreen) return;
 
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -204,7 +224,113 @@ export function OrderSearchSelect({
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [open]);
+  }, [open, fullScreen]);
+
+  const renderOrderList = (inModal = false) => (
+    <>
+      <div className="p-3 border-b bg-background">
+        <div className="relative">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            ref={inModal ? fullScreenSearchRef : searchInputRef}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="جستجو با نام مشتری، کد، آدرس، شرح محل..."
+            compactFocus
+            className="pr-10 text-sm h-10"
+          />
+        </div>
+      </div>
+      <ScrollArea className={inModal ? 'flex-1 overflow-y-auto' : ''} style={!inModal ? { height: Math.max(140, position.maxHeight - 64) } : undefined}>
+        {filteredOrders.length === 0 ? (
+          <div className="py-6 text-center text-sm text-muted-foreground">
+            سفارشی یافت نشد
+          </div>
+        ) : (
+          <div className="p-1 bg-background">
+            {filteredOrders.map((order) => {
+              const isSelected = value === order.id;
+
+              return (
+                <button
+                  key={order.id}
+                  onClick={() => handleSelect(order.id)}
+                  className={
+                    `w-full text-right rounded-md transition-colors hover:bg-accent ` +
+                    (inModal ? 'px-4 py-3 text-sm ' : dense ? 'px-3 py-1.5 text-xs ' : 'px-3 py-2 text-sm ') +
+                    (isSelected ? ' bg-accent' : '')
+                  }
+                >
+                  <div className={inModal ? 'flex items-center gap-2 font-medium' : dense ? 'flex items-center gap-2' : 'font-medium'}>
+                    <span className="font-bold text-primary tabular-nums">{order.code}</span>
+                    <span className={inModal ? 'truncate font-medium' : dense ? 'truncate font-medium' : ''}>
+                      {inModal || dense ? (order.customer_name || 'بدون نام') : (
+                        <>
+                          {' - '}
+                          {order.customer_name || 'بدون نام'}
+                        </>
+                      )}
+                    </span>
+                  </div>
+
+                  <div className={inModal ? 'text-xs text-muted-foreground mt-1 line-clamp-1' : dense ? 'text-[11px] text-muted-foreground mt-0.5 line-clamp-1' : 'text-xs text-muted-foreground mt-0.5 line-clamp-1'}>
+                    {order.subcategory_name && (
+                      <span className={dense && !inModal ? 'text-foreground/80 ml-1' : 'text-foreground/80 ml-2'}>
+                        {order.subcategory_name}
+                        {dense && !inModal ? ' • ' : ''}
+                      </span>
+                    )}
+                    {order.address}
+                  </div>
+
+                  {inModal ? (
+                    <>
+                      {order.activity_description && (
+                        <div className="text-xs text-muted-foreground mt-1 p-1.5 bg-muted rounded-md line-clamp-2 border">
+                          <span className="font-medium">شرح محل و فعالیت:</span> {order.activity_description}
+                        </div>
+                      )}
+                      {order.customer_phone && (
+                        <div className="text-xs text-muted-foreground mt-0.5" dir="ltr">
+                          {order.customer_phone}
+                        </div>
+                      )}
+                    </>
+                  ) : (dense ? (
+                    <>
+                      {order.activity_description && (
+                        <div className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">
+                          {order.activity_description}
+                        </div>
+                      )}
+                      {order.customer_phone && (
+                        <div className="text-[11px] text-muted-foreground mt-0.5">
+                          {order.customer_phone}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {order.activity_description && (
+                        <div className="text-xs text-muted-foreground mt-1 p-1.5 bg-muted rounded-md line-clamp-2 border">
+                          <span className="font-medium">شرح محل و فعالیت:</span> {order.activity_description}
+                        </div>
+                      )}
+                      {order.customer_phone && (
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {order.customer_phone}
+                        </div>
+                      )}
+                    </>
+                  ))}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </ScrollArea>
+    </>
+  );
 
   return (
     <div className="relative">
@@ -231,7 +357,20 @@ export function OrderSearchSelect({
         )}
       </Button>
 
-      {open && position.width > 0 &&
+      {fullScreen ? (
+        <Dialog open={open} onOpenChange={handleOpenChange}>
+          <DialogContent
+            className="fixed inset-0 z-[200] flex h-screen w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 p-0 sm:inset-0 sm:h-screen sm:w-screen sm:rounded-none"
+            style={{ zoom: 'max(1, var(--app-zoom, 1))' } as React.CSSProperties}
+          >
+            <DialogHeader className="shrink-0 border-b bg-background p-4 text-right sm:text-right">
+              <DialogTitle className="text-lg font-semibold">انتخاب سفارش</DialogTitle>
+            </DialogHeader>
+            {renderOrderList(true)}
+          </DialogContent>
+        </Dialog>
+      ) : (
+        open && position.width > 0 &&
         createPortal(
           (() => {
             const zoom = getCurrentZoom() || 1;
@@ -250,100 +389,13 @@ export function OrderSearchSelect({
             } as React.CSSProperties}
             dir="rtl"
           >
-
-            <div className="p-3 border-b bg-background">
-              <div className="relative">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  ref={searchInputRef}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="جستجو با نام مشتری، کد، آدرس، شرح محل..."
-                  compactFocus
-                  className="pr-10 text-sm h-10"
-                />
-              </div>
-            </div>
-            <ScrollArea style={{ height: Math.max(140, position.maxHeight - 64) }}>
-              {filteredOrders.length === 0 ? (
-                <div className="py-6 text-center text-sm text-muted-foreground">
-                  سفارشی یافت نشد
-                </div>
-              ) : (
-                <div className="p-1 bg-background">
-                  {filteredOrders.map((order) => {
-                    const isSelected = value === order.id;
-
-                    return (
-                      <button
-                        key={order.id}
-                        onClick={() => handleSelect(order.id)}
-                        className={
-                          `w-full text-right rounded-md transition-colors hover:bg-accent ` +
-                          (dense ? 'px-3 py-1.5 text-xs' : 'px-3 py-2 text-sm') +
-                          (isSelected ? ' bg-accent' : '')
-                        }
-                      >
-                        <div className={dense ? 'flex items-center gap-2' : 'font-medium'}>
-                          <span className="font-bold text-primary tabular-nums">{order.code}</span>
-                          <span className={dense ? 'truncate font-medium' : ''}>
-                            {dense ? (order.customer_name || 'بدون نام') : (
-                              <>
-                                {' - '}
-                                {order.customer_name || 'بدون نام'}
-                              </>
-                            )}
-                          </span>
-                        </div>
-
-                        <div className={dense ? 'text-[11px] text-muted-foreground mt-0.5 line-clamp-1' : 'text-xs text-muted-foreground mt-0.5 line-clamp-1'}>
-                          {order.subcategory_name && (
-                            <span className={dense ? 'text-foreground/80 ml-1' : 'text-foreground/80 ml-2'}>
-                              {order.subcategory_name}
-                              {dense ? ' • ' : ''}
-                            </span>
-                          )}
-                          {order.address}
-                        </div>
-
-                        {dense ? (
-                          <>
-                            {order.activity_description && (
-                              <div className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">
-                                {order.activity_description}
-                              </div>
-                            )}
-                            {order.customer_phone && (
-                              <div className="text-[11px] text-muted-foreground mt-0.5">
-                                {order.customer_phone}
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            {order.activity_description && (
-                              <div className="text-xs text-muted-foreground mt-1 p-1.5 bg-muted rounded-md line-clamp-2 border">
-                                <span className="font-medium">شرح محل و فعالیت:</span> {order.activity_description}
-                              </div>
-                            )}
-                            {order.customer_phone && (
-                              <div className="text-xs text-muted-foreground mt-0.5">
-                                {order.customer_phone}
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </ScrollArea>
+            {renderOrderList(false)}
           </div>
             );
           })(),
           document.body,
-        )}
+        )
+      )}
 
     </div>
   );
