@@ -111,6 +111,8 @@ export function StatementPaymentsHistoryDialog({
   const [editChequeSerial, setEditChequeSerial] = useState('');
   const [editChequeReceived, setEditChequeReceived] = useState<string>(new Date().toISOString());
   const [editChequeDue, setEditChequeDue] = useState<string>(new Date().toISOString());
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
 
   const orderById = useMemo(() => {
     const m = new Map<string, OrderLite>();
