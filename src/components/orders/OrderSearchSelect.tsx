@@ -60,6 +60,16 @@ export function OrderSearchSelect({
     maxHeight: dense ? 900 : 800,
   });
 
+  // زوم محلی مخصوص مودال تمام‌صفحه؛ پیش‌فرض ۱۰۰٪ و با زوم‌کردن سفارشات بیشتری در یک نمای دیده می‌شوند
+  const MODAL_ZOOM_LEVELS = [0.75, 0.85, 0.95, 1, 1.1, 1.2] as const;
+  const DEFAULT_MODAL_ZOOM_INDEX = 3;
+  const [modalZoomIndex, setModalZoomIndex] = useState(DEFAULT_MODAL_ZOOM_INDEX);
+  const modalZoom = MODAL_ZOOM_LEVELS[modalZoomIndex];
+
+  const modalZoomIn = () => setModalZoomIndex(i => Math.min(i + 1, MODAL_ZOOM_LEVELS.length - 1));
+  const modalZoomOut = () => setModalZoomIndex(i => Math.max(i - 1, 0));
+  const resetModalZoom = () => setModalZoomIndex(DEFAULT_MODAL_ZOOM_INDEX);
+
   const selectedOrder = orders.find(o => o.id === value);
 
   // سفارشات بایگانی‌شده در لیست انتخاب نمایش داده نمی‌شوند، اما اگر قبلاً در ردیفی
