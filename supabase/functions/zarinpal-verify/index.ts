@@ -273,7 +273,10 @@ serve(async (req) => {
 
             if (!dupTx || dupTx.length === 0) {
               let running = Number(cardRow.current_balance) || 0;
-              const today = new Date().toISOString().slice(0, 10);
+              // ZarinPal settles one day later — record the card transaction with tomorrow's date (Tehran)
+              const tehranNow = new Date(Date.now() + 3.5 * 60 * 60 * 1000);
+              tehranNow.setUTCDate(tehranNow.getUTCDate() + 1);
+              const settlementDate = tehranNow.toISOString().slice(0, 10);
               for (const d of distribution) {
                 const { data: ordInfo } = await supabaseClient
                   .from('projects_v3')
