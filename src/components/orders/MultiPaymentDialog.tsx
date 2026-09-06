@@ -758,7 +758,13 @@ export function MultiPaymentDialog({
                     <div className="mt-1.5">
                       {chequeImagePreview ? (
                         <div className="relative inline-block">
-                          <img src={chequeImagePreview} alt="پیش‌نمایش چک" className="max-h-40 rounded-md border border-border object-contain bg-muted" />
+                          <button
+                            type="button"
+                            onClick={() => { setZoomUrl(chequeImagePreview); setZoomOpen(true); }}
+                            className="p-0 border-0 bg-transparent"
+                          >
+                            <img src={chequeImagePreview} alt="پیش‌نمایش چک" className="max-h-40 rounded-md border border-border object-contain bg-muted cursor-zoom-in" />
+                          </button>
                           <button
                             type="button"
                             onClick={() => {
