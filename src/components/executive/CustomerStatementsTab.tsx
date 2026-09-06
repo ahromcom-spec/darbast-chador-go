@@ -154,6 +154,26 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
         return;
       }
 
+      // چک‌های ثبت‌شده روی صورتحساب‌ها (برای نمایش سهم چک از پرداختی‌ها)
+      const statementIds = (stmts || []).map((s: any) => s.id);
+      const { data: chequeRows } = await supabase
+        .from('cheques')
+        .select('statement_id, amount, status')
+        .in('statement_id', statementIds);
+      const chequeByStatement = new Map<string, { total: number; cleared: number; pending: number; bounced: number }>();
+      for (const ch of (chequeRows || []) as any[]) {
+        if (!ch.statement_id) continue;
+        const cur = chequeByStatement.get(ch.statement_id) || { total: 0, cleared: 0, pending: 0, bounced: 0 };
+        const amt = Number(ch.amount) || 0;
+        cur.total += amt;
+        if (ch.status === 'cleared') cur.cleared += amt;
+        else if (ch.status === 'bounced') cur.bounced += amt;
+        else cur.pending += amt;
+        chequeByStatement.set(ch.statement_id, cur);
+      }
+
+
+
       const { data: customers } = await supabase
         .from('customers')
         .select('id, user_id')
