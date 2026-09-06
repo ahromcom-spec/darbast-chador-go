@@ -250,7 +250,7 @@ export function OrderSearchSelect({
             onChange={(e) => setSearch(e.target.value)}
             placeholder="جستجو با نام مشتری، کد، آدرس، شرح محل..."
             compactFocus
-            className="pr-10 text-sm h-10"
+            className={inModal ? 'pr-10 text-sm h-9' : 'pr-10 text-sm h-10'}
           />
         </div>
       </div>
