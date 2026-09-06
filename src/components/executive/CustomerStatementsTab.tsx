@@ -403,6 +403,25 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
     }
   };
 
+  const handleReopen = async () => {
+    if (!reopening) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.rpc('reopen_customer_statement' as any, { _statement_id: reopening.id });
+      if (error) throw error;
+      toast({ title: 'انجام شد', description: `صورتحساب شماره ${reopening.statement_number} مجدداً باز شد` });
+      setReopening(null);
+      await load();
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: 'خطا', description: err.message || 'بازگشایی صورتحساب با خطا مواجه شد', variant: 'destructive' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+
+
   if (loading) return <LoadingSpinner />;
 
   return (
