@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ArrowRight, MapPin, X, Plus, Camera, Video, Search, Satellite, Map as MapIcon } from 'lucide-react';
-import { MapSearchBox } from '@/components/locations/MapSearchBox';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
@@ -3311,12 +3310,12 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           </svg>
         </div>
 
-        {/* دکمه انتخاب موقعیت مرکز نقشه */}
-        <div className="pointer-events-auto absolute bottom-[4.75rem] left-1/2 -translate-x-1/2 w-[90%] max-w-md z-[2200]">
-          <Button
-            className={`w-full h-11 text-sm font-bold shadow-xl ${snappedProject ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
-            onClick={() => {
-              if (snappedProject) {
+        {/* دکمه انتخاب پروژه فقط زمانی که مکان‌نما روی پروژه قرار گرفته */}
+        {snappedProject && (
+          <div className="pointer-events-auto absolute bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-[2200]">
+            <Button
+              className="w-full h-11 text-sm font-bold shadow-xl bg-green-600 hover:bg-green-700 text-white"
+              onClick={() => {
                 if (isMobile) {
                   setMobileSelectedProject(snappedProject);
                   setMobileSelectedLocationProjects(
@@ -3325,45 +3324,14 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
                 } else {
                   setSelectedProject(snappedProject);
                 }
-                return;
-              }
-              if (!centerPin) return;
-              navigate('/user/new-location', {
-                state: { lat: centerPin.lat, lng: centerPin.lng, fromMap: true },
-              });
-            }}
-          >
-            <MapPin className="h-4 w-4 ml-1.5" />
-            {snappedProject
-              ? `انتخاب پروژه: ${snappedProject.title || 'پروژه من'}`
-              : 'افزودن پروژه در این موقعیت'}
-          </Button>
-          {!snappedProject && (
-            <p className="mt-1 text-center text-[10px] text-muted-foreground bg-background/70 backdrop-blur-sm rounded px-2 py-0.5">
-              نقشه را جابجا کنید تا مکان‌نما روی محل پروژه قرار بگیرد (تا ۳ متری، پروژه خودکار انتخاب می‌شود)
-            </p>
-          )}
-        </div>
+              }}
+            >
+              <MapPin className="h-4 w-4 ml-1.5" />
+              {`انتخاب پروژه: ${snappedProject.title || 'پروژه من'}`}
+            </Button>
+          </div>
+        )}
 
-        {/* کادر جستجوی آدرس - پایین نقشه */}
-
-        <div className="pointer-events-auto absolute bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-[2100]">
-          <MapSearchBox
-            onLocationSelect={(lat, lng, placeName) => {
-              // پرواز به موقعیت جستجو شده
-              if (mapRef.current) {
-                mapRef.current.flyTo([lat, lng], 16, {
-                  duration: 1.5,
-                  easeLinearity: 0.25
-                });
-              }
-            }}
-            placeholder="جستجوی آدرس یا محل..."
-            className="w-full"
-            showSearchButton={true}
-            resultsPlacement="top"
-          />
-        </div>
 
         {/* نقشه */}
         <div ref={mapContainer} className="absolute inset-0" style={{ touchAction: 'pan-x pan-y' }} />

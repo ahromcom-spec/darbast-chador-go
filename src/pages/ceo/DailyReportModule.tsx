@@ -787,10 +787,11 @@ export default function DailyReportModule() {
     setSavedReports(prev => prev.filter(r => !selectedReportIds.has(r.id)));
   });
 
-  // Persist active tab to localStorage
+  // Persist active tab to localStorage (شامل تب نقشه تا بعد از رفرش هم باقی بماند)
   useEffect(() => {
-    if (activeTab !== 'execution-location') localStorage.setItem('dailyReportActiveTab', activeTab);
+    localStorage.setItem('dailyReportActiveTab', activeTab);
   }, [activeTab]);
+
 
   // بستن نقشه تمام‌صفحه لوکیشن اجرایی و بازگشت به ماژول
   const closeExecutionMap = useCallback(() => {
