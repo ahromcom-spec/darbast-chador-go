@@ -3644,6 +3644,10 @@ export type Database = {
           deep_archived_at: string | null
           deep_archived_by: string | null
           detailed_address: string | null
+          discount_amount: number
+          discount_at: string | null
+          discount_by: string | null
+          discount_note: string | null
           district_id: string | null
           executed_by: string | null
           execution_confirmed_at: string | null
@@ -3669,6 +3673,7 @@ export type Database = {
           payment_confirmed_at: string | null
           payment_confirmed_by: string | null
           payment_method: string | null
+          price_before_discount: number | null
           province_id: string
           rejection_reason: string | null
           rental_start_date: string | null
@@ -3699,6 +3704,10 @@ export type Database = {
           deep_archived_at?: string | null
           deep_archived_by?: string | null
           detailed_address?: string | null
+          discount_amount?: number
+          discount_at?: string | null
+          discount_by?: string | null
+          discount_note?: string | null
           district_id?: string | null
           executed_by?: string | null
           execution_confirmed_at?: string | null
@@ -3726,6 +3735,7 @@ export type Database = {
           payment_confirmed_at?: string | null
           payment_confirmed_by?: string | null
           payment_method?: string | null
+          price_before_discount?: number | null
           province_id: string
           rejection_reason?: string | null
           rental_start_date?: string | null
@@ -3756,6 +3766,10 @@ export type Database = {
           deep_archived_at?: string | null
           deep_archived_by?: string | null
           detailed_address?: string | null
+          discount_amount?: number
+          discount_at?: string | null
+          discount_by?: string | null
+          discount_note?: string | null
           district_id?: string | null
           executed_by?: string | null
           execution_confirmed_at?: string | null
@@ -3783,6 +3797,7 @@ export type Database = {
           payment_confirmed_at?: string | null
           payment_confirmed_by?: string | null
           payment_method?: string | null
+          price_before_discount?: number | null
           province_id?: string
           rejection_reason?: string | null
           rental_start_date?: string | null
@@ -6198,6 +6213,10 @@ export type Database = {
           deep_archived_at: string | null
           deep_archived_by: string | null
           detailed_address: string | null
+          discount_amount: number
+          discount_at: string | null
+          discount_by: string | null
+          discount_note: string | null
           district_id: string | null
           executed_by: string | null
           execution_confirmed_at: string | null
@@ -6223,6 +6242,7 @@ export type Database = {
           payment_confirmed_at: string | null
           payment_confirmed_by: string | null
           payment_method: string | null
+          price_before_discount: number | null
           province_id: string
           rejection_reason: string | null
           rental_start_date: string | null
@@ -6345,6 +6365,10 @@ export type Database = {
           deep_archived_at: string | null
           deep_archived_by: string | null
           detailed_address: string | null
+          discount_amount: number
+          discount_at: string | null
+          discount_by: string | null
+          discount_note: string | null
           district_id: string | null
           executed_by: string | null
           execution_confirmed_at: string | null
@@ -6370,6 +6394,7 @@ export type Database = {
           payment_confirmed_at: string | null
           payment_confirmed_by: string | null
           payment_method: string | null
+          price_before_discount: number | null
           province_id: string
           rejection_reason: string | null
           rental_start_date: string | null
