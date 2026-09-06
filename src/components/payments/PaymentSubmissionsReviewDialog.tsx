@@ -37,6 +37,8 @@ export default function PaymentSubmissionsReviewDialog({
   const [amountBySub, setAmountBySub] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
   const { cards } = useBankCards();
 
   const load = useCallback(async () => {
