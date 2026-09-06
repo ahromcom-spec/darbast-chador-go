@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Banknote, User, Plus, History, Calendar, FileText, Wallet, CreditCard, Pencil, Trash2, Check, X } from 'lucide-react';
+import { Banknote, User, Plus, History, Calendar, FileText, Wallet, CreditCard, Pencil, Trash2, Check, X, FileCheck, Upload, Image as ImageIcon } from 'lucide-react';
 import { formatPersianDateTimeFull } from '@/lib/dateUtils';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -18,6 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import OrderPaymentSubmissionsPanel from '@/components/payments/OrderPaymentSubmissionsPanel';
+import { formatPersianDate } from '@/lib/dateUtils';
 
 
 interface Payment {
@@ -70,6 +71,14 @@ export function MultiPaymentDialog({
   const [selectedBankCardId, setSelectedBankCardId] = useState<string | null>(null);
   const [totalPaid, setTotalPaid] = useState(0);
   const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString());
+
+  // حالت ثبت: نقدی/کارت یا چک مشتری
+  const [payMode, setPayMode] = useState<'cash' | 'cheque'>('cash');
+  const [chequeSerial, setChequeSerial] = useState('');
+  const [chequeReceivedDate, setChequeReceivedDate] = useState<string>(new Date().toISOString());
+  const [chequeDueDate, setChequeDueDate] = useState<string>(new Date().toISOString());
+  const [chequeImageFile, setChequeImageFile] = useState<File | null>(null);
+  const [chequeImagePreview, setChequeImagePreview] = useState<string | null>(null);
 
   // Edit state
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
@@ -268,6 +277,117 @@ export function MultiPaymentDialog({
     } catch (error: any) {
       console.error('Error adding payment:', error);
       toast({ variant: 'destructive', title: 'خطا در ثبت پرداخت', description: error.message || 'ثبت پرداخت با خطا مواجه شد.' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+
+  /** ثبت چک دریافتی از مشتری برای این سفارش */
+  const handleAddCheque = async () => {
+    const amount = parseFloat(paymentAmount.replace(/,/g, ''));
+    if (!paymentAmount || !amount || amount <= 0) {
+      toast({ variant: 'destructive', title: 'خطا', description: 'لطفاً مبلغ چک را وارد کنید' });
+      return;
+    }
+    if (!chequeSerial.trim()) {
+      toast({ variant: 'destructive', title: 'خطا', description: 'شماره سریال چک را وارد کنید' });
+      return;
+    }
+    if (!user?.id) {
+      toast({ variant: 'destructive', title: 'خطا', description: 'لطفاً ابتدا وارد سیستم شوید' });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      let imagePath: string | null = null;
+      if (chequeImageFile) {
+        const ext = (chequeImageFile.name.split('.').pop() || 'jpg').toLowerCase();
+        const path = `${user.id}/${orderId}/${Date.now()}-${chequeSerial.trim() || 'cheque'}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from('cheque-images')
+          .upload(path, chequeImageFile, { upsert: true, contentType: chequeImageFile.type });
+        if (upErr) throw new Error(`خطا در آپلود تصویر چک: ${upErr.message}`);
+        imagePath = path;
+      }
+
+      const dueLabel = formatPersianDate(chequeDueDate, { dateFormat: 'yyyy/MM/dd' });
+      const { data: insertedPayment, error: paymentError } = await supabase
+        .from('order_payments')
+        .insert({
+          order_id: orderId,
+          amount,
+          payment_method: 'cheque',
+          receipt_number: receiptNumber || chequeSerial,
+          notes: `${notes || `چک شماره ${chequeSerial} — سررسید ${dueLabel} (وصول نشده)`} [CHEQUE:${chequeSerial}]`,
+          paid_by: user.id,
+          bank_card_id: selectedBankCardId || null,
+          payment_date: chequeDueDate,
+        } as any)
+        .select('id')
+        .single();
+      if (paymentError) throw new Error(`خطا در ثبت چک: ${paymentError.message}`);
+
+      const newTotalPaid = totalPaid + amount;
+      await supabase.from('projects_v3').update({ total_paid: newTotalPaid, updated_at: new Date().toISOString() }).eq('id', orderId);
+
+      let createdTransactionId: string | null = null;
+      if (selectedBankCardId) {
+        const { data: cardData } = await supabase
+          .from('bank_cards').select('current_balance').eq('id', selectedBankCardId).single();
+        if (cardData) {
+          const { data: txIns } = await supabase.from('bank_card_transactions').insert({
+            bank_card_id: selectedBankCardId,
+            transaction_type: 'deposit',
+            amount,
+            balance_after: Number(cardData.current_balance) + amount,
+            description: `🟠 چک وصول نشده است — سریال ${chequeSerial} — سفارش ${orderCode} - ${customerName}`,
+            reference_type: 'cheque_pending',
+            reference_id: insertedPayment?.id,
+            created_by: user.id,
+            report_date: chequeDueDate || null,
+            created_at: chequeDueDate || new Date().toISOString(),
+          } as any).select('id').single();
+          createdTransactionId = txIns?.id || null;
+          await recalculateBankCardBalance(selectedBankCardId);
+          window.dispatchEvent(new CustomEvent('bank-card-balance-updated'));
+        }
+      }
+
+      const { error: chequeError } = await supabase.from('cheques').insert({
+        customer_id: customerId || null,
+        bank_card_id: selectedBankCardId || null,
+        transaction_id: createdTransactionId,
+        amount,
+        serial_number: chequeSerial,
+        received_date: chequeReceivedDate,
+        due_date: chequeDueDate,
+        status: 'pending',
+        order_payment_ids: insertedPayment?.id ? [insertedPayment.id] : [],
+        notes: notes || `سفارش ${orderCode}`,
+        image_url: imagePath,
+        created_by: user.id,
+      } as any);
+      if (chequeError) throw new Error(`خطا در ثبت چک: ${chequeError.message}`);
+
+      toast({ title: '✓ چک ثبت شد', description: `چک سریال ${chequeSerial} با مبلغ ${amount.toLocaleString('fa-IR')} تومان در انتظار وصول ثبت شد` });
+
+      setPaymentAmount('');
+      setReceiptNumber('');
+      setNotes('');
+      setSelectedBankCardId(null);
+      setChequeSerial('');
+      setChequeReceivedDate(new Date().toISOString());
+      setChequeDueDate(new Date().toISOString());
+      if (chequeImagePreview) URL.revokeObjectURL(chequeImagePreview);
+      setChequeImageFile(null);
+      setChequeImagePreview(null);
+      fetchPayments();
+      onPaymentSuccess?.();
+    } catch (error: any) {
+      console.error('Error adding cheque:', error);
+      toast({ variant: 'destructive', title: 'خطا در ثبت چک', description: error.message || 'ثبت چک با خطا مواجه شد.' });
     } finally {
       setSubmitting(false);
     }
@@ -523,9 +643,31 @@ export function MultiPaymentDialog({
                 <Plus className="h-4 w-4" />
                 ثبت پرداخت جدید
               </h4>
-              
+
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={payMode === 'cash' ? 'default' : 'outline'}
+                  className={payMode === 'cash' ? 'bg-green-600 hover:bg-green-700 text-white gap-2' : 'gap-2'}
+                  onClick={() => setPayMode('cash')}
+                >
+                  <Banknote className="h-4 w-4" />
+                  نقدی / کارت
+                </Button>
+                <Button
+                  type="button"
+                  variant={payMode === 'cheque' ? 'default' : 'outline'}
+                  className={payMode === 'cheque' ? 'bg-amber-600 hover:bg-amber-700 text-white gap-2' : 'gap-2'}
+                  onClick={() => setPayMode('cheque')}
+                >
+                  <FileCheck className="h-4 w-4" />
+                  ثبت چک مشتری
+                </Button>
+              </div>
+
               <div>
-                <Label htmlFor="payment-amount">مبلغ پرداختی (تومان) *</Label>
+                <Label htmlFor="payment-amount">{payMode === 'cheque' ? 'مبلغ چک (تومان) *' : 'مبلغ پرداختی (تومان) *'}</Label>
+
                 <Input
                   id="payment-amount"
                   type="text"
@@ -557,24 +699,109 @@ export function MultiPaymentDialog({
                 )}
               </div>
 
-              <div>
-                <Label className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  تاریخ واریز
-                </Label>
-                <div className="mt-1.5">
-                  <PersianDatePicker
-                    value={paymentDate}
-                    onChange={(date) => date && setPaymentDate(date)}
-                    disabled={isSettled}
-                  />
+              {payMode === 'cash' ? (
+                <div>
+                  <Label className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    تاریخ واریز
+                  </Label>
+                  <div className="mt-1.5">
+                    <PersianDatePicker
+                      value={paymentDate}
+                      onChange={(date) => date && setPaymentDate(date)}
+                      disabled={isSettled}
+                    />
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-950/20 p-3">
+                  <div>
+                    <Label htmlFor="cheque-serial">شماره سریال چک *</Label>
+                    <Input
+                      id="cheque-serial"
+                      value={chequeSerial}
+                      onChange={(e) => setChequeSerial(e.target.value)}
+                      placeholder="شماره سریال روی چک"
+                      className="mt-1.5"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      تاریخ تحویل گرفتن چک
+                    </Label>
+                    <div className="mt-1.5">
+                      <PersianDatePicker value={chequeReceivedDate} onChange={(d) => d && setChequeReceivedDate(d)} />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      تاریخ سررسید چک
+                    </Label>
+                    <div className="mt-1.5">
+                      <PersianDatePicker value={chequeDueDate} onChange={(d) => d && setChequeDueDate(d)} />
+                    </div>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-400 mt-1 leading-5">
+                      تاریخ تراکنش کارت بانکی، تاریخ سررسید چک خواهد بود.
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <ImageIcon className="h-4 w-4" />
+                      تصویر چک (اختیاری)
+                    </Label>
+                    <div className="mt-1.5">
+                      {chequeImagePreview ? (
+                        <div className="relative inline-block">
+                          <img src={chequeImagePreview} alt="پیش‌نمایش چک" className="max-h-40 rounded-md border border-border object-contain bg-muted" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (chequeImagePreview) URL.revokeObjectURL(chequeImagePreview);
+                              setChequeImageFile(null);
+                              setChequeImagePreview(null);
+                            }}
+                            className="absolute -top-2 -left-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-1 shadow"
+                            aria-label="حذف تصویر"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex items-center justify-center gap-2 cursor-pointer border-2 border-dashed border-border rounded-md py-3 px-4 hover:bg-muted/50 transition text-sm text-muted-foreground">
+                          <Upload className="h-4 w-4" />
+                          <span>انتخاب عکس چک از گالری یا دوربین</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0] || null;
+                              if (!f) return;
+                              if (f.size > 10 * 1024 * 1024) {
+                                toast({ variant: 'destructive', title: 'حجم تصویر زیاد است', description: 'حداکثر حجم مجاز ۱۰ مگابایت است' });
+                                return;
+                              }
+                              setChequeImageFile(f);
+                              setChequeImagePreview(URL.createObjectURL(f));
+                            }}
+                          />
+                        </label>
+                      )}
+                      <p className="text-[11px] text-muted-foreground mt-1 leading-5">
+                        تصویر چک در «مدیریت چک‌ها» هم قابل مشاهده خواهد بود.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <Label className="flex items-center gap-2">
                   <CreditCard className="h-4 w-4" />
-                  واریز به کارت بانکی (اختیاری)
+                  {payMode === 'cheque' ? 'کارت بانکی مقصد چک (اختیاری)' : 'واریز به کارت بانکی (اختیاری)'}
                 </Label>
                 <div className="mt-1.5">
                   <BankCardSelect
@@ -586,7 +813,7 @@ export function MultiPaymentDialog({
                     showManagementCards={true}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">با انتخاب کارت، مبلغ پرداختی به موجودی آن اضافه می‌شود</p>
+                <p className="text-xs text-muted-foreground mt-1">{payMode === 'cheque' ? 'با انتخاب کارت، مبلغ چک در تاریخ سررسید به موجودی آن اضافه می‌شود' : 'با انتخاب کارت، مبلغ پرداختی به موجودی آن اضافه می‌شود'}</p>
               </div>
 
               <div>
@@ -599,10 +826,17 @@ export function MultiPaymentDialog({
                 <Input id="payment-notes" type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="مثلاً: علی‌الحساب، پرداخت نقدی" className="mt-1.5" />
               </div>
 
-              <Button onClick={handleAddPayment} disabled={submitting || !paymentAmount || isSettled} className="w-full gap-2 bg-green-600 hover:bg-green-700">
-                <Wallet className="h-4 w-4" />
-                {submitting ? 'در حال ثبت...' : 'ثبت پرداخت'}
-              </Button>
+              {payMode === 'cheque' ? (
+                <Button onClick={handleAddCheque} disabled={submitting || !paymentAmount || !chequeSerial.trim() || isSettled} className="w-full gap-2 bg-amber-600 hover:bg-amber-700 text-white">
+                  <FileCheck className="h-4 w-4" />
+                  {submitting ? 'در حال ثبت...' : 'ثبت چک برای این سفارش'}
+                </Button>
+              ) : (
+                <Button onClick={handleAddPayment} disabled={submitting || !paymentAmount || isSettled} className="w-full gap-2 bg-green-600 hover:bg-green-700">
+                  <Wallet className="h-4 w-4" />
+                  {submitting ? 'در حال ثبت...' : 'ثبت پرداخت'}
+                </Button>
+              )}
             </div>
 
             <Separator />
