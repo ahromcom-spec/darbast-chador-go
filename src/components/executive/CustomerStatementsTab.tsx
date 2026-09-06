@@ -108,6 +108,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
   const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
   const [expandedStatements, setExpandedStatements] = useState<Set<string>>(new Set());
   const [closing, setClosing] = useState<Statement | null>(null);
+  const [reopening, setReopening] = useState<Statement | null>(null);
   const [busy, setBusy] = useState(false);
   const [payingStmt, setPayingStmt] = useState<{ statement: Statement; customer: CustomerGroup } | null>(null);
   const [historyStmt, setHistoryStmt] = useState<{ statement: Statement; customer: CustomerGroup } | null>(null);
