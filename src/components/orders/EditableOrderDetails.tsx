@@ -2072,7 +2072,20 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         </div>
       )}
 
+      {/* تخفیف مدیریتی */}
+      {!hidePrice && (
+        <OrderDiscountPanel
+          orderId={order.id}
+          currentPrice={Number(order.payment_amount || order.total_price || 0)}
+          priceBeforeDiscount={order.price_before_discount ?? null}
+          discountAmount={order.discount_amount ?? 0}
+          discountNote={order.discount_note ?? null}
+          onUpdate={onUpdate}
+        />
+      )}
+
       {!isExpertPricingRequest && !isCustomService && !hidePrice && (
+
 
         <div className="p-4 rounded-lg border bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
           <div className="flex items-center gap-2 mb-2">
