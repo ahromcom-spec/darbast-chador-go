@@ -114,7 +114,8 @@ export const OrderDiscountPanel = ({
             value={discountValue > 0 ? discountValue.toLocaleString('fa-IR') : ''}
             onChange={(e) => {
               setPercent('');
-              setAmount(String(Math.round(parseLocalizedNumber(e.target.value))));
+              const digitsOnly = toEnglishDigits(e.target.value).replace(/[^\d]/g, '');
+              setAmount(digitsOnly);
             }}
             placeholder="مبلغ تخفیف"
             className="font-bold"
