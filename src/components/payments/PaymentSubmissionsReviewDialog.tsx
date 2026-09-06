@@ -149,10 +149,13 @@ export default function PaymentSubmissionsReviewDialog({
                     <div className="flex items-center gap-2">
                       <Badge className={st.cls}>{st.label}</Badge>
                       {r.image_path && images[r.image_path] && (
-                        <Button size="sm" variant="ghost" className="h-7 gap-1" asChild>
-                          <a href={images[r.image_path]} target="_blank" rel="noreferrer">
-                            <Eye className="h-3.5 w-3.5" /> مشاهده تصویر
-                          </a>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 gap-1"
+                          onClick={() => { setZoomUrl(images[r.image_path]); setZoomOpen(true); }}
+                        >
+                          <Eye className="h-3.5 w-3.5" /> مشاهده تصویر
                         </Button>
                       )}
                     </div>
@@ -160,9 +163,13 @@ export default function PaymentSubmissionsReviewDialog({
 
                   {r.notes && <p className="text-xs text-muted-foreground">توضیح مشتری: {r.notes}</p>}
                   {r.image_path && images[r.image_path] && (
-                    <a href={images[r.image_path]} target="_blank" rel="noreferrer">
-                      <img src={images[r.image_path]} alt="تصویر فیش" className="max-h-48 rounded-md border object-contain" />
-                    </a>
+                    <button
+                      type="button"
+                      onClick={() => { setZoomUrl(images[r.image_path]); setZoomOpen(true); }}
+                      className="p-0 border-0 bg-transparent"
+                    >
+                      <img src={images[r.image_path]} alt="تصویر فیش" className="max-h-48 rounded-md border object-contain cursor-zoom-in" />
+                    </button>
                   )}
 
                   {r.status === 'pending' ? (
