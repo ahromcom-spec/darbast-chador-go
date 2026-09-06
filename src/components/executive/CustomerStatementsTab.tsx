@@ -44,6 +44,14 @@ interface Statement {
   total_paid_actual: number;
   overpaid: number;
   total_remaining: number;
+  /** مجموع چک‌های ثبت‌شده روی این صورتحساب */
+  cheque_total: number;
+  /** چک‌های وصول‌شده */
+  cheque_cleared: number;
+  /** چک‌های در جریان (وصول‌نشده) */
+  cheque_pending: number;
+  /** چک‌های برگشتی */
+  cheque_bounced: number;
 
   subcategory_name: string | null;
   address: string | null;
@@ -63,7 +71,12 @@ interface CustomerGroup {
   total_amount: number;
   total_paid_actual: number;
   overpaid: number;
+  cheque_total: number;
+  cheque_cleared: number;
+  cheque_pending: number;
+  cheque_bounced: number;
 }
+
 
 
 const formatPrice = (n: number) => new Intl.NumberFormat('fa-IR').format(Math.round(n || 0)) + ' تومان';
@@ -141,6 +154,26 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
         return;
       }
 
+      // چک‌های ثبت‌شده روی صورتحساب‌ها (برای نمایش سهم چک از پرداختی‌ها)
+      const statementIds = (stmts || []).map((s: any) => s.id);
+      const { data: chequeRows } = await supabase
+        .from('cheques')
+        .select('statement_id, amount, status')
+        .in('statement_id', statementIds);
+      const chequeByStatement = new Map<string, { total: number; cleared: number; pending: number; bounced: number }>();
+      for (const ch of (chequeRows || []) as any[]) {
+        if (!ch.statement_id) continue;
+        const cur = chequeByStatement.get(ch.statement_id) || { total: 0, cleared: 0, pending: 0, bounced: 0 };
+        const amt = Number(ch.amount) || 0;
+        cur.total += amt;
+        if (ch.status === 'cleared') cur.cleared += amt;
+        else if (ch.status === 'bounced') cur.bounced += amt;
+        else cur.pending += amt;
+        chequeByStatement.set(ch.statement_id, cur);
+      }
+
+
+
       const { data: customers } = await supabase
         .from('customers')
         .select('id, user_id')
@@ -187,6 +220,11 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
             total_amount: 0,
             total_paid_actual: 0,
             overpaid: 0,
+            cheque_total: 0,
+            cheque_cleared: 0,
+            cheque_pending: 0,
+            cheque_bounced: 0,
+
           });
 
         }
@@ -257,6 +295,11 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
           total_paid_actual,
           overpaid: Math.max(total_paid_actual - total_amount, 0),
           total_remaining: Math.max(total_amount - total_paid, 0),
+          cheque_total: chequeByStatement.get(s.id)?.total || 0,
+          cheque_cleared: chequeByStatement.get(s.id)?.cleared || 0,
+          cheque_pending: chequeByStatement.get(s.id)?.pending || 0,
+          cheque_bounced: chequeByStatement.get(s.id)?.bounced || 0,
+
 
           subcategory_name: serviceTypes[0] || null,
           address: s.address || myOrders[0]?.raw?.address || null,
@@ -274,7 +317,12 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
         const total_amount = visible.reduce((a, s) => a + s.total_amount, 0);
         const total_remaining = visible.reduce((a, s) => a + s.total_remaining, 0);
         const total_paid_actual = visible.reduce((a, s) => a + (s.total_paid_actual || 0), 0);
-        return { ...g, statements: visible, total_amount, total_remaining, total_paid_actual, overpaid: Math.max(total_paid_actual - total_amount, 0) };
+        const cheque_total = visible.reduce((a, s) => a + (s.cheque_total || 0), 0);
+        const cheque_cleared = visible.reduce((a, s) => a + (s.cheque_cleared || 0), 0);
+        const cheque_pending = visible.reduce((a, s) => a + (s.cheque_pending || 0), 0);
+        const cheque_bounced = visible.reduce((a, s) => a + (s.cheque_bounced || 0), 0);
+        return { ...g, statements: visible, total_amount, total_remaining, total_paid_actual, cheque_total, cheque_cleared, cheque_pending, cheque_bounced, overpaid: Math.max(total_paid_actual - total_amount, 0) };
+
 
       }).filter(g => g.statements.length > 0);
 
@@ -305,7 +353,12 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
           const total_amount = g.statements.reduce((a, s) => a + s.total_amount, 0);
           const total_remaining = g.statements.reduce((a, s) => a + s.total_remaining, 0);
           const total_paid_actual = g.statements.reduce((a, s) => a + (s.total_paid_actual || 0), 0);
-          return { ...g, total_amount, total_remaining, total_paid_actual, overpaid: Math.max(total_paid_actual - total_amount, 0) };
+          const cheque_total = g.statements.reduce((a, s) => a + (s.cheque_total || 0), 0);
+          const cheque_cleared = g.statements.reduce((a, s) => a + (s.cheque_cleared || 0), 0);
+          const cheque_pending = g.statements.reduce((a, s) => a + (s.cheque_pending || 0), 0);
+          const cheque_bounced = g.statements.reduce((a, s) => a + (s.cheque_bounced || 0), 0);
+          return { ...g, total_amount, total_remaining, total_paid_actual, cheque_total, cheque_cleared, cheque_pending, cheque_bounced, overpaid: Math.max(total_paid_actual - total_amount, 0) };
+
         });
 
     }
@@ -409,6 +462,14 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                         )}
                         <span className="text-sm">کل: <b>{formatPrice(g.total_amount)}</b></span>
                         <span className="text-sm text-emerald-700">واریز کامل کارفرما: <b>{formatPrice(g.total_paid_actual)}</b></span>
+                        {g.cheque_total > 0 && (
+                          <span className="text-sm text-indigo-700">
+                            چک: <b>{formatPrice(g.cheque_total)}</b>
+                            {' '}(وصول‌شده: {formatPrice(g.cheque_cleared)} — در جریان: {formatPrice(g.cheque_pending)}
+                            {g.cheque_bounced > 0 ? ` — برگشتی: ${formatPrice(g.cheque_bounced)}` : ''})
+                          </span>
+                        )}
+
                         {g.overpaid > 0 && (
                           <Badge className="bg-amber-500/20 text-amber-700 border border-amber-500/40">
                             اضافه‌پرداخت: {formatPrice(g.overpaid)}
@@ -473,12 +534,25 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                   </div>
                                   <div className="flex items-center gap-3 flex-wrap text-xs">
                                     <span>کل: <b>{formatPrice(s.total_amount)}</b></span>
-                                    <span className="text-green-600">پرداختی: {formatPrice(s.total_paid)}</span>
+                                    <span className="text-green-600">پرداختی (شامل چک): {formatPrice(s.total_paid)}</span>
+                                    {s.cheque_total > 0 && (
+                                      <>
+                                        <span className="text-indigo-700">
+                                          چک: {formatPrice(s.cheque_total)}
+                                          {' '}(وصول‌شده: {formatPrice(s.cheque_cleared)} — در جریان: {formatPrice(s.cheque_pending)}
+                                          {s.cheque_bounced > 0 ? ` — برگشتی: ${formatPrice(s.cheque_bounced)}` : ''})
+                                        </span>
+                                        <span className="text-orange-700">
+                                          مانده بدون احتساب چک‌های وصول‌نشده: {formatPrice(s.total_remaining + s.cheque_pending)}
+                                        </span>
+                                      </>
+                                    )}
                                     {s.overpaid > 0 && (
                                       <span className="text-amber-700">اضافه‌پرداخت: {formatPrice(s.overpaid)}</span>
                                     )}
 
                                     <span className="text-red-600">مانده: {formatPrice(s.total_remaining)}</span>
+
                                     <div onClick={(e) => e.stopPropagation()} className="inline-block">
                                       <StatementInvoiceDialog
                                         statementNumber={s.statement_number}
