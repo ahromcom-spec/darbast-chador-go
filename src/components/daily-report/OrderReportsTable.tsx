@@ -113,11 +113,11 @@ export function OrderReportsTable({
                           onUpdateRow(index, 'notes', e.target.value);
                         }
                       }}
-                       className="min-h-[140px] w-[24ch] bg-background/50"
+                       className="w-[24ch] bg-background/50"
                        placeholder="توضیحات..."
                        maxLength={600}
                      />
-                  </TableCell>
+                   </TableCell>
                   <TableCell className="border border-blue-200">
                     <Input
                       value={row.team_name}
@@ -134,12 +134,12 @@ export function OrderReportsTable({
                           onUpdateRow(index, 'service_details', e.target.value);
                         }
                       }}
-                       className="min-h-[140px] w-[24ch] bg-background/50"
+                       className="w-[24ch] bg-background/50"
                        placeholder="جزئیات خدمات..."
                        maxLength={600}
                      />
-                   </TableCell>
-                   <TableCell className="border border-blue-200">
+                    </TableCell>
+                    <TableCell className="border border-blue-200">
                     <AutoResizeTextarea
                       value={row.activity_description}
                       onChange={(e) => {
@@ -147,11 +147,11 @@ export function OrderReportsTable({
                           onUpdateRow(index, 'activity_description', e.target.value);
                         }
                       }}
-                       className="min-h-[140px] w-[24ch] bg-background/50"
+                       className="w-[24ch] bg-background/50"
                        placeholder="شرح فعالیت..."
                        maxLength={600}
                      />
-                  </TableCell>
+                   </TableCell>
                   <TableCell className="border border-blue-200">
                     <div className="flex items-center gap-2">
                       <OrderSearchSelect
