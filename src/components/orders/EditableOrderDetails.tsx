@@ -35,6 +35,8 @@ import { OrderMediaSection } from './OrderMediaSection';
 import { ExpertPricingEditDialog } from './ExpertPricingEditDialog';
 import { InvoiceEmployerOverrideDialog } from './InvoiceEmployerOverrideDialog';
 import { applyFixedPriceToBreakdown } from '@/lib/priceBreakdown';
+import { OrderDiscountPanel } from './OrderDiscountPanel';
+
 
 const scaffoldingTypeLabels: Record<string, string> = {
   facade: 'داربست سطحی نما',
