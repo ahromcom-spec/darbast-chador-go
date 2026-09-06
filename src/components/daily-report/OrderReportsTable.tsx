@@ -113,7 +113,7 @@ export function OrderReportsTable({
                           onUpdateRow(index, 'notes', e.target.value);
                         }
                       }}
-                       className="w-[24ch] bg-background/50"
+                       className="min-h-[48px] w-[24ch] bg-background/50"
                        placeholder="توضیحات..."
                        maxLength={600}
                      />
@@ -134,7 +134,7 @@ export function OrderReportsTable({
                           onUpdateRow(index, 'service_details', e.target.value);
                         }
                       }}
-                       className="w-[24ch] bg-background/50"
+                       className="min-h-[48px] w-[24ch] bg-background/50"
                        placeholder="جزئیات خدمات..."
                        maxLength={600}
                      />
@@ -147,7 +147,7 @@ export function OrderReportsTable({
                           onUpdateRow(index, 'activity_description', e.target.value);
                         }
                       }}
-                       className="w-[24ch] bg-background/50"
+                       className="min-h-[48px] w-[24ch] bg-background/50"
                        placeholder="شرح فعالیت..."
                        maxLength={600}
                      />
