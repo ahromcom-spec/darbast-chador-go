@@ -80,6 +80,8 @@ export function MultiPaymentDialog({
   const [chequeDueDate, setChequeDueDate] = useState<string>(new Date().toISOString());
   const [chequeImageFile, setChequeImageFile] = useState<File | null>(null);
   const [chequeImagePreview, setChequeImagePreview] = useState<string | null>(null);
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
 
   // Edit state
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
