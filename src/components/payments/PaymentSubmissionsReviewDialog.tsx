@@ -14,6 +14,7 @@ import {
   approvePaymentSubmission, deletePaymentSubmission, kindLabels, rejectPaymentSubmission,
   signPaymentImages, submissionStatusLabels, type PaymentSubmission,
 } from '@/lib/paymentSubmissions';
+import { ImageZoomModal } from '@/components/common/ImageZoomModal';
 
 interface Props {
   orderId?: string | null;
