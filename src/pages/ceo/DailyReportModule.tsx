@@ -5294,6 +5294,7 @@ export default function DailyReportModule() {
                                         onValueChange={(value) => updateOrderRow(index, 'order_id', value)}
                                         placeholder="انتخاب سفارش"
                                         dense
+                                        fullScreen
                                       />
                                     )}
                                     {row.order_id && (
