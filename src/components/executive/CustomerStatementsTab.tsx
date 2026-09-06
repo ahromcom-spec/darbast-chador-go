@@ -295,6 +295,11 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
           total_paid_actual,
           overpaid: Math.max(total_paid_actual - total_amount, 0),
           total_remaining: Math.max(total_amount - total_paid, 0),
+          cheque_total: chequeByStatement.get(s.id)?.total || 0,
+          cheque_cleared: chequeByStatement.get(s.id)?.cleared || 0,
+          cheque_pending: chequeByStatement.get(s.id)?.pending || 0,
+          cheque_bounced: chequeByStatement.get(s.id)?.bounced || 0,
+
 
           subcategory_name: serviceTypes[0] || null,
           address: s.address || myOrders[0]?.raw?.address || null,
