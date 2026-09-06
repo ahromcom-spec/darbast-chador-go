@@ -1007,6 +1007,12 @@ export function MultiPaymentDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ImageZoomModal
+        imageUrl={zoomUrl || ''}
+        isOpen={zoomOpen}
+        onClose={() => { setZoomOpen(false); setZoomUrl(null); }}
+      />
     </>
   );
 }
