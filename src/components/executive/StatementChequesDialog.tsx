@@ -8,6 +8,7 @@ import { FileCheck, CheckCircle2, XCircle, Loader2, Image as ImageIcon, External
 import { useToast } from '@/hooks/use-toast';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
 import { formatPersianDate } from '@/lib/dateUtils';
+import { ImageZoomModal } from '@/components/common/ImageZoomModal';
 
 interface Props {
   open: boolean;
