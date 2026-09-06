@@ -526,7 +526,7 @@ export function StatementManualPaymentDialog({
                   ) : (
                     <label className="flex items-center justify-center gap-2 cursor-pointer border-2 border-dashed border-border rounded-md py-3 px-4 hover:bg-muted/50 transition text-sm text-muted-foreground">
                       <Upload className="h-4 w-4" />
-                      <span>انتخاب یا گرفتن عکس از چک</span>
+                      <span>انتخاب عکس چک از گالری یا دوربین</span>
                       <input
                         type="file"
                         accept="image/*"
