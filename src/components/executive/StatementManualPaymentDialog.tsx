@@ -625,5 +625,6 @@ export function StatementManualPaymentDialog({
       isOpen={zoomOpen}
       onClose={() => { setZoomOpen(false); setZoomUrl(null); }}
     />
+    </>
   );
 }
