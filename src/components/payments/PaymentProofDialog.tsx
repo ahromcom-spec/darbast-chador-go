@@ -37,14 +37,22 @@ export default function PaymentProofDialog({
   const [serial, setSerial] = useState('');
   const [dueDate, setDueDate] = useState<string>(new Date().toISOString());
   const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [zoomOpen, setZoomOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const numericAmount = Number(toEnglishDigits(amount).replace(/[^\d]/g, '')) || 0;
 
+  const clearFile = () => {
+    if (preview) URL.revokeObjectURL(preview);
+    setPreview(null); setFile(null);
+  };
+
   const reset = () => {
     setKind('receipt'); setAmount(defaultAmount ? String(Math.round(defaultAmount)) : '');
-    setNotes(''); setSerial(''); setFile(null); setDueDate(new Date().toISOString());
+    setNotes(''); setSerial(''); clearFile(); setDueDate(new Date().toISOString());
   };
+
 
   const submit = async () => {
     if (numericAmount <= 0) { toast.error('مبلغ واریزی را وارد کنید'); return; }
