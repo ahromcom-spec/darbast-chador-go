@@ -19,6 +19,7 @@ import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import OrderPaymentSubmissionsPanel from '@/components/payments/OrderPaymentSubmissionsPanel';
 import { formatPersianDate } from '@/lib/dateUtils';
+import { ImageZoomModal } from '@/components/common/ImageZoomModal';
 
 
 interface Payment {
