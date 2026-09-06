@@ -241,7 +241,7 @@ export function OrderSearchSelect({
 
   const renderOrderList = (inModal = false) => (
     <>
-      <div className="p-3 border-b bg-background">
+      <div className={inModal ? 'p-2 border-b bg-background' : 'p-3 border-b bg-background'}>
         <div className="relative">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
