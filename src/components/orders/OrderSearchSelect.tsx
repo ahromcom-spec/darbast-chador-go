@@ -376,10 +376,44 @@ export function OrderSearchSelect({
             className="fixed inset-0 z-[200] flex h-screen w-screen max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 p-0 sm:inset-0 sm:h-screen sm:w-screen sm:rounded-none"
             style={{ zoom: 'max(1, var(--app-zoom, 1))' } as React.CSSProperties}
           >
-            <DialogHeader className="shrink-0 border-b bg-background p-4 text-right sm:text-right">
-              <DialogTitle className="text-lg font-semibold">انتخاب سفارش</DialogTitle>
+            <DialogHeader className="shrink-0 border-b bg-background py-2 px-3 text-right sm:text-right">
+              <div className="flex items-center justify-between gap-2">
+                <DialogTitle className="text-base font-semibold">انتخاب سفارش</DialogTitle>
+                <div className="flex items-center gap-1" dir="ltr">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={modalZoomIndex === 0}
+                    onClick={modalZoomOut}
+                    aria-label="کوچک‌نمایی"
+                  >
+                    <ZoomOut className="h-4 w-4" />
+                  </Button>
+                  <span className="min-w-[3ch] text-center text-xs text-muted-foreground tabular-nums">
+                    {Math.round(modalZoom * 100)}%
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={modalZoomIndex === MODAL_ZOOM_LEVELS.length - 1}
+                    onClick={modalZoomIn}
+                    aria-label="بزرگ‌نمایی"
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </DialogHeader>
-            {renderOrderList(true)}
+            <div
+              className="flex-1 overflow-hidden origin-top"
+              style={{ transform: `scale(${modalZoom})`, transformOrigin: 'top center' } as React.CSSProperties}
+            >
+              {renderOrderList(true)}
+            </div>
           </DialogContent>
         </Dialog>
       ) : (
