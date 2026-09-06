@@ -288,11 +288,13 @@ export function StatementChequesDialog({ open, onOpenChange, statementId, statem
                           تصویر چک
                         </div>
                         {imageUrls[ch.id] ? (
-                          <a
-                            href={imageUrls[ch.id]}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-block relative group"
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setZoomUrl(imageUrls[ch.id]);
+                              setZoomOpen(true);
+                            }}
+                            className="inline-block relative group p-0 border-0 bg-transparent"
                           >
                             <img
                               src={imageUrls[ch.id]}
@@ -303,7 +305,7 @@ export function StatementChequesDialog({ open, onOpenChange, statementId, statem
                             <span className="absolute top-1 left-1 bg-black/60 text-white rounded p-1 opacity-0 group-hover:opacity-100 transition">
                               <ExternalLink className="h-3.5 w-3.5" />
                             </span>
-                          </a>
+                          </button>
                         ) : (
                           <div className="text-xs text-muted-foreground flex items-center gap-2">
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -312,6 +314,11 @@ export function StatementChequesDialog({ open, onOpenChange, statementId, statem
                         )}
                       </div>
                     )}
+                    <ImageZoomModal
+                      imageUrl={zoomUrl || ''}
+                      isOpen={zoomOpen}
+                      onClose={() => { setZoomOpen(false); setZoomUrl(null); }}
+                    />
                   </div>
                 );
               })}
