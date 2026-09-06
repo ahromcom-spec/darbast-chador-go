@@ -227,6 +227,12 @@ export default function PaymentSubmissionsReviewDialog({
           </div>
         </DialogContent>
       </Dialog>
+
+      <ImageZoomModal
+        imageUrl={zoomUrl || ''}
+        isOpen={zoomOpen}
+        onClose={() => { setZoomOpen(false); setZoomUrl(null); }}
+      />
     </>
   );
 }
