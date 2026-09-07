@@ -2019,7 +2019,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           const html = `
             <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
               ${addressLabelHtml}
-              <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid #fff;background:#f0f0f0;position:relative;">
+              <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid ${projectArchived ? '#94a3b8' : '#fff'};background:#f0f0f0;position:relative;${projectArchived ? 'filter:grayscale(0.45) saturate(0.7);' : ''}">
                 <img src="${url1}" alt="تصویر پروژه" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
                 <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));height:18px;display:flex;align-items:center;justify-content:center;">
                   <span style="color:#fff;font-size:10px;font-weight:bold;">${totalOrderImages}</span>
@@ -3328,6 +3328,32 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             </>
           )}
         </Button>
+
+        {/* فیلتر نمایش سفارش‌ها: همه / فعال / بایگانی */}
+        {!activeExecutionOnly && (
+          <Card className="pointer-events-auto absolute right-2 top-2 bg-card/80 backdrop-blur-md shadow-lg border border-primary/20 p-1 rounded-md z-[2100]" dir="rtl">
+            <div className="flex items-center gap-1">
+              {([
+                { key: 'all', label: 'همه' },
+                { key: 'active', label: 'فعال' },
+                { key: 'archived', label: 'بایگانی' },
+              ] as { key: MapOrderFilter; label: string }[]).map(opt => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setMapOrderFilter(opt.key)}
+                  className={`px-2 py-1 rounded text-[10px] font-semibold transition-colors ${
+                    mapOrderFilter === opt.key
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {/* کارت تعداد پروژه‌ها - زیر دکمه ماهواره‌ای */}
         <Card className="pointer-events-auto absolute left-2 top-10 bg-card/50 backdrop-blur-md shadow-lg border border-primary/20 p-1 rounded-md z-[2100]">
