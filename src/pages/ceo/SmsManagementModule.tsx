@@ -598,7 +598,11 @@ export default function SmsManagementModule() {
             <TabsTrigger value="ceo">پیامک‌های مدیرعامل ({groups.ceo?.length || 0})</TabsTrigger>
             <TabsTrigger value="logs">گزارش ارسال ({logs.length})</TabsTrigger>
             <TabsTrigger value="queue">در انتظار ارسال ({queue.length})</TabsTrigger>
+            <TabsTrigger value="bale">پیامرسان بله</TabsTrigger>
           </TabsList>
+          <TabsContent value="bale" className="mt-4">
+            <BaleMessengerTab />
+          </TabsContent>
           <TabsContent value="queue" className="mt-4">
             <Card>
               <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
