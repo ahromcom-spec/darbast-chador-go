@@ -6,9 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { EmptyState } from '@/components/common/EmptyState';
+import { OrderMediaPreview } from '@/components/profile/OrderMediaPreview';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { Package, MapPin, Calendar, Eye, Filter, X, Users, Search, XCircle, Wallet } from 'lucide-react';
+import { Package, MapPin, Calendar, Eye, Filter, X, Users, Search, XCircle, Wallet, Archive, Activity, CheckCircle2, Images, ChevronDown } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -82,6 +84,11 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
   const [selectedServiceType, setSelectedServiceType] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // تب فعال / بایگانی
+  const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
+  const [archivedVisible, setArchivedVisible] = useState(8);
+  const [openMediaOrderId, setOpenMediaOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOrders();
