@@ -754,6 +754,9 @@ export default function SmsManagementModule() {
                           {new Date(l.created_at).toLocaleString("fa-IR")}
                         </TableCell>
                         <TableCell className="font-mono text-xs">{l.recipient}</TableCell>
+                        <TableCell className="text-xs max-w-[140px] truncate" title={l.address ? `${l.address}${l.detailed_address ? ` - ${l.detailed_address}` : ""}` : ""}>
+                          {l.customer_name || "—"}
+                        </TableCell>
                         <TableCell><Badge variant="outline" className="font-mono text-[10px]">{l.template_key}</Badge></TableCell>
                         <TableCell className="font-mono text-xs">{l.order_code || "—"}</TableCell>
                         <TableCell>
