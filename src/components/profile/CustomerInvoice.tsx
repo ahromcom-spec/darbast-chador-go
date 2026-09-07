@@ -387,17 +387,42 @@ export const CustomerInvoice = () => {
 
 
 
+      {/* تب‌های فعال / بایگانی */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          size="sm"
+          variant={view === 'active' ? 'default' : 'outline'}
+          className="gap-1"
+          onClick={() => setView('active')}
+        >
+          <FileText className="h-3.5 w-3.5" />
+          صورتحساب‌های فعال
+          <span className="text-[11px] opacity-80">({new Intl.NumberFormat('fa-IR').format(activeStatements.length)})</span>
+        </Button>
+        <Button
+          size="sm"
+          variant={view === 'archived' ? 'default' : 'outline'}
+          className="gap-1"
+          onClick={() => setView('archived')}
+        >
+          <Archive className="h-3.5 w-3.5" />
+          صورتحساب‌های بایگانی
+          <span className="text-[11px] opacity-80">({new Intl.NumberFormat('fa-IR').format(archivedStatements.length)})</span>
+        </Button>
+      </div>
+
       {/* لیست صورتحساب‌ها */}
-      {statements.length === 0 ? (
+      {visibleStatements.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center text-muted-foreground">
-            هنوز صورتحسابی ندارید
+            {view === 'archived' ? 'صورتحساب بایگانی‌شده‌ای ندارید' : 'هنوز صورتحسابی ندارید'}
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
-          {statements.map(s => {
+          {visibleStatements.map(s => {
             const isOpen = expanded.has(s.id);
+
             return (
               <Collapsible key={s.id} open={isOpen} onOpenChange={() => toggle(s.id)}>
                 <Card className={s.status === 'open' ? 'border-primary/40' : ''}>
