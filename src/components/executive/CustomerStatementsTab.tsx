@@ -306,6 +306,10 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
           cheque_cleared: chequeByStatement.get(s.id)?.cleared || 0,
           cheque_pending: chequeByStatement.get(s.id)?.pending || 0,
           cheque_bounced: chequeByStatement.get(s.id)?.bounced || 0,
+          is_archived: !!s.is_archived,
+          is_deep_archived: !!s.is_deep_archived,
+          archived_at: s.archived_at || null,
+
 
 
           subcategory_name: serviceTypes[0] || null,
