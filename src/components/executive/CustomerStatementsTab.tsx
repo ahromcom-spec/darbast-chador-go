@@ -122,6 +122,8 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
   const [chequesStmt, setChequesStmt] = useState<{ statement: Statement; customer: CustomerGroup } | null>(null);
   const [globalPay, setGlobalPay] = useState<CustomerGroup | null>(null);
   const [globalHistory, setGlobalHistory] = useState<CustomerGroup | null>(null);
+  const [archiveView, setArchiveView] = useState<'active' | 'archived' | 'deep'>('active');
+
 
   /**
    * All invoices of a customer across every statement, ordered by statement number
