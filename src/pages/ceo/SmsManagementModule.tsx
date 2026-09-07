@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import {
   Loader2, MessageSquare, Save, RefreshCw, Smartphone, Send, AlertCircle,
   CheckCircle2, XCircle, Lock, RotateCcw, Wallet, Clock, Settings2,
+  Search, X,
 } from "lucide-react";
 
 interface SmsTemplate {
@@ -43,6 +44,9 @@ interface SmsLog {
   order_code: string | null;
   provider_response: string | null;
   created_at: string;
+  customer_name?: string | null;
+  address?: string | null;
+  detailed_address?: string | null;
 }
 
 interface ScheduledSms {
@@ -113,6 +117,8 @@ export default function SmsManagementModule() {
   const [resending, setResending] = useState<string | null>(null);
   const [queue, setQueue] = useState<ScheduledSms[]>([]);
   const [canceling, setCanceling] = useState<string | null>(null);
+  const [logSearch, setLogSearch] = useState("");
+  const [queueSearch, setQueueSearch] = useState("");
 
   const cancelScheduled = async (row: ScheduledSms) => {
     setCanceling(row.id);
@@ -175,7 +181,26 @@ export default function SmsManagementModule() {
       setItems((tplRes.data || []) as SmsTemplate[]);
       setDrafts({});
     }
-    if (!logsRes.error) setLogs((logsRes.data || []) as SmsLog[]);
+    if (!logsRes.error) {
+      const rawLogs = (logsRes.data || []) as any[];
+      const orderCodes = rawLogs.map((l) => l.order_code).filter(Boolean);
+      let projectByCode: Record<string, { customer_name?: string | null; address?: string | null; detailed_address?: string | null }> = {};
+      if (orderCodes.length) {
+        const { data: projects } = await supabase
+          .from("projects_v3")
+          .select("code, customer_name, address, detailed_address")
+          .in("code", orderCodes);
+        (projects || []).forEach((p: any) => {
+          if (p.code) projectByCode[p.code] = p;
+        });
+      }
+      setLogs(rawLogs.map((l) => ({
+        ...l,
+        customer_name: l.order_code ? projectByCode[l.order_code]?.customer_name || null : null,
+        address: l.order_code ? projectByCode[l.order_code]?.address || null : null,
+        detailed_address: l.order_code ? projectByCode[l.order_code]?.detailed_address || null : null,
+      })) as SmsLog[]);
+    }
     if (!queueRes.error) setQueue((queueRes.data || []) as unknown as ScheduledSms[]);
 
     if (!statsRes.error) {
@@ -294,6 +319,41 @@ export default function SmsManagementModule() {
     for (const it of items) (g[it.scope] || (g[it.scope] = [])).push(it);
     return g;
   }, [items]);
+
+  const filteredLogs = useMemo(() => {
+    const q = logSearch.trim();
+    if (!q) return logs;
+    const lower = q.toLowerCase();
+    return logs.filter((l) => {
+      const fullAddress = [l.address, l.detailed_address].filter(Boolean).join(" ");
+      return [
+        l.recipient,
+        l.customer_name,
+        fullAddress,
+        l.message,
+        l.order_code,
+        l.template_key,
+        l.provider_response,
+      ].filter(Boolean).some((v) => String(v).toLowerCase().includes(lower));
+    });
+  }, [logs, logSearch]);
+
+  const filteredQueue = useMemo(() => {
+    const q = queueSearch.trim();
+    if (!q) return queue;
+    const lower = q.toLowerCase();
+    return queue.filter((r) => {
+      const p = r.payload || {};
+      const payloadText = [p.message, p.text, p.body, p.customerName, p.address, p.description].filter(Boolean).join(" ");
+      return [
+        r.phone,
+        r.order_code,
+        r.status_key,
+        payloadText,
+        r.last_error,
+      ].filter(Boolean).some((v) => String(v).toLowerCase().includes(lower));
+    });
+  }, [queue, queueSearch]);
 
   const renderItem = (item: SmsTemplate) => {
     const m = merged(item);
@@ -548,6 +608,25 @@ export default function SmsManagementModule() {
                 </Button>
               </CardHeader>
               <CardContent className="overflow-x-auto">
+                <div className="relative mb-3">
+                  <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    className="rounded-xl pr-9"
+                    placeholder="جستجو در نام کارفرما، آدرس و شماره تماس..."
+                    value={queueSearch}
+                    onChange={(e) => setQueueSearch(e.target.value)}
+                  />
+                  {queueSearch && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="absolute left-1 top-1/2 h-7 w-7 -translate-y-1/2"
+                      onClick={() => setQueueSearch("")}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground mb-3">
                   پیامک‌های ناموفق به‌صورت خودکار با یک زمان تصادفی بین ۵ تا ۱۲۰ ثانیه دوباره ارسال می‌شوند (حداکثر ۵ تلاش).
                   در صورت انصراف می‌توانید ارسال را لغو کنید.
@@ -566,12 +645,12 @@ export default function SmsManagementModule() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {queue.length === 0 && (
+                    {filteredQueue.length === 0 && (
                       <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                        پیامکی در انتظار ارسال نیست.
+                        {queueSearch.trim() ? "موردی با این جستجو یافت نشد." : "پیامکی در انتظار ارسال نیست."}
                       </TableCell></TableRow>
                     )}
-                    {queue.map((row) => (
+                    {filteredQueue.map((row) => (
                       <TableRow key={row.id}>
                         <TableCell className="text-xs whitespace-nowrap">
                           {new Date(row.send_after).toLocaleString("fa-IR")}
@@ -630,11 +709,31 @@ export default function SmsManagementModule() {
                 <CardTitle className="text-base">آخرین ارسال‌ها</CardTitle>
               </CardHeader>
               <CardContent className="overflow-x-auto">
+                <div className="relative mb-3">
+                  <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    className="rounded-xl pr-9"
+                    placeholder="جستجو در نام کارفرما، آدرس و شماره تماس..."
+                    value={logSearch}
+                    onChange={(e) => setLogSearch(e.target.value)}
+                  />
+                  {logSearch && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="absolute left-1 top-1/2 h-7 w-7 -translate-y-1/2"
+                      onClick={() => setLogSearch("")}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>زمان</TableHead>
                       <TableHead>گیرنده</TableHead>
+                      <TableHead>کارفرما</TableHead>
                       <TableHead>کلید</TableHead>
                       <TableHead>کد سفارش</TableHead>
                       <TableHead>وضعیت</TableHead>
@@ -644,17 +743,20 @@ export default function SmsManagementModule() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {logs.length === 0 && (
-                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                        گزارشی ثبت نشده است.
+                    {filteredLogs.length === 0 && (
+                      <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                        {logSearch.trim() ? "موردی با این جستجو یافت نشد." : "گزارشی ثبت نشده است."}
                       </TableCell></TableRow>
                     )}
-                    {logs.map((l) => (
+                    {filteredLogs.map((l) => (
                       <TableRow key={l.id}>
                         <TableCell className="text-xs whitespace-nowrap">
                           {new Date(l.created_at).toLocaleString("fa-IR")}
                         </TableCell>
                         <TableCell className="font-mono text-xs">{l.recipient}</TableCell>
+                        <TableCell className="text-xs max-w-[140px] truncate" title={l.address ? `${l.address}${l.detailed_address ? ` - ${l.detailed_address}` : ""}` : ""}>
+                          {l.customer_name || "—"}
+                        </TableCell>
                         <TableCell><Badge variant="outline" className="font-mono text-[10px]">{l.template_key}</Badge></TableCell>
                         <TableCell className="font-mono text-xs">{l.order_code || "—"}</TableCell>
                         <TableCell>
