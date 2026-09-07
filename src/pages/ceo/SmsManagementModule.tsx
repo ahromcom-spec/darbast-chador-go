@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/accordion";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
+import { BaleMessengerTab } from "@/components/ceo/BaleMessengerTab";
 import {
   Loader2, MessageSquare, Save, RefreshCw, Smartphone, Send, AlertCircle,
   CheckCircle2, XCircle, Lock, RotateCcw, Wallet, Clock, Settings2,
