@@ -3385,7 +3385,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
 
         {/* دکمه انتخاب پروژه فقط زمانی که مکان‌نما روی پروژه قرار گرفته */}
         {snappedProject && (
-          <div className="pointer-events-auto absolute bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-[2200]">
+          <div className={`pointer-events-auto absolute ${activeExecutionOnly ? 'bottom-4' : 'bottom-[4.75rem]'} left-1/2 -translate-x-1/2 w-[90%] max-w-md z-[2200]`}>
             <Button
               className="w-full h-11 text-sm font-bold shadow-xl bg-green-600 hover:bg-green-700 text-white"
               onClick={() => {
