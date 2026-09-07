@@ -117,6 +117,8 @@ export default function SmsManagementModule() {
   const [resending, setResending] = useState<string | null>(null);
   const [queue, setQueue] = useState<ScheduledSms[]>([]);
   const [canceling, setCanceling] = useState<string | null>(null);
+  const [logSearch, setLogSearch] = useState("");
+  const [queueSearch, setQueueSearch] = useState("");
 
   const cancelScheduled = async (row: ScheduledSms) => {
     setCanceling(row.id);
