@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useToast } from '@/hooks/use-toast';
-import { Receipt, Wallet, TrendingUp, TrendingDown, ChevronDown, ChevronUp, FileText, CheckCircle2, Lock, CreditCard } from 'lucide-react';
+import { Receipt, Wallet, TrendingUp, TrendingDown, ChevronDown, ChevronUp, FileText, CheckCircle2, Lock, CreditCard, Archive } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
