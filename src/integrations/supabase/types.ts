@@ -2105,6 +2105,117 @@ export type Database = {
           },
         ]
       }
+      messenger_chats: {
+        Row: {
+          chat_id: string
+          created_at: string
+          full_name: string | null
+          id: string
+          phone: string | null
+          provider: string
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          chat_id: string
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          provider?: string
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          chat_id?: string
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          provider?: string
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      messenger_logs: {
+        Row: {
+          chat_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          media_url: string | null
+          order_code: string | null
+          order_id: string | null
+          phone: string | null
+          provider: string
+          provider_response: string | null
+          status: string
+          text: string | null
+        }
+        Insert: {
+          chat_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          media_url?: string | null
+          order_code?: string | null
+          order_id?: string | null
+          phone?: string | null
+          provider?: string
+          provider_response?: string | null
+          status?: string
+          text?: string | null
+        }
+        Update: {
+          chat_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          media_url?: string | null
+          order_code?: string | null
+          order_id?: string | null
+          phone?: string | null
+          provider?: string
+          provider_response?: string | null
+          status?: string
+          text?: string | null
+        }
+        Relationships: []
+      }
+      messenger_settings: {
+        Row: {
+          bot_username: string | null
+          enabled: boolean
+          id: string
+          notify_ceo: boolean
+          provider: string
+          send_media: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          bot_username?: string | null
+          enabled?: boolean
+          id?: string
+          notify_ceo?: boolean
+          provider?: string
+          send_media?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          bot_username?: string | null
+          enabled?: boolean
+          id?: string
+          notify_ceo?: boolean
+          provider?: string
+          send_media?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       module_assignments: {
         Row: {
           assigned_at: string

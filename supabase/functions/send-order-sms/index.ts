@@ -463,6 +463,53 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`[send-order-sms] Sending message: ${message}`);
 
+    // === ارسال همزمان در پیامرسان بله (در صورت فعال بودن) ===
+    try {
+      const { data: messenger } = await supabase
+        .from("messenger_settings")
+        .select("enabled, send_media, notify_ceo")
+        .eq("provider", "bale")
+        .maybeSingle();
+
+      const baleAllowed =
+        messenger?.enabled === true && (!isCeoNotification || messenger?.notify_ceo !== false);
+
+      if (baleAllowed) {
+        const media: Array<{ url: string; type: "photo" | "video" }> = [];
+        if (messenger?.send_media !== false && orderId) {
+          const { data: mediaRows } = await supabase
+            .from("project_media")
+            .select("file_path, file_type")
+            .eq("project_id", orderId)
+            .order("created_at", { ascending: false })
+            .limit(4);
+          for (const row of mediaRows ?? []) {
+            const type = String((row as any).file_type || "").startsWith("video") ? "video" : "photo";
+            const { data: pub } = supabase.storage
+              .from("project-media")
+              .getPublicUrl((row as any).file_path);
+            if (pub?.publicUrl) media.push({ url: pub.publicUrl, type });
+          }
+        }
+
+        await fetch(`${supabaseUrl}/functions/v1/send-bale-message`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${supabaseKey}` },
+          body: JSON.stringify({
+            phone: normalizedPhone,
+            text: message,
+            media,
+            orderCode,
+            orderId: orderId ?? undefined,
+          }),
+        });
+      }
+    } catch (e) {
+      console.warn("[send-order-sms] Bale send failed:", e);
+    }
+
+
+
 
     // Get ParsGreen credentials
     const apiKey = Deno.env.get("PARSGREEN_API_KEY");
