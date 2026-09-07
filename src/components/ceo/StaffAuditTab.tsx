@@ -617,7 +617,7 @@ export function StaffAuditTab() {
               <tr style="background-color: #f5e6d3; font-weight: bold;">
                 <td colspan="2" style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">جمع کل:</td>
                 <td style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${summary.totalDaysWorked.toLocaleString('fa-IR')} روز</td>
-                <td style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${formatOvertime(summary.totalOvertime)} (کم‌کاری: ${formatOvertime(summary.totalUndertime)})</td>
+                <td style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; line-height: 1.6;"><span style="white-space: nowrap; direction: ltr; display: inline-block; color: #16a34a;">${formatOvertime(summary.totalOvertime)}</span><br/><span style="font-size: 9px; font-weight: normal;">اضافه‌کاری</span><br/><span style="white-space: nowrap; direction: ltr; display: inline-block; color: #dc2626;">${formatOvertime(summary.totalUndertime)}</span><br/><span style="font-size: 9px; font-weight: normal;">کم‌کاری</span></td>
                 <td style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; color: #16a34a;"><span style="white-space: nowrap;">${summary.totalReceived.toLocaleString('fa-IR')}</span><br/>تومان</td>
                 <td style="padding: 8px; border: 1px solid #d4a574;"></td>
                 <td style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; color: #dc2626;"><span style="white-space: nowrap;">${summary.totalSpent.toLocaleString('fa-IR')}</span><br/>تومان</td>
