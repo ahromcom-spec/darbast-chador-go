@@ -1304,7 +1304,7 @@ export function StaffAuditTab() {
                           {record.work_status === 'حاضر' ? '۱ روز کارکرد' : (record.work_status === 'نصف روز' ? 'نصف روز کارکرد' : 'غایب')}
                         </Badge>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap">{(record.work_status === 'حاضر' || record.work_status === 'نصف روز') ? formatOvertimeLabel(record.overtime_hours) : '—'}</TableCell>
+                      <TableCell className="whitespace-nowrap">{formatOvertimeLabel(record.overtime_hours)}</TableCell>
                       <TableCell className="text-green-600 font-medium">
                         {record.amount_received > 0 ? formatCurrency(record.amount_received) : '—'}
                       </TableCell>
