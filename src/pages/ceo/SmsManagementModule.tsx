@@ -742,12 +742,12 @@ export default function SmsManagementModule() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {logs.length === 0 && (
+                    {filteredLogs.length === 0 && (
                       <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                        گزارشی ثبت نشده است.
+                        {logSearch.trim() ? "موردی با این جستجو یافت نشد." : "گزارشی ثبت نشده است."}
                       </TableCell></TableRow>
                     )}
-                    {logs.map((l) => (
+                    {filteredLogs.map((l) => (
                       <TableRow key={l.id}>
                         <TableCell className="text-xs whitespace-nowrap">
                           {new Date(l.created_at).toLocaleString("fa-IR")}
