@@ -266,6 +266,9 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
     return { paymentLabel, paymentVariant, stageLabel, stageVariant };
   };
 
+  const isArchivedOrder = (o: Order) =>
+    !!o.is_archived || o.status === 'completed' || o.status === 'closed' || o.execution_stage === 'completed' || o.execution_stage === 'closed';
+
   const getFilteredOrders = () => {
     return orders.filter(order => {
       // Search filter
@@ -437,150 +440,66 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
         </CardContent>
       </Card>
 
-      {/* Results Count */}
-      <div className="text-sm text-muted-foreground">
-        {filteredOrders.length} سفارش {hasActiveFilters && `از ${orders.length}`}
-      </div>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'active' | 'archived')} dir="rtl" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 h-auto p-1">
+          <TabsTrigger value="active" className="gap-2 text-xs sm:text-sm py-2">
+            <Activity className="h-4 w-4" />
+            سفارش‌های فعال
+            <span className="rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[11px]">{activeOrders.length}</span>
+          </TabsTrigger>
+          <TabsTrigger value="archived" className="gap-2 text-xs sm:text-sm py-2">
+            <Archive className="h-4 w-4" />
+            بایگانی / تکمیل‌شده
+            <span className="rounded-full bg-muted text-muted-foreground px-2 py-0.5 text-[11px]">{archivedOrders.length}</span>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Orders List */}
-      {filteredOrders.length === 0 ? (
-        <EmptyState
-          icon={Package}
-          title={hasActiveFilters ? "سفارشی با این فیلترها یافت نشد" : "سفارشی ثبت نشده"}
-          description={hasActiveFilters ? "فیلترهای خود را تغییر دهید" : "برای ثبت سفارش جدید از صفحه اصلی اقدام کنید"}
-          actionLabel={hasActiveFilters ? "پاک کردن فیلترها" : "ثبت سفارش جدید"}
-          onAction={hasActiveFilters ? clearFilters : () => navigate('/')}
-        />
-      ) : (
-        <div className="space-y-3">
-          {filteredOrders.map((order) => {
-            const displayStatus = getOrderDisplayStatus(order);
-            
-            return (
-              <Card 
-                key={order.id} 
-                className="hover:shadow-md transition-shadow cursor-pointer border-border/50"
-                onClick={() => navigate(`/user/orders/${order.id}`)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="space-y-2 flex-1">
-                      {/* Order Code & Status */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-foreground">#{order.code}</span>
-                        {/* Stage badge */}
-                        <Badge variant={displayStatus.stageVariant}>
-                          {displayStatus.stageLabel}
-                        </Badge>
-                        {/* Payment badge */}
-                        <Badge variant={displayStatus.paymentVariant}>
-                          {displayStatus.paymentLabel}
-                        </Badge>
-                        {order.is_archived && (
-                          <Badge variant="secondary" className="text-xs">
-                            تمام شده
-                          </Badge>
-                        )}
-                        {order.statement_closed && (
-                          <Badge variant="outline" className="text-xs">
-                            صورتحساب بسته شده
-                          </Badge>
-                        )}
-                        {order.isCollaborated && (
-                          <Badge variant="outline" className="gap-1 text-xs border-primary/50 text-primary">
-                            <Users className="h-3 w-3" />
-                            همکار
-                          </Badge>
-                        )}
-                      </div>
+        <TabsContent value="active" className="mt-4 space-y-3">
+          <div className="text-sm text-muted-foreground">
+            {activeOrders.length} سفارش فعال {hasActiveFilters && `از ${orders.filter(o => !isArchivedOrder(o)).length}`}
+          </div>
+          {activeOrders.length === 0 ? (
+            <EmptyState
+              icon={Package}
+              title={hasActiveFilters ? "سفارشی با این فیلترها یافت نشد" : "سفارش فعالی ندارید"}
+              description={hasActiveFilters ? "فیلترهای خود را تغییر دهید" : "برای ثبت سفارش جدید از صفحه اصلی اقدام کنید"}
+              actionLabel={hasActiveFilters ? "پاک کردن فیلترها" : "ثبت سفارش جدید"}
+              onAction={hasActiveFilters ? clearFilters : () => navigate('/')}
+            />
+          ) : (
+            <div className="space-y-3">
+              {activeOrders.map((order) => renderOrderCard(order, false))}
+            </div>
+          )}
+        </TabsContent>
 
-                      {/* Service Type */}
-                      {order.subcategory_name && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Package className="h-4 w-4" />
-                          <span>{order.subcategory_name}</span>
-                        </div>
-                      )}
-
-                      {/* Address */}
-                      {order.address && (
-                        <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                          <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                          <span className="line-clamp-1">{order.address}</span>
-                        </div>
-                      )}
-
-                      {/* Price */}
-                      {(() => {
-                        const total = Number(order.total_price) || Number(order.payment_amount) || 0;
-                        const paid = Number(order.total_paid) || 0;
-                        const remaining = Math.max(total - paid, 0);
-                        if (total <= 0) return null;
-                        const fmt = (n: number) => new Intl.NumberFormat('fa-IR').format(Math.round(n));
-                        return (
-                          <div className="flex items-center gap-2 text-sm flex-wrap">
-                            <Wallet className="h-4 w-4 text-emerald-600" />
-                            <span className="font-semibold text-foreground">مبلغ فاکتور: {fmt(total)} تومان</span>
-                            {paid > 0 && (
-                              <span className="text-xs text-green-600">• پرداختی: {fmt(paid)}</span>
-                            )}
-                            {remaining > 0 && (
-                              <span className="text-xs text-red-600">• مانده: {fmt(remaining)}</span>
-                            )}
-                          </div>
-                        );
-                      })()}
-
-                      {/* Date */}
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Calendar className="h-3.5 w-3.5" />
-                        <span>
-                          {new Date(order.created_at).toLocaleDateString('fa-IR', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-2 flex-shrink-0">
-                      {/* Cancel button for pending orders */}
-                      {order.status === 'pending' && (
-                        <Button 
-                          variant="destructive" 
-                          size="sm"
-                          className="gap-1"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setCancelOrderId(order.id);
-                          }}
-                        >
-                          <XCircle className="h-4 w-4" />
-                          لغو
-                        </Button>
-                      )}
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="gap-2"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/user/orders/${order.id}`);
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                        مشاهده
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+        <TabsContent value="archived" className="mt-4 space-y-3">
+          <div className="text-sm text-muted-foreground">
+            {archivedOrders.length} سفارش تکمیل‌شده
+          </div>
+          {archivedOrders.length === 0 ? (
+            <EmptyState
+              icon={Archive}
+              title="سفارش بایگانی‌شده‌ای ندارید"
+              description="سفارش‌های تکمیل‌شده در این بخش نگهداری می‌شوند"
+            />
+          ) : (
+            <div className="space-y-3">
+              {archivedOrders.slice(0, archivedVisible).map((order) => renderOrderCard(order, true))}
+              {archivedVisible < archivedOrders.length && (
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={() => setArchivedVisible(v => v + 8)}
+                >
+                  <ChevronDown className="h-4 w-4" />
+                  نمایش سفارش‌های بیشتر ({archivedOrders.length - archivedVisible})
+                </Button>
+              )}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Cancel Order Dialog */}
       <AlertDialog open={!!cancelOrderId} onOpenChange={() => setCancelOrderId(null)}>
