@@ -60,6 +60,23 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
+    // اتصال ربات: ثبت وب‌هوک بله روی سرور و دریافت اطلاعات ربات
+    if ((body as any).action === "setup") {
+      const hookUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/bale-webhook`;
+      const setRes = await fetch(`${BALE_API}/bot${token}/setWebhook`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: hookUrl }),
+      });
+      const setText = (await setRes.text()).slice(0, 500);
+      const meRes = await fetch(`${BALE_API}/bot${token}/getMe`);
+      const meText = (await meRes.text()).slice(0, 500);
+      return new Response(
+        JSON.stringify({ success: setRes.ok, webhook: setText, bot: meText, hookUrl }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const { data: settings } = await supabase
       .from("messenger_settings")
       .select("enabled, send_media")
