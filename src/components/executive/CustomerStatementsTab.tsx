@@ -614,6 +614,12 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                     ) : (
                                       <Badge variant="outline" className="gap-1"><Lock className="h-3 w-3" />بسته</Badge>
                                     )}
+                                    {s.is_deep_archived ? (
+                                      <Badge variant="outline" className="gap-1 border-red-400 text-red-700"><Archive className="h-3 w-3" />بایگانی عمیق</Badge>
+                                    ) : s.is_archived ? (
+                                      <Badge variant="outline" className="gap-1 border-slate-400 text-slate-700"><Archive className="h-3 w-3" />بایگانی</Badge>
+                                    ) : null}
+
                                     <span className="text-xs text-muted-foreground">{s.orders.length} سفارش</span>
                                     {(s.serviceTypes.length > 0 ? s.serviceTypes : (s.subcategory_name ? [s.subcategory_name] : [])).map((svc, idx) => (
                                       <Badge key={idx} variant="secondary" className="text-xs">{svc}</Badge>
