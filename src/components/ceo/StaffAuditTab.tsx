@@ -273,7 +273,7 @@ export function StaffAuditTab() {
         breakdownMap[base].daysWorked += dayFactor;
         breakdownMap[base].totalSalary += base * dayFactor;
       }
-      const hours = r.overtime_hours || 0;
+      const hours = effectiveOvertime(r);
       if (hours !== 0) {
         // نرخ کم‌کاری برابر نرخ اضافه‌کاری است (یک‌ششم حقوق روزانه) و از مبلغ کارکرد کم می‌شود
         const pay = Math.abs(hours) * base * fraction;
