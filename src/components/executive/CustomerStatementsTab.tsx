@@ -9,7 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ChevronDown, ChevronUp, FileText, Lock, Unlock, Search, User, Phone, Banknote, History, ArrowRightLeft, FileCheck, Eye } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileText, Lock, Unlock, Search, User, Phone, Banknote, History, ArrowRightLeft, FileCheck, Eye, Archive, ArchiveRestore } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ManagerOrderInvoice from '@/components/orders/ManagerOrderInvoice';
 import { StatementInvoiceDialog } from '@/components/executive/StatementInvoiceDialog';
@@ -52,6 +52,12 @@ interface Statement {
   cheque_pending: number;
   /** چک‌های برگشتی */
   cheque_bounced: number;
+  /** بایگانی صورتحساب */
+  is_archived: boolean;
+  /** بایگانی عمیق صورتحساب */
+  is_deep_archived: boolean;
+  archived_at: string | null;
+
 
   subcategory_name: string | null;
   address: string | null;
@@ -116,6 +122,8 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
   const [chequesStmt, setChequesStmt] = useState<{ statement: Statement; customer: CustomerGroup } | null>(null);
   const [globalPay, setGlobalPay] = useState<CustomerGroup | null>(null);
   const [globalHistory, setGlobalHistory] = useState<CustomerGroup | null>(null);
+  const [archiveView, setArchiveView] = useState<'active' | 'archived' | 'deep'>('active');
+
 
   /**
    * All invoices of a customer across every statement, ordered by statement number
@@ -300,6 +308,10 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
           cheque_cleared: chequeByStatement.get(s.id)?.cleared || 0,
           cheque_pending: chequeByStatement.get(s.id)?.pending || 0,
           cheque_bounced: chequeByStatement.get(s.id)?.bounced || 0,
+          is_archived: !!s.is_archived,
+          is_deep_archived: !!s.is_deep_archived,
+          archived_at: s.archived_at || null,
+
 
 
           subcategory_name: serviceTypes[0] || null,
@@ -342,34 +354,45 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
   }, []);
 
   const filtered = useMemo(() => {
-    let list = groups;
-    if (filter !== 'all') {
-      list = list
-        .map(g => ({
-          ...g,
-          statements: g.statements.filter(s => s.status === filter),
-        }))
-        .filter(g => g.statements.length > 0)
-        .map(g => {
-          const total_amount = g.statements.reduce((a, s) => a + s.total_amount, 0);
-          const total_remaining = g.statements.reduce((a, s) => a + s.total_remaining, 0);
-          const total_paid_actual = g.statements.reduce((a, s) => a + (s.total_paid_actual || 0), 0);
-          const cheque_total = g.statements.reduce((a, s) => a + (s.cheque_total || 0), 0);
-          const cheque_cleared = g.statements.reduce((a, s) => a + (s.cheque_cleared || 0), 0);
-          const cheque_pending = g.statements.reduce((a, s) => a + (s.cheque_pending || 0), 0);
-          const cheque_bounced = g.statements.reduce((a, s) => a + (s.cheque_bounced || 0), 0);
-          return { ...g, total_amount, total_remaining, total_paid_actual, cheque_total, cheque_cleared, cheque_pending, cheque_bounced, overpaid: Math.max(total_paid_actual - total_amount, 0) };
+    const matchArchive = (s: Statement) => {
+      if (archiveView === 'deep') return s.is_deep_archived;
+      if (archiveView === 'archived') return s.is_archived && !s.is_deep_archived;
+      return !s.is_archived && !s.is_deep_archived;
+    };
+    let list = groups
+      .map(g => ({
+        ...g,
+        statements: g.statements.filter(s => matchArchive(s) && (filter === 'all' || s.status === filter)),
+      }))
+      .filter(g => g.statements.length > 0)
+      .map(g => {
+        const total_amount = g.statements.reduce((a, s) => a + s.total_amount, 0);
+        const total_remaining = g.statements.reduce((a, s) => a + s.total_remaining, 0);
+        const total_paid_actual = g.statements.reduce((a, s) => a + (s.total_paid_actual || 0), 0);
+        const cheque_total = g.statements.reduce((a, s) => a + (s.cheque_total || 0), 0);
+        const cheque_cleared = g.statements.reduce((a, s) => a + (s.cheque_cleared || 0), 0);
+        const cheque_pending = g.statements.reduce((a, s) => a + (s.cheque_pending || 0), 0);
+        const cheque_bounced = g.statements.reduce((a, s) => a + (s.cheque_bounced || 0), 0);
+        return { ...g, total_amount, total_remaining, total_paid_actual, cheque_total, cheque_cleared, cheque_pending, cheque_bounced, overpaid: Math.max(total_paid_actual - total_amount, 0) };
+      });
 
-        });
-
-    }
     const q = search.trim().toLowerCase();
     if (!q) return list;
     return list.filter(g =>
       (g.full_name || '').toLowerCase().includes(q) ||
       (g.phone_number || '').includes(q)
     );
-  }, [groups, search, filter]);
+  }, [groups, search, filter, archiveView]);
+
+  const archiveCounts = useMemo(() => {
+    const all = groups.flatMap(g => g.statements);
+    return {
+      active: all.filter(s => !s.is_archived && !s.is_deep_archived).length,
+      archived: all.filter(s => s.is_archived && !s.is_deep_archived).length,
+      deep: all.filter(s => s.is_deep_archived).length,
+    };
+  }, [groups]);
+
 
   const toggleCustomer = (id: string) => {
     setExpandedCustomers(prev => {
@@ -420,6 +443,30 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
     }
   };
 
+  const setArchiveState = async (
+    s: Statement,
+    patch: { is_archived: boolean; is_deep_archived: boolean },
+    successMessage: string,
+  ) => {
+    setBusy(true);
+    try {
+      const { error } = await supabase
+        .from('customer_statements' as any)
+        .update({
+          ...patch,
+          archived_at: patch.is_archived || patch.is_deep_archived ? new Date().toISOString() : null,
+        } as any)
+        .eq('id', s.id);
+      if (error) throw error;
+      toast({ title: 'انجام شد', description: successMessage });
+      await load();
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: 'خطا', description: err.message || 'عملیات بایگانی با خطا مواجه شد', variant: 'destructive' });
+    } finally {
+      setBusy(false);
+    }
+  };
 
 
   if (loading) return <LoadingSpinner />;
@@ -437,9 +484,29 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
               className="pr-10"
             />
           </div>
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            {([
+              { key: 'active', label: 'صورتحساب‌های فعال', count: archiveCounts.active },
+              { key: 'archived', label: 'بایگانی', count: archiveCounts.archived },
+              { key: 'deep', label: 'بایگانی عمیق', count: archiveCounts.deep },
+            ] as const).map(t => (
+              <Button
+                key={t.key}
+                size="sm"
+                variant={archiveView === t.key ? 'default' : 'outline'}
+                className="gap-1"
+                onClick={() => setArchiveView(t.key)}
+              >
+                {t.key === 'active' ? <FileText className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+                {t.label}
+                <span className="text-[11px] opacity-80">({new Intl.NumberFormat('fa-IR').format(t.count)})</span>
+              </Button>
+            ))}
+          </div>
           <p className="text-xs text-muted-foreground mt-3">
             {filtered.length} مشتری دارای صورتحساب
           </p>
+
         </CardContent>
       </Card>
 
@@ -547,6 +614,12 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                     ) : (
                                       <Badge variant="outline" className="gap-1"><Lock className="h-3 w-3" />بسته</Badge>
                                     )}
+                                    {s.is_deep_archived ? (
+                                      <Badge variant="outline" className="gap-1 border-red-400 text-red-700"><Archive className="h-3 w-3" />بایگانی عمیق</Badge>
+                                    ) : s.is_archived ? (
+                                      <Badge variant="outline" className="gap-1 border-slate-400 text-slate-700"><Archive className="h-3 w-3" />بایگانی</Badge>
+                                    ) : null}
+
                                     <span className="text-xs text-muted-foreground">{s.orders.length} سفارش</span>
                                     {(s.serviceTypes.length > 0 ? s.serviceTypes : (s.subcategory_name ? [s.subcategory_name] : [])).map((svc, idx) => (
                                       <Badge key={idx} variant="secondary" className="text-xs">{svc}</Badge>
@@ -646,6 +719,67 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                         بازگشایی صورتحساب
                                       </Button>
                                     )}
+                                    {!s.is_archived && !s.is_deep_archived && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1 border-slate-400 text-slate-700 hover:bg-slate-50"
+                                        disabled={busy}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setArchiveState(s, { is_archived: true, is_deep_archived: false }, `صورتحساب شماره ${s.statement_number} بایگانی شد`);
+                                        }}
+                                      >
+                                        <Archive className="h-3.5 w-3.5" />
+                                        بایگانی
+                                      </Button>
+                                    )}
+                                    {s.is_archived && !s.is_deep_archived && (
+                                      <>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="gap-1 border-emerald-400 text-emerald-700 hover:bg-emerald-50"
+                                          disabled={busy}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setArchiveState(s, { is_archived: false, is_deep_archived: false }, `صورتحساب شماره ${s.statement_number} از بایگانی خارج شد`);
+                                          }}
+                                        >
+                                          <ArchiveRestore className="h-3.5 w-3.5" />
+                                          خروج از بایگانی
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="gap-1 border-red-400 text-red-700 hover:bg-red-50"
+                                          disabled={busy}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setArchiveState(s, { is_archived: true, is_deep_archived: true }, `صورتحساب شماره ${s.statement_number} به بایگانی عمیق منتقل شد`);
+                                          }}
+                                        >
+                                          <Archive className="h-3.5 w-3.5" />
+                                          بایگانی عمیق
+                                        </Button>
+                                      </>
+                                    )}
+                                    {s.is_deep_archived && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1 border-emerald-400 text-emerald-700 hover:bg-emerald-50"
+                                        disabled={busy}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setArchiveState(s, { is_archived: true, is_deep_archived: false }, `صورتحساب شماره ${s.statement_number} از بایگانی عمیق بازگردانده شد`);
+                                        }}
+                                      >
+                                        <ArchiveRestore className="h-3.5 w-3.5" />
+                                        بازگردانی از بایگانی عمیق
+                                      </Button>
+                                    )}
+
                                     {sOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                   </div>
                                 </div>

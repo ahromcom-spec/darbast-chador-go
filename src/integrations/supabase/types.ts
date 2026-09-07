@@ -1155,12 +1155,15 @@ export type Database = {
       customer_statements: {
         Row: {
           address: string | null
+          archived_at: string | null
           closed_at: string | null
           closed_by: string | null
           created_at: string
           customer_id: string
           detailed_address: string | null
           id: string
+          is_archived: boolean
+          is_deep_archived: boolean
           is_manual: boolean
           statement_number: number
           status: string
@@ -1171,12 +1174,15 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          archived_at?: string | null
           closed_at?: string | null
           closed_by?: string | null
           created_at?: string
           customer_id: string
           detailed_address?: string | null
           id?: string
+          is_archived?: boolean
+          is_deep_archived?: boolean
           is_manual?: boolean
           statement_number: number
           status?: string
@@ -1187,12 +1193,15 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          archived_at?: string | null
           closed_at?: string | null
           closed_by?: string | null
           created_at?: string
           customer_id?: string
           detailed_address?: string | null
           id?: string
+          is_archived?: boolean
+          is_deep_archived?: boolean
           is_manual?: boolean
           statement_number?: number
           status?: string

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useToast } from '@/hooks/use-toast';
-import { Receipt, Wallet, TrendingUp, TrendingDown, ChevronDown, ChevronUp, FileText, CheckCircle2, Lock, CreditCard } from 'lucide-react';
+import { Receipt, Wallet, TrendingUp, TrendingDown, ChevronDown, ChevronUp, FileText, CheckCircle2, Lock, CreditCard, Archive } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -58,6 +58,8 @@ interface StatementGroup {
   addresses: string[];
   orders: OrderRow[];
   is_manual: boolean;
+  is_archived: boolean;
+  is_deep_archived: boolean;
 }
 
 const statusLabels: Record<string, string> = {
@@ -89,6 +91,7 @@ export const CustomerInvoice = () => {
   const [payDialog, setPayDialog] = useState<{ open: boolean; statement: StatementGroup | null; payAll?: boolean }>({ open: false, statement: null });
   const [payAmountInput, setPayAmountInput] = useState('');
   const [paying, setPaying] = useState(false);
+  const [view, setView] = useState<'active' | 'archived'>('active');
 
   useEffect(() => {
     if (user) load();
@@ -219,6 +222,8 @@ export const CustomerInvoice = () => {
           addresses,
           orders: myOrders,
           is_manual: !!s.is_manual,
+          is_archived: !!s.is_archived,
+          is_deep_archived: !!s.is_deep_archived,
         };
       });
 
@@ -277,12 +282,14 @@ export const CustomerInvoice = () => {
             }).filter(Boolean))) as string[],
             orders: myCollabOrders,
             is_manual: false,
+            is_archived: false,
+            is_deep_archived: false,
           } as StatementGroup;
         }
       }
 
       // صورتحساب خالی خودکار نمایش داده نشود؛ فقط صورتحساب دارای سفارش یا دستی نمایش داده شود.
-      const filtered = groups.filter(g => g.orders.length > 0 || g.is_manual === true);
+      const filtered = groups.filter(g => (g.orders.length > 0 || g.is_manual === true) && !g.is_deep_archived);
       if (collabGroup) filtered.unshift(collabGroup);
       setStatements(filtered);
       // باز کردن آخرین صورتحساب (بالاترین شماره) به‌صورت پیش‌فرض
@@ -305,7 +312,11 @@ export const CustomerInvoice = () => {
     });
   };
 
-  const summary = statements.reduce(
+  const activeStatements = statements.filter(s => !s.is_archived);
+  const archivedStatements = statements.filter(s => s.is_archived);
+  const visibleStatements = view === 'archived' ? archivedStatements : activeStatements;
+
+  const summary = visibleStatements.reduce(
     (a, s) => ({
       count: a.count + s.orders.length,
       total: a.total + s.total_amount,
@@ -314,6 +325,7 @@ export const CustomerInvoice = () => {
     }),
     { count: 0, total: 0, paid: 0, remaining: 0 }
   );
+
 
   if (loading) return <LoadingSpinner />;
 
@@ -375,17 +387,42 @@ export const CustomerInvoice = () => {
 
 
 
+      {/* تب‌های فعال / بایگانی */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          size="sm"
+          variant={view === 'active' ? 'default' : 'outline'}
+          className="gap-1"
+          onClick={() => setView('active')}
+        >
+          <FileText className="h-3.5 w-3.5" />
+          صورتحساب‌های فعال
+          <span className="text-[11px] opacity-80">({new Intl.NumberFormat('fa-IR').format(activeStatements.length)})</span>
+        </Button>
+        <Button
+          size="sm"
+          variant={view === 'archived' ? 'default' : 'outline'}
+          className="gap-1"
+          onClick={() => setView('archived')}
+        >
+          <Archive className="h-3.5 w-3.5" />
+          صورتحساب‌های بایگانی
+          <span className="text-[11px] opacity-80">({new Intl.NumberFormat('fa-IR').format(archivedStatements.length)})</span>
+        </Button>
+      </div>
+
       {/* لیست صورتحساب‌ها */}
-      {statements.length === 0 ? (
+      {visibleStatements.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center text-muted-foreground">
-            هنوز صورتحسابی ندارید
+            {view === 'archived' ? 'صورتحساب بایگانی‌شده‌ای ندارید' : 'هنوز صورتحسابی ندارید'}
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
-          {statements.map(s => {
+          {visibleStatements.map(s => {
             const isOpen = expanded.has(s.id);
+
             return (
               <Collapsible key={s.id} open={isOpen} onOpenChange={() => toggle(s.id)}>
                 <Card className={s.status === 'open' ? 'border-primary/40' : ''}>
@@ -424,6 +461,12 @@ export const CustomerInvoice = () => {
                               <Lock className="h-3 w-3" /> بسته شده
                             </Badge>
                           )}
+                          {s.is_archived && (
+                            <Badge variant="outline" className="gap-1 border-slate-400 text-slate-700 dark:text-slate-300">
+                              <Archive className="h-3 w-3" /> بایگانی‌شده
+                            </Badge>
+                          )}
+
                           <span className="text-sm font-bold">{formatPrice(s.total_amount)}</span>
                           <span className="text-xs text-green-600">پرداختی: {formatPrice(s.total_paid)}</span>
                           <span className="text-xs text-red-600">مانده: {formatPrice(s.total_remaining)}</span>
