@@ -288,7 +288,7 @@ export const CustomerInvoice = () => {
       }
 
       // صورتحساب خالی خودکار نمایش داده نشود؛ فقط صورتحساب دارای سفارش یا دستی نمایش داده شود.
-      const filtered = groups.filter(g => g.orders.length > 0 || g.is_manual === true);
+      const filtered = groups.filter(g => (g.orders.length > 0 || g.is_manual === true) && !g.is_deep_archived);
       if (collabGroup) filtered.unshift(collabGroup);
       setStatements(filtered);
       // باز کردن آخرین صورتحساب (بالاترین شماره) به‌صورت پیش‌فرض
