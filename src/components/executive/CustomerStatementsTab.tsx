@@ -484,9 +484,29 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
               className="pr-10"
             />
           </div>
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            {([
+              { key: 'active', label: 'صورتحساب‌های فعال', count: archiveCounts.active },
+              { key: 'archived', label: 'بایگانی', count: archiveCounts.archived },
+              { key: 'deep', label: 'بایگانی عمیق', count: archiveCounts.deep },
+            ] as const).map(t => (
+              <Button
+                key={t.key}
+                size="sm"
+                variant={archiveView === t.key ? 'default' : 'outline'}
+                className="gap-1"
+                onClick={() => setArchiveView(t.key)}
+              >
+                {t.key === 'active' ? <FileText className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+                {t.label}
+                <span className="text-[11px] opacity-80">({new Intl.NumberFormat('fa-IR').format(t.count)})</span>
+              </Button>
+            ))}
+          </div>
           <p className="text-xs text-muted-foreground mt-3">
             {filtered.length} مشتری دارای صورتحساب
           </p>
+
         </CardContent>
       </Card>
 
