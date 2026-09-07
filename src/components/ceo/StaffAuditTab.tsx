@@ -238,9 +238,8 @@ export function StaffAuditTab() {
   };
 
   const calculateSummary = (records: StaffAuditRecord[], settings: SalarySettings, localBonuses?: number, localDeductions?: number, localPrevBalance?: number, localPrevExtra?: number) => {
-    // اضافه‌کاری/کم‌کاری فقط برای روزهایی که نیرو حاضر یا نصف روز بوده معتبر است
-    const effectiveOvertime = (r: StaffAuditRecord) =>
-      (r.work_status === 'حاضر' || r.work_status === 'نصف روز') ? (r.overtime_hours || 0) : 0;
+    // اضافه‌کاری/کم‌کاری مستقل از وضعیت کارکرد ثبت می‌شود (حتی در روز غیبت)
+    const effectiveOvertime = (r: StaffAuditRecord) => r.overtime_hours || 0;
 
     // Basic counts
     const totalDaysWorked = records.filter(r => r.work_status === 'حاضر').length
@@ -565,6 +564,7 @@ export function StaffAuditTab() {
       const recordsWithData = records.filter((r) =>
         r.work_status === 'حاضر' ||
         r.work_status === 'نصف روز' ||
+        (r.overtime_hours || 0) !== 0 ||
         (r.amount_received || 0) > 0 ||
         (r.amount_spent || 0) > 0 ||
         !!r.notes ||
@@ -1305,7 +1305,7 @@ export function StaffAuditTab() {
                           {record.work_status === 'حاضر' ? '۱ روز کارکرد' : (record.work_status === 'نصف روز' ? 'نصف روز کارکرد' : 'غایب')}
                         </Badge>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap">{(record.work_status === 'حاضر' || record.work_status === 'نصف روز') ? formatOvertimeLabel(record.overtime_hours) : '—'}</TableCell>
+                      <TableCell className="whitespace-nowrap">{formatOvertimeLabel(record.overtime_hours)}</TableCell>
                       <TableCell className="text-green-600 font-medium">
                         {record.amount_received > 0 ? formatCurrency(record.amount_received) : '—'}
                       </TableCell>
