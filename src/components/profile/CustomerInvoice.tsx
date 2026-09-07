@@ -58,6 +58,8 @@ interface StatementGroup {
   addresses: string[];
   orders: OrderRow[];
   is_manual: boolean;
+  is_archived: boolean;
+  is_deep_archived: boolean;
 }
 
 const statusLabels: Record<string, string> = {
