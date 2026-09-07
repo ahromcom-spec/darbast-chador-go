@@ -238,12 +238,16 @@ export function StaffAuditTab() {
   };
 
   const calculateSummary = (records: StaffAuditRecord[], settings: SalarySettings, localBonuses?: number, localDeductions?: number, localPrevBalance?: number, localPrevExtra?: number) => {
+    // اضافه‌کاری/کم‌کاری فقط برای روزهایی که نیرو حاضر یا نصف روز بوده معتبر است
+    const effectiveOvertime = (r: StaffAuditRecord) =>
+      (r.work_status === 'حاضر' || r.work_status === 'نصف روز') ? (r.overtime_hours || 0) : 0;
+
     // Basic counts
     const totalDaysWorked = records.filter(r => r.work_status === 'حاضر').length
       + 0.5 * records.filter(r => r.work_status === 'نصف روز').length;
     const totalAbsentDays = records.filter(r => r.work_status === 'غایب').length;
-    const totalOvertime = records.reduce((sum, r) => sum + Math.max(0, r.overtime_hours || 0), 0);
-    const totalUndertime = records.reduce((sum, r) => sum + Math.max(0, -(r.overtime_hours || 0)), 0);
+    const totalOvertime = records.reduce((sum, r) => sum + Math.max(0, effectiveOvertime(r)), 0);
+    const totalUndertime = records.reduce((sum, r) => sum + Math.max(0, -effectiveOvertime(r)), 0);
     const netOvertime = totalOvertime - totalUndertime;
 
     
@@ -269,7 +273,7 @@ export function StaffAuditTab() {
         breakdownMap[base].daysWorked += dayFactor;
         breakdownMap[base].totalSalary += base * dayFactor;
       }
-      const hours = r.overtime_hours || 0;
+      const hours = effectiveOvertime(r);
       if (hours !== 0) {
         // نرخ کم‌کاری برابر نرخ اضافه‌کاری است (یک‌ششم حقوق روزانه) و از مبلغ کارکرد کم می‌شود
         const pay = Math.abs(hours) * base * fraction;
@@ -576,11 +580,11 @@ export function StaffAuditTab() {
           <table style="width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed;">
             <colgroup>
               <col style="width: 3%;" />
-              <col style="width: 9%;" />
-              <col style="width: 6%;" />
+              <col style="width: 8%;" />
               <col style="width: 7%;" />
+              <col style="width: 9%;" />
               <col style="width: 10%;" />
-              <col style="width: 19%;" />
+              <col style="width: 17%;" />
               <col style="width: 10%;" />
               <col style="width: 19%;" />
               <col style="width: 17%;" />
@@ -604,7 +608,7 @@ export function StaffAuditTab() {
                   <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center;">${(index + 1).toLocaleString('fa-IR')}</td>
                   <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${formatPersianDateNumeric(record.report_date)}</td>
                   <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${record.work_status === 'حاضر' ? '۱ روز' : (record.work_status === 'نصف روز' ? 'نصف روز' : 'غایب')}</td>
-                  <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${formatOvertimeLabel(record.overtime_hours)}</td>
+                  <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; line-height: 1.5;">${(record.overtime_hours || 0) === 0 ? '—' : `<span style="white-space: nowrap; direction: ltr; display: inline-block; font-weight: bold;">${formatOvertime(Math.abs(record.overtime_hours))}</span><br/><span style="font-size: 9px; color: ${record.overtime_hours > 0 ? '#16a34a' : '#dc2626'};">${record.overtime_hours > 0 ? 'اضافه‌کاری' : 'کم‌کاری'}</span>`}</td>
                   <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; color: ${record.amount_received > 0 ? '#16a34a' : '#666'};">${record.amount_received > 0 ? '<span style="white-space: nowrap;">' + record.amount_received.toLocaleString('fa-IR') + '</span><br/>تومان' : '—'}</td>
                   <td style="padding: 6px 8px; border: 1px solid #d4a574; text-align: right; word-break: break-word;">${record.receiving_notes || '—'}</td>
                   <td style="padding: 6px 3px; border: 1px solid #d4a574; text-align: center; color: ${record.amount_spent > 0 ? '#dc2626' : '#666'};">${record.amount_spent > 0 ? '<span style="white-space: nowrap;">' + record.amount_spent.toLocaleString('fa-IR') + '</span><br/>تومان' : '—'}</td>
@@ -617,7 +621,7 @@ export function StaffAuditTab() {
               <tr style="background-color: #f5e6d3; font-weight: bold;">
                 <td colspan="2" style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">جمع کل:</td>
                 <td style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${summary.totalDaysWorked.toLocaleString('fa-IR')} روز</td>
-                <td style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; white-space: nowrap;">${formatOvertime(summary.totalOvertime)} (کم‌کاری: ${formatOvertime(summary.totalUndertime)})</td>
+                <td style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; line-height: 1.6;"><span style="white-space: nowrap; direction: ltr; display: inline-block; color: #16a34a;">${formatOvertime(summary.totalOvertime)}</span><br/><span style="font-size: 9px; font-weight: normal;">اضافه‌کاری</span><br/><span style="white-space: nowrap; direction: ltr; display: inline-block; color: #dc2626;">${formatOvertime(summary.totalUndertime)}</span><br/><span style="font-size: 9px; font-weight: normal;">کم‌کاری</span></td>
                 <td style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; color: #16a34a;"><span style="white-space: nowrap;">${summary.totalReceived.toLocaleString('fa-IR')}</span><br/>تومان</td>
                 <td style="padding: 8px; border: 1px solid #d4a574;"></td>
                 <td style="padding: 8px 4px; border: 1px solid #d4a574; text-align: center; color: #dc2626;"><span style="white-space: nowrap;">${summary.totalSpent.toLocaleString('fa-IR')}</span><br/>تومان</td>
@@ -1301,7 +1305,7 @@ export function StaffAuditTab() {
                           {record.work_status === 'حاضر' ? '۱ روز کارکرد' : (record.work_status === 'نصف روز' ? 'نصف روز کارکرد' : 'غایب')}
                         </Badge>
                       </TableCell>
-                      <TableCell>{formatOvertimeLabel(record.overtime_hours)}</TableCell>
+                      <TableCell className="whitespace-nowrap">{(record.work_status === 'حاضر' || record.work_status === 'نصف روز') ? formatOvertimeLabel(record.overtime_hours) : '—'}</TableCell>
                       <TableCell className="text-green-600 font-medium">
                         {record.amount_received > 0 ? formatCurrency(record.amount_received) : '—'}
                       </TableCell>
