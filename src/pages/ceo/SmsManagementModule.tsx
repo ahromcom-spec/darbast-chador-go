@@ -608,6 +608,25 @@ export default function SmsManagementModule() {
                 </Button>
               </CardHeader>
               <CardContent className="overflow-x-auto">
+                <div className="relative mb-3">
+                  <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    className="rounded-xl pr-9"
+                    placeholder="جستجو در نام کارفرما، آدرس و شماره تماس..."
+                    value={queueSearch}
+                    onChange={(e) => setQueueSearch(e.target.value)}
+                  />
+                  {queueSearch && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="absolute left-1 top-1/2 h-7 w-7 -translate-y-1/2"
+                      onClick={() => setQueueSearch("")}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground mb-3">
                   پیامک‌های ناموفق به‌صورت خودکار با یک زمان تصادفی بین ۵ تا ۱۲۰ ثانیه دوباره ارسال می‌شوند (حداکثر ۵ تلاش).
                   در صورت انصراف می‌توانید ارسال را لغو کنید.
