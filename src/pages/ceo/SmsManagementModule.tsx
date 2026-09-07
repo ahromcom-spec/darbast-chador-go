@@ -44,6 +44,9 @@ interface SmsLog {
   order_code: string | null;
   provider_response: string | null;
   created_at: string;
+  customer_name?: string | null;
+  address?: string | null;
+  detailed_address?: string | null;
 }
 
 interface ScheduledSms {
