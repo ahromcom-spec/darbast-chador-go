@@ -311,7 +311,11 @@ export const CustomerInvoice = () => {
     });
   };
 
-  const summary = statements.reduce(
+  const activeStatements = statements.filter(s => !s.is_archived);
+  const archivedStatements = statements.filter(s => s.is_archived);
+  const visibleStatements = view === 'archived' ? archivedStatements : activeStatements;
+
+  const summary = visibleStatements.reduce(
     (a, s) => ({
       count: a.count + s.orders.length,
       total: a.total + s.total_amount,
@@ -320,6 +324,7 @@ export const CustomerInvoice = () => {
     }),
     { count: 0, total: 0, paid: 0, remaining: 0 }
   );
+
 
   if (loading) return <LoadingSpinner />;
 
