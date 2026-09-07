@@ -38,12 +38,26 @@ interface ProjectOrder {
   subcategory?: { name: string; code: string };
   service_type?: { name: string; code: string };
   media?: HierarchyMedia[];
+  is_archived?: boolean | null;
 }
 
 interface ProjectWithMedia extends ProjectHierarchy {
   media?: HierarchyMedia[];
   orders?: ProjectOrder[];
 }
+
+/** آیا این سفارش تکمیل/بایگانی شده است؟ */
+const isArchivedOrder = (o: any) =>
+  !!o?.is_archived || o?.status === 'completed' || o?.status === 'closed' || o?.execution_stage === 'completed' || o?.execution_stage === 'closed';
+
+/** پروژه فقط سفارش‌های تکمیل‌شده دارد؟ */
+const isArchivedProject = (p: ProjectWithMedia) => {
+  const orders = p.orders || [];
+  if (orders.length === 0) return false;
+  return orders.every(o => isArchivedOrder(o));
+};
+
+type MapOrderFilter = 'all' | 'active' | 'archived';
 
 const getMarkerLocationTitle = (project: ProjectWithMedia): string => {
   const title = project.locations?.title?.trim();
@@ -116,6 +130,8 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
   const [serviceTypeDialogOpen, setServiceTypeDialogOpen] = useState(false);
   const [serviceTypeDialogLocationId, setServiceTypeDialogLocationId] = useState<string>('');
   const [mapStyle, setMapStyle] = useState<'standard' | 'satellite'>('standard');
+  // فیلتر نمایش سفارش‌ها روی نقشه: همه / فعال / بایگانی
+  const [mapOrderFilter, setMapOrderFilter] = useState<MapOrderFilter>('all');
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const buildingsLayerRef = useRef<L.LayerGroup | null>(null);
 
@@ -860,7 +876,11 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
       // فقط سفارش‌هایی که به پروژه‌های فعلی روی نقشه تعلق دارند
       const v3OrdersFiltered = v3OrdersAll.filter(o => {
         if (!o.hierarchy_project_id || !projectIds.includes(o.hierarchy_project_id) || o.status === 'rejected') return false;
-        if (!activeExecutionOnly) return true;
+        if (!activeExecutionOnly) {
+          if (mapOrderFilter === 'active' && isArchivedOrder(o)) return false;
+          if (mapOrderFilter === 'archived' && !isArchivedOrder(o)) return false;
+          return true;
+        }
         return isActiveExecutionOrder(o, new Set(Object.keys(repairOrders)));
       });
 
@@ -1021,6 +1041,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             address: order.address,
             created_at: order.created_at,
             approved_at: order.approved_at || null,
+            is_archived: isArchivedOrder(order),
             subcategory: order.subcategory || (order.subcategory_id ? subMap.get(order.subcategory_id) : undefined),
             service_type: order.service_type || (order.service_type_id ? stMap.get(order.service_type_id) : undefined),
             media: orderMediaMap.get(order.id) || []
@@ -1053,7 +1074,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
       console.error('خطا در دریافت عکس‌های پروژه:', error);
       setProjectsWithMedia(projects.map(p => ({ ...p, media: [], orders: [] })));
     }
-  }, [projects, activeExecutionOnly, companyOrders, repairOrders]);
+  }, [projects, activeExecutionOnly, companyOrders, repairOrders, mapOrderFilter]);
 
   // دریافت درخواست‌های تعمیر باز برای سفارش‌های نمایش‌داده‌شده روی نقشه
   useEffect(() => {
