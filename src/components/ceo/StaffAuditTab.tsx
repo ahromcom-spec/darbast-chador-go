@@ -576,11 +576,11 @@ export function StaffAuditTab() {
           <table style="width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed;">
             <colgroup>
               <col style="width: 3%;" />
-              <col style="width: 9%;" />
-              <col style="width: 6%;" />
+              <col style="width: 8%;" />
               <col style="width: 7%;" />
+              <col style="width: 9%;" />
               <col style="width: 10%;" />
-              <col style="width: 19%;" />
+              <col style="width: 17%;" />
               <col style="width: 10%;" />
               <col style="width: 19%;" />
               <col style="width: 17%;" />
