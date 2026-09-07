@@ -443,6 +443,30 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
     }
   };
 
+  const setArchiveState = async (
+    s: Statement,
+    patch: { is_archived: boolean; is_deep_archived: boolean },
+    successMessage: string,
+  ) => {
+    setBusy(true);
+    try {
+      const { error } = await supabase
+        .from('customer_statements' as any)
+        .update({
+          ...patch,
+          archived_at: patch.is_archived || patch.is_deep_archived ? new Date().toISOString() : null,
+        } as any)
+        .eq('id', s.id);
+      if (error) throw error;
+      toast({ title: 'انجام شد', description: successMessage });
+      await load();
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: 'خطا', description: err.message || 'عملیات بایگانی با خطا مواجه شد', variant: 'destructive' });
+    } finally {
+      setBusy(false);
+    }
+  };
 
 
   if (loading) return <LoadingSpinner />;
