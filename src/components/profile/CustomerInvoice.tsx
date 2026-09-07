@@ -91,6 +91,7 @@ export const CustomerInvoice = () => {
   const [payDialog, setPayDialog] = useState<{ open: boolean; statement: StatementGroup | null; payAll?: boolean }>({ open: false, statement: null });
   const [payAmountInput, setPayAmountInput] = useState('');
   const [paying, setPaying] = useState(false);
+  const [view, setView] = useState<'active' | 'archived'>('active');
 
   useEffect(() => {
     if (user) load();
