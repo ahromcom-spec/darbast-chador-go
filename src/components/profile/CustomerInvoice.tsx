@@ -461,6 +461,12 @@ export const CustomerInvoice = () => {
                               <Lock className="h-3 w-3" /> بسته شده
                             </Badge>
                           )}
+                          {s.is_archived && (
+                            <Badge variant="outline" className="gap-1 border-slate-400 text-slate-700 dark:text-slate-300">
+                              <Archive className="h-3 w-3" /> بایگانی‌شده
+                            </Badge>
+                          )}
+
                           <span className="text-sm font-bold">{formatPrice(s.total_amount)}</span>
                           <span className="text-xs text-green-600">پرداختی: {formatPrice(s.total_paid)}</span>
                           <span className="text-xs text-red-600">مانده: {formatPrice(s.total_remaining)}</span>
