@@ -170,9 +170,8 @@ export const CustomerInvoice = () => {
         .select('id, code, status, payment_amount, total_price, total_paid, created_at, statement_id, address, detailed_address, notes, subcategories(name)')
         .eq('customer_id', customer.id)
         .neq('status', 'rejected')
-        .or('is_archived.is.null,is_archived.eq.false')
         .or('is_deep_archived.is.null,is_deep_archived.eq.false')
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: false });
       if (e2) throw e2;
 
       const groups: StatementGroup[] = (stmts || []).map((s: any) => {
@@ -238,7 +237,6 @@ export const CustomerInvoice = () => {
           .select('id, code, status, payment_amount, total_price, total_paid, created_at, address, detailed_address, notes, subcategories(name)')
           .in('id', collabOrderIds)
           .neq('status', 'rejected')
-          .or('is_archived.is.null,is_archived.eq.false')
           .or('is_deep_archived.is.null,is_deep_archived.eq.false');
 
         const myCollabOrders: OrderRow[] = (collabOrders || []).map((o: any) => {

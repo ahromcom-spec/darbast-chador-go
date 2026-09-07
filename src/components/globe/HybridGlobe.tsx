@@ -525,7 +525,6 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           .from('projects_v3')
           .select('id', { count: 'exact', head: true })
           .eq('hierarchy_project_id', projectForOrder.id)
-          .or('is_archived.is.null,is_archived.eq.false')
           .or('is_deep_archived.is.null,is_deep_archived.eq.false')
           .neq('status', 'rejected');
 

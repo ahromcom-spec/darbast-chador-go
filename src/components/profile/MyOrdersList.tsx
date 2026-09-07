@@ -37,6 +37,8 @@ interface Order {
   total_price?: number | null;
   total_paid?: number | null;
   payment_amount?: number | null;
+  is_archived?: boolean | null;
+  statement_closed?: boolean;
 }
 
 interface MyOrdersListProps {
@@ -130,14 +132,23 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
       const provinceIds = [...new Set(ordersData.map((o: any) => o.province_id).filter(Boolean))];
       
       // Fetch additional data in parallel
-      const [subcatRes, provRes, collabRes] = await Promise.all([
+      const statementIds = [...new Set(ordersData.map((o: any) => o.statement_id).filter(Boolean))];
+
+      const [subcatRes, provRes, collabRes, stmtRes] = await Promise.all([
         supabase.from('subcategories').select('id, name').in('id', subcategoryIds),
         supabase.from('provinces').select('id, name').in('id', provinceIds),
         supabase.from('order_collaborators')
           .select('order_id, status, responded_at, manager_approved_at')
           .eq('invitee_user_id', userId)
-          .in('order_id', orderIds)
+          .in('order_id', orderIds),
+        statementIds.length > 0
+          ? supabase.from('customer_statements' as any).select('id, status').in('id', statementIds)
+          : Promise.resolve({ data: [] as any[] } as any)
       ]);
+
+      const closedStatementIds = new Set(
+        ((stmtRes as any)?.data || []).filter((s: any) => s.status === 'closed').map((s: any) => s.id)
+      );
 
       
       const INACTIVE_COLLAB_STATUSES = ['pending', 'manager_approved', 'pending_registration', 'rejected', 'cancelled', 'canceled', 'exited'];
@@ -165,6 +176,8 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
         total_price: order.total_price,
         total_paid: order.total_paid,
         payment_amount: order.payment_amount,
+        is_archived: order.is_archived,
+        statement_closed: closedStatementIds.has(order.statement_id),
       }));
 
       // Sort by created_at descending
@@ -456,6 +469,16 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
                         <Badge variant={displayStatus.paymentVariant}>
                           {displayStatus.paymentLabel}
                         </Badge>
+                        {order.is_archived && (
+                          <Badge variant="secondary" className="text-xs">
+                            تمام شده
+                          </Badge>
+                        )}
+                        {order.statement_closed && (
+                          <Badge variant="outline" className="text-xs">
+                            صورتحساب بسته شده
+                          </Badge>
+                        )}
                         {order.isCollaborated && (
                           <Badge variant="outline" className="gap-1 text-xs border-primary/50 text-primary">
                             <Users className="h-3 w-3" />
