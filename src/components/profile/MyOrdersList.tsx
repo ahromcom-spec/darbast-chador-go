@@ -346,6 +346,138 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
 
   const hasActiveFilters = selectedAddress !== 'all' || selectedServiceType !== 'all' || selectedStatus !== 'all' || searchQuery.trim() !== '';
   const filteredOrders = getFilteredOrders();
+  const activeOrders = filteredOrders.filter(o => !isArchivedOrder(o));
+  const archivedOrders = filteredOrders.filter(o => isArchivedOrder(o));
+
+  const renderOrderCard = (order: Order, archived: boolean) => {
+    const displayStatus = getOrderDisplayStatus(order);
+    const total = Number(order.total_price) || Number(order.payment_amount) || 0;
+    const paid = Number(order.total_paid) || 0;
+    const remaining = Math.max(total - paid, 0);
+    const fmt = (n: number) => new Intl.NumberFormat('fa-IR').format(Math.round(n));
+    const mediaOpen = openMediaOrderId === order.id;
+
+    return (
+      <Card
+        key={order.id}
+        className={`hover:shadow-md transition-shadow cursor-pointer ${archived ? 'border-border/40 bg-muted/30' : 'border-border/50'}`}
+        onClick={() => navigate(`/user/orders/${order.id}`)}
+      >
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+            <div className="space-y-2 flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold text-foreground">#{order.code}</span>
+                {archived && (
+                  <Badge variant="outline" className="gap-1 text-xs border-emerald-500/40 text-emerald-600 bg-emerald-500/10">
+                    <CheckCircle2 className="h-3 w-3" />
+                    تکمیل‌شده
+                  </Badge>
+                )}
+                <Badge variant={displayStatus.stageVariant}>{displayStatus.stageLabel}</Badge>
+                <Badge variant={displayStatus.paymentVariant}>{displayStatus.paymentLabel}</Badge>
+                {order.statement_closed && (
+                  <Badge variant="outline" className="text-xs">صورتحساب بسته شده</Badge>
+                )}
+                {order.isCollaborated && (
+                  <Badge variant="outline" className="gap-1 text-xs border-primary/50 text-primary">
+                    <Users className="h-3 w-3" />
+                    همکار
+                  </Badge>
+                )}
+              </div>
+
+              {order.subcategory_name && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Package className="h-4 w-4" />
+                  <span>{order.subcategory_name}</span>
+                </div>
+              )}
+
+              {order.address && (
+                <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                  <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span className="line-clamp-1">{order.address}</span>
+                </div>
+              )}
+
+              {total > 0 && (
+                <div className="flex items-center gap-2 text-sm flex-wrap">
+                  <Wallet className="h-4 w-4 text-emerald-600" />
+                  <span className="font-semibold text-foreground">مبلغ فاکتور: {fmt(total)} تومان</span>
+                  {paid > 0 && <span className="text-xs text-green-600">• پرداختی: {fmt(paid)}</span>}
+                  {remaining > 0 && <span className="text-xs text-red-600">• مانده: {fmt(remaining)}</span>}
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                <Calendar className="h-3.5 w-3.5" />
+                <span>
+                  ثبت: {new Date(order.created_at).toLocaleDateString('fa-IR', { year: 'numeric', month: 'long', day: 'numeric' })}
+                </span>
+                {archived && order.payment_confirmed_at && (
+                  <span>
+                    • تکمیل: {new Date(order.payment_confirmed_at).toLocaleDateString('fa-IR', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  </span>
+                )}
+              </div>
+
+              {archived && (
+                <div className="pt-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2 text-xs h-8 px-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenMediaOrderId(mediaOpen ? null : order.id);
+                    }}
+                  >
+                    <Images className="h-3.5 w-3.5" />
+                    {mediaOpen ? 'بستن عکس‌ها و فیلم‌ها' : 'مشاهده عکس‌ها و فیلم‌ها'}
+                  </Button>
+                  {mediaOpen && (
+                    <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                      <OrderMediaPreview orderId={order.id} />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 flex-shrink-0">
+              {order.status === 'pending' && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="gap-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCancelOrderId(order.id);
+                  }}
+                >
+                  <XCircle className="h-4 w-4" />
+                  لغو
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/user/orders/${order.id}`);
+                }}
+              >
+                <Eye className="h-4 w-4" />
+                مشاهده
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   if (loading) {
     return (
