@@ -645,12 +645,12 @@ export default function SmsManagementModule() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {queue.length === 0 && (
+                    {filteredQueue.length === 0 && (
                       <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                        پیامکی در انتظار ارسال نیست.
+                        {queueSearch.trim() ? "موردی با این جستجو یافت نشد." : "پیامکی در انتظار ارسال نیست."}
                       </TableCell></TableRow>
                     )}
-                    {queue.map((row) => (
+                    {filteredQueue.map((row) => (
                       <TableRow key={row.id}>
                         <TableCell className="text-xs whitespace-nowrap">
                           {new Date(row.send_after).toLocaleString("fa-IR")}
