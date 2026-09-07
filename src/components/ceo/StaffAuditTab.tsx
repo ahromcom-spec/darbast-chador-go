@@ -238,12 +238,16 @@ export function StaffAuditTab() {
   };
 
   const calculateSummary = (records: StaffAuditRecord[], settings: SalarySettings, localBonuses?: number, localDeductions?: number, localPrevBalance?: number, localPrevExtra?: number) => {
+    // اضافه‌کاری/کم‌کاری فقط برای روزهایی که نیرو حاضر یا نصف روز بوده معتبر است
+    const effectiveOvertime = (r: StaffAuditRecord) =>
+      (r.work_status === 'حاضر' || r.work_status === 'نصف روز') ? (r.overtime_hours || 0) : 0;
+
     // Basic counts
     const totalDaysWorked = records.filter(r => r.work_status === 'حاضر').length
       + 0.5 * records.filter(r => r.work_status === 'نصف روز').length;
     const totalAbsentDays = records.filter(r => r.work_status === 'غایب').length;
-    const totalOvertime = records.reduce((sum, r) => sum + Math.max(0, r.overtime_hours || 0), 0);
-    const totalUndertime = records.reduce((sum, r) => sum + Math.max(0, -(r.overtime_hours || 0)), 0);
+    const totalOvertime = records.reduce((sum, r) => sum + Math.max(0, effectiveOvertime(r)), 0);
+    const totalUndertime = records.reduce((sum, r) => sum + Math.max(0, -effectiveOvertime(r)), 0);
     const netOvertime = totalOvertime - totalUndertime;
 
     
