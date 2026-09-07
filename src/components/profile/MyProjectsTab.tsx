@@ -100,7 +100,9 @@ export const MyProjectsTab = () => {
 
       const ordByProj: Record<string, Order[]> = {};
       (projRes.data || []).forEach((p: any) => {
-        ordByProj[p.id] = orders.filter(o => o.project_id === p.id);
+        ordByProj[p.id] = orders
+          .filter(o => o.project_id === p.id)
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       });
 
       // Only keep addresses with projects that have orders

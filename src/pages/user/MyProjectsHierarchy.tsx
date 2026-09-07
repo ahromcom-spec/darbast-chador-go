@@ -240,9 +240,9 @@ export default function MyProjectsHierarchy() {
       // گروه‌بندی سفارش‌ها بر اساس hierarchy_project_id
       const ordersByProject: { [key: string]: Order[] } = {};
       projects?.forEach((project) => {
-        ordersByProject[project.id] = (orders || []).filter((o) => 
-          o.project_id === project.id
-        );
+        ordersByProject[project.id] = (orders || [])
+          .filter((o) => o.project_id === project.id)
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       });
 
       // فیلتر کردن: فقط پروژه‌هایی که سفارش دارند و آدرس‌هایی که پروژه با سفارش دارند
