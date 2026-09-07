@@ -52,6 +52,12 @@ interface Statement {
   cheque_pending: number;
   /** چک‌های برگشتی */
   cheque_bounced: number;
+  /** بایگانی صورتحساب */
+  is_archived: boolean;
+  /** بایگانی عمیق صورتحساب */
+  is_deep_archived: boolean;
+  archived_at: string | null;
+
 
   subcategory_name: string | null;
   address: string | null;
