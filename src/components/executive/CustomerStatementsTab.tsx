@@ -354,34 +354,45 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
   }, []);
 
   const filtered = useMemo(() => {
-    let list = groups;
-    if (filter !== 'all') {
-      list = list
-        .map(g => ({
-          ...g,
-          statements: g.statements.filter(s => s.status === filter),
-        }))
-        .filter(g => g.statements.length > 0)
-        .map(g => {
-          const total_amount = g.statements.reduce((a, s) => a + s.total_amount, 0);
-          const total_remaining = g.statements.reduce((a, s) => a + s.total_remaining, 0);
-          const total_paid_actual = g.statements.reduce((a, s) => a + (s.total_paid_actual || 0), 0);
-          const cheque_total = g.statements.reduce((a, s) => a + (s.cheque_total || 0), 0);
-          const cheque_cleared = g.statements.reduce((a, s) => a + (s.cheque_cleared || 0), 0);
-          const cheque_pending = g.statements.reduce((a, s) => a + (s.cheque_pending || 0), 0);
-          const cheque_bounced = g.statements.reduce((a, s) => a + (s.cheque_bounced || 0), 0);
-          return { ...g, total_amount, total_remaining, total_paid_actual, cheque_total, cheque_cleared, cheque_pending, cheque_bounced, overpaid: Math.max(total_paid_actual - total_amount, 0) };
+    const matchArchive = (s: Statement) => {
+      if (archiveView === 'deep') return s.is_deep_archived;
+      if (archiveView === 'archived') return s.is_archived && !s.is_deep_archived;
+      return !s.is_archived && !s.is_deep_archived;
+    };
+    let list = groups
+      .map(g => ({
+        ...g,
+        statements: g.statements.filter(s => matchArchive(s) && (filter === 'all' || s.status === filter)),
+      }))
+      .filter(g => g.statements.length > 0)
+      .map(g => {
+        const total_amount = g.statements.reduce((a, s) => a + s.total_amount, 0);
+        const total_remaining = g.statements.reduce((a, s) => a + s.total_remaining, 0);
+        const total_paid_actual = g.statements.reduce((a, s) => a + (s.total_paid_actual || 0), 0);
+        const cheque_total = g.statements.reduce((a, s) => a + (s.cheque_total || 0), 0);
+        const cheque_cleared = g.statements.reduce((a, s) => a + (s.cheque_cleared || 0), 0);
+        const cheque_pending = g.statements.reduce((a, s) => a + (s.cheque_pending || 0), 0);
+        const cheque_bounced = g.statements.reduce((a, s) => a + (s.cheque_bounced || 0), 0);
+        return { ...g, total_amount, total_remaining, total_paid_actual, cheque_total, cheque_cleared, cheque_pending, cheque_bounced, overpaid: Math.max(total_paid_actual - total_amount, 0) };
+      });
 
-        });
-
-    }
     const q = search.trim().toLowerCase();
     if (!q) return list;
     return list.filter(g =>
       (g.full_name || '').toLowerCase().includes(q) ||
       (g.phone_number || '').includes(q)
     );
-  }, [groups, search, filter]);
+  }, [groups, search, filter, archiveView]);
+
+  const archiveCounts = useMemo(() => {
+    const all = groups.flatMap(g => g.statements);
+    return {
+      active: all.filter(s => !s.is_archived && !s.is_deep_archived).length,
+      archived: all.filter(s => s.is_archived && !s.is_deep_archived).length,
+      deep: all.filter(s => s.is_deep_archived).length,
+    };
+  }, [groups]);
+
 
   const toggleCustomer = (id: string) => {
     setExpandedCustomers(prev => {
