@@ -1692,6 +1692,10 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
       const centerLat = firstProject.locations!.lat;
       const centerLng = firstProject.locations!.lng;
       const clusterKey = centerLat.toFixed(6) + '_' + centerLng.toFixed(6);
+      // اگر همه پروژه‌های این نقطه تکمیل‌شده باشند، نقطه با رنگ ملایم نمایش داده می‌شود
+      const groupArchived = group.every(p => isArchivedProject(p));
+      const clusterDotColor = groupArchived ? '#94a3b8' : '#ef4444';
+      const clusterDotShadow = groupArchived ? 'rgba(148,163,184,0.5)' : 'rgba(239, 68, 68, 0.5)';
 
       // برای همه موقعیت‌ها (چه تکی چه چندتایی) نقطه مرکزی قرمز اضافه کنیم
       // ایجاد نقطه مرکزی قرمز کوچک
@@ -1710,9 +1714,9 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
               width: 12px;
               height: 12px;
               border-radius: 50%;
-              background: #ef4444;
+              background: ${clusterDotColor};
               border: 2px solid white;
-              box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
+              box-shadow: 0 2px 8px ${clusterDotShadow};
               cursor: pointer;
               transition: all 0.2s ease;
             "
@@ -1925,6 +1929,27 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             ">🔧 ${repairLabels[topRepairStatus]}</div>`
           : '';
 
+        const projectArchived = isArchivedProject(project);
+        const labelGradient = projectArchived
+          ? 'linear-gradient(135deg, rgba(100,116,139,0.95) 0%, rgba(71,85,105,0.95) 100%)'
+          : 'linear-gradient(135deg, rgba(59,130,246,0.95) 0%, rgba(37,99,235,0.95) 100%)';
+        const archivedBadgeHtml = projectArchived
+          ? `<div style="
+              background:rgba(16,185,129,0.95);
+              color:#fff;
+              padding:3px 7px;
+              border-radius:6px;
+              font-family:Vazirmatn, sans-serif;
+              font-size:9px;
+              font-weight:700;
+              white-space:nowrap;
+              text-align:center;
+              box-shadow:0 2px 8px rgba(0,0,0,0.25);
+              margin-bottom:3px;
+              direction:rtl;
+            ">✓ تکمیل‌شده</div>`
+          : '';
+
         const addressLabelHtml = `
           <div style="
             position:absolute;
@@ -1938,8 +1963,9 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             z-index:10;
           ">
             ${repairBadgeHtml}
+            ${archivedBadgeHtml}
             <div style="
-              background:linear-gradient(135deg, rgba(59,130,246,0.95) 0%, rgba(37,99,235,0.95) 100%);
+              background:${labelGradient};
               color:white;
               padding:4px 8px;
               border-radius:6px;
