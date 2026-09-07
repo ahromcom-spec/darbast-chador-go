@@ -14,6 +14,7 @@ import { ImageZoomModal } from '@/components/common/ImageZoomModal';
 import { MobileProjectPanel } from './MobileProjectPanel';
 import { ServiceTypeSelectionDialog } from './ServiceTypeSelectionDialog';
 import { useNavigate } from 'react-router-dom';
+import { MapSearchBox } from '@/components/locations/MapSearchBox';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { createNeshanTileLayer, NESHAN_ATTRIBUTION } from '@/lib/neshan';
 import { createOSMBuildingsLayer } from '@/lib/osmBuildings';
