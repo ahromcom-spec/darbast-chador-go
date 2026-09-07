@@ -320,6 +320,41 @@ export default function SmsManagementModule() {
     return g;
   }, [items]);
 
+  const filteredLogs = useMemo(() => {
+    const q = logSearch.trim();
+    if (!q) return logs;
+    const lower = q.toLowerCase();
+    return logs.filter((l) => {
+      const fullAddress = [l.address, l.detailed_address].filter(Boolean).join(" ");
+      return [
+        l.recipient,
+        l.customer_name,
+        fullAddress,
+        l.message,
+        l.order_code,
+        l.template_key,
+        l.provider_response,
+      ].filter(Boolean).some((v) => String(v).toLowerCase().includes(lower));
+    });
+  }, [logs, logSearch]);
+
+  const filteredQueue = useMemo(() => {
+    const q = queueSearch.trim();
+    if (!q) return queue;
+    const lower = q.toLowerCase();
+    return queue.filter((r) => {
+      const p = r.payload || {};
+      const payloadText = [p.message, p.text, p.body, p.customerName, p.address, p.description].filter(Boolean).join(" ");
+      return [
+        r.phone,
+        r.order_code,
+        r.status_key,
+        payloadText,
+        r.last_error,
+      ].filter(Boolean).some((v) => String(v).toLowerCase().includes(lower));
+    });
+  }, [queue, queueSearch]);
+
   const renderItem = (item: SmsTemplate) => {
     const m = merged(item);
     const dirty = !!drafts[item.id];
