@@ -564,6 +564,7 @@ export function StaffAuditTab() {
       const recordsWithData = records.filter((r) =>
         r.work_status === 'حاضر' ||
         r.work_status === 'نصف روز' ||
+        (r.overtime_hours || 0) !== 0 ||
         (r.amount_received || 0) > 0 ||
         (r.amount_spent || 0) > 0 ||
         !!r.notes ||
