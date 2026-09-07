@@ -38,12 +38,26 @@ interface ProjectOrder {
   subcategory?: { name: string; code: string };
   service_type?: { name: string; code: string };
   media?: HierarchyMedia[];
+  is_archived?: boolean | null;
 }
 
 interface ProjectWithMedia extends ProjectHierarchy {
   media?: HierarchyMedia[];
   orders?: ProjectOrder[];
 }
+
+/** آیا این سفارش تکمیل/بایگانی شده است؟ */
+const isArchivedOrder = (o: any) =>
+  !!o?.is_archived || o?.status === 'completed' || o?.status === 'closed' || o?.execution_stage === 'completed' || o?.execution_stage === 'closed';
+
+/** پروژه فقط سفارش‌های تکمیل‌شده دارد؟ */
+const isArchivedProject = (p: ProjectWithMedia) => {
+  const orders = p.orders || [];
+  if (orders.length === 0) return false;
+  return orders.every(o => isArchivedOrder(o));
+};
+
+type MapOrderFilter = 'all' | 'active' | 'archived';
 
 const getMarkerLocationTitle = (project: ProjectWithMedia): string => {
   const title = project.locations?.title?.trim();
@@ -116,6 +130,8 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
   const [serviceTypeDialogOpen, setServiceTypeDialogOpen] = useState(false);
   const [serviceTypeDialogLocationId, setServiceTypeDialogLocationId] = useState<string>('');
   const [mapStyle, setMapStyle] = useState<'standard' | 'satellite'>('standard');
+  // فیلتر نمایش سفارش‌ها روی نقشه: همه / فعال / بایگانی
+  const [mapOrderFilter, setMapOrderFilter] = useState<MapOrderFilter>('all');
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const buildingsLayerRef = useRef<L.LayerGroup | null>(null);
 
@@ -860,7 +876,11 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
       // فقط سفارش‌هایی که به پروژه‌های فعلی روی نقشه تعلق دارند
       const v3OrdersFiltered = v3OrdersAll.filter(o => {
         if (!o.hierarchy_project_id || !projectIds.includes(o.hierarchy_project_id) || o.status === 'rejected') return false;
-        if (!activeExecutionOnly) return true;
+        if (!activeExecutionOnly) {
+          if (mapOrderFilter === 'active' && isArchivedOrder(o)) return false;
+          if (mapOrderFilter === 'archived' && !isArchivedOrder(o)) return false;
+          return true;
+        }
         return isActiveExecutionOrder(o, new Set(Object.keys(repairOrders)));
       });
 
@@ -1021,6 +1041,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             address: order.address,
             created_at: order.created_at,
             approved_at: order.approved_at || null,
+            is_archived: isArchivedOrder(order),
             subcategory: order.subcategory || (order.subcategory_id ? subMap.get(order.subcategory_id) : undefined),
             service_type: order.service_type || (order.service_type_id ? stMap.get(order.service_type_id) : undefined),
             media: orderMediaMap.get(order.id) || []
@@ -1053,7 +1074,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
       console.error('خطا در دریافت عکس‌های پروژه:', error);
       setProjectsWithMedia(projects.map(p => ({ ...p, media: [], orders: [] })));
     }
-  }, [projects, activeExecutionOnly, companyOrders, repairOrders]);
+  }, [projects, activeExecutionOnly, companyOrders, repairOrders, mapOrderFilter]);
 
   // دریافت درخواست‌های تعمیر باز برای سفارش‌های نمایش‌داده‌شده روی نقشه
   useEffect(() => {
@@ -1671,6 +1692,10 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
       const centerLat = firstProject.locations!.lat;
       const centerLng = firstProject.locations!.lng;
       const clusterKey = centerLat.toFixed(6) + '_' + centerLng.toFixed(6);
+      // اگر همه پروژه‌های این نقطه تکمیل‌شده باشند، نقطه با رنگ ملایم نمایش داده می‌شود
+      const groupArchived = group.every(p => isArchivedProject(p));
+      const clusterDotColor = groupArchived ? '#94a3b8' : '#ef4444';
+      const clusterDotShadow = groupArchived ? 'rgba(148,163,184,0.5)' : 'rgba(239, 68, 68, 0.5)';
 
       // برای همه موقعیت‌ها (چه تکی چه چندتایی) نقطه مرکزی قرمز اضافه کنیم
       // ایجاد نقطه مرکزی قرمز کوچک
@@ -1689,9 +1714,9 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
               width: 12px;
               height: 12px;
               border-radius: 50%;
-              background: #ef4444;
+              background: ${clusterDotColor};
               border: 2px solid white;
-              box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
+              box-shadow: 0 2px 8px ${clusterDotShadow};
               cursor: pointer;
               transition: all 0.2s ease;
             "
@@ -1904,6 +1929,27 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             ">🔧 ${repairLabels[topRepairStatus]}</div>`
           : '';
 
+        const projectArchived = isArchivedProject(project);
+        const labelGradient = projectArchived
+          ? 'linear-gradient(135deg, rgba(100,116,139,0.95) 0%, rgba(71,85,105,0.95) 100%)'
+          : 'linear-gradient(135deg, rgba(59,130,246,0.95) 0%, rgba(37,99,235,0.95) 100%)';
+        const archivedBadgeHtml = projectArchived
+          ? `<div style="
+              background:rgba(16,185,129,0.95);
+              color:#fff;
+              padding:3px 7px;
+              border-radius:6px;
+              font-family:Vazirmatn, sans-serif;
+              font-size:9px;
+              font-weight:700;
+              white-space:nowrap;
+              text-align:center;
+              box-shadow:0 2px 8px rgba(0,0,0,0.25);
+              margin-bottom:3px;
+              direction:rtl;
+            ">✓ تکمیل‌شده</div>`
+          : '';
+
         const addressLabelHtml = `
           <div style="
             position:absolute;
@@ -1917,8 +1963,9 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             z-index:10;
           ">
             ${repairBadgeHtml}
+            ${archivedBadgeHtml}
             <div style="
-              background:linear-gradient(135deg, rgba(59,130,246,0.95) 0%, rgba(37,99,235,0.95) 100%);
+              background:${labelGradient};
               color:white;
               padding:4px 8px;
               border-radius:6px;
@@ -1972,7 +2019,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           const html = `
             <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
               ${addressLabelHtml}
-              <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid #fff;background:#f0f0f0;position:relative;">
+              <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid ${projectArchived ? '#94a3b8' : '#fff'};background:#f0f0f0;position:relative;${projectArchived ? 'filter:grayscale(0.45) saturate(0.7);' : ''}">
                 <img src="${url1}" alt="تصویر پروژه" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
                 <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));height:18px;display:flex;align-items:center;justify-content:center;">
                   <span style="color:#fff;font-size:10px;font-weight:bold;">${totalOrderImages}</span>
@@ -3281,6 +3328,32 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             </>
           )}
         </Button>
+
+        {/* فیلتر نمایش سفارش‌ها: همه / فعال / بایگانی */}
+        {!activeExecutionOnly && (
+          <Card className="pointer-events-auto absolute right-2 top-2 bg-card/80 backdrop-blur-md shadow-lg border border-primary/20 p-1 rounded-md z-[2100]" dir="rtl">
+            <div className="flex items-center gap-1">
+              {([
+                { key: 'all', label: 'همه' },
+                { key: 'active', label: 'فعال' },
+                { key: 'archived', label: 'بایگانی' },
+              ] as { key: MapOrderFilter; label: string }[]).map(opt => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setMapOrderFilter(opt.key)}
+                  className={`px-2 py-1 rounded text-[10px] font-semibold transition-colors ${
+                    mapOrderFilter === opt.key
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {/* کارت تعداد پروژه‌ها - زیر دکمه ماهواره‌ای */}
         <Card className="pointer-events-auto absolute left-2 top-10 bg-card/50 backdrop-blur-md shadow-lg border border-primary/20 p-1 rounded-md z-[2100]">
