@@ -709,6 +709,25 @@ export default function SmsManagementModule() {
                 <CardTitle className="text-base">آخرین ارسال‌ها</CardTitle>
               </CardHeader>
               <CardContent className="overflow-x-auto">
+                <div className="relative mb-3">
+                  <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    className="rounded-xl pr-9"
+                    placeholder="جستجو در نام کارفرما، آدرس و شماره تماس..."
+                    value={logSearch}
+                    onChange={(e) => setLogSearch(e.target.value)}
+                  />
+                  {logSearch && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="absolute left-1 top-1/2 h-7 w-7 -translate-y-1/2"
+                      onClick={() => setLogSearch("")}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
                 <Table>
                   <TableHeader>
                     <TableRow>
