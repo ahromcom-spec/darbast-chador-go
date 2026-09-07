@@ -733,6 +733,7 @@ export default function SmsManagementModule() {
                     <TableRow>
                       <TableHead>زمان</TableHead>
                       <TableHead>گیرنده</TableHead>
+                      <TableHead>کارفرما</TableHead>
                       <TableHead>کلید</TableHead>
                       <TableHead>کد سفارش</TableHead>
                       <TableHead>وضعیت</TableHead>
@@ -743,7 +744,7 @@ export default function SmsManagementModule() {
                   </TableHeader>
                   <TableBody>
                     {filteredLogs.length === 0 && (
-                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                      <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                         {logSearch.trim() ? "موردی با این جستجو یافت نشد." : "گزارشی ثبت نشده است."}
                       </TableCell></TableRow>
                     )}
