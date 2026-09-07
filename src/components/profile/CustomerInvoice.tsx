@@ -221,6 +221,8 @@ export const CustomerInvoice = () => {
           addresses,
           orders: myOrders,
           is_manual: !!s.is_manual,
+          is_archived: !!s.is_archived,
+          is_deep_archived: !!s.is_deep_archived,
         };
       });
 
