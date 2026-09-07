@@ -14,6 +14,7 @@ import { ImageZoomModal } from '@/components/common/ImageZoomModal';
 import { MobileProjectPanel } from './MobileProjectPanel';
 import { ServiceTypeSelectionDialog } from './ServiceTypeSelectionDialog';
 import { useNavigate } from 'react-router-dom';
+import { MapSearchBox } from '@/components/locations/MapSearchBox';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { createNeshanTileLayer, NESHAN_ATTRIBUTION } from '@/lib/neshan';
 import { createOSMBuildingsLayer } from '@/lib/osmBuildings';
@@ -3384,7 +3385,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
 
         {/* دکمه انتخاب پروژه فقط زمانی که مکان‌نما روی پروژه قرار گرفته */}
         {snappedProject && (
-          <div className="pointer-events-auto absolute bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-[2200]">
+          <div className={`pointer-events-auto absolute ${activeExecutionOnly ? 'bottom-4' : 'bottom-[4.75rem]'} left-1/2 -translate-x-1/2 w-[90%] max-w-md z-[2200]`}>
             <Button
               className="w-full h-11 text-sm font-bold shadow-xl bg-green-600 hover:bg-green-700 text-white"
               onClick={() => {
@@ -3403,6 +3404,49 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             </Button>
           </div>
         )}
+
+        {/* نقشه عمومی (کره زمین): دکمه افزودن پروژه در موقعیت مرکز نقشه */}
+        {!activeExecutionOnly && !snappedProject && (
+          <div className="pointer-events-auto absolute bottom-[4.75rem] left-1/2 -translate-x-1/2 w-[90%] max-w-md z-[2200]">
+            <Button
+              className="w-full h-11 text-sm font-bold shadow-xl"
+              onClick={() => {
+                if (!centerPin) return;
+                navigate('/user/new-location', {
+                  state: { lat: centerPin.lat, lng: centerPin.lng, fromMap: true },
+                });
+              }}
+            >
+              <MapPin className="h-4 w-4 ml-1.5" />
+              افزودن پروژه در این موقعیت
+            </Button>
+            <p className="mt-1 text-center text-[10px] text-muted-foreground bg-background/70 backdrop-blur-sm rounded px-2 py-0.5">
+              نقشه را جابجا کنید تا مکان‌نما روی محل پروژه قرار بگیرد (تا ۳ متری، پروژه خودکار انتخاب می‌شود)
+            </p>
+          </div>
+        )}
+
+        {/* نقشه عمومی (کره زمین): کادر جستجوی آدرس - پایین نقشه */}
+        {!activeExecutionOnly && (
+          <div className="pointer-events-auto absolute bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-[2100]">
+            <MapSearchBox
+              onLocationSelect={(lat, lng) => {
+                if (mapRef.current) {
+                  mapRef.current.flyTo([lat, lng], 16, {
+                    duration: 1.5,
+                    easeLinearity: 0.25
+                  });
+                }
+              }}
+              placeholder="جستجوی آدرس یا محل..."
+              className="w-full"
+              showSearchButton={true}
+              resultsPlacement="top"
+            />
+          </div>
+        )}
+
+
 
 
         {/* نقشه */}
