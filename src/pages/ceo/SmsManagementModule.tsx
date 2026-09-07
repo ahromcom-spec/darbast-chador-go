@@ -181,7 +181,26 @@ export default function SmsManagementModule() {
       setItems((tplRes.data || []) as SmsTemplate[]);
       setDrafts({});
     }
-    if (!logsRes.error) setLogs((logsRes.data || []) as SmsLog[]);
+    if (!logsRes.error) {
+      const rawLogs = (logsRes.data || []) as any[];
+      const orderCodes = rawLogs.map((l) => l.order_code).filter(Boolean);
+      let projectByCode: Record<string, { customer_name?: string | null; address?: string | null; detailed_address?: string | null }> = {};
+      if (orderCodes.length) {
+        const { data: projects } = await supabase
+          .from("projects_v3")
+          .select("code, customer_name, address, detailed_address")
+          .in("code", orderCodes);
+        (projects || []).forEach((p: any) => {
+          if (p.code) projectByCode[p.code] = p;
+        });
+      }
+      setLogs(rawLogs.map((l) => ({
+        ...l,
+        customer_name: l.order_code ? projectByCode[l.order_code]?.customer_name || null : null,
+        address: l.order_code ? projectByCode[l.order_code]?.address || null : null,
+        detailed_address: l.order_code ? projectByCode[l.order_code]?.detailed_address || null : null,
+      })) as SmsLog[]);
+    }
     if (!queueRes.error) setQueue((queueRes.data || []) as unknown as ScheduledSms[]);
 
     if (!statsRes.error) {
