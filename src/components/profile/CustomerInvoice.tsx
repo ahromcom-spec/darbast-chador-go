@@ -281,6 +281,8 @@ export const CustomerInvoice = () => {
             }).filter(Boolean))) as string[],
             orders: myCollabOrders,
             is_manual: false,
+            is_archived: false,
+            is_deep_archived: false,
           } as StatementGroup;
         }
       }
