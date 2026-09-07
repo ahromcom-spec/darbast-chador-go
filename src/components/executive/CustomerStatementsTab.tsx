@@ -713,6 +713,67 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                         بازگشایی صورتحساب
                                       </Button>
                                     )}
+                                    {!s.is_archived && !s.is_deep_archived && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1 border-slate-400 text-slate-700 hover:bg-slate-50"
+                                        disabled={busy}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setArchiveState(s, { is_archived: true, is_deep_archived: false }, `صورتحساب شماره ${s.statement_number} بایگانی شد`);
+                                        }}
+                                      >
+                                        <Archive className="h-3.5 w-3.5" />
+                                        بایگانی
+                                      </Button>
+                                    )}
+                                    {s.is_archived && !s.is_deep_archived && (
+                                      <>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="gap-1 border-emerald-400 text-emerald-700 hover:bg-emerald-50"
+                                          disabled={busy}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setArchiveState(s, { is_archived: false, is_deep_archived: false }, `صورتحساب شماره ${s.statement_number} از بایگانی خارج شد`);
+                                          }}
+                                        >
+                                          <ArchiveRestore className="h-3.5 w-3.5" />
+                                          خروج از بایگانی
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="gap-1 border-red-400 text-red-700 hover:bg-red-50"
+                                          disabled={busy}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setArchiveState(s, { is_archived: true, is_deep_archived: true }, `صورتحساب شماره ${s.statement_number} به بایگانی عمیق منتقل شد`);
+                                          }}
+                                        >
+                                          <Archive className="h-3.5 w-3.5" />
+                                          بایگانی عمیق
+                                        </Button>
+                                      </>
+                                    )}
+                                    {s.is_deep_archived && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-1 border-emerald-400 text-emerald-700 hover:bg-emerald-50"
+                                        disabled={busy}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setArchiveState(s, { is_archived: true, is_deep_archived: false }, `صورتحساب شماره ${s.statement_number} از بایگانی عمیق بازگردانده شد`);
+                                        }}
+                                      >
+                                        <ArchiveRestore className="h-3.5 w-3.5" />
+                                        بازگردانی از بایگانی عمیق
+                                      </Button>
+                                    )}
+
                                     {sOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                   </div>
                                 </div>
