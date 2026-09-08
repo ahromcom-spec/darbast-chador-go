@@ -876,25 +876,8 @@ export default function ComprehensiveScaffoldingForm({
         }
       }
 
-      // ===== شرط ارتفاع نامتعارف (ماژول قیمت‌گذاری) =====
-      const unconv = getFacadeUnconventionalHeight();
-      if (unconv) {
-        const fee = pricePerMeter ?? P('facade_per_meter_over_100', 45000);
-        const extraPrice = unconv.extraVolume * fee;
-        const pctExtra = P('facade_unconventional_height_pct', 30);
-        breakdown.push('— ارتفاع نامتعارف داربست —');
-        unconv.details.forEach(d => {
-          breakdown.push(
-            `ارتفاع مازاد ${d.extraHeight.toLocaleString('fa-IR')} متر × طول ${d.length.toLocaleString('fa-IR')} × عرض ${d.width.toLocaleString('fa-IR')} = ${d.extraHeight * d.length * d.width} متر مکعب اضافی`
-          );
-        });
-        breakdown.push(`متراژ اضافی × فی: ${Math.round(extraPrice).toLocaleString('fa-IR')} تومان`);
-        basePrice += extraPrice;
-        const surcharge = (basePrice * pctExtra) / 100;
-        breakdown.push(`هزینه ارتفاع نامتعارف: +${pctExtra}% = ${Math.round(surcharge).toLocaleString('fa-IR')} تومان`);
-        basePrice += surcharge;
-        if (area > 0) effectiveMonthlyUnitFee = Math.round(basePrice / area);
-      }
+      // شرط ارتفاع نامتعارف دیگر پنهان نیست و به‌صورت «شرط قابل ویرایش» در ماژول قیمت‌گذاری تعریف شده است.
+
 
 
 
