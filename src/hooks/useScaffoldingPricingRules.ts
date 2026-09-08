@@ -110,7 +110,7 @@ export const useScaffoldingPricingRules = (configTable: PricingConfigTable) => {
       .not('source_text', 'is', null);
     if (exErr) throw exErr;
 
-    const existing = (existingRows || []) as { id: string; source_text: string }[];
+    const existing = ((existingRows || []) as unknown) as { id: string; source_text: string }[];
     const stale = existing.filter((r) => !wanted.includes((r.source_text || '').trim()));
     if (stale.length) {
       const { error } = await supabase
