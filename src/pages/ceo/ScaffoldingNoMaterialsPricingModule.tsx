@@ -170,6 +170,14 @@ export default function ScaffoldingNoMaterialsPricingModule() {
               <CardTitle className="text-base">{CATEGORY_LABELS[cat] || cat}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              <CategoryRulesBuilder
+                category={cat}
+                categoryLabel={CATEGORY_LABELS[cat] || cat}
+                rules={byCategory(cat)}
+                onCreate={createRule}
+                onUpdate={updateRule}
+                onDelete={deleteRule}
+              />
               <CategoryConditionsList
                 category={cat}
                 categoryLabel={CATEGORY_LABELS[cat] || cat}
