@@ -230,7 +230,22 @@ export const describeCondition = (c: RuleCondition): string => {
   return `${METRIC_LABELS[c.left]} ${OPERATOR_LABELS[c.operator]} ${right}`;
 };
 
-export const describeAction = (type: RuleActionType, value: number): string => {
+/** فرمول را برای مدیر به زبان فارسی بازنویسی می‌کند */
+export const describeFormula = (formula: string): string => {
+  let out = formula;
+  (Object.keys(METRIC_LABELS) as RuleMetric[])
+    .sort((a, b) => b.length - a.length)
+    .forEach((m) => {
+      out = out.split(m).join(`«${METRIC_LABELS[m]}»`);
+    });
+  return out;
+};
+
+export const describeAction = (
+  type: RuleActionType,
+  value: number,
+  formula?: string | null,
+): string => {
   const v = (value || 0).toLocaleString('fa-IR');
   switch (type) {
     case 'increase_percent': return `${v}٪ افزایش قیمت`;
@@ -238,15 +253,18 @@ export const describeAction = (type: RuleActionType, value: number): string => {
     case 'add_amount': return `${v} تومان افزوده شود`;
     case 'min_price': return `حداقل ${v} تومان`;
     case 'set_price': return `قیمت ثابت ${v} تومان`;
+    case 'add_formula':
+      return formula
+        ? `نتیجه فرمول ${describeFormula(formula)} به قیمت افزوده شود`
+        : 'نتیجه فرمول به قیمت افزوده شود';
     default: return '';
   }
 };
 
 export const describeRule = (rule: PricingRule): string => {
   const conds = (rule.conditions || []).map(describeCondition).join(' و ');
-  return conds
-    ? `اگر ${conds} ← ${describeAction(rule.action_type, rule.action_value)}`
-    : describeAction(rule.action_type, rule.action_value);
+  const act = describeAction(rule.action_type, rule.action_value, rule.action_formula);
+  return conds ? `اگر ${conds} ← ${act}` : act;
 };
 
 const conditionHolds = (c: RuleCondition, metrics: RuleMetrics): boolean => {
