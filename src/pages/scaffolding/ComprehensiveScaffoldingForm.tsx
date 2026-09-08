@@ -218,6 +218,10 @@ export default function ComprehensiveScaffoldingForm({
   const { get: pricingGetNoMaterials } = useScaffoldingNoMaterialsPricing();
   const isNoMaterialsSubcategory = propSubcategoryCode === '20';
   const pricingGet = isNoMaterialsSubcategory ? pricingGetNoMaterials : pricingGetWithMaterials;
+  // شرط‌های ساختاریافته قیمت‌گذاری همان جدول (مؤثر مستقیم روی قیمت)
+  const { rules: pricingRules } = useScaffoldingPricingRules(
+    isNoMaterialsSubcategory ? 'scaffolding_no_materials_pricing_config' : 'scaffolding_pricing_config'
+  );
 
 
   const [conditions, setConditions] = useState<ServiceConditions>({
