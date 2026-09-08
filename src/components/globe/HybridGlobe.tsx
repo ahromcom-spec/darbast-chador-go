@@ -1939,12 +1939,12 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           : '';
 
         const projectArchived = isArchivedProject(project);
+        const orderCounts = getProjectOrderCounts(project);
         const labelGradient = projectArchived
           ? 'linear-gradient(135deg, rgba(100,116,139,0.95) 0%, rgba(71,85,105,0.95) 100%)'
           : 'linear-gradient(135deg, rgba(59,130,246,0.95) 0%, rgba(37,99,235,0.95) 100%)';
-        const archivedBadgeHtml = projectArchived
-          ? `<div style="
-              background:rgba(16,185,129,0.95);
+        const statusChip = (bg: string, text: string) => `<div style="
+              background:${bg};
               color:#fff;
               padding:3px 7px;
               border-radius:6px;
@@ -1956,8 +1956,18 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
               box-shadow:0 2px 8px rgba(0,0,0,0.25);
               margin-bottom:3px;
               direction:rtl;
-            ">✓ تکمیل‌شده</div>`
-          : '';
+            ">${text}</div>`;
+        const archivedBadgeHtml = orderCounts.total === 0
+          ? ''
+          : [
+              orderCounts.active > 0
+                ? statusChip('rgba(37,99,235,0.95)', `● فعال${orderCounts.archived > 0 ? ` (${orderCounts.active})` : ''}`)
+                : '',
+              orderCounts.archived > 0
+                ? statusChip('rgba(100,116,139,0.95)', `✓ بایگانی شده${orderCounts.active > 0 ? ` (${orderCounts.archived})` : ''}`)
+                : '',
+            ].join('');
+
 
         const addressLabelHtml = `
           <div style="
