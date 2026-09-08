@@ -11,6 +11,8 @@ import { toast } from 'sonner';
 import { parseLocalizedNumber } from '@/lib/numberParsing';
 import { useScaffoldingPricingConditions } from '@/hooks/useScaffoldingPricingConditions';
 import { CategoryConditionsBox, CategoryConditionsList } from '@/components/pricing/CategoryConditionsBox';
+import { CategoryRulesBuilder } from '@/components/pricing/CategoryRulesBuilder';
+import { useScaffoldingPricingRules } from '@/hooks/useScaffoldingPricingRules';
 
 const CATEGORY_LABELS: Record<string, string> = {
   facade: 'داربست سطحی نما',
