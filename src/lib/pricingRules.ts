@@ -54,6 +54,8 @@ export interface PricingRule {
   conditions: RuleCondition[];
   action_type: RuleActionType;
   action_value: number;
+  /** فرمول محاسباتی (وقتی action_type = add_formula) مثل: ((height - 2*length) * length) * 0.3 * unit_fee */
+  action_formula?: string | null;
   sort_order: number;
 }
 
