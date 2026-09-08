@@ -15,7 +15,6 @@ import { notifyManagers } from '@/lib/notifications';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useFormPersistence } from '@/hooks/useFormPersistence';
 import { buildOrderSmsAddress, sendOrderSms, sendCeoNotificationSms } from '@/lib/orderSms';
-import { useScaffoldingPricing } from '@/hooks/useScaffoldingPricing';
 import { useScaffoldingPricingRules } from '@/hooks/useScaffoldingPricingRules';
 import { applyPricingRules, type RuleMetrics } from '@/lib/pricingRules';
 
@@ -34,7 +33,6 @@ export default function ScaffoldingFacadeForm() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { get: pricingGet } = useScaffoldingPricing();
   const { rules: pricingRules } = useScaffoldingPricingRules('scaffolding_pricing_config');
   
   // Use form persistence to save user's progress
@@ -205,21 +203,9 @@ export default function ScaffoldingFacadeForm() {
 
   const calculatePrice = (area: number, months: string): number => {
     const monthsPricing = {
-      '1': {
-        base50: pricingGet('facade_1m_fixed_under_50', 3200000),
-        base100: pricingGet('facade_1m_fixed_50_100', 4200000),
-        perMeter: pricingGet('facade_1m_per_meter_over_100', 45000),
-      },
-      '2': {
-        base50: pricingGet('facade_2m_fixed_under_50', 3000000),
-        base100: pricingGet('facade_2m_fixed_50_100', 4000000),
-        perMeter: pricingGet('facade_2m_per_meter_over_100', 42000),
-      },
-      '3+': {
-        base50: pricingGet('facade_3m_fixed_under_50', 2800000),
-        base100: pricingGet('facade_3m_fixed_50_100', 3800000),
-        perMeter: pricingGet('facade_3m_per_meter_over_100', 39000),
-      },
+      '1': { base50: 3200000, base100: 4200000, perMeter: 45000 },
+      '2': { base50: 3000000, base100: 4000000, perMeter: 42000 },
+      '3+': { base50: 2800000, base100: 3800000, perMeter: 39000 },
     };
 
     const pricing = monthsPricing[months as keyof typeof monthsPricing];
