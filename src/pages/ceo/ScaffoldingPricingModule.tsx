@@ -10,7 +10,7 @@ import { Save, RefreshCw, DollarSign, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseLocalizedNumber } from '@/lib/numberParsing';
 import { useScaffoldingPricingConditions } from '@/hooks/useScaffoldingPricingConditions';
-import { CategoryConditionsBox } from '@/components/pricing/CategoryConditionsBox';
+import { CategoryConditionsBox, CategoryConditionsList } from '@/components/pricing/CategoryConditionsBox';
 
 const CATEGORY_LABELS: Record<string, string> = {
   facade: 'داربست سطحی نما',
