@@ -308,23 +308,72 @@ export const CategoryRulesBuilder = ({
                   ))}
                 </SelectContent>
               </Select>
-              <Input
-                value={actionValue ? actionValue.toLocaleString('en-US') : ''}
-                onChange={(e) => {
-                  const n = parseLocalizedNumber(e.target.value.replace(/,/g, ''));
-                  setActionValue(Number.isNaN(n) ? 0 : n);
-                }}
-                dir="ltr"
-                className="text-left"
-                placeholder="مقدار"
-              />
+              {!isFormula && (
+                <Input
+                  value={actionValue ? actionValue.toLocaleString('en-US') : ''}
+                  onChange={(e) => {
+                    const n = parseLocalizedNumber(e.target.value.replace(/,/g, ''));
+                    setActionValue(Number.isNaN(n) ? 0 : n);
+                  }}
+                  dir="ltr"
+                  className="text-left"
+                  placeholder="مقدار"
+                />
+              )}
             </div>
           </div>
+
+          {/* فرمول محاسباتی آزاد */}
+          {isFormula && (
+            <div className="rounded-md border border-emerald-300 bg-emerald-50/40 p-2 space-y-2">
+              <Label className="text-xs block">
+                فرمول محاسبه مبلغی که به قیمت کل اضافه می‌شود
+              </Label>
+              <Textarea
+                value={formula}
+                onChange={(e) => setFormula(e.target.value)}
+                dir="ltr"
+                className="text-left font-mono text-sm min-h-[70px] bg-background"
+                placeholder="((height - 2 * length) * length) * 0.30 * unit_fee"
+              />
+              <div className="flex flex-wrap gap-1">
+                {(Object.keys(METRIC_LABELS) as RuleMetric[]).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setFormula((prev) => (prev ? `${prev} ${m}` : m))}
+                    className="rounded border border-emerald-300 bg-background px-2 py-0.5 text-[11px] hover:bg-emerald-100"
+                  >
+                    {METRIC_LABELS[m]} <span className="font-mono text-emerald-700">{m}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-6">
+                مثال: «اگر شرط‌های بالا برقرار بود، (ارتفاع منهای ۲ برابر طول) ضرب در طول، ضرب در
+                ۳۰٪ فی هر متر، به قیمت کل اضافه شود» ←{' '}
+                <span className="font-mono" dir="ltr">((height - 2 * length) * length) * 0.30 * unit_fee</span>
+                <br />
+                عملگرهای مجاز: + − × ÷ و پرانتز. «فی هر متر» اگر جداگانه تعیین نشده باشد، از تقسیم
+                قیمت پایه بر متراژ محاسبه می‌شود.
+              </p>
+              {formula.trim() && !formulaValid && (
+                <p className="text-xs text-destructive">فرمول معتبر نیست؛ متغیرها یا پرانتزها را بررسی کنید.</p>
+              )}
+              {samplePreview !== null && (
+                <p className="text-xs text-emerald-700">
+                  نمونه محاسبه (طول ۶، ارتفاع ۲۰، متراژ ۱۲۰، فی ۳۰٬۰۰۰):{' '}
+                  <b>{Math.round(samplePreview).toLocaleString('fa-IR')} تومان</b> به قیمت اضافه می‌شود
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="rounded-md bg-muted/50 p-2 text-xs leading-6">
             <Wand2 className="inline w-3.5 h-3.5 ml-1 text-emerald-600" />
             پیش‌نمایش: اگر {conditions.map(describeCondition).join(' و ')} ←{' '}
-            <b className="text-emerald-700">{describeAction(actionType, actionValue)}</b>
+            <b className="text-emerald-700">
+              {describeAction(actionType, actionValue, formula)}
+            </b>
           </div>
 
           <div className="flex justify-end">
