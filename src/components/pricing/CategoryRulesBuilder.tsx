@@ -7,12 +7,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Plus, Trash2, Wand2, X, Sigma } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseLocalizedNumber } from '@/lib/numberParsing';
+import { Textarea } from '@/components/ui/textarea';
 import {
   ACTION_LABELS,
   METRIC_LABELS,
   OPERATOR_LABELS,
   describeAction,
   describeCondition,
+  validateFormula,
+  evaluateFormula,
   type PricingRule,
   type RuleActionType,
   type RuleCondition,
