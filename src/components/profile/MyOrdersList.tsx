@@ -266,8 +266,8 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
     return { paymentLabel, paymentVariant, stageLabel, stageVariant };
   };
 
-  const isArchivedOrder = (o: Order) =>
-    !!o.is_archived || o.status === 'completed' || o.status === 'closed' || o.execution_stage === 'completed' || o.execution_stage === 'closed';
+  // فقط پرچم بایگانی معتبر است، نه وضعیت اجرایی سفارش
+  const isArchivedOrder = (o: Order) => !!o.is_archived || !!(o as any).is_deep_archived;
 
   const getFilteredOrders = () => {
     return orders.filter(order => {
