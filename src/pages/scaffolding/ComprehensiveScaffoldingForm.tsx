@@ -986,6 +986,17 @@ export default function ComprehensiveScaffoldingForm({
       basePrice += additionalCost;
     }
 
+    // اعمال شرط‌های ساختاریافته ثبت‌شده در ماژول قیمت‌گذاری
+    const priceBeforeRules = basePrice;
+    basePrice = applyRules(basePrice);
+    if (
+      effectiveMonthlyUnitFee !== null &&
+      priceBeforeRules > 0 &&
+      basePrice !== priceBeforeRules
+    ) {
+      effectiveMonthlyUnitFee = Math.round(effectiveMonthlyUnitFee * (basePrice / priceBeforeRules));
+    }
+
     // فی نهایی هر متر (شامل ضرایب فاصله/ارتفاع/تخفیف اجاره و تخفیف رتبه همکاری)
     if (effectiveMonthlyUnitFee !== null && effectiveMonthlyUnitFee > 0) {
       pricePerMeter = Math.round(effectiveMonthlyUnitFee * (1 - (cooperationDiscountPct || 0) / 100));
