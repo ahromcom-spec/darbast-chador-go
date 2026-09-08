@@ -15,6 +15,7 @@ const normalize = (row: any): PricingRule => ({
   conditions: Array.isArray(row.conditions) ? (row.conditions as RuleCondition[]) : [],
   action_type: (row.action_type || 'increase_percent') as RuleActionType,
   action_value: Number(row.action_value) || 0,
+  action_formula: row.action_formula ?? null,
   sort_order: Number(row.sort_order) || 0,
 });
 
@@ -66,6 +67,7 @@ export const useScaffoldingPricingRules = (configTable: PricingConfigTable) => {
       conditions: input.conditions as any,
       action_type: input.action_type,
       action_value: input.action_value,
+      action_formula: input.action_formula ?? null,
       sort_order: input.sort_order,
     } as any);
     if (error) throw error;
@@ -79,6 +81,7 @@ export const useScaffoldingPricingRules = (configTable: PricingConfigTable) => {
     if (patch.conditions !== undefined) payload.conditions = patch.conditions;
     if (patch.action_type !== undefined) payload.action_type = patch.action_type;
     if (patch.action_value !== undefined) payload.action_value = patch.action_value;
+    if (patch.action_formula !== undefined) payload.action_formula = patch.action_formula;
     if (patch.sort_order !== undefined) payload.sort_order = patch.sort_order;
     const { error } = await supabase.from(TABLE as any).update(payload as any).eq('id', id);
     if (error) throw error;

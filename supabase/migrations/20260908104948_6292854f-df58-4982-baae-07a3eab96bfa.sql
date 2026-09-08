@@ -1,0 +1,1 @@
+ALTER TABLE public.scaffolding_pricing_rules ADD COLUMN IF NOT EXISTS action_formula text;

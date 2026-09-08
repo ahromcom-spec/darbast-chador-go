@@ -4580,6 +4580,7 @@ export type Database = {
       }
       scaffolding_pricing_rules: {
         Row: {
+          action_formula: string | null
           action_type: string
           action_value: number
           category: string
@@ -4594,6 +4595,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          action_formula?: string | null
           action_type?: string
           action_value?: number
           category: string
@@ -4608,6 +4610,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          action_formula?: string | null
           action_type?: string
           action_value?: number
           category?: string

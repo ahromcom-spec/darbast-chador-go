@@ -7,12 +7,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Plus, Trash2, Wand2, X, Sigma } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseLocalizedNumber } from '@/lib/numberParsing';
+import { Textarea } from '@/components/ui/textarea';
 import {
   ACTION_LABELS,
   METRIC_LABELS,
   OPERATOR_LABELS,
   describeAction,
   describeCondition,
+  validateFormula,
+  evaluateFormula,
   type PricingRule,
   type RuleActionType,
   type RuleCondition,
@@ -55,12 +58,26 @@ export const CategoryRulesBuilder = ({
   const [conditions, setConditions] = useState<RuleCondition[]>([emptyCondition()]);
   const [actionType, setActionType] = useState<RuleActionType>('increase_percent');
   const [actionValue, setActionValue] = useState<number>(0);
+  const [formula, setFormula] = useState('');
+
+  const isFormula = actionType === 'add_formula';
+  const formulaValid = isFormula && formula.trim() ? validateFormula(formula) : false;
+  /** نمونه محاسبه با اعداد فرضی تا مدیر نتیجه فرمول را ببیند */
+  const samplePreview =
+    isFormula && formulaValid
+      ? evaluateFormula(formula, {
+          length: 6, width: 1, height: 20, area: 120, total_length: 6, pipe_length: 6,
+          platform_height: 0, scaffold_height: 20, vehicle_distance: 0, distance_km: 0,
+          months: 1, unit_fee: 30000, base_price: 3600000,
+        })
+      : null;
 
   const reset = () => {
     setTitle('');
     setConditions([emptyCondition()]);
     setActionType('increase_percent');
     setActionValue(0);
+    setFormula('');
   };
 
   const patchCondition = (i: number, patch: Partial<RuleCondition>) =>
@@ -68,7 +85,16 @@ export const CategoryRulesBuilder = ({
 
   const handleSave = async () => {
     if (!conditions.length) return;
-    if (!actionValue) {
+    if (isFormula) {
+      if (!formula.trim()) {
+        toast.error('فرمول محاسبه را وارد کنید');
+        return;
+      }
+      if (!formulaValid) {
+        toast.error('فرمول معتبر نیست؛ فقط از متغیرهای مجاز و + - × ÷ و پرانتز استفاده کنید');
+        return;
+      }
+    } else if (!actionValue) {
       toast.error('مقدار اثر شرط روی قیمت را وارد کنید');
       return;
     }
@@ -80,7 +106,8 @@ export const CategoryRulesBuilder = ({
         is_enabled: true,
         conditions,
         action_type: actionType,
-        action_value: actionValue,
+        action_value: isFormula ? 0 : actionValue,
+        action_formula: isFormula ? formula.trim() : null,
         sort_order: rules.length,
       });
       toast.success('شرط قیمت‌گذاری ثبت شد و از همین حالا در فرم سفارش اعمال می‌شود');
@@ -127,7 +154,7 @@ export const CategoryRulesBuilder = ({
                 <div className="text-xs text-muted-foreground leading-6">
                   اگر {(r.conditions || []).map(describeCondition).join(' و ')} ←{' '}
                   <span className="text-emerald-700 font-bold">
-                    {describeAction(r.action_type, r.action_value)}
+                    {describeAction(r.action_type, r.action_value, r.action_formula)}
                   </span>
                 </div>
               </div>
@@ -281,23 +308,72 @@ export const CategoryRulesBuilder = ({
                   ))}
                 </SelectContent>
               </Select>
-              <Input
-                value={actionValue ? actionValue.toLocaleString('en-US') : ''}
-                onChange={(e) => {
-                  const n = parseLocalizedNumber(e.target.value.replace(/,/g, ''));
-                  setActionValue(Number.isNaN(n) ? 0 : n);
-                }}
-                dir="ltr"
-                className="text-left"
-                placeholder="مقدار"
-              />
+              {!isFormula && (
+                <Input
+                  value={actionValue ? actionValue.toLocaleString('en-US') : ''}
+                  onChange={(e) => {
+                    const n = parseLocalizedNumber(e.target.value.replace(/,/g, ''));
+                    setActionValue(Number.isNaN(n) ? 0 : n);
+                  }}
+                  dir="ltr"
+                  className="text-left"
+                  placeholder="مقدار"
+                />
+              )}
             </div>
           </div>
+
+          {/* فرمول محاسباتی آزاد */}
+          {isFormula && (
+            <div className="rounded-md border border-emerald-300 bg-emerald-50/40 p-2 space-y-2">
+              <Label className="text-xs block">
+                فرمول محاسبه مبلغی که به قیمت کل اضافه می‌شود
+              </Label>
+              <Textarea
+                value={formula}
+                onChange={(e) => setFormula(e.target.value)}
+                dir="ltr"
+                className="text-left font-mono text-sm min-h-[70px] bg-background"
+                placeholder="((height - 2 * length) * length) * 0.30 * unit_fee"
+              />
+              <div className="flex flex-wrap gap-1">
+                {(Object.keys(METRIC_LABELS) as RuleMetric[]).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setFormula((prev) => (prev ? `${prev} ${m}` : m))}
+                    className="rounded border border-emerald-300 bg-background px-2 py-0.5 text-[11px] hover:bg-emerald-100"
+                  >
+                    {METRIC_LABELS[m]} <span className="font-mono text-emerald-700">{m}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-6">
+                مثال: «اگر شرط‌های بالا برقرار بود، (ارتفاع منهای ۲ برابر طول) ضرب در طول، ضرب در
+                ۳۰٪ فی هر متر، به قیمت کل اضافه شود» ←{' '}
+                <span className="font-mono" dir="ltr">((height - 2 * length) * length) * 0.30 * unit_fee</span>
+                <br />
+                عملگرهای مجاز: + − × ÷ و پرانتز. «فی هر متر» اگر جداگانه تعیین نشده باشد، از تقسیم
+                قیمت پایه بر متراژ محاسبه می‌شود.
+              </p>
+              {formula.trim() && !formulaValid && (
+                <p className="text-xs text-destructive">فرمول معتبر نیست؛ متغیرها یا پرانتزها را بررسی کنید.</p>
+              )}
+              {samplePreview !== null && (
+                <p className="text-xs text-emerald-700">
+                  نمونه محاسبه (طول ۶، ارتفاع ۲۰، متراژ ۱۲۰، فی ۳۰٬۰۰۰):{' '}
+                  <b>{Math.round(samplePreview).toLocaleString('fa-IR')} تومان</b> به قیمت اضافه می‌شود
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="rounded-md bg-muted/50 p-2 text-xs leading-6">
             <Wand2 className="inline w-3.5 h-3.5 ml-1 text-emerald-600" />
             پیش‌نمایش: اگر {conditions.map(describeCondition).join(' و ')} ←{' '}
-            <b className="text-emerald-700">{describeAction(actionType, actionValue)}</b>
+            <b className="text-emerald-700">
+              {describeAction(actionType, actionValue, formula)}
+            </b>
           </div>
 
           <div className="flex justify-end">
