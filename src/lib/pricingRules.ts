@@ -20,6 +20,7 @@ export type RuleMetric =
   | 'vehicle_distance'
   | 'distance_km'
   | 'months'
+  | 'unit_fee'
   | 'base_price';
 
 export type RuleActionType =
@@ -27,7 +28,8 @@ export type RuleActionType =
   | 'decrease_percent'
   | 'add_amount'
   | 'min_price'
-  | 'set_price';
+  | 'set_price'
+  | 'add_formula';
 
 export interface RuleCondition {
   /** متغیر سمت راست شرط (چیزی که سنجیده می‌شود) */
