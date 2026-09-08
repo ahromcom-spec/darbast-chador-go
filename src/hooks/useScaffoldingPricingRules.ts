@@ -91,5 +91,89 @@ export const useScaffoldingPricingRules = (configTable: PricingConfigTable) => {
     await refetch();
   };
 
-  return { rules, byCategory, isLoading, refetch, createRule, updateRule, deleteRule };
+  /**
+   * شرط‌های متنی هر بخش را به قوانین قابل‌اجرا تبدیل می‌کند تا مستقیماً
+   * روی قیمت فرم سفارش اثر بگذارند. متن حذف‌شده، قانون تولیدشده‌اش هم حذف می‌شود.
+   */
+  const syncRulesFromTexts = async (
+    category: string,
+    texts: string[],
+    categoryLabel?: string,
+  ): Promise<{ created: number; removed: number; skipped: string[] }> => {
+    const wanted = texts.map((t) => t.trim()).filter(Boolean);
+
+    const { data: existingRows, error: exErr } = await supabase
+      .from(TABLE as any)
+      .select('id, source_text')
+      .eq('config_table', configTable)
+      .eq('category', category)
+      .not('source_text', 'is', null);
+    if (exErr) throw exErr;
+
+    const existing = ((existingRows || []) as unknown) as { id: string; source_text: string }[];
+    const stale = existing.filter((r) => !wanted.includes((r.source_text || '').trim()));
+    if (stale.length) {
+      const { error } = await supabase
+        .from(TABLE as any)
+        .delete()
+        .in('id', stale.map((r) => r.id));
+      if (error) throw error;
+    }
+
+    const alreadyCovered = new Set(
+      existing
+        .filter((r) => wanted.includes((r.source_text || '').trim()))
+        .map((r) => (r.source_text || '').trim()),
+    );
+    const missing = wanted.filter((t) => !alreadyCovered.has(t));
+
+    let created = 0;
+    const skipped: string[] = [];
+
+    for (const text of missing) {
+      const { data, error } = await supabase.functions.invoke('parse-pricing-condition', {
+        body: { text, categoryLabel },
+      });
+      if (error) {
+        skipped.push(text);
+        continue;
+      }
+      const generated = Array.isArray((data as any)?.rules) ? (data as any).rules : [];
+      if (!generated.length) {
+        skipped.push(text);
+        continue;
+      }
+      const payload = generated.map((r: any, idx: number) => ({
+        config_table: configTable,
+        category,
+        title: r.title,
+        is_enabled: true,
+        conditions: r.conditions,
+        action_type: r.action_type,
+        action_value: r.action_value,
+        sort_order: 100 + idx,
+        source_text: text,
+      }));
+      const { error: insErr } = await supabase.from(TABLE as any).insert(payload as any);
+      if (insErr) {
+        skipped.push(text);
+        continue;
+      }
+      created += payload.length;
+    }
+
+    await refetch();
+    return { created, removed: stale.length, skipped };
+  };
+
+  return {
+    rules,
+    byCategory,
+    isLoading,
+    refetch,
+    createRule,
+    updateRule,
+    deleteRule,
+    syncRulesFromTexts,
+  };
 };

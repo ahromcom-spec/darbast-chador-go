@@ -4589,6 +4589,7 @@ export type Database = {
           id: string
           is_enabled: boolean
           sort_order: number
+          source_text: string | null
           title: string
           updated_at: string
         }
@@ -4602,6 +4603,7 @@ export type Database = {
           id?: string
           is_enabled?: boolean
           sort_order?: number
+          source_text?: string | null
           title?: string
           updated_at?: string
         }
@@ -4615,6 +4617,7 @@ export type Database = {
           id?: string
           is_enabled?: boolean
           sort_order?: number
+          source_text?: string | null
           title?: string
           updated_at?: string
         }

@@ -1,0 +1,2 @@
+ALTER TABLE public.scaffolding_pricing_rules ADD COLUMN IF NOT EXISTS source_text text;
+CREATE INDEX IF NOT EXISTS idx_scaffolding_pricing_rules_source ON public.scaffolding_pricing_rules (config_table, category, source_text);
