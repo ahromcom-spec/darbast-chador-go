@@ -353,6 +353,18 @@ export const applyPricingRules = (
         fixedPrice = v;
         lines.push(`${name}: قیمت ثابت ${v.toLocaleString('fa-IR')} تومان`);
         break;
+      case 'add_formula': {
+        const res = evaluateFormula(rule.action_formula, withBase);
+        if (res === null || !Number.isFinite(res) || res === 0) {
+          lines.push(`${name}: فرمول قابل محاسبه نبود یا نتیجه صفر شد`);
+          break;
+        }
+        addSum += res;
+        lines.push(
+          `${name}: ${res >= 0 ? '+' : '-'}${Math.abs(Math.round(res)).toLocaleString('fa-IR')} تومان (فرمول)`,
+        );
+        break;
+      }
     }
   }
 
