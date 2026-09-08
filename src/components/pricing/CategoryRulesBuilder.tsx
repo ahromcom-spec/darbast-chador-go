@@ -58,12 +58,26 @@ export const CategoryRulesBuilder = ({
   const [conditions, setConditions] = useState<RuleCondition[]>([emptyCondition()]);
   const [actionType, setActionType] = useState<RuleActionType>('increase_percent');
   const [actionValue, setActionValue] = useState<number>(0);
+  const [formula, setFormula] = useState('');
+
+  const isFormula = actionType === 'add_formula';
+  const formulaValid = isFormula && formula.trim() ? validateFormula(formula) : false;
+  /** نمونه محاسبه با اعداد فرضی تا مدیر نتیجه فرمول را ببیند */
+  const samplePreview =
+    isFormula && formulaValid
+      ? evaluateFormula(formula, {
+          length: 6, width: 1, height: 20, area: 120, total_length: 6, pipe_length: 6,
+          platform_height: 0, scaffold_height: 20, vehicle_distance: 0, distance_km: 0,
+          months: 1, unit_fee: 30000, base_price: 3600000,
+        })
+      : null;
 
   const reset = () => {
     setTitle('');
     setConditions([emptyCondition()]);
     setActionType('increase_percent');
     setActionValue(0);
+    setFormula('');
   };
 
   const patchCondition = (i: number, patch: Partial<RuleCondition>) =>
@@ -71,7 +85,16 @@ export const CategoryRulesBuilder = ({
 
   const handleSave = async () => {
     if (!conditions.length) return;
-    if (!actionValue) {
+    if (isFormula) {
+      if (!formula.trim()) {
+        toast.error('فرمول محاسبه را وارد کنید');
+        return;
+      }
+      if (!formulaValid) {
+        toast.error('فرمول معتبر نیست؛ فقط از متغیرهای مجاز و + - × ÷ و پرانتز استفاده کنید');
+        return;
+      }
+    } else if (!actionValue) {
       toast.error('مقدار اثر شرط روی قیمت را وارد کنید');
       return;
     }
@@ -83,7 +106,8 @@ export const CategoryRulesBuilder = ({
         is_enabled: true,
         conditions,
         action_type: actionType,
-        action_value: actionValue,
+        action_value: isFormula ? 0 : actionValue,
+        action_formula: isFormula ? formula.trim() : null,
         sort_order: rules.length,
       });
       toast.success('شرط قیمت‌گذاری ثبت شد و از همین حالا در فرم سفارش اعمال می‌شود');
