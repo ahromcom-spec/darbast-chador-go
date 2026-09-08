@@ -92,7 +92,122 @@ export const ACTION_LABELS: Record<RuleActionType, string> = {
   add_amount: 'افزودن مبلغ ثابت (تومان)',
   min_price: 'حداقل قیمت (تومان)',
   set_price: 'قیمت ثابت نهایی (تومان)',
+  add_formula: 'افزودن نتیجه فرمول محاسباتی (تومان)',
 };
+
+/* ==========================================================================
+ * ارزیاب فرمول‌های محاسباتی مدیر
+ * پشتیبانی: + - * / ( ) درصد به‌صورت عدد اعشاری، و متغیرهای METRIC_LABELS
+ * ========================================================================== */
+
+const toEnDigits = (s: string) =>
+  s
+    .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+
+/** ارزیابی امن یک عبارت ریاضی با متغیرها. در صورت خطا null برمی‌گرداند. */
+export const evaluateFormula = (
+  expression: string | null | undefined,
+  metrics: RuleMetrics,
+): number | null => {
+  if (!expression || !expression.trim()) return null;
+  const src = toEnDigits(expression)
+    .replace(/[×✕✖xX]/g, '*')
+    .replace(/[÷]/g, '/')
+    .replace(/[−–—]/g, '-')
+    .replace(/[٫]/g, '.')
+    .replace(/\s+/g, '');
+
+  let i = 0;
+  const eof = () => i >= src.length;
+  const peek = () => src[i];
+
+  const parseExpr = (): number => {
+    let value = parseTerm();
+    while (!eof() && (peek() === '+' || peek() === '-')) {
+      const op = src[i++];
+      const rhs = parseTerm();
+      value = op === '+' ? value + rhs : value - rhs;
+    }
+    return value;
+  };
+
+  const parseTerm = (): number => {
+    let value = parseUnary();
+    while (!eof() && (peek() === '*' || peek() === '/' || peek() === '%')) {
+      const op = src[i++];
+      if (op === '%') {
+        // درصد به‌صورت پسوندی: 30% => 0.3
+        value = value / 100;
+        continue;
+      }
+      const rhs = parseUnary();
+      value = op === '*' ? value * rhs : rhs === 0 ? 0 : value / rhs;
+    }
+    return value;
+  };
+
+  const parseUnary = (): number => {
+    if (!eof() && (peek() === '+' || peek() === '-')) {
+      const op = src[i++];
+      const v = parseUnary();
+      return op === '-' ? -v : v;
+    }
+    return parseAtom();
+  };
+
+  const parseAtom = (): number => {
+    if (eof()) throw new Error('پایان نامنتظره');
+    if (peek() === '(') {
+      i++;
+      const v = parseExpr();
+      if (peek() !== ')') throw new Error('پرانتز بسته نشده');
+      i++;
+      return applyPercentSuffix(v);
+    }
+    const numMatch = /^[0-9]+(\.[0-9]+)?/.exec(src.slice(i));
+    if (numMatch) {
+      i += numMatch[0].length;
+      return applyPercentSuffix(Number(numMatch[0]));
+    }
+    const idMatch = /^[a-zA-Z_][a-zA-Z0-9_]*/.exec(src.slice(i));
+    if (idMatch) {
+      i += idMatch[0].length;
+      const key = idMatch[0] as RuleMetric;
+      if (!(key in METRIC_LABELS)) throw new Error(`متغیر ناشناخته: ${idMatch[0]}`);
+      return applyPercentSuffix(Number(metrics[key]) || 0);
+    }
+    throw new Error(`نویسه نامعتبر: ${peek()}`);
+  };
+
+  const applyPercentSuffix = (v: number): number => {
+    if (!eof() && peek() === '%' && src[i + 1] !== undefined && /[*/+\-)]/.test(src[i + 1])) {
+      i++;
+      return v / 100;
+    }
+    if (!eof() && peek() === '%' && i + 1 >= src.length) {
+      i++;
+      return v / 100;
+    }
+    return v;
+  };
+
+  try {
+    const result = parseExpr();
+    if (!eof()) return null;
+    return Number.isFinite(result) ? result : null;
+  } catch {
+    return null;
+  }
+};
+
+/** بررسی معتبر بودن فرمول برای نمایش خطا به مدیر */
+export const validateFormula = (expression: string): boolean =>
+  evaluateFormula(expression, {
+    length: 1, width: 1, height: 1, area: 1, total_length: 1, pipe_length: 1,
+    platform_height: 1, scaffold_height: 1, vehicle_distance: 1, distance_km: 1,
+    months: 1, unit_fee: 1, base_price: 1,
+  }) !== null;
 
 const compare = (a: number, op: RuleOperator, b: number): boolean => {
   switch (op) {
