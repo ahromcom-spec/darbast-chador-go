@@ -81,6 +81,7 @@ export const useScaffoldingPricingRules = (configTable: PricingConfigTable) => {
     if (patch.conditions !== undefined) payload.conditions = patch.conditions;
     if (patch.action_type !== undefined) payload.action_type = patch.action_type;
     if (patch.action_value !== undefined) payload.action_value = patch.action_value;
+    if (patch.action_formula !== undefined) payload.action_formula = patch.action_formula;
     if (patch.sort_order !== undefined) payload.sort_order = patch.sort_order;
     const { error } = await supabase.from(TABLE as any).update(payload as any).eq('id', id);
     if (error) throw error;
