@@ -31,6 +31,8 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { NewLocationForm } from '@/components/locations/NewLocationForm';
 import { useScaffoldingPricing } from '@/hooks/useScaffoldingPricing';
 import { useScaffoldingNoMaterialsPricing } from '@/hooks/useScaffoldingNoMaterialsPricing';
+import { useScaffoldingPricingRules } from '@/hooks/useScaffoldingPricingRules';
+import { applyPricingRules, serviceToRuleCategory, type RuleMetrics } from '@/lib/pricingRules';
 import { OrderForOthers, RecipientData } from '@/components/orders/OrderForOthers';
 import { buildOrderSmsAddress, sendOrderSms, sendCeoNotificationSms } from '@/lib/orderSms';
 import { ExpertPricingRequestDialog } from '@/components/orders/ExpertPricingRequestDialog';
