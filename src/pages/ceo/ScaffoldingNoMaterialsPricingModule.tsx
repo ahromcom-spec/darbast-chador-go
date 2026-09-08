@@ -167,6 +167,12 @@ export default function ScaffoldingNoMaterialsPricingModule() {
               <CardTitle className="text-base">{CATEGORY_LABELS[cat] || cat}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              <CategoryConditionsList
+                category={cat}
+                categoryLabel={CATEGORY_LABELS[cat] || cat}
+                value={conditionsMap[cat] || ''}
+                onSave={saveCondition}
+              />
               {grouped[cat].map((item) => {
                 const current = draft[item.id] ?? String(item.value);
                 const isDirty = dirtyIds.includes(item.id);
