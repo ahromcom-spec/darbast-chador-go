@@ -179,10 +179,34 @@ export default function ComprehensiveScaffoldingForm({
     return null;
   };
 
+  /**
+   * شرط ارتفاع نامتعارف داربست سطحی نما (تعریف‌شده در ماژول قیمت‌گذاری):
+   * اگر طول ≥ ۶ متر و ارتفاع بیش از ۲ برابر طول باشد، ارتفاع مازاد در طول (و عرض) ضرب
+   * و به‌عنوان متراژ اضافی با فی محاسبه می‌شود و ۳۰٪ هزینه ارتفاع نامتعارف اضافه می‌گردد.
+   */
+  const getFacadeUnconventionalHeight = () => {
+    if (!isFacadeScaffolding) return null;
+    let extraVolume = 0;
+    const details: { length: number; extraHeight: number; width: number }[] = [];
+    effectiveDimensions.forEach((d) => {
+      if (d.length >= 6 && d.height > 2 * d.length) {
+        const extraHeight = d.height - 2 * d.length;
+        const w = d.width || 1;
+        extraVolume += extraHeight * d.length * w;
+        details.push({ length: d.length, extraHeight, width: w });
+      }
+    });
+    if (extraVolume <= 0) return null;
+    return { extraVolume, details };
+  };
+
   // هشدار برای داربست سطحی نما: ارتفاع بیشتر از 12 متر و بیشتر از دو برابر مجموع طول‌ها
   const getFacadeWarning = () => {
     if (!isFacadeScaffolding) return null;
-    
+
+    // اگر شرط ارتفاع نامتعارف در قیمت‌گذاری اعمال می‌شود، سفارش قابل ثبت است و هشدار لازم نیست
+    if (getFacadeUnconventionalHeight()) return null;
+
     // محاسبه مجموع طول‌های همه ابعاد
     const totalLength = dimensions.reduce((sum, dim) => sum + parseFloat(dim.length || '0'), 0);
     const height = parseFloat(dimensions[0]?.height || '0');
@@ -192,6 +216,7 @@ export default function ComprehensiveScaffoldingForm({
     }
     return null;
   };
+
   
   // Location fields - دریافت از state (در صورت عدم وجود در props)
   const [detailedAddress, setDetailedAddress] = useState(navState?.detailedAddress || address);
@@ -850,6 +875,28 @@ export default function ComprehensiveScaffoldingForm({
           effectiveMonthlyUnitFee = Math.round(basePrice / area);
         }
       }
+
+      // ===== شرط ارتفاع نامتعارف (ماژول قیمت‌گذاری) =====
+      const unconv = getFacadeUnconventionalHeight();
+      if (unconv) {
+        const fee = pricePerMeter ?? P('facade_per_meter_over_100', 45000);
+        const extraPrice = unconv.extraVolume * fee;
+        const pctExtra = P('facade_unconventional_height_pct', 30);
+        breakdown.push('— ارتفاع نامتعارف داربست —');
+        unconv.details.forEach(d => {
+          breakdown.push(
+            `ارتفاع مازاد ${d.extraHeight.toLocaleString('fa-IR')} متر × طول ${d.length.toLocaleString('fa-IR')} × عرض ${d.width.toLocaleString('fa-IR')} = ${d.extraHeight * d.length * d.width} متر مکعب اضافی`
+          );
+        });
+        breakdown.push(`متراژ اضافی × فی: ${Math.round(extraPrice).toLocaleString('fa-IR')} تومان`);
+        basePrice += extraPrice;
+        const surcharge = (basePrice * pctExtra) / 100;
+        breakdown.push(`هزینه ارتفاع نامتعارف: +${pctExtra}% = ${Math.round(surcharge).toLocaleString('fa-IR')} تومان`);
+        basePrice += surcharge;
+        if (area > 0) effectiveMonthlyUnitFee = Math.round(basePrice / area);
+      }
+
+
 
     } else if (activeService === 'formwork') {
       if (area <= 100) {
