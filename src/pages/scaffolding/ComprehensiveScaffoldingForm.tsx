@@ -721,7 +721,7 @@ export default function ComprehensiveScaffoldingForm({
       breakdown.push(`قیمت هر واحد: ${pricePerUnit.toLocaleString('fa-IR')} تومان`);
       breakdown.push(`قیمت کل: ${basePrice.toLocaleString('fa-IR')} تومان`);
 
-      return { total: finalizePrice(basePrice), pricePerMeter: null, breakdown };
+      return { total: finalizePrice(applyRules(basePrice)), pricePerMeter: null, breakdown };
     }
 
     // محاسبه ضریب شرایط سرویس
