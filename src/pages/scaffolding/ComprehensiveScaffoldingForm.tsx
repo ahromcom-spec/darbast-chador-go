@@ -620,6 +620,41 @@ export default function ComprehensiveScaffoldingForm({
     let pricePerMeter: number | null = null;
     const breakdown: string[] = [];
 
+    // ====== متغیرهای قابل استفاده در شرط‌های ساختاریافته ماژول قیمت‌گذاری ======
+    const ruleMetrics: RuleMetrics = {
+      length: Math.max(0, ...effectiveDimensions.map(d => d.length), 0),
+      width: Math.max(0, ...effectiveDimensions.map(d => d.width), 0),
+      height: Math.max(
+        0,
+        ...effectiveDimensions.map(d => d.height),
+        isColumnScaffolding ? effectiveColumnHeight : 0,
+      ),
+      total_length: effectiveDimensions.reduce((s, d) => s + d.length, 0),
+      area,
+      pipe_length: parseFloat(dimensions[0]?.length || '0') || 0,
+      platform_height: onGround ? 0 : (conditions.platformHeight || 0),
+      scaffold_height: onGround ? 0 : (conditions.scaffoldHeightFromPlatform || 0),
+      vehicle_distance: vehicleReachesSite ? 0 : (conditions.vehicleDistance || 0),
+      distance_km: typeof distanceFromCenter === 'number' ? distanceFromCenter : 0,
+      months: conditions.rentalMonthsPlan
+        ? parseInt(conditions.rentalMonthsPlan.replace('+', '')) || 1
+        : (conditions.totalMonths || 1),
+    };
+
+    /** اعمال شرط‌های ساختاریافته این بخش روی قیمت و افزودن توضیح به ریز محاسبات */
+    const applyRules = (value: number): number => {
+      const cat = serviceToRuleCategory(activeService || scaffoldType);
+      const catRules = pricingRules.filter(r => r.category === cat);
+      if (!catRules.length) return value;
+      const res = applyPricingRules(catRules, ruleMetrics, value);
+      if (res.applied) {
+        breakdown.push('— شرط‌های قیمت‌گذاری —');
+        res.lines.forEach(l => breakdown.push(l));
+        breakdown.push(`قیمت پس از شرط‌ها: ${Math.round(res.price).toLocaleString('fa-IR')} تومان`);
+      }
+      return res.price;
+    };
+
     // ====== مقادیر قابل تنظیم از ماژول CEO (با fallback به اعداد فعلی) ======
     const P = pricingGet;
     const pct = (key: string, fb: number) => P(key, fb) / 100; // درصد به ضریب اضافه
