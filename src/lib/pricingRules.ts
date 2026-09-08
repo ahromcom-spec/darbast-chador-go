@@ -311,7 +311,13 @@ export const applyPricingRules = (
     return { price: basePrice, lines, applied: false };
   }
 
-  const withBase: RuleMetrics = { ...metrics, base_price: basePrice };
+  const derivedUnitFee =
+    metrics.unit_fee && metrics.unit_fee > 0
+      ? metrics.unit_fee
+      : metrics.area && metrics.area > 0
+        ? basePrice / metrics.area
+        : 0;
+  const withBase: RuleMetrics = { ...metrics, base_price: basePrice, unit_fee: derivedUnitFee };
   const sorted = [...rules].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
   let price = basePrice;
