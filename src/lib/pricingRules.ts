@@ -73,6 +73,7 @@ export const METRIC_LABELS: Record<RuleMetric, string> = {
   vehicle_distance: 'فاصله خودرو تا محل اجرا (متر)',
   distance_km: 'فاصله از مرکز شهر (کیلومتر)',
   months: 'تعداد ماه اجاره',
+  unit_fee: 'فی هر متر (تومان)',
   base_price: 'قیمت پایه محاسبه‌شده (تومان)',
 };
 
