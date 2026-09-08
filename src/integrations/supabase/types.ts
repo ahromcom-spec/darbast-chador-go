@@ -4578,6 +4578,48 @@ export type Database = {
         }
         Relationships: []
       }
+      scaffolding_pricing_rules: {
+        Row: {
+          action_type: string
+          action_value: number
+          category: string
+          conditions: Json
+          config_table: string
+          created_at: string
+          id: string
+          is_enabled: boolean
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          action_type?: string
+          action_value?: number
+          category: string
+          conditions?: Json
+          config_table: string
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          action_type?: string
+          action_value?: number
+          category?: string
+          conditions?: Json
+          config_table?: string
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       scaffolding_requests: {
         Row: {
           address: string | null

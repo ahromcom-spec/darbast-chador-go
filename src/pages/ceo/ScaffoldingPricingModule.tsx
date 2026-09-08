@@ -11,6 +11,8 @@ import { toast } from 'sonner';
 import { parseLocalizedNumber } from '@/lib/numberParsing';
 import { useScaffoldingPricingConditions } from '@/hooks/useScaffoldingPricingConditions';
 import { CategoryConditionsBox, CategoryConditionsList } from '@/components/pricing/CategoryConditionsBox';
+import { CategoryRulesBuilder } from '@/components/pricing/CategoryRulesBuilder';
+import { useScaffoldingPricingRules } from '@/hooks/useScaffoldingPricingRules';
 
 const CATEGORY_LABELS: Record<string, string> = {
   facade: 'داربست سطحی نما',
@@ -48,6 +50,7 @@ export default function ScaffoldingPricingModule() {
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const { map: conditionsMap, saveCondition } = useScaffoldingPricingConditions('scaffolding_pricing_config');
+  const { byCategory, createRule, updateRule, deleteRule } = useScaffoldingPricingRules('scaffolding_pricing_config');
 
   useEffect(() => {
     // sync draft with loaded items
@@ -163,6 +166,14 @@ export default function ScaffoldingPricingModule() {
               <CardTitle className="text-base">{CATEGORY_LABELS[cat] || cat}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              <CategoryRulesBuilder
+                category={cat}
+                categoryLabel={CATEGORY_LABELS[cat] || cat}
+                rules={byCategory(cat)}
+                onCreate={createRule}
+                onUpdate={updateRule}
+                onDelete={deleteRule}
+              />
               <CategoryConditionsList
                 category={cat}
                 categoryLabel={CATEGORY_LABELS[cat] || cat}
