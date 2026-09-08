@@ -50,6 +50,7 @@ export default function ScaffoldingNoMaterialsPricingModule() {
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const { map: conditionsMap, saveCondition } = useScaffoldingPricingConditions('scaffolding_no_materials_pricing_config');
+  const { byCategory, createRule, updateRule, deleteRule } = useScaffoldingPricingRules('scaffolding_no_materials_pricing_config');
 
   const MODULE_TITLE = 'ماژول قیمت‌گذاری خدمات اجرای داربست بدون اجناس';
   const MODULE_DESC = 'مدیریت آیتم‌های قیمت‌گذاری فرم سفارش «خدمات اجرای داربست بدون اجناس»';
