@@ -15,6 +15,8 @@ import { notifyManagers } from '@/lib/notifications';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useFormPersistence } from '@/hooks/useFormPersistence';
 import { buildOrderSmsAddress, sendOrderSms, sendCeoNotificationSms } from '@/lib/orderSms';
+import { useScaffoldingPricingRules } from '@/hooks/useScaffoldingPricingRules';
+import { applyPricingRules, type RuleMetrics } from '@/lib/pricingRules';
 
 // Import comprehensive validation schemas
 import { orderDimensionSchema, orderFormSchema } from '@/lib/validations';
@@ -31,6 +33,7 @@ export default function ScaffoldingFacadeForm() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { rules: pricingRules } = useScaffoldingPricingRules('scaffolding_pricing_config');
   
   // Use form persistence to save user's progress
   const { formData, updateField, clearForm, isLoaded: formLoaded } = useFormPersistence('scaffolding-facade', {
@@ -208,13 +211,26 @@ export default function ScaffoldingFacadeForm() {
     const pricing = monthsPricing[months as keyof typeof monthsPricing];
     if (!pricing) return 0;
 
-    if (area <= 50) {
-      return pricing.base50;
-    } else if (area <= 100) {
-      return pricing.base100;
-    } else {
-      return area * pricing.perMeter;
-    }
+    const basePrice = area <= 50
+      ? pricing.base50
+      : area <= 100
+        ? pricing.base100
+        : area * pricing.perMeter;
+    const metrics: RuleMetrics = {
+      length: Math.max(0, ...dimensions.map((d) => parseFloat(d.length) || 0)),
+      height: Math.max(0, ...dimensions.map((d) => parseFloat(d.height) || 0)),
+      width: 0,
+      area,
+      total_length: dimensions.reduce((sum, d) => sum + (parseFloat(d.length) || 0), 0),
+      months: months === '3+' ? 3 : (parseInt(months) || 1),
+      unit_fee: area > 100 ? pricing.perMeter : (area > 0 ? basePrice / area : 0),
+      base_price: basePrice,
+    };
+    return applyPricingRules(
+      pricingRules.filter((rule) => rule.category === 'facade'),
+      metrics,
+      basePrice,
+    ).price;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

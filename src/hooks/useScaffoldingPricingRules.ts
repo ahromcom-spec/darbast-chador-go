@@ -154,6 +154,7 @@ export const useScaffoldingPricingRules = (configTable: PricingConfigTable) => {
         conditions: r.conditions,
         action_type: r.action_type,
         action_value: r.action_value,
+        action_formula: r.action_formula ?? null,
         sort_order: 100 + idx,
         source_text: text,
       }));
