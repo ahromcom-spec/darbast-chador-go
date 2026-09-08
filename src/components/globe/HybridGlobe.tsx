@@ -51,12 +51,20 @@ interface ProjectWithMedia extends ProjectHierarchy {
 const isArchivedOrder = (o: any) =>
   !!o?.is_archived || o?.status === 'completed' || o?.status === 'closed' || o?.execution_stage === 'completed' || o?.execution_stage === 'closed';
 
+/** شمارش سفارش‌های فعال و بایگانی یک پروژه */
+const getProjectOrderCounts = (p: ProjectWithMedia) => {
+  const orders = p.orders || [];
+  const archived = orders.filter(o => isArchivedOrder(o)).length;
+  return { archived, active: orders.length - archived, total: orders.length };
+};
+
 /** پروژه فقط سفارش‌های تکمیل‌شده دارد؟ */
 const isArchivedProject = (p: ProjectWithMedia) => {
-  const orders = p.orders || [];
-  if (orders.length === 0) return false;
-  return orders.every(o => isArchivedOrder(o));
+  const { total, archived } = getProjectOrderCounts(p);
+  if (total === 0) return false;
+  return archived === total;
 };
+
 
 type MapOrderFilter = 'all' | 'active' | 'archived';
 
