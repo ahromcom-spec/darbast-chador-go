@@ -50,7 +50,27 @@ export default function ScaffoldingNoMaterialsPricingModule() {
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const { map: conditionsMap, saveCondition } = useScaffoldingPricingConditions('scaffolding_no_materials_pricing_config');
-  const { byCategory, createRule, updateRule, deleteRule } = useScaffoldingPricingRules('scaffolding_no_materials_pricing_config');
+  const { byCategory, createRule, updateRule, deleteRule, syncRulesFromTexts } =
+    useScaffoldingPricingRules('scaffolding_no_materials_pricing_config');
+
+  /** ذخیره متن شرط + تبدیل خودکار آن به قانون مؤثر روی قیمت فرم */
+  const saveConditionAndSync = async (category: string, conditions: string) => {
+    await saveCondition(category, conditions);
+    const label = CATEGORY_LABELS[category] || category;
+    try {
+      const res = await syncRulesFromTexts(category, parseConditions(conditions), label);
+      if (res.created > 0) {
+        toast.success('شرط متنی به قانون قیمت تبدیل شد و از این پس روی قیمت فرم اثر می‌گذارد');
+      }
+      if (res.skipped.length) {
+        toast.warning(
+          'برای یک یا چند شرط، عدد یا معیار مشخصی پیدا نشد؛ لطفاً آن شرط را با «ساخت شرط جدید» دقیق‌تر تعریف کنید.'
+        );
+      }
+    } catch (e: any) {
+      toast.error('شرط ذخیره شد اما تبدیل خودکار انجام نشد: ' + (e?.message || 'نامشخص'));
+    }
+  };
 
   const MODULE_TITLE = 'ماژول قیمت‌گذاری خدمات اجرای داربست بدون اجناس';
   const MODULE_DESC = 'مدیریت آیتم‌های قیمت‌گذاری فرم سفارش «خدمات اجرای داربست بدون اجناس»';
