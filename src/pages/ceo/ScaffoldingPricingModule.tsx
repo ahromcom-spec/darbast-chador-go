@@ -10,7 +10,7 @@ import { Save, RefreshCw, DollarSign, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseLocalizedNumber } from '@/lib/numberParsing';
 import { useScaffoldingPricingConditions } from '@/hooks/useScaffoldingPricingConditions';
-import { CategoryConditionsBox } from '@/components/pricing/CategoryConditionsBox';
+import { CategoryConditionsBox, CategoryConditionsList } from '@/components/pricing/CategoryConditionsBox';
 
 const CATEGORY_LABELS: Record<string, string> = {
   facade: 'داربست سطحی نما',
@@ -163,6 +163,12 @@ export default function ScaffoldingPricingModule() {
               <CardTitle className="text-base">{CATEGORY_LABELS[cat] || cat}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              <CategoryConditionsList
+                category={cat}
+                categoryLabel={CATEGORY_LABELS[cat] || cat}
+                value={conditionsMap[cat] || ''}
+                onSave={saveCondition}
+              />
               {grouped[cat].map((item) => {
                 const current = draft[item.id] ?? String(item.value);
                 const isDirty = dirtyIds.includes(item.id);
