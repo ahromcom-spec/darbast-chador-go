@@ -50,6 +50,7 @@ export default function ScaffoldingPricingModule() {
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const { map: conditionsMap, saveCondition } = useScaffoldingPricingConditions('scaffolding_pricing_config');
+  const { byCategory, createRule, updateRule, deleteRule } = useScaffoldingPricingRules('scaffolding_pricing_config');
 
   useEffect(() => {
     // sync draft with loaded items
