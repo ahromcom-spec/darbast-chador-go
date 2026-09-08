@@ -47,9 +47,8 @@ interface ProjectWithMedia extends ProjectHierarchy {
   orders?: ProjectOrder[];
 }
 
-/** آیا این سفارش تکمیل/بایگانی شده است؟ */
-const isArchivedOrder = (o: any) =>
-  !!o?.is_archived || o?.status === 'completed' || o?.status === 'closed' || o?.execution_stage === 'completed' || o?.execution_stage === 'closed';
+/** آیا این سفارش بایگانی شده است؟ فقط پرچم‌های بایگانی معتبرند، نه وضعیت اجرایی */
+const isArchivedOrder = (o: any) => !!o?.is_archived || !!o?.is_deep_archived;
 
 /** شمارش سفارش‌های فعال و بایگانی یک پروژه */
 const getProjectOrderCounts = (p: ProjectWithMedia) => {
