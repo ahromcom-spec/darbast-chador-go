@@ -15,6 +15,9 @@ import { notifyManagers } from '@/lib/notifications';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useFormPersistence } from '@/hooks/useFormPersistence';
 import { buildOrderSmsAddress, sendOrderSms, sendCeoNotificationSms } from '@/lib/orderSms';
+import { useScaffoldingPricing } from '@/hooks/useScaffoldingPricing';
+import { useScaffoldingPricingRules } from '@/hooks/useScaffoldingPricingRules';
+import { applyPricingRules, type RuleMetrics } from '@/lib/pricingRules';
 
 // Import comprehensive validation schemas
 import { orderDimensionSchema, orderFormSchema } from '@/lib/validations';
@@ -31,6 +34,8 @@ export default function ScaffoldingFacadeForm() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { get: pricingGet } = useScaffoldingPricing();
+  const { rules: pricingRules } = useScaffoldingPricingRules('scaffolding_pricing_config');
   
   // Use form persistence to save user's progress
   const { formData, updateField, clearForm, isLoaded: formLoaded } = useFormPersistence('scaffolding-facade', {
@@ -200,21 +205,46 @@ export default function ScaffoldingFacadeForm() {
 
   const calculatePrice = (area: number, months: string): number => {
     const monthsPricing = {
-      '1': { base50: 3200000, base100: 4200000, perMeter: 45000 },
-      '2': { base50: 3000000, base100: 4000000, perMeter: 42000 },
-      '3+': { base50: 2800000, base100: 3800000, perMeter: 39000 },
+      '1': {
+        base50: pricingGet('facade_1m_fixed_under_50', 3200000),
+        base100: pricingGet('facade_1m_fixed_50_100', 4200000),
+        perMeter: pricingGet('facade_1m_per_meter_over_100', 45000),
+      },
+      '2': {
+        base50: pricingGet('facade_2m_fixed_under_50', 3000000),
+        base100: pricingGet('facade_2m_fixed_50_100', 4000000),
+        perMeter: pricingGet('facade_2m_per_meter_over_100', 42000),
+      },
+      '3+': {
+        base50: pricingGet('facade_3m_fixed_under_50', 2800000),
+        base100: pricingGet('facade_3m_fixed_50_100', 3800000),
+        perMeter: pricingGet('facade_3m_per_meter_over_100', 39000),
+      },
     };
 
     const pricing = monthsPricing[months as keyof typeof monthsPricing];
     if (!pricing) return 0;
 
-    if (area <= 50) {
-      return pricing.base50;
-    } else if (area <= 100) {
-      return pricing.base100;
-    } else {
-      return area * pricing.perMeter;
-    }
+    const basePrice = area <= 50
+      ? pricing.base50
+      : area <= 100
+        ? pricing.base100
+        : area * pricing.perMeter;
+    const metrics: RuleMetrics = {
+      length: Math.max(0, ...dimensions.map((d) => parseFloat(d.length) || 0)),
+      height: Math.max(0, ...dimensions.map((d) => parseFloat(d.height) || 0)),
+      width: 0,
+      area,
+      total_length: dimensions.reduce((sum, d) => sum + (parseFloat(d.length) || 0), 0),
+      months: months === '3+' ? 3 : (parseInt(months) || 1),
+      unit_fee: area > 100 ? pricing.perMeter : (area > 0 ? basePrice / area : 0),
+      base_price: basePrice,
+    };
+    return applyPricingRules(
+      pricingRules.filter((rule) => rule.category === 'facade'),
+      metrics,
+      basePrice,
+    ).price;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

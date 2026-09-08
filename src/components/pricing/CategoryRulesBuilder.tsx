@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Plus, Trash2, Wand2, X, Sigma } from 'lucide-react';
+import { Calculator, Loader2, Pencil, Plus, Trash2, Wand2, X, Sigma } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseLocalizedNumber } from '@/lib/numberParsing';
 import { Textarea } from '@/components/ui/textarea';
@@ -59,6 +59,7 @@ export const CategoryRulesBuilder = ({
   const [actionType, setActionType] = useState<RuleActionType>('increase_percent');
   const [actionValue, setActionValue] = useState<number>(0);
   const [formula, setFormula] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const isFormula = actionType === 'add_formula';
   const formulaValid = isFormula && formula.trim() ? validateFormula(formula) : false;
@@ -78,6 +79,17 @@ export const CategoryRulesBuilder = ({
     setActionType('increase_percent');
     setActionValue(0);
     setFormula('');
+    setEditingId(null);
+  };
+
+  const startEditing = (rule: PricingRule) => {
+    setEditingId(rule.id);
+    setTitle(rule.title || '');
+    setConditions(rule.conditions?.length ? rule.conditions : [emptyCondition()]);
+    setActionType(rule.action_type);
+    setActionValue(rule.action_value || 0);
+    setFormula(rule.action_formula || '');
+    setOpen(true);
   };
 
   const patchCondition = (i: number, patch: Partial<RuleCondition>) =>
@@ -100,7 +112,7 @@ export const CategoryRulesBuilder = ({
     }
     setSaving(true);
     try {
-      await onCreate({
+      const payload = {
         category,
         title: title.trim() || `شرط ${categoryLabel}`,
         is_enabled: true,
@@ -109,8 +121,15 @@ export const CategoryRulesBuilder = ({
         action_value: isFormula ? 0 : actionValue,
         action_formula: isFormula ? formula.trim() : null,
         sort_order: rules.length,
-      });
-      toast.success('شرط قیمت‌گذاری ثبت شد و از همین حالا در فرم سفارش اعمال می‌شود');
+      };
+      if (editingId) {
+        await onUpdate(editingId, payload);
+      } else {
+        await onCreate(payload);
+      }
+      toast.success(editingId
+        ? 'شرط و فرمول ویرایش شد و از همین حالا روی قیمت اعمال می‌شود'
+        : 'شرط قیمت‌گذاری ثبت شد و از همین حالا در فرم سفارش اعمال می‌شود');
       reset();
       setOpen(false);
     } catch (e: any) {
@@ -164,6 +183,15 @@ export const CategoryRulesBuilder = ({
                   checked={r.is_enabled}
                   onCheckedChange={(v) => onUpdate(r.id, { is_enabled: v })}
                 />
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="h-8 w-8"
+                  title="ویرایش شرط و فرمول"
+                  onClick={() => startEditing(r)}
+                >
+                  <Pencil className="w-4 h-4" />
+                </Button>
                 <Button
                   size="icon"
                   variant="ghost"
@@ -299,15 +327,21 @@ export const CategoryRulesBuilder = ({
 
           <div>
             <Label className="text-xs mb-1 block">۳) اگر شرط برقرار بود، با قیمت چه کار شود؟</Label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <Select value={actionType} onValueChange={(v) => setActionType(v as RuleActionType)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(ACTION_LABELS) as RuleActionType[]).map((a) => (
-                    <SelectItem key={a} value={a}>{ACTION_LABELS[a]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-2">
+              {(Object.keys(ACTION_LABELS) as RuleActionType[]).map((a) => (
+                <Button
+                  key={a}
+                  type="button"
+                  variant={actionType === a ? 'default' : 'outline'}
+                  className="h-auto min-h-10 whitespace-normal justify-start text-right"
+                  onClick={() => setActionType(a)}
+                >
+                  {a === 'add_formula' && <Calculator className="w-4 h-4 ml-1 shrink-0" />}
+                  {ACTION_LABELS[a]}
+                </Button>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 gap-2">
               {!isFormula && (
                 <Input
                   value={actionValue ? actionValue.toLocaleString('en-US') : ''}
@@ -338,16 +372,40 @@ export const CategoryRulesBuilder = ({
               />
               <div className="flex flex-wrap gap-1">
                 {(Object.keys(METRIC_LABELS) as RuleMetric[]).map((m) => (
-                  <button
+                  <Button
                     key={m}
                     type="button"
+                    size="sm"
+                    variant="outline"
                     onClick={() => setFormula((prev) => (prev ? `${prev} ${m}` : m))}
-                    className="rounded border border-emerald-300 bg-background px-2 py-0.5 text-[11px] hover:bg-emerald-100"
+                    className="h-7 px-2 text-[11px]"
                   >
                     {METRIC_LABELS[m]} <span className="font-mono text-emerald-700">{m}</span>
-                  </button>
+                  </Button>
                 ))}
               </div>
+              <div className="flex flex-wrap gap-1">
+                {['(', ')', '+', '−', '×', '÷', '30%'].map((token) => (
+                  <Button
+                    key={token}
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="h-7 min-w-9 px-2 font-mono"
+                    onClick={() => setFormula((prev) => `${prev}${prev && !prev.endsWith(' ') ? ' ' : ''}${token} `)}
+                  >
+                    {token}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full whitespace-normal h-auto py-2"
+                onClick={() => setFormula('((height - 2 * length) * length) * 30% * unit_fee')}
+              >
+                درج فرمول نمونه: مازاد ارتفاع × طول × ۳۰٪ × فی هر متر
+              </Button>
               <p className="text-[11px] text-muted-foreground leading-6">
                 مثال: «اگر شرط‌های بالا برقرار بود، (ارتفاع منهای ۲ برابر طول) ضرب در طول، ضرب در
                 ۳۰٪ فی هر متر، به قیمت کل اضافه شود» ←{' '}
@@ -379,7 +437,7 @@ export const CategoryRulesBuilder = ({
           <div className="flex justify-end">
             <Button onClick={handleSave} disabled={saving}>
               {saving ? <Loader2 className="w-4 h-4 ml-1 animate-spin" /> : <Plus className="w-4 h-4 ml-1" />}
-              ثبت شرط مؤثر بر قیمت
+              {editingId ? 'ذخیره ویرایش شرط و فرمول' : 'ثبت شرط مؤثر بر قیمت'}
             </Button>
           </div>
         </div>
