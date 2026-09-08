@@ -685,7 +685,7 @@ export default function ComprehensiveScaffoldingForm({
         breakdown.push(`قیمت کل: ${pipeLength} × ${pricePerMeter.toLocaleString('fa-IR')} = ${basePrice.toLocaleString('fa-IR')} تومان`);
       }
 
-      return { total: finalizePrice(basePrice), pricePerMeter, breakdown };
+      return { total: finalizePrice(applyRules(basePrice)), pricePerMeter, breakdown };
     }
 
     // محاسبه قیمت برای داربست ستونی
