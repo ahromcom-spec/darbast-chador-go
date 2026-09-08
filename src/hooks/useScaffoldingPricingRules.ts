@@ -15,6 +15,7 @@ const normalize = (row: any): PricingRule => ({
   conditions: Array.isArray(row.conditions) ? (row.conditions as RuleCondition[]) : [],
   action_type: (row.action_type || 'increase_percent') as RuleActionType,
   action_value: Number(row.action_value) || 0,
+  action_formula: row.action_formula ?? null,
   sort_order: Number(row.sort_order) || 0,
 });
 
