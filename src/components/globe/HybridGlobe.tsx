@@ -51,12 +51,20 @@ interface ProjectWithMedia extends ProjectHierarchy {
 const isArchivedOrder = (o: any) =>
   !!o?.is_archived || o?.status === 'completed' || o?.status === 'closed' || o?.execution_stage === 'completed' || o?.execution_stage === 'closed';
 
+/** شمارش سفارش‌های فعال و بایگانی یک پروژه */
+const getProjectOrderCounts = (p: ProjectWithMedia) => {
+  const orders = p.orders || [];
+  const archived = orders.filter(o => isArchivedOrder(o)).length;
+  return { archived, active: orders.length - archived, total: orders.length };
+};
+
 /** پروژه فقط سفارش‌های تکمیل‌شده دارد؟ */
 const isArchivedProject = (p: ProjectWithMedia) => {
-  const orders = p.orders || [];
-  if (orders.length === 0) return false;
-  return orders.every(o => isArchivedOrder(o));
+  const { total, archived } = getProjectOrderCounts(p);
+  if (total === 0) return false;
+  return archived === total;
 };
+
 
 type MapOrderFilter = 'all' | 'active' | 'archived';
 
@@ -1931,12 +1939,12 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           : '';
 
         const projectArchived = isArchivedProject(project);
+        const orderCounts = getProjectOrderCounts(project);
         const labelGradient = projectArchived
           ? 'linear-gradient(135deg, rgba(100,116,139,0.95) 0%, rgba(71,85,105,0.95) 100%)'
           : 'linear-gradient(135deg, rgba(59,130,246,0.95) 0%, rgba(37,99,235,0.95) 100%)';
-        const archivedBadgeHtml = projectArchived
-          ? `<div style="
-              background:rgba(16,185,129,0.95);
+        const statusChip = (bg: string, text: string) => `<div style="
+              background:${bg};
               color:#fff;
               padding:3px 7px;
               border-radius:6px;
@@ -1948,8 +1956,18 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
               box-shadow:0 2px 8px rgba(0,0,0,0.25);
               margin-bottom:3px;
               direction:rtl;
-            ">✓ تکمیل‌شده</div>`
-          : '';
+            ">${text}</div>`;
+        const archivedBadgeHtml = orderCounts.total === 0
+          ? ''
+          : [
+              orderCounts.active > 0
+                ? statusChip('rgba(37,99,235,0.95)', `● فعال${orderCounts.archived > 0 ? ` (${orderCounts.active})` : ''}`)
+                : '',
+              orderCounts.archived > 0
+                ? statusChip('rgba(100,116,139,0.95)', `✓ بایگانی شده${orderCounts.active > 0 ? ` (${orderCounts.archived})` : ''}`)
+                : '',
+            ].join('');
+
 
         const addressLabelHtml = `
           <div style="
@@ -2230,7 +2248,13 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
                         onmouseover="this.style.borderColor='#3b82f6';this.style.boxShadow='0 4px 12px rgba(59,130,246,0.2)'"
                         onmouseout="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'"
                       >
-                        <div style="font-size:11px;font-weight:600;color:#1f2937;">کد: ${order.code}</div>
+                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                          <div style="font-size:11px;font-weight:600;color:#1f2937;">کد: ${order.code}</div>
+                          ${isArchivedOrder(order)
+                            ? `<span style="font-size:9px;font-weight:700;color:#fff;background:#64748b;border-radius:5px;padding:2px 6px;">✓ بایگانی شده</span>`
+                            : `<span style="font-size:9px;font-weight:700;color:#fff;background:#2563eb;border-radius:5px;padding:2px 6px;">● فعال</span>`}
+                        </div>
+
                         <div id="order-gallery-${order.id}" class="swipeable-gallery" style="position:relative;margin-top:6px;touch-action:pan-y;">
                           <div style="overflow:hidden;border-radius:6px;background:#f9fafb;position:relative;height:160px;">
                             ${allMedia.map((m, idx) => {
