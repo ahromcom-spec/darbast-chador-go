@@ -154,7 +154,7 @@ export const CategoryRulesBuilder = ({
                 <div className="text-xs text-muted-foreground leading-6">
                   اگر {(r.conditions || []).map(describeCondition).join(' و ')} ←{' '}
                   <span className="text-emerald-700 font-bold">
-                    {describeAction(r.action_type, r.action_value)}
+                    {describeAction(r.action_type, r.action_value, r.action_formula)}
                   </span>
                 </div>
               </div>
