@@ -1174,9 +1174,9 @@ export async function fetchInvoiceExtras(order: InvoiceOrderLike): Promise<Invoi
   extras.freshFinancials = ((fin as any)?.data || null) as any;
   const c = (collection as any)?.data;
   extras.collectionRequestDate = c?.requested_date || null;
-  extras.collectionConfirmedDate =
-    c?.confirmed_date || c?.completed_at || order.customer_completion_date ||
-    (['approved', 'completed'].includes(c?.status || '') ? c?.requested_date : null) || null;
+  // تاریخ تثبیت شده مستقل است و هرگز از تاریخ درخواست پر نمی‌شود
+  extras.collectionConfirmedDate = c?.confirmed_date || null;
+
   extras.payments = ((pays as any)?.data || []) as any;
   extras.customerCode = (profile as any)?.data?.customer_code || '';
   return extras;
