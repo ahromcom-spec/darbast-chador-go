@@ -160,11 +160,12 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         setOrderApprovals(approvalsRes.data);
       }
 
-      if (collectionRes.data?.requested_date) {
-        setApprovedCollectionDate(collectionRes.data.requested_date);
+      if (collectionRes.data?.confirmed_date) {
+        setApprovedCollectionDate(collectionRes.data.confirmed_date);
       } else {
         setApprovedCollectionDate(null);
       }
+
     };
     fetchData();
   }, [order.id]);
