@@ -515,6 +515,33 @@ export function CollectionRequestDialog({
     }
   };
 
+  // Manager clears the requested date
+  const handleClearRequestedDate = async () => {
+    if (!existingRequest || !isManager) return;
+
+    const previousDate = existingRequest.requested_date;
+    setUpdatingDate(true);
+    try {
+      const { error } = await supabase
+        .from('collection_requests')
+        .update({ requested_date: null })
+        .eq('id', existingRequest.id);
+
+      if (error) throw error;
+
+      setExistingRequest({ ...existingRequest, requested_date: null });
+      setRequestedDate('');
+      toast({ title: '✓ موفق', description: 'تاریخ درخواست جمع‌آوری پاک شد' });
+      onSaved?.();
+    } catch (error: any) {
+      console.error('Error clearing requested date:', error);
+      setExistingRequest({ ...existingRequest, requested_date: previousDate });
+      toast({ title: 'خطا', description: 'خطا در پاک کردن تاریخ درخواست', variant: 'destructive' });
+    } finally {
+      setUpdatingDate(false);
+    }
+  };
+
   // Manager updates the collection date
   const handleUpdateDate = async () => {
     if (!existingRequest || !isManager) return;
