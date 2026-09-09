@@ -148,11 +148,9 @@ export function CollectionRequestDialog({
         if (request.requested_date) {
           setRequestedDate(request.requested_date);
         }
-        if (request.confirmed_date) {
-          setConfirmedDate(request.confirmed_date);
-        } else if (request.requested_date) {
-          setConfirmedDate(request.requested_date); // Pre-fill with customer's requested date if no confirmed date
-        }
+        // تاریخ تثبیت شده کاملاً مستقل از تاریخ درخواست است و پیش‌پر نمی‌شود
+        setConfirmedDate(request.confirmed_date || '');
+
 
         // Fetch messages
         const { data: messagesData } = await supabase
