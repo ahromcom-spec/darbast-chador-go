@@ -217,14 +217,15 @@ export function CollectionRequestDialog({
         if (error) throw error;
 
         // بروزرسانی سفارش به مرحله در انتظار جمع‌آوری
+        // توجه: تاریخ تثبیت جمع‌آوری اینجا ثبت نمی‌شود و باید جداگانه توسط مدیر ثبت شود
         const { error: orderError } = await supabase
           .from('projects_v3')
           .update({
             execution_stage: 'awaiting_collection',
             execution_stage_updated_at: new Date().toISOString(),
-            customer_completion_date: requestedDate,
           })
           .eq('id', orderId);
+
 
         if (orderError) {
           console.error('Error updating order stage:', orderError);
