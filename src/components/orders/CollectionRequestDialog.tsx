@@ -888,6 +888,18 @@ export function CollectionRequestDialog({
                         <Calendar className="h-4 w-4 mr-1" />
                         به‌روزرسانی تاریخ درخواست
                       </Button>
+                      {existingRequest.requested_date && (
+                        <Button
+                          onClick={handleClearRequestedDate}
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive hover:bg-destructive/10"
+                          title="پاک کردن تاریخ درخواست"
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          حذف تاریخ درخواست
+                        </Button>
+                      )}
                       <Button
                         onClick={handleUpdateDate}
                         disabled={!confirmedDate || confirmedDate === existingRequest.confirmed_date}
