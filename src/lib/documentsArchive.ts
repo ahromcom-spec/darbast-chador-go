@@ -245,12 +245,8 @@ export async function fetchArchiveDocs(f: ArchiveFilters): Promise<ArchiveDoc[]>
           total_paid: o.total_paid ?? null,
         },
         collectionRequestDate: collection?.requested_date || null,
-        collectionConfirmedDate:
-          collection?.confirmed_date ||
-          collection?.completed_at ||
-          o.customer_completion_date ||
-          (['approved', 'completed'].includes(collection?.status || '') ? collection?.requested_date : null) ||
-          null,
+        collectionConfirmedDate: collection?.confirmed_date || null,
+
         customerCode: codeByPhone[o.customer_phone] || '',
         payments: (paymentsBy[o.id] || []) as any,
       };
