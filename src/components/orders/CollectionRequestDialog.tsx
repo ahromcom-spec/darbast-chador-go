@@ -747,10 +747,11 @@ export function CollectionRequestDialog({
                 {/* Date Confirmation/Adjustment */}
                 <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
                   <p className="text-sm text-blue-800 dark:text-blue-200">
-                    تاریخ پیشنهادی مشتری را تایید یا تاریخ جدید تعیین کنید:
+                    تاریخ جمع‌آوری تثبیت شده مستقل از تاریخ درخواستی مشتری است. اگر خالی بماند، فقط درخواست تایید می‌شود و تاریخ تثبیت بعداً قابل ثبت است.
                   </p>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">تاریخ جمع‌آوری تایید شده *</label>
+                    <label className="text-sm font-medium">تاریخ جمع‌آوری تثبیت شده (اختیاری)</label>
+
                     <PersianDatePicker
                       value={confirmedDate}
                       onChange={setConfirmedDate}
