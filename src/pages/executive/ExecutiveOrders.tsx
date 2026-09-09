@@ -1888,19 +1888,6 @@ export default function ExecutiveOrders() {
                         </span>
                       </div>
                     )}
-                    {/* نمایش تاریخ جمع‌آوری تثبیت شده */}
-                    {order.customer_completion_date && (
-                      <div className="mt-2 text-sm bg-green-100 dark:bg-green-900/30 p-2 rounded">
-                        <span className="text-green-700 dark:text-green-300 font-medium">✓ تاریخ جمع‌آوری تثبیت شده: </span>
-                        <span className="font-bold text-green-800 dark:text-green-200">
-                          {new Date(order.customer_completion_date).toLocaleDateString('fa-IR', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                        </span>
-                      </div>
-                    )}
                   </div>
                 ) : (
                   <div className="p-3 rounded-lg border bg-muted/30 border-dashed">
