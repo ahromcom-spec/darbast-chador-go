@@ -316,17 +316,9 @@ export function CollectionRequestDialog({
   const handleApproveRequest = async () => {
     if (!existingRequest || !isManager) return;
 
-    // اگر تاریخ تایید شده خالی است، از تاریخ درخواستی استفاده کن
-    const dateToUse = confirmedDate || existingRequest.requested_date;
-    
-    if (!dateToUse) {
-      toast({
-        title: 'خطا',
-        description: 'لطفاً تاریخ جمع‌آوری را تایید یا تنظیم کنید',
-        variant: 'destructive',
-      });
-      return;
-    }
+    // تاریخ تثبیت شده مستقل است؛ در صورت خالی بودن، درخواست بدون تاریخ تثبیت تایید می‌شود
+    const dateToUse = confirmedDate || null;
+
 
     setApprovingRequest(true);
     try {
