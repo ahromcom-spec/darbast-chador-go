@@ -136,7 +136,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
           .eq('order_id', order.id),
         supabase
           .from('collection_requests')
-          .select('requested_date, status')
+          .select('requested_date, confirmed_date, status')
           .eq('order_id', order.id)
           .eq('status', 'approved')
           .order('created_at', { ascending: false })
@@ -160,11 +160,12 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         setOrderApprovals(approvalsRes.data);
       }
 
-      if (collectionRes.data?.requested_date) {
-        setApprovedCollectionDate(collectionRes.data.requested_date);
+      if (collectionRes.data?.confirmed_date) {
+        setApprovedCollectionDate(collectionRes.data.confirmed_date);
       } else {
         setApprovedCollectionDate(null);
       }
+
     };
     fetchData();
   }, [order.id]);

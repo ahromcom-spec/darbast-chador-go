@@ -217,10 +217,9 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
         .maybeSingle();
       
       setCollectionRequestDate(collectionData?.requested_date || null);
-      const confirmed = collectionData?.confirmed_date || collectionData?.completed_at || order.customer_completion_date || (
-        ['approved', 'completed'].includes(collectionData?.status || '') ? collectionData?.requested_date : null
-      );
-      setCollectionConfirmedDate(confirmed || null);
+      // تاریخ تثبیت شده مستقل است
+      setCollectionConfirmedDate(collectionData?.confirmed_date || null);
+
 
       // Fetch payment history
       const { data: paymentsData } = await supabase

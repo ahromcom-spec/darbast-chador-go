@@ -148,11 +148,9 @@ export function CollectionRequestDialog({
         if (request.requested_date) {
           setRequestedDate(request.requested_date);
         }
-        if (request.confirmed_date) {
-          setConfirmedDate(request.confirmed_date);
-        } else if (request.requested_date) {
-          setConfirmedDate(request.requested_date); // Pre-fill with customer's requested date if no confirmed date
-        }
+        // تاریخ تثبیت شده کاملاً مستقل از تاریخ درخواست است و پیش‌پر نمی‌شود
+        setConfirmedDate(request.confirmed_date || '');
+
 
         // Fetch messages
         const { data: messagesData } = await supabase
@@ -219,14 +217,15 @@ export function CollectionRequestDialog({
         if (error) throw error;
 
         // بروزرسانی سفارش به مرحله در انتظار جمع‌آوری
+        // توجه: تاریخ تثبیت جمع‌آوری اینجا ثبت نمی‌شود و باید جداگانه توسط مدیر ثبت شود
         const { error: orderError } = await supabase
           .from('projects_v3')
           .update({
             execution_stage: 'awaiting_collection',
             execution_stage_updated_at: new Date().toISOString(),
-            customer_completion_date: requestedDate,
           })
           .eq('id', orderId);
+
 
         if (orderError) {
           console.error('Error updating order stage:', orderError);
@@ -317,17 +316,9 @@ export function CollectionRequestDialog({
   const handleApproveRequest = async () => {
     if (!existingRequest || !isManager) return;
 
-    // اگر تاریخ تایید شده خالی است، از تاریخ درخواستی استفاده کن
-    const dateToUse = confirmedDate || existingRequest.requested_date;
-    
-    if (!dateToUse) {
-      toast({
-        title: 'خطا',
-        description: 'لطفاً تاریخ جمع‌آوری را تایید یا تنظیم کنید',
-        variant: 'destructive',
-      });
-      return;
-    }
+    // تاریخ تثبیت شده مستقل است؛ در صورت خالی بودن، درخواست بدون تاریخ تثبیت تایید می‌شود
+    const dateToUse = confirmedDate || null;
+
 
     setApprovingRequest(true);
     try {
@@ -347,15 +338,16 @@ export function CollectionRequestDialog({
 
       if (error) throw error;
 
-      // Update order execution_stage to awaiting_collection and save collection date
+      // Update order execution_stage to awaiting_collection (تاریخ تثبیت فقط اگر مدیر وارد کرده باشد)
       const { error: orderError } = await supabase
         .from('projects_v3')
         .update({
           execution_stage: 'awaiting_collection',
           execution_stage_updated_at: new Date().toISOString(),
-          customer_completion_date: dateToUse,
+          ...(dateToUse ? { customer_completion_date: dateToUse } : {}),
         })
         .eq('id', orderId);
+
 
       if (orderError) {
         console.error('Error updating order stage:', orderError);
@@ -755,10 +747,11 @@ export function CollectionRequestDialog({
                 {/* Date Confirmation/Adjustment */}
                 <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
                   <p className="text-sm text-blue-800 dark:text-blue-200">
-                    تاریخ پیشنهادی مشتری را تایید یا تاریخ جدید تعیین کنید:
+                    تاریخ جمع‌آوری تثبیت شده مستقل از تاریخ درخواستی مشتری است. اگر خالی بماند، فقط درخواست تایید می‌شود و تاریخ تثبیت بعداً قابل ثبت است.
                   </p>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">تاریخ جمع‌آوری تایید شده *</label>
+                    <label className="text-sm font-medium">تاریخ جمع‌آوری تثبیت شده (اختیاری)</label>
+
                     <PersianDatePicker
                       value={confirmedDate}
                       onChange={setConfirmedDate}
@@ -778,7 +771,7 @@ export function CollectionRequestDialog({
                   ) : (
                     <Button
                       onClick={handleApproveRequest}
-                      disabled={!confirmedDate}
+                      disabled={approvingRequest}
                       className="flex-1 bg-green-600 hover:bg-green-700"
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
