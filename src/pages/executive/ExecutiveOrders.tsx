@@ -1878,22 +1878,9 @@ export default function ExecutiveOrders() {
                     )}
                     {order.collection_request.confirmed_date && (
                       <div className="mt-2 text-sm bg-green-100 dark:bg-green-900/30 p-2 rounded">
-                        <span className="text-green-700 dark:text-green-300 font-medium">✓ تاریخ جمع‌آوری تثبیت شده: </span>
+                        <span className="text-green-700 dark:text-green-300 font-medium">✓ تاریخ جمع‌آوری شده: </span>
                         <span className="font-bold text-green-800 dark:text-green-200">
                           {new Date(order.collection_request.confirmed_date).toLocaleDateString('fa-IR', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                        </span>
-                      </div>
-                    )}
-                    {/* نمایش تاریخ جمع‌آوری تثبیت شده */}
-                    {order.customer_completion_date && (
-                      <div className="mt-2 text-sm bg-green-100 dark:bg-green-900/30 p-2 rounded">
-                        <span className="text-green-700 dark:text-green-300 font-medium">✓ تاریخ جمع‌آوری تثبیت شده: </span>
-                        <span className="font-bold text-green-800 dark:text-green-200">
-                          {new Date(order.customer_completion_date).toLocaleDateString('fa-IR', {
                             year: 'numeric',
                             month: 'long',
                             day: 'numeric'
