@@ -700,7 +700,7 @@ export function buildOrderInvoiceHtml(
             <td class="value-cell" style="white-space:nowrap;">${order.rental_start_date ? formatPersianDate(order.rental_start_date) : '-'}</td>
             <td class="label-cell" style="white-space:nowrap;">تاریخ درخواست جمع‌آوری:</td>
             <td class="value-cell" style="white-space:nowrap;">${collectionRequestDate ? formatPersianDateTime(collectionRequestDate) : '-'}</td>
-            <td class="label-cell" style="white-space:nowrap;">تاریخ جمع‌آوری تثبیت‌شده:</td>
+            <td class="label-cell" style="white-space:nowrap;">تاریخ جمع‌آوری شده:</td>
             <td class="value-cell" style="white-space:nowrap;">${collectionConfirmedDate ? formatPersianDate(collectionConfirmedDate) : '-'}</td>
           </tr>
           <tr>

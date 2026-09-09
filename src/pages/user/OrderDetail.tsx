@@ -2694,12 +2694,12 @@ export default function OrderDetail() {
                             </Badge>
                           </div>
                         )}
-                        {/* تاریخ جمع‌آوری تثبیت شده */}
+                        {/* تاریخ جمع‌آوری شده */}
                         {collectionRequestInfo.confirmed_date && (
                           <div className="flex items-center gap-2 p-2 bg-green-100/50 dark:bg-green-900/30 rounded-lg text-sm">
                             <CalendarDays className="h-4 w-4 text-green-600 dark:text-green-400" />
                             <span className="text-green-800 dark:text-green-200 font-medium">
-                              تاریخ جمع‌آوری تثبیت شده: {formatPersianDate(collectionRequestInfo.confirmed_date)}
+                              تاریخ جمع‌آوری شده: {formatPersianDate(collectionRequestInfo.confirmed_date)}
                             </span>
                           </div>
                         )}
