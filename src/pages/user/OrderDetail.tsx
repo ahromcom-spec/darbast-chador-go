@@ -628,11 +628,12 @@ export default function OrderDetail() {
 
       if (collectionRes.data) {
         setCollectionRequestInfo(collectionRes.data as any);
-        if (collectionRes.data.status === 'approved' && collectionRes.data.requested_date) {
-          setApprovedCollectionDate(collectionRes.data.requested_date);
+        if (collectionRes.data.confirmed_date) {
+          setApprovedCollectionDate(collectionRes.data.confirmed_date);
         } else {
           setApprovedCollectionDate(null);
         }
+
       } else {
         setCollectionRequestInfo(null);
         setApprovedCollectionDate(null);
