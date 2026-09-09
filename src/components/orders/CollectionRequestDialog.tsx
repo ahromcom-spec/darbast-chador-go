@@ -338,15 +338,16 @@ export function CollectionRequestDialog({
 
       if (error) throw error;
 
-      // Update order execution_stage to awaiting_collection and save collection date
+      // Update order execution_stage to awaiting_collection (تاریخ تثبیت فقط اگر مدیر وارد کرده باشد)
       const { error: orderError } = await supabase
         .from('projects_v3')
         .update({
           execution_stage: 'awaiting_collection',
           execution_stage_updated_at: new Date().toISOString(),
-          customer_completion_date: dateToUse,
+          ...(dateToUse ? { customer_completion_date: dateToUse } : {}),
         })
         .eq('id', orderId);
+
 
       if (orderError) {
         console.error('Error updating order stage:', orderError);
