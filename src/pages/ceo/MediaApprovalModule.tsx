@@ -848,15 +848,26 @@ const MediaApprovalModule: React.FC = () => {
 
                         <div className="flex gap-2">
                           {item.file_type === 'video' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="gap-2"
-                              onClick={() => openVideoAudioEditor(item)}
-                              title="ویرایش صدای ویدیو"
-                            >
-                              <Music className="h-4 w-4" />
-                            </Button>
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-2"
+                                onClick={() => openVideoAudioEditor(item)}
+                                title="ویرایش صدای ویدیو"
+                              >
+                                <Music className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-2"
+                                onClick={() => openVideoVisualEditor(item)}
+                                title="ویرایش اندازه و افکت ویدیو"
+                              >
+                                <Wand2 className="h-4 w-4" />
+                              </Button>
+                            </>
                           )}
                           <Button
                             size="sm"
