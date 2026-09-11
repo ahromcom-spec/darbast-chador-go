@@ -551,10 +551,10 @@ function SimpleLeafletMapInner({
         }}
       />
 
-      {/* مکان‌نمای ثابت مرکز نقشه */}
+      {/* مکان‌نمای ثابت مرکز نقشه (کوچک، سبک اسنپ) */}
       <div className="pointer-events-none absolute left-1/2 top-1/2 z-[10004] -translate-x-1/2 -translate-y-full">
-        <svg width="42" height="52" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <ellipse cx="20" cy="48" rx="7" ry="2" fill="rgba(0,0,0,0.25)" />
+        <svg width="26" height="32" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="20" cy="48" rx="6" ry="1.8" fill="rgba(0,0,0,0.22)" />
           <path
             d="M20 2C12 2 6 8 6 16C6 25 20 42 20 42C20 42 34 25 34 16C34 8 28 2 20 2Z"
             fill={snapTarget ? '#16a34a' : '#ef4444'}
@@ -566,10 +566,11 @@ function SimpleLeafletMapInner({
       </div>
 
       {/* دکمه تأیید موقعیت مرکز نقشه */}
-      <div className={`absolute ${isFullscreen ? 'bottom-24' : 'bottom-12'} left-1/2 -translate-x-1/2 w-[88%] max-w-sm z-[10004]`}>
+      <div className={`absolute ${isFullscreen ? 'bottom-20' : 'bottom-3'} left-1/2 -translate-x-1/2 w-auto max-w-[80%] z-[10004]`}>
         <Button
           type="button"
-          className={`w-full h-11 text-sm font-bold shadow-xl ${snapTarget ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+          size="sm"
+          className={`h-8 px-3 text-[11px] font-bold rounded-full shadow-lg whitespace-nowrap ${snapTarget ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
           onClick={() => {
             const point = snapTarget ?? centerPin;
             if (!point) return;
@@ -577,14 +578,11 @@ function SimpleLeafletMapInner({
             mapRef.current?.panTo([point.lat, point.lng]);
           }}
         >
-          <Check className="h-4 w-4 ml-1.5" />
+          <Check className="h-3.5 w-3.5 ml-1" />
           {snapTarget
-            ? `انتخاب موقعیت پروژه: ${snapTarget.title || 'پروژه من'}`
+            ? `انتخاب: ${snapTarget.title || 'پروژه من'}`
             : 'انتخاب این موقعیت'}
         </Button>
-        <p className="mt-1 text-center text-[10px] text-muted-foreground bg-background/70 backdrop-blur-sm rounded px-2 py-0.5">
-          نقشه را جابجا کنید تا مکان‌نما روی محل پروژه قرار بگیرد (تا ۳ متری، موقعیت پروژه خودکار انتخاب می‌شود)
-        </p>
       </div>
 
 
@@ -592,50 +590,30 @@ function SimpleLeafletMapInner({
       <Button
         type="button"
         variant="ghost"
-        size="sm"
+        size="icon"
         onClick={() => setMapStyle(prev => prev === 'standard' ? 'satellite' : 'standard')}
-        className="absolute top-3 right-3 z-[10002] h-9 px-3 text-xs rounded-md bg-background/80 backdrop-blur-md border border-border text-foreground hover:bg-background shadow-md"
+        className="absolute top-2 right-2 z-[10002] h-7 w-7 rounded-full bg-background/85 backdrop-blur-md border border-border text-foreground hover:bg-background shadow-sm"
         title={mapStyle === 'standard' ? 'نمای ماهواره‌ای' : 'نمای استاندارد'}
       >
-        {mapStyle === 'standard' ? (
-          <>
-            <Satellite className="h-4 w-4 ml-1" />
-            <span className="font-medium">ماهواره‌ای</span>
-          </>
-        ) : (
-          <>
-            <MapIcon className="h-4 w-4 ml-1" />
-            <span className="font-medium">نقشه</span>
-          </>
-        )}
+        {mapStyle === 'standard' ? <Satellite className="h-3.5 w-3.5" /> : <MapIcon className="h-3.5 w-3.5" />}
       </Button>
 
       {/* دکمه تمام‌صفحه / خروج از تمام‌صفحه */}
       <Button
         type="button"
         variant="ghost"
-        size="sm"
+        size="icon"
         onClick={toggleFullscreen}
-        className="absolute top-14 right-3 z-[10002] h-9 px-3 text-xs rounded-md bg-background/80 backdrop-blur-md border border-border text-foreground hover:bg-background shadow-md"
+        className="absolute top-10 right-2 z-[10002] h-7 w-7 rounded-full bg-background/85 backdrop-blur-md border border-border text-foreground hover:bg-background shadow-sm"
         title={isFullscreen ? 'کوچک کردن نقشه' : 'نمایش تمام‌صفحه نقشه'}
       >
-        {isFullscreen ? (
-          <>
-            <Minimize2 className="h-4 w-4 ml-1" />
-            <span className="font-medium">کوچک کردن</span>
-          </>
-        ) : (
-          <>
-            <Maximize2 className="h-4 w-4 ml-1" />
-            <span className="font-medium">تمام‌صفحه</span>
-          </>
-        )}
+        {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
       </Button>
 
-      {/* کادر جستجوی آدرس - با فاصله از دکمه ماهواره */}
+      {/* کادر جستجوی آدرس - کوچک و جمع‌وجور */}
       {showSearch && (
         <div
-          className="absolute top-3 left-3 right-[8.5rem] z-[10001] transition-[right] duration-200 focus-within:right-3 focus-within:z-[10003]"
+          className="absolute top-2 left-2 right-12 z-[10001] scale-90 origin-top-left transition-[right] duration-200 focus-within:right-2 focus-within:z-[10003]"
         >
           <MapSearchBox
             onLocationSelect={handleSearchLocationSelect}
@@ -647,17 +625,19 @@ function SimpleLeafletMapInner({
 
       {/* بازگشت به فرم ثبت آدرس در حالت تمام‌صفحه */}
       {isFullscreen && (
-        <div className="absolute bottom-0 left-0 right-0 p-3 pb-5 bg-background/95 backdrop-blur-md border-t border-border z-[10002]">
+        <div className="absolute bottom-0 left-0 right-0 p-2 pb-3 bg-background/95 backdrop-blur-md border-t border-border z-[10002]">
           <Button
             type="button"
-            className="w-full h-12 text-base font-bold shadow-lg"
+            size="sm"
+            className="w-full h-9 text-xs font-bold shadow"
             onClick={toggleFullscreen}
           >
-            <Check className="h-5 w-5 ml-2" />
+            <Check className="h-4 w-4 ml-1.5" />
             بازگشت به ثبت آدرس
           </Button>
         </div>
       )}
+
 
 
       {selectedPos && (
