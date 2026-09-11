@@ -533,7 +533,7 @@ function SimpleLeafletMapInner({
       className={
         isFullscreen
           ? 'fixed top-0 left-0 z-[99999] bg-background overflow-hidden'
-          : 'relative w-full min-h-[420px] overflow-hidden rounded-lg'
+          : 'relative w-full h-full min-h-[420px] overflow-hidden rounded-lg'
       }
       style={
         isFullscreen
@@ -565,12 +565,11 @@ function SimpleLeafletMapInner({
         </svg>
       </div>
 
-      {/* دکمه تأیید موقعیت مرکز نقشه */}
-      <div className={`absolute ${isFullscreen ? 'bottom-20' : 'bottom-3'} left-1/2 -translate-x-1/2 w-auto max-w-[80%] z-[10004]`}>
+      {/* دکمه تأیید محل پروژه (مرکز نقشه) */}
+      <div className={`absolute ${isFullscreen ? 'bottom-20' : 'bottom-4'} left-1/2 -translate-x-1/2 w-[86%] max-w-md z-[10004]`}>
         <Button
           type="button"
-          size="sm"
-          className={`h-8 px-3 text-[11px] font-bold rounded-full shadow-lg whitespace-nowrap ${snapTarget ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+          className={`w-full h-11 text-sm font-bold rounded-full shadow-xl ${snapTarget ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
           onClick={() => {
             const point = snapTarget ?? centerPin;
             if (!point) return;
@@ -578,12 +577,13 @@ function SimpleLeafletMapInner({
             mapRef.current?.panTo([point.lat, point.lng]);
           }}
         >
-          <Check className="h-3.5 w-3.5 ml-1" />
+          <Check className="h-4 w-4 ml-1.5" />
           {snapTarget
             ? `انتخاب: ${snapTarget.title || 'پروژه من'}`
-            : 'انتخاب این موقعیت'}
+            : 'تایید محل پروژه'}
         </Button>
       </div>
+
 
 
       {/* دکمه تغییر نمای نقشه */}
