@@ -13,6 +13,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ModuleHeader } from '@/components/common/ModuleHeader';
 import VideoAudioEditor from '@/components/media/VideoAudioEditor';
+import VideoVisualEditor from '@/components/media/VideoVisualEditor';
 import { 
   CheckCircle, 
   XCircle, 
@@ -29,7 +30,8 @@ import {
   FolderOpen,
   Plus,
   Upload,
-  Music
+  Music,
+  Wand2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
