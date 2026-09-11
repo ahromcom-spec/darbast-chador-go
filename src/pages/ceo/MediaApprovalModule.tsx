@@ -1324,6 +1324,23 @@ const MediaApprovalModule: React.FC = () => {
         />
       )}
 
+      {/* Video Visual (size / effects) Editor */}
+      {showVideoVisualEditor && videoToEdit && (
+        <VideoVisualEditor
+          key={`visual-${videoToEditItem?.id || videoToEdit}`}
+          open={showVideoVisualEditor}
+          onOpenChange={(open) => {
+            setShowVideoVisualEditor(open);
+            if (!open) {
+              setVideoToEdit(null);
+              setVideoToEditItem(null);
+            }
+          }}
+          videoUrl={videoToEdit}
+          onSave={handleEditedVideoSave}
+        />
+      )}
+
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={(open) => {
         if (!open) {
