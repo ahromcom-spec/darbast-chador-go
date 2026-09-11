@@ -92,6 +92,8 @@ const isActiveExecutionOrder = (o: any, repairOrderIds?: Set<string>) => {
   // سفارش‌هایی که درخواست تعمیر باز دارند همیشه روی نقشه بمانند
   if (repairOrderIds?.has(o.id)) return true;
   if (o.is_archived) return false;
+  // سفارش‌های در انتظار تایید مدیران هم روی نقشه اجرایی نمایش داده شوند
+  if (o.status === 'pending') return true;
   if (o.execution_stage) {
     return o.execution_stage === 'awaiting_collection' || o.execution_stage === 'in_collection';
   }
@@ -1956,9 +1958,15 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
               margin-bottom:3px;
               direction:rtl;
             ">${text}</div>`;
+        const pendingCount = (project.orders || []).filter(
+          (o: any) => o.status === 'pending' && !o.is_archived
+        ).length;
+        const pendingBadgeHtml = pendingCount > 0
+          ? statusChip('rgba(234,179,8,0.97)', `⏳ در انتظار تایید مدیران${pendingCount > 1 ? ` (${pendingCount})` : ''}`)
+          : '';
         const archivedBadgeHtml = orderCounts.total === 0
           ? ''
-          : [
+          : pendingBadgeHtml + [
               orderCounts.active > 0
                 ? statusChip('rgba(37,99,235,0.95)', `● فعال${orderCounts.archived > 0 ? ` (${orderCounts.active})` : ''}`)
                 : '',
