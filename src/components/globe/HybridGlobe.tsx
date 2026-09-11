@@ -92,6 +92,8 @@ const isActiveExecutionOrder = (o: any, repairOrderIds?: Set<string>) => {
   // سفارش‌هایی که درخواست تعمیر باز دارند همیشه روی نقشه بمانند
   if (repairOrderIds?.has(o.id)) return true;
   if (o.is_archived) return false;
+  // سفارش‌های در انتظار تایید مدیران هم روی نقشه اجرایی نمایش داده شوند
+  if (o.status === 'pending') return true;
   if (o.execution_stage) {
     return o.execution_stage === 'awaiting_collection' || o.execution_stage === 'in_collection';
   }
