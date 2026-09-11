@@ -954,6 +954,32 @@ const MediaApprovalModule: React.FC = () => {
                           </p>
                         </div>
 
+                        {/* ویرایش ویدیو در همه مراحل */}
+                        {item.file_type === 'video' && (
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 gap-1 text-xs"
+                              onClick={() => openVideoVisualEditor(item)}
+                              title="ویرایش اندازه و افکت ویدیو"
+                            >
+                              <Wand2 className="h-4 w-4" />
+                              اندازه و افکت
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 gap-1 text-xs"
+                              onClick={() => openVideoAudioEditor(item)}
+                              title="ویرایش صدای ویدیو"
+                            >
+                              <Music className="h-4 w-4" />
+                              صدا
+                            </Button>
+                          </div>
+                        )}
+
                         {activeTab === 'pending' && (
                           <div className="flex gap-2">
                             <Button
