@@ -13,6 +13,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ModuleHeader } from '@/components/common/ModuleHeader';
 import VideoAudioEditor from '@/components/media/VideoAudioEditor';
+import VideoVisualEditor from '@/components/media/VideoVisualEditor';
 import { 
   CheckCircle, 
   XCircle, 
@@ -29,7 +30,8 @@ import {
   FolderOpen,
   Plus,
   Upload,
-  Music
+  Music,
+  Wand2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -94,6 +96,7 @@ const MediaApprovalModule: React.FC = () => {
   
   // Video audio editor state
   const [showVideoAudioEditor, setShowVideoAudioEditor] = useState(false);
+  const [showVideoVisualEditor, setShowVideoVisualEditor] = useState(false);
   const [videoToEdit, setVideoToEdit] = useState<string | null>(null);
   const [videoToEditItem, setVideoToEditItem] = useState<MediaItem | OrderMediaItem | null>(null);
   
@@ -608,6 +611,14 @@ const MediaApprovalModule: React.FC = () => {
     setShowVideoAudioEditor(true);
   };
 
+  // Open video visual (size / effects) editor
+  const openVideoVisualEditor = (item: MediaItem | OrderMediaItem) => {
+    const url = getMediaUrl(item.file_path);
+    setVideoToEdit(url);
+    setVideoToEditItem(item);
+    setShowVideoVisualEditor(true);
+  };
+
   // Handle edited video save
   const handleEditedVideoSave = async (editedBlob: Blob) => {
     if (!user || !videoToEditItem) return;
@@ -698,6 +709,7 @@ const MediaApprovalModule: React.FC = () => {
       }
       
       setShowVideoAudioEditor(false);
+      setShowVideoVisualEditor(false);
       setVideoToEdit(null);
       setVideoToEditItem(null);
       setActiveTab('approved');
@@ -836,15 +848,26 @@ const MediaApprovalModule: React.FC = () => {
 
                         <div className="flex gap-2">
                           {item.file_type === 'video' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="gap-2"
-                              onClick={() => openVideoAudioEditor(item)}
-                              title="ویرایش صدای ویدیو"
-                            >
-                              <Music className="h-4 w-4" />
-                            </Button>
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-2"
+                                onClick={() => openVideoAudioEditor(item)}
+                                title="ویرایش صدای ویدیو"
+                              >
+                                <Music className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-2"
+                                onClick={() => openVideoVisualEditor(item)}
+                                title="ویرایش اندازه و افکت ویدیو"
+                              >
+                                <Wand2 className="h-4 w-4" />
+                              </Button>
+                            </>
                           )}
                           <Button
                             size="sm"
@@ -931,6 +954,32 @@ const MediaApprovalModule: React.FC = () => {
                           </p>
                         </div>
 
+                        {/* ویرایش ویدیو در همه مراحل */}
+                        {item.file_type === 'video' && (
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 gap-1 text-xs"
+                              onClick={() => openVideoVisualEditor(item)}
+                              title="ویرایش اندازه و افکت ویدیو"
+                            >
+                              <Wand2 className="h-4 w-4" />
+                              اندازه و افکت
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 gap-1 text-xs"
+                              onClick={() => openVideoAudioEditor(item)}
+                              title="ویرایش صدای ویدیو"
+                            >
+                              <Music className="h-4 w-4" />
+                              صدا
+                            </Button>
+                          </div>
+                        )}
+
                         {activeTab === 'pending' && (
                           <div className="flex gap-2">
                             <Button
@@ -960,17 +1009,6 @@ const MediaApprovalModule: React.FC = () => {
 
                         {activeTab === 'approved' && (
                           <div className="flex gap-1 flex-wrap">
-                            {item.file_type === 'video' && (
-                              <Button
-                                size="icon"
-                                variant="outline"
-                                className="h-8 w-8"
-                                onClick={() => openVideoAudioEditor(item)}
-                                title="ویرایش صدای ویدیو"
-                              >
-                                <Music className="h-4 w-4" />
-                              </Button>
-                            )}
                             <Button
                               size="icon"
                               variant="outline"
@@ -1276,6 +1314,23 @@ const MediaApprovalModule: React.FC = () => {
           open={showVideoAudioEditor}
           onOpenChange={(open) => {
             setShowVideoAudioEditor(open);
+            if (!open) {
+              setVideoToEdit(null);
+              setVideoToEditItem(null);
+            }
+          }}
+          videoUrl={videoToEdit}
+          onSave={handleEditedVideoSave}
+        />
+      )}
+
+      {/* Video Visual (size / effects) Editor */}
+      {showVideoVisualEditor && videoToEdit && (
+        <VideoVisualEditor
+          key={`visual-${videoToEditItem?.id || videoToEdit}`}
+          open={showVideoVisualEditor}
+          onOpenChange={(open) => {
+            setShowVideoVisualEditor(open);
             if (!open) {
               setVideoToEdit(null);
               setVideoToEditItem(null);
