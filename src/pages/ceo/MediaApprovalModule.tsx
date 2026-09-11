@@ -611,6 +611,14 @@ const MediaApprovalModule: React.FC = () => {
     setShowVideoAudioEditor(true);
   };
 
+  // Open video visual (size / effects) editor
+  const openVideoVisualEditor = (item: MediaItem | OrderMediaItem) => {
+    const url = getMediaUrl(item.file_path);
+    setVideoToEdit(url);
+    setVideoToEditItem(item);
+    setShowVideoVisualEditor(true);
+  };
+
   // Handle edited video save
   const handleEditedVideoSave = async (editedBlob: Blob) => {
     if (!user || !videoToEditItem) return;
