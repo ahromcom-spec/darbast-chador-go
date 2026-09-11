@@ -1009,17 +1009,6 @@ const MediaApprovalModule: React.FC = () => {
 
                         {activeTab === 'approved' && (
                           <div className="flex gap-1 flex-wrap">
-                            {item.file_type === 'video' && (
-                              <Button
-                                size="icon"
-                                variant="outline"
-                                className="h-8 w-8"
-                                onClick={() => openVideoAudioEditor(item)}
-                                title="ویرایش صدای ویدیو"
-                              >
-                                <Music className="h-4 w-4" />
-                              </Button>
-                            )}
                             <Button
                               size="icon"
                               variant="outline"
