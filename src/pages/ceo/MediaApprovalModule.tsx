@@ -96,6 +96,7 @@ const MediaApprovalModule: React.FC = () => {
   
   // Video audio editor state
   const [showVideoAudioEditor, setShowVideoAudioEditor] = useState(false);
+  const [showVideoVisualEditor, setShowVideoVisualEditor] = useState(false);
   const [videoToEdit, setVideoToEdit] = useState<string | null>(null);
   const [videoToEditItem, setVideoToEditItem] = useState<MediaItem | OrderMediaItem | null>(null);
   
