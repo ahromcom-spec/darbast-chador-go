@@ -709,6 +709,7 @@ const MediaApprovalModule: React.FC = () => {
       }
       
       setShowVideoAudioEditor(false);
+      setShowVideoVisualEditor(false);
       setVideoToEdit(null);
       setVideoToEditItem(null);
       setActiveTab('approved');
