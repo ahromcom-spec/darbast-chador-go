@@ -1958,9 +1958,15 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
               margin-bottom:3px;
               direction:rtl;
             ">${text}</div>`;
+        const pendingCount = (project.orders || []).filter(
+          (o: any) => o.status === 'pending' && !o.is_archived
+        ).length;
+        const pendingBadgeHtml = pendingCount > 0
+          ? statusChip('rgba(234,179,8,0.97)', `⏳ در انتظار تایید مدیران${pendingCount > 1 ? ` (${pendingCount})` : ''}`)
+          : '';
         const archivedBadgeHtml = orderCounts.total === 0
           ? ''
-          : [
+          : pendingBadgeHtml + [
               orderCounts.active > 0
                 ? statusChip('rgba(37,99,235,0.95)', `● فعال${orderCounts.archived > 0 ? ` (${orderCounts.active})` : ''}`)
                 : '',
