@@ -586,7 +586,7 @@ function SimpleLeafletMapInner({
           <ellipse cx="20" cy="48" rx="6" ry="1.8" fill="rgba(0,0,0,0.22)" />
           <path
             d="M20 2C12 2 6 8 6 16C6 25 20 42 20 42C20 42 34 25 34 16C34 8 28 2 20 2Z"
-            fill={snapTarget ? '#16a34a' : '#ef4444'}
+            fill={confirmedPos ? '#16a34a' : snapTarget ? '#16a34a' : '#ef4444'}
             stroke="white"
             strokeWidth="2.5"
           />
@@ -594,24 +594,53 @@ function SimpleLeafletMapInner({
         </svg>
       </div>
 
-      {/* دکمه تأیید محل پروژه (مرکز نقشه) */}
-      <div className={`absolute ${isFullscreen ? 'bottom-20' : 'bottom-4'} left-1/2 -translate-x-1/2 w-[86%] max-w-md z-[10004]`}>
-        <Button
-          type="button"
-          className={`w-full h-11 text-sm font-bold rounded-full shadow-xl ${snapTarget ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
-          onClick={() => {
-            const point = snapTarget ?? centerPin;
-            if (!point) return;
-            placeMarkerRef.current?.(point.lat, point.lng);
-            mapRef.current?.panTo([point.lat, point.lng]);
-          }}
-        >
-          <Check className="h-4 w-4 ml-1.5" />
-          {snapTarget
-            ? `انتخاب: ${snapTarget.title || 'پروژه من'}`
-            : 'تایید محل پروژه'}
-        </Button>
+      {/* کلید تأیید مکان / ویرایش مکان — بالای نشانگر مرکز */}
+      <div className="absolute left-1/2 top-1/2 z-[10005] -translate-x-1/2" style={{ transform: 'translate(-50%, calc(-100% - 66px))' }}>
+        {!confirmedPos ? (
+          <Button
+            type="button"
+            size="sm"
+            className={`h-8 px-4 text-xs font-bold rounded-full shadow-xl whitespace-nowrap ${snapTarget ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+            onClick={handleConfirmLocation}
+          >
+            <Check className="h-3.5 w-3.5 ml-1" />
+            {snapTarget ? `تأیید مکان: ${snapTarget.title || 'پروژه من'}` : 'تأیید مکان'}
+          </Button>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-1 h-8 px-3 rounded-full bg-green-600 text-white text-xs font-bold shadow-xl whitespace-nowrap">
+              <Check className="h-3.5 w-3.5" />
+              مکان ذخیره شد
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-8 px-3 text-xs font-bold rounded-full shadow-xl whitespace-nowrap"
+              onClick={handleEditLocation}
+            >
+              <Pencil className="h-3.5 w-3.5 ml-1" />
+              اصلاح مکان
+            </Button>
+          </div>
+        )}
       </div>
+
+      {/* دکمه تأیید محل پروژه پایین نقشه — فقط وقتی مکان هنوز تأیید نشده */}
+      {!confirmedPos && (
+        <div className={`absolute ${isFullscreen ? 'bottom-20' : 'bottom-4'} left-1/2 -translate-x-1/2 w-[86%] max-w-md z-[10004]`}>
+          <Button
+            type="button"
+            className={`w-full h-11 text-sm font-bold rounded-full shadow-xl ${snapTarget ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+            onClick={handleConfirmLocation}
+          >
+            <Check className="h-4 w-4 ml-1.5" />
+            {snapTarget
+              ? `انتخاب: ${snapTarget.title || 'پروژه من'}`
+              : 'تایید محل پروژه'}
+          </Button>
+        </div>
+      )}
 
 
 
