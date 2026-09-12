@@ -1822,6 +1822,51 @@ export type Database = {
           },
         ]
       }
+      help_videos: {
+        Row: {
+          context_key: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          poster_url: string | null
+          sort_order: number
+          storage_path: string | null
+          title: string
+          updated_at: string
+          video_url: string
+        }
+        Insert: {
+          context_key: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          poster_url?: string | null
+          sort_order?: number
+          storage_path?: string | null
+          title: string
+          updated_at?: string
+          video_url: string
+        }
+        Update: {
+          context_key?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          poster_url?: string | null
+          sort_order?: number
+          storage_path?: string | null
+          title?: string
+          updated_at?: string
+          video_url?: string
+        }
+        Relationships: []
+      }
       hr_employees: {
         Row: {
           created_at: string
