@@ -60,6 +60,35 @@ function SimpleLeafletMapInner({
   const [centerPin, setCenterPin] = useState<{ lat: number; lng: number } | null>(null);
   const [existingLocations, setExistingLocations] = useState<Array<{ id: string; lat: number; lng: number; title: string | null }>>([]);
   const [snapTarget, setSnapTarget] = useState<{ id: string; lat: number; lng: number; title: string | null } | null>(null);
+  const [confirmedPos, setConfirmedPos] = useState<{ lat: number; lng: number } | null>(null);
+
+  // قفل/باز کردن تعامل نقشه بعد از تأیید مکان
+  const setMapLocked = (locked: boolean) => {
+    const map = mapRef.current;
+    if (!map) return;
+    const handlers = [map.dragging, map.scrollWheelZoom, map.touchZoom, map.doubleClickZoom, map.boxZoom, map.keyboard];
+    handlers.forEach((h) => { if (!h) return; locked ? h.disable() : h.enable(); });
+    if (markerRef.current) {
+      if (locked) markerRef.current.dragging?.disable();
+      else markerRef.current.dragging?.enable();
+    }
+  };
+
+  // تأیید نهایی مکان: ذخیره مختصات و قفل نقشه
+  const handleConfirmLocation = () => {
+    const point = snapTarget ?? centerPin;
+    if (!point) return;
+    placeMarkerRef.current?.(point.lat, point.lng);
+    mapRef.current?.panTo([point.lat, point.lng]);
+    setConfirmedPos({ lat: point.lat, lng: point.lng });
+    setMapLocked(true);
+  };
+
+  // خروج از حالت ذخیره‌شده برای اصلاح مکان
+  const handleEditLocation = () => {
+    setConfirmedPos(null);
+    setMapLocked(false);
+  };
 
 
   const toggleFullscreen = async () => {
