@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import { supabase } from '@/integrations/supabase/client';
 import { MapSearchBox } from './MapSearchBox';
 import { Button } from '@/components/ui/button';
-import { Satellite, Map as MapIcon, Maximize2, Minimize2, Check } from 'lucide-react';
+import { Satellite, Map as MapIcon, Maximize2, Minimize2, Check, Pencil } from 'lucide-react';
 import { createNeshanTileLayer, neshanDirection } from '@/lib/neshan';
 
 export interface SimpleLeafletMapRef {
@@ -668,8 +668,8 @@ function SimpleLeafletMapInner({
         {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
       </Button>
 
-      {/* کادر جستجوی آدرس - کوچک و جمع‌وجور */}
-      {showSearch && (
+      {/* کادر جستجوی آدرس - کوچک و جمع‌وجور (در حالت ذخیره‌شده پنهان می‌شود) */}
+      {showSearch && !confirmedPos && (
         <div
           className="absolute top-2 left-2 right-12 z-[10001] scale-90 origin-top-left transition-[right] duration-200 focus-within:right-2 focus-within:z-[10003]"
         >
