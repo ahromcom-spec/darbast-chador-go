@@ -8,6 +8,7 @@ import ComprehensiveScaffoldingForm from './ComprehensiveScaffoldingForm';
 import { supabase } from '@/integrations/supabase/client';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useToast } from '@/hooks/use-toast';
+import { ContextualVideoHelp } from '@/components/help/ContextualVideoHelp';
 
 export default function ScaffoldingForm() {
   const navigate = useNavigate();
@@ -170,7 +171,11 @@ export default function ScaffoldingForm() {
                 <Building2 className="h-6 w-6 text-foreground" />
                 {editOrderId ? 'ویرایش سفارش' : `فرم ثبت سفارش ${finalServiceName || 'خدمات داربست فلزی'}`}
               </CardTitle>
+              <div className="flex justify-center pt-1">
+                <ContextualVideoHelp contextKey="order-form-scaffolding" />
+              </div>
             </CardHeader>
+
 
             {/* نمایش اطلاعات آدرس و سرویس */}
             {finalLocationAddress && (

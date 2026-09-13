@@ -55,6 +55,7 @@ const OrderTransfersModule = lazy(() => import("@/pages/ceo/OrderTransfersModule
 const RatingsModule = lazy(() => import("@/pages/ceo/RatingsModule"));
 const SiteNotificationsModule = lazy(() => import("@/pages/ceo/SiteNotificationsModule"));
 const DocumentsArchiveModule = lazy(() => import("@/pages/ceo/DocumentsArchiveModule"));
+const HelpVideosModule = lazy(() => import("@/pages/ceo/HelpVideosModule"));
 
 const StaffVerifications = lazy(() => import("@/pages/ceo/StaffVerifications").then(m => ({ default: m.StaffVerifications })));
 const CEOOrders = lazy(() => import("@/pages/ceo/CEOOrders").then(m => ({ default: m.CEOOrders })));
@@ -438,6 +439,14 @@ const App = () => {
                   <DocumentsArchiveModule />
                 </ProtectedRoute>
               } />
+
+              {/* مسیر مستقل برای ماژول راهنماهای ویدیویی سایت */}
+              <Route path="/help-videos" element={
+                <ProtectedRoute>
+                  <HelpVideosModule />
+                </ProtectedRoute>
+              } />
+
 
 
 

@@ -44,6 +44,7 @@ import { PendingProjectInvites } from '@/components/projects/PendingProjectInvit
 import { MyProjectsTab } from '@/components/profile/MyProjectsTab';
 import { UserModulesTab } from '@/components/profile/UserModulesTab';
 import { lazy } from 'react';
+import { ContextualVideoHelp } from '@/components/help/ContextualVideoHelp';
 
 const SalesCustomers = lazy(() => import('@/pages/sales/SalesCustomers'));
 
@@ -330,6 +331,12 @@ const fetchOrders = async () => {
               دسترسی سریع
             </TabsTrigger>
           </TabsList>
+
+          <div className="flex justify-end mt-3">
+            <ContextualVideoHelp contextKey={`profile-${tabFromUrl}`} />
+          </div>
+
+
 
 
           {/* Modules Tab */}
