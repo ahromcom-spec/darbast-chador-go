@@ -440,6 +440,14 @@ const App = () => {
                 </ProtectedRoute>
               } />
 
+              {/* مسیر مستقل برای ماژول راهنماهای ویدیویی سایت */}
+              <Route path="/help-videos" element={
+                <ProtectedRoute>
+                  <HelpVideosModule />
+                </ProtectedRoute>
+              } />
+
+
 
 
               {/* مسیر مستقل برای ماژول مدیریت پیامک‌ها */}
