@@ -18,7 +18,7 @@ export const HELP_VIDEO_CONTEXTS: HelpVideoContext[] = [
   { key: 'profile-invoice', label: 'پروفایل - صورتحساب من', group: 'پروفایل کاربری' },
   { key: 'profile-modules', label: 'پروفایل - ماژول‌ها', group: 'پروفایل کاربری' },
   { key: 'profile-security', label: 'پروفایل - امنیت', group: 'پروفایل کاربری' },
-  { key: 'profile-quick-access', label: 'پروفایل - دسترسی سریع', group: 'پروفایل کاربری' },
+  { key: 'profile-actions', label: 'پروفایل - دسترسی سریع', group: 'پروفایل کاربری' },
 
   { key: 'order-form-scaffolding', label: 'فرم سفارش داربست فلزی', group: 'فرم‌های سفارش' },
   { key: 'order-form-scaffolding-facade', label: 'فرم داربست نما', group: 'فرم‌های سفارش' },
