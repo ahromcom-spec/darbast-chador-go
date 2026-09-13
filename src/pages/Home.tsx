@@ -237,7 +237,11 @@ const Home = () => {
                 <h2 className="text-lg sm:text-2xl md:text-3xl font-bold leading-tight tracking-tight primary-gradient bg-clip-text text-transparent mb-2">
                   خدمات ساختمانی و منزل خود را انتخاب کنید
                 </h2>
+                <div className="flex justify-center">
+                  <ContextualVideoHelp contextKey="home" />
+                </div>
               </CardHeader>
+
               
               <CardContent className="space-y-3 sm:space-y-4 md:space-y-5 px-4 sm:px-6 pb-4 sm:pb-6">
                 {servicesLoading ? (

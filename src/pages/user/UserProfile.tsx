@@ -331,6 +331,12 @@ const fetchOrders = async () => {
             </TabsTrigger>
           </TabsList>
 
+          <div className="flex justify-end mt-3">
+            <ContextualVideoHelp contextKey={`profile-${tabFromUrl}`} />
+          </div>
+
+
+
 
           {/* Modules Tab */}
           <TabsContent value="modules" className="mt-4">
