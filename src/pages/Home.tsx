@@ -13,6 +13,7 @@ import scaffoldingIcon from '@/assets/scaffolding-icon.png.asset.json';
 
 import { RecentActivities } from '@/components/home/RecentActivities';
 import { ModuleShortcuts } from '@/components/home/ModuleShortcuts';
+import { ContextualVideoHelp } from '@/components/help/ContextualVideoHelp';
 
 // Lazy load heavy components for better performance
 const PWAInstallBanner = lazy(() => import('@/components/common/PWAInstallBanner').then(m => ({ default: m.PWAInstallBanner })));

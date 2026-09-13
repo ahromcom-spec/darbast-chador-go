@@ -8,6 +8,7 @@ import ComprehensiveScaffoldingForm from './ComprehensiveScaffoldingForm';
 import { supabase } from '@/integrations/supabase/client';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useToast } from '@/hooks/use-toast';
+import { ContextualVideoHelp } from '@/components/help/ContextualVideoHelp';
 
 export default function ScaffoldingForm() {
   const navigate = useNavigate();
