@@ -6743,6 +6743,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      manager_transfer_order_to_customer: {
+        Args: { p_order_id: string; p_phone: string }
+        Returns: Json
+      }
       manual_dispatch_v3: {
         Args: { _contractor_ids: string[]; _project_id: string }
         Returns: Json
