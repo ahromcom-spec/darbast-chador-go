@@ -2022,7 +2022,11 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
               ${addressLabelHtml}
               <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid #fff;background:#000;position:relative;">
-                <video src="${videoUrl}" autoplay muted loop playsinline preload="auto" style="width:100%;height:100%;object-fit:cover;pointer-events:none;"></video>
+                <video src="${videoUrl}" autoplay muted playsinline preload="auto"
+                  onplay="this.dataset.cycleStart=Date.now()"
+                  onended="const elapsed=Date.now()-(parseInt(this.dataset.cycleStart)||0);const wait=Math.max(0,8000-elapsed);setTimeout(()=>{this.currentTime=0;this.play();},wait);"
+                  style="width:100%;height:100%;object-fit:cover;pointer-events:none;">
+                </video>
                 <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));height:18px;display:flex;align-items:center;justify-content:center;">
                   <span style="color:#fff;font-size:10px;font-weight:bold;">${totalOrderImages}</span>
                 </div>
