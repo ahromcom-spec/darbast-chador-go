@@ -22,8 +22,8 @@ import { formatPersianDateTimeFull, formatPersianDate } from '@/lib/dateUtils';
 import { setOrderScheduleSchema, sendNotificationSchema } from '@/lib/rpcValidation';
 import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
-import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
-import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
+import { ManagerCustomerOrderTransfer } from '@/components/orders/ManagerCustomerOrderTransfer';
+import { ManagerCustomerCollaborator } from '@/components/orders/ManagerCustomerCollaborator';
 import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
 import { sendPushNotification, sendNotificationRpc } from '@/lib/notifications';
 import { useAuth } from '@/contexts/AuthContext';
@@ -2476,7 +2476,7 @@ export default function ExecutiveOrders() {
       </Dialog>
 
       {selectedOrder && (
-        <ManagerOrderTransfer
+        <ManagerCustomerOrderTransfer
           orderId={selectedOrder.id}
           orderCode={selectedOrder.code}
           open={transferDialogOpen}
@@ -2486,7 +2486,7 @@ export default function ExecutiveOrders() {
       )}
 
       {selectedOrder && (
-        <ManagerAddStaffCollaborator
+        <ManagerCustomerCollaborator
           orderId={selectedOrder.id}
           orderCode={selectedOrder.code}
           open={collaboratorDialogOpen}
