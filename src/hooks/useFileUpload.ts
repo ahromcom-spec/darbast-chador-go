@@ -147,6 +147,7 @@ export function useFileUpload({ bucket, onComplete }: UseFileUploadOptions) {
                   total: totalSize,
                   percentage: Math.min(percentage, 99) // تا 99% نگه دار تا کامل شود
                 });
+                tracker.update(event.loaded, event.total);
               }
             });
 
@@ -196,12 +197,14 @@ export function useFileUpload({ bucket, onComplete }: UseFileUploadOptions) {
             });
 
           if (dbError) throw dbError;
+          tracker.finish();
           successCount++;
         } else {
           throw new Error(result.error);
         }
       } catch (err: any) {
         console.error('Error uploading file:', file.name, err);
+        tracker.fail(err?.message);
         errorCount++;
         // نمایش پیام خطای واقعی برای فایل اول
         if (errorCount === 1) {
