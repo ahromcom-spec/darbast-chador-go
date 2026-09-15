@@ -18,6 +18,8 @@ interface ContextualVideoHelpProps {
 
 const VideoBody = ({ video }: { video: HelpVideo }) => {
   const [url, setUrl] = useState<string | null>(null);
+  const [buffered, setBuffered] = useState(0);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -29,20 +31,46 @@ const VideoBody = ({ video }: { video: HelpVideo }) => {
     };
   }, [video]);
 
+  // نمایش لحظه‌ای میزان دریافت (دانلود) ویدیو
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || !url) return;
+    const stop = trackVideoDownload(el, `دریافت ویدیو: ${video.title}`);
+    const onProgress = () => {
+      if (!el.duration || !isFinite(el.duration) || el.buffered.length === 0) return;
+      setBuffered(Math.round((el.buffered.end(el.buffered.length - 1) / el.duration) * 100));
+    };
+    el.addEventListener('progress', onProgress);
+    el.addEventListener('timeupdate', onProgress);
+    return () => {
+      el.removeEventListener('progress', onProgress);
+      el.removeEventListener('timeupdate', onProgress);
+      stop();
+    };
+  }, [url, video.title]);
+
   return (
     <div className="space-y-3">
       <div className="relative w-full overflow-hidden rounded-lg bg-black aspect-video">
         {url ? (
-          <video
-            src={url}
-            poster={video.poster_url || undefined}
-            controls
-            playsInline
-            preload="metadata"
-            className="w-full h-full object-contain"
-          >
-            مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند
-          </video>
+          <>
+            <video
+              ref={videoRef}
+              src={url}
+              poster={video.poster_url || undefined}
+              controls
+              playsInline
+              preload="metadata"
+              className="w-full h-full object-contain"
+            >
+              مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند
+            </video>
+            {buffered > 0 && buffered < 100 && (
+              <div className="absolute top-2 left-2 rounded-md bg-black/60 px-2 py-0.5 text-[11px] text-white">
+                دریافت ویدیو: {buffered}%
+              </div>
+            )}
+          </>
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
             <Loader2 className="h-7 w-7 text-white animate-spin" />

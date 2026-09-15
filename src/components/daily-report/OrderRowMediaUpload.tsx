@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { buildMediaFingerprint, findDuplicateProjectMedia } from '@/lib/mediaFingerprint';
+import { uploadToStorageWithProgress } from '@/lib/mediaTransfers';
 
 const MEDIA_BUCKET = 'project-media';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
