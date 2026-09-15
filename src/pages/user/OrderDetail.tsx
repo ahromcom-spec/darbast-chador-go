@@ -3379,7 +3379,7 @@ export default function OrderDetail() {
                   ویرایش سفارش
                 </Button>
               )}
-              {canManageOrder && order.status !== 'rejected' && order.status !== 'closed' && (
+              {canManageOrder && order.status !== 'rejected' && (
                 <Button
                   variant="outline"
                   onClick={() => setShowTransferDialog(true)}
@@ -3390,7 +3390,7 @@ export default function OrderDetail() {
                   انتقال سفارش
                 </Button>
               )}
-              {canManageOrder && order.status !== 'rejected' && order.status !== 'closed' && (
+              {canManageOrder && order.status !== 'rejected' && (
 
                 <Button
                   variant="outline"
