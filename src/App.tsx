@@ -205,6 +205,7 @@ const AnalyticsTracker = ({ children }: { children: ReactNode }) => {
 
 
 const App = () => {
+  // eslint-disable-next-line
   useGlobalTableArrowNavigation();
   return (
     <ErrorBoundary>
@@ -212,6 +213,7 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <MediaTransferPanel />
           <BrowserRouter>
             <ZoomProvider>
               
