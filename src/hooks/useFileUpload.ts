@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { compressImages } from '@/lib/imageOptimizer';
+import { startTransfer } from '@/lib/mediaTransfers';
 
 
 interface UploadProgress {
@@ -122,6 +123,8 @@ export function useFileUpload({ bucket, onComplete }: UseFileUploadOptions) {
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
+
+      const tracker = startTransfer('upload', file.name, file.size);
 
       try {
         // آپلود با پیشرفت واقعی
