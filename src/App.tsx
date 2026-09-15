@@ -205,7 +205,6 @@ const AnalyticsTracker = ({ children }: { children: ReactNode }) => {
 
 
 const App = () => {
-  // eslint-disable-next-line
   useGlobalTableArrowNavigation();
   return (
     <ErrorBoundary>
