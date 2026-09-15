@@ -40,6 +40,14 @@ export const CentralizedVideoPlayer = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+
+  // نمایش لحظه‌ای میزان دریافت (دانلود) ویدیو در پنل انتقال فایل‌ها
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || !src) return;
+    return trackVideoDownload(el, 'دریافت ویدیو');
+  }, [src]);
+  
   
   // Fetch signed URL if filePath is provided
   useEffect(() => {
