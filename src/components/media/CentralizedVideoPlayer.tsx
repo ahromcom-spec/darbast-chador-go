@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Play, Pause, Volume2, VolumeX, Maximize2, Download, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { trackVideoDownload } from '@/lib/mediaTransfers';
 
 interface CentralizedVideoPlayerProps {
   src: string;
