@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -46,6 +47,8 @@ export default function HelpVideosModule() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadPercent, setUploadPercent] = useState(0);
+  const [uploadFileName, setUploadFileName] = useState('');
 
   const canManage = isCEO || isAdmin || isGeneralManager;
   const rolesLoading = ceoLoading || adminLoading || gmLoading;
@@ -92,7 +95,9 @@ export default function HelpVideosModule() {
   const handleUpload = async (file: File) => {
     try {
       setUploading(true);
-      const result = await uploadVideoFile(file);
+      setUploadPercent(0);
+      setUploadFileName(file.name);
+      const result = await uploadVideoFile(file, (p) => setUploadPercent(p));
       setForm((f) => ({ ...f, storage_path: result.storage_path, video_url: result.video_url }));
       toast({ title: 'ویدیو بارگذاری شد', description: 'حالا عنوان و محل نمایش را ثبت کنید.' });
     } catch (err: any) {
@@ -337,8 +342,22 @@ export default function HelpVideosModule() {
                   {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                   بارگذاری فیلم ضبط‌شده
                 </Button>
-                {form.storage_path && <span className="text-xs text-green-600">فایل آماده است</span>}
+                {form.storage_path && !uploading && (
+                  <span className="text-xs text-green-600">فایل آماده است</span>
+                )}
               </div>
+
+              {uploading && (
+                <div className="space-y-1 rounded-lg border border-border p-2.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="truncate text-muted-foreground">
+                      در حال بارگذاری {uploadFileName}
+                    </span>
+                    <span className="font-semibold text-primary shrink-0">{uploadPercent}%</span>
+                  </div>
+                  <Progress value={uploadPercent} className="h-2" />
+                </div>
+              )}
               <Input
                 value={form.video_url}
                 onChange={(e) => setForm((f) => ({ ...f, video_url: e.target.value, storage_path: null }))}

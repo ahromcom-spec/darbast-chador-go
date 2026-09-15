@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { compressImages } from '@/lib/imageOptimizer';
+import { startTransfer } from '@/lib/mediaTransfers';
 
 
 interface UploadProgress {
@@ -123,6 +124,8 @@ export function useFileUpload({ bucket, onComplete }: UseFileUploadOptions) {
       const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
 
+      const tracker = startTransfer('upload', file.name, file.size);
+
       try {
         // آپلود با پیشرفت واقعی
         const result = await new Promise<UploadResult>((resolve) => {
@@ -144,6 +147,7 @@ export function useFileUpload({ bucket, onComplete }: UseFileUploadOptions) {
                   total: totalSize,
                   percentage: Math.min(percentage, 99) // تا 99% نگه دار تا کامل شود
                 });
+                tracker.update(event.loaded, event.total);
               }
             });
 
@@ -193,12 +197,14 @@ export function useFileUpload({ bucket, onComplete }: UseFileUploadOptions) {
             });
 
           if (dbError) throw dbError;
+          tracker.finish();
           successCount++;
         } else {
           throw new Error(result.error);
         }
       } catch (err: any) {
         console.error('Error uploading file:', file.name, err);
+        tracker.fail(err?.message);
         errorCount++;
         // نمایش پیام خطای واقعی برای فایل اول
         if (errorCount === 1) {

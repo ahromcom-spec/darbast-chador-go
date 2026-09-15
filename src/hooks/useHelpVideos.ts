@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { uploadToStorageWithProgress } from '@/lib/mediaTransfers';
 
 export interface HelpVideo {
   id: string;
@@ -157,16 +158,23 @@ export const useHelpVideosAdmin = () => {
     [fetchVideos]
   );
 
-  const uploadVideoFile = useCallback(async (file: File) => {
-    const ext = file.name.split('.').pop() || 'mp4';
-    const path = `guides/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error } = await supabase.storage
-      .from(HELP_BUCKET)
-      .upload(path, file, { contentType: file.type || 'video/mp4', upsert: false });
-    if (error) throw error;
-    const { data } = await supabase.storage.from(HELP_BUCKET).createSignedUrl(path, 60 * 60 * 6);
-    return { storage_path: path, video_url: data?.signedUrl || '' };
-  }, []);
+  const uploadVideoFile = useCallback(
+    async (file: File, onProgress?: (percentage: number) => void) => {
+      const ext = file.name.split('.').pop() || 'mp4';
+      const path = `guides/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      await uploadToStorageWithProgress({
+        bucket: HELP_BUCKET,
+        path,
+        file,
+        label: `فیلم راهنما: ${file.name}`,
+        contentType: file.type || 'video/mp4',
+        onProgress: (percentage) => onProgress?.(percentage),
+      });
+      const { data } = await supabase.storage.from(HELP_BUCKET).createSignedUrl(path, 60 * 60 * 6);
+      return { storage_path: path, video_url: data?.signedUrl || '' };
+    },
+    []
+  );
 
   return { videos, loading, fetchVideos, saveVideo, toggleActive, deleteVideo, uploadVideoFile };
 };

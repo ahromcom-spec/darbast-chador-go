@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { buildMediaFingerprint, findDuplicateProjectMedia } from '@/lib/mediaFingerprint';
+import { uploadToStorageWithProgress } from '@/lib/mediaTransfers';
 
 const MEDIA_BUCKET = 'project-media';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -310,16 +311,18 @@ export function OrderRowMediaUpload({
         const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}_${safeName}`;
         const storagePath = `${user.id}/${fileName}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from(MEDIA_BUCKET)
-          .upload(storagePath, file, { 
+        try {
+          await uploadToStorageWithProgress({
+            bucket: MEDIA_BUCKET,
+            path: storagePath,
+            file,
+            label: file.name,
             upsert: true,
             contentType: file.type || (type === 'video' ? 'video/mp4' : 'image/jpeg'),
           });
-
-        if (uploadError) {
+        } catch (uploadError: any) {
           console.error('Upload error:', uploadError, 'MIME:', file.type, 'Size:', file.size);
-          toast({ title: `خطا در آپلود: ${uploadError.message}`, variant: 'destructive' });
+          toast({ title: `خطا در آپلود: ${uploadError?.message || ''}`, variant: 'destructive' });
           continue;
         }
 

@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Play, Pause, Volume2, VolumeX, Maximize2, Download, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { trackVideoDownload } from '@/lib/mediaTransfers';
 
 interface CentralizedVideoPlayerProps {
   src: string;
@@ -40,6 +41,14 @@ export const CentralizedVideoPlayer = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+
+  // نمایش لحظه‌ای میزان دریافت (دانلود) ویدیو در پنل انتقال فایل‌ها
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || !src) return;
+    return trackVideoDownload(el, 'دریافت ویدیو');
+  }, [src]);
+  
   
   // Fetch signed URL if filePath is provided
   useEffect(() => {
