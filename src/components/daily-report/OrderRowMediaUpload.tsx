@@ -310,16 +310,18 @@ export function OrderRowMediaUpload({
         const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}_${safeName}`;
         const storagePath = `${user.id}/${fileName}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from(MEDIA_BUCKET)
-          .upload(storagePath, file, { 
+        try {
+          await uploadToStorageWithProgress({
+            bucket: MEDIA_BUCKET,
+            path: storagePath,
+            file,
+            label: file.name,
             upsert: true,
             contentType: file.type || (type === 'video' ? 'video/mp4' : 'image/jpeg'),
           });
-
-        if (uploadError) {
+        } catch (uploadError: any) {
           console.error('Upload error:', uploadError, 'MIME:', file.type, 'Size:', file.size);
-          toast({ title: `خطا در آپلود: ${uploadError.message}`, variant: 'destructive' });
+          toast({ title: `خطا در آپلود: ${uploadError?.message || ''}`, variant: 'destructive' });
           continue;
         }
 
