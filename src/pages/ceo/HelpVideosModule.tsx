@@ -46,6 +46,8 @@ export default function HelpVideosModule() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadPercent, setUploadPercent] = useState(0);
+  const [uploadFileName, setUploadFileName] = useState('');
 
   const canManage = isCEO || isAdmin || isGeneralManager;
   const rolesLoading = ceoLoading || adminLoading || gmLoading;
@@ -92,7 +94,9 @@ export default function HelpVideosModule() {
   const handleUpload = async (file: File) => {
     try {
       setUploading(true);
-      const result = await uploadVideoFile(file);
+      setUploadPercent(0);
+      setUploadFileName(file.name);
+      const result = await uploadVideoFile(file, (p) => setUploadPercent(p));
       setForm((f) => ({ ...f, storage_path: result.storage_path, video_url: result.video_url }));
       toast({ title: 'ویدیو بارگذاری شد', description: 'حالا عنوان و محل نمایش را ثبت کنید.' });
     } catch (err: any) {
