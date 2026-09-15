@@ -429,9 +429,13 @@ export function OrderForOthersInfo({ orderId, onStatusChange }: OrderForOthersIn
         {isAccepted && (
           <Alert className="border-green-300 bg-green-50 dark:bg-green-950/20">
             <Check className="h-4 w-4 text-green-600" />
-            <AlertTitle className="text-green-700">سفارش پذیرفته شده</AlertTitle>
+            <AlertTitle className="text-green-700">
+              {isSender ? 'سفارش منتقل شد' : 'این سفارش به شما منتقل شده است'}
+            </AlertTitle>
             <AlertDescription className="text-green-600">
-              هر دو کاربر به این سفارش دسترسی دارند. ثبت‌کننده ({data.from_name}) تا پایان سفارش به عنوان مرجع باقی می‌ماند.
+              {isSender
+                ? `این سفارش به ${data.to_name || data.to_phone} منتقل شد و دیگر در دسترس شما نیست.`
+                : `این سفارش از طرف ${data.from_name}${data.from_phone ? ` (${data.from_phone})` : ''} به شما منتقل شده است و اکنون به‌طور کامل در اختیار شماست.`}
             </AlertDescription>
           </Alert>
         )}
