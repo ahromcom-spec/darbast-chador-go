@@ -125,6 +125,14 @@ const AVAILABLE_MODULES: Module[] = [
     bgColor: 'bg-pink-50',
   },
   {
+    key: 'help_videos',
+    name: 'ماژول فیلم‌های آموزشی سایت',
+    description: 'آپلود و اتصال فیلم‌های راهنما به هر بخش سایت (صفحه نخست، پروفایل، فرم‌ها و...)',
+    href: '/help-videos',
+    color: 'text-violet-600',
+    bgColor: 'bg-violet-50',
+  },
+  {
     key: 'bank_cards',
     name: 'ماژول ثبت کارت حساب بانکی',
     description: 'مدیریت کارت‌های بانکی و پیگیری موجودی',

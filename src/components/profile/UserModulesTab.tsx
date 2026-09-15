@@ -212,6 +212,15 @@ const MODULE_DETAILS: Record<string, ModuleInfo> = {
     bgColor: 'bg-orange-50',
     icon: 'users',
   },
+  help_videos: {
+    key: 'help_videos',
+    name: 'ماژول فیلم‌های آموزشی سایت',
+    description: 'آپلود و اتصال فیلم‌های راهنما به هر بخش سایت (صفحه نخست، پروفایل، فرم‌ها و...)',
+    href: '/help-videos',
+    color: 'text-violet-600',
+    bgColor: 'bg-violet-50',
+    icon: 'video',
+  },
 };
 
 function buildModuleUrl(href: string, moduleKey: string) {
@@ -395,6 +404,7 @@ export function UserModulesTab() {
     if (name.includes('صورتحساب جامع مشتری')) return 'customer_comprehensive_invoice';
     if (name.includes('آمار') || name.includes('بازدید')) return 'site_analytics';
     if (name.includes('رسانه')) return 'media_approval';
+    if (name.includes('فیلم') && (name.includes('آموزش') || name.includes('راهنما'))) return 'help_videos';
     if (name.includes('سفارشات') || name.includes('داربست') || name.includes('اجرایی')) return 'scaffold_execution_with_materials';
 
     return assignment.module_key;
