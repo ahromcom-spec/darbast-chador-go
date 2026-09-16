@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import { useServiceTypesWithSubcategories, Subcategory } from '@/hooks/useServiceTypesWithSubcategories';
 import { Layers, Loader2, ChevronDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ServiceTypeSelectionDialogProps {
@@ -104,14 +103,21 @@ export function ServiceTypeSelectionDialog({
   const navigateToForm = useCallback((leaf: Subcategory) => {
     if (isNavigating) return;
     setIsNavigating(true);
-    const formRoute = leaf.form_path || SUBCATEGORY_FORM_ROUTES[leaf.code || ''] || '/user/select-service';
+    const serviceType = serviceTypes.find(st => st.id === selectedServiceType);
+    // فقط برای «داربست فلزی» (کد ۱۰) از نقشه فرم‌های قدیمی استفاده می‌شود
+    const legacyRoute = serviceType?.code === '10'
+      ? SUBCATEGORY_FORM_ROUTES[leaf.code || '']
+      : undefined;
+    const formRoute = leaf.form_path || legacyRoute || '/form-not-available';
     onOpenChange(false);
     navigate(formRoute, {
       state: {
         fromMap: true,
         locationId,
         serviceTypeId: selectedServiceType,
+        serviceName: serviceType?.name || '',
         subcategoryId: leaf.id,
+        subcategoryName: leaf.name,
         subcategoryCode: leaf.code || '',
         returnToMap: true,
         locationAddress: locationInfo?.address_line || '',
@@ -123,7 +129,7 @@ export function ServiceTypeSelectionDialog({
         districtName: locationInfo?.districts?.name || '',
       },
     });
-  }, [isNavigating, navigate, onOpenChange, locationId, selectedServiceType, locationInfo]);
+  }, [isNavigating, navigate, onOpenChange, locationId, selectedServiceType, serviceTypes, locationInfo]);
 
 
   const handleSelectServiceType = useCallback((typeId: string) => {
@@ -148,7 +154,7 @@ export function ServiceTypeSelectionDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-md max-h-[90vh] overflow-visible"
+        className="w-[calc(100vw-2rem)] sm:max-w-md max-h-[85vh] overflow-y-auto overflow-x-hidden"
         dir="rtl"
         style={{ zIndex: 200001 }}
         onPointerDownOutside={(e) => e.preventDefault()}
@@ -173,19 +179,19 @@ export function ServiceTypeSelectionDialog({
                 onClick={() => { setTypeOpen(!typeOpen); setOpenLevel(null); }}
                 disabled={loading}
                 className={cn(
-                  "flex h-10 w-full items-center justify-between rounded-md border-2 border-input bg-background px-3 py-2 text-sm text-foreground",
+                  "flex min-h-10 w-full items-center justify-between gap-2 rounded-md border-2 border-input bg-background px-3 py-2 text-sm text-foreground text-right",
                   "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
                   "disabled:cursor-not-allowed disabled:opacity-50 shadow-sm hover:border-primary/50"
                 )}
               >
-                <span className={cn(!selectedServiceTypeData && "text-muted-foreground")}>
+                <span className={cn("flex-1 leading-tight whitespace-normal break-words", !selectedServiceTypeData && "text-muted-foreground")}>
                   {loading ? 'در حال بارگذاری...' : (selectedServiceTypeData?.name || 'انتخاب نوع خدمات')}
                 </span>
-                <ChevronDown className={cn("h-4 w-4 opacity-50 transition-transform", typeOpen && "rotate-180")} />
+                <ChevronDown className={cn("h-4 w-4 shrink-0 opacity-50 transition-transform", typeOpen && "rotate-180")} />
               </button>
               {typeOpen && (
-                <div className="absolute top-full right-0 left-0 mt-1 bg-popover border rounded-md shadow-lg overflow-hidden" style={{ zIndex: 300001 }}>
-                  <ScrollArea className="max-h-80">
+                <div className="mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  <div>
                     <div className="p-1">
                       {serviceTypes.map((type) => (
                         <button
@@ -198,12 +204,12 @@ export function ServiceTypeSelectionDialog({
                             selectedServiceType === type.id && "bg-accent text-accent-foreground"
                           )}
                         >
-                          {selectedServiceType === type.id && (<Check className="h-3 w-3 ml-1.5 text-primary" />)}
-                          <span className="text-right flex-1 leading-tight">{type.name}</span>
+                          {selectedServiceType === type.id && (<Check className="h-3 w-3 ml-1.5 text-primary shrink-0" />)}
+                          <span className="text-right flex-1 leading-tight whitespace-normal break-words">{type.name}</span>
                         </button>
                       ))}
                     </div>
-                  </ScrollArea>
+                  </div>
                 </div>
               )}
             </div>
@@ -228,19 +234,19 @@ export function ServiceTypeSelectionDialog({
                     }}
                     disabled={list.length === 0}
                     className={cn(
-                      "flex h-10 w-full items-center justify-between rounded-md border-2 border-input bg-background px-3 py-2 text-sm text-foreground",
+                      "flex min-h-10 w-full items-center justify-between gap-2 rounded-md border-2 border-input bg-background px-3 py-2 text-sm text-foreground text-right",
                       "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
                       "disabled:cursor-not-allowed disabled:opacity-50 shadow-sm hover:border-primary/50"
                     )}
                   >
-                    <span className={cn(!currentNode && "text-muted-foreground")}>
+                    <span className={cn("flex-1 leading-tight whitespace-normal break-words", !currentNode && "text-muted-foreground")}>
                       {list.length === 0 ? 'موجود نیست' : (currentNode?.name || 'انتخاب کنید')}
                     </span>
-                    <ChevronDown className={cn("h-4 w-4 opacity-50 transition-transform", openLevel === idx && "rotate-180")} />
+                    <ChevronDown className={cn("h-4 w-4 shrink-0 opacity-50 transition-transform", openLevel === idx && "rotate-180")} />
                   </button>
                   {openLevel === idx && list.length > 0 && (
-                    <div className="absolute top-full right-0 left-0 mt-1 bg-popover border rounded-md shadow-lg overflow-hidden" style={{ zIndex: 300001 }}>
-                      <ScrollArea className="max-h-80">
+                    <div className="mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      <div>
                         <div className="p-1">
                           {list.map((sub) => (
                             <button
@@ -253,12 +259,12 @@ export function ServiceTypeSelectionDialog({
                                 currentId === sub.id && "bg-accent text-accent-foreground"
                               )}
                             >
-                              {currentId === sub.id && (<Check className="h-3 w-3 ml-1.5 text-primary" />)}
-                              <span className="text-right flex-1 leading-tight">{sub.name}</span>
+                              {currentId === sub.id && (<Check className="h-3 w-3 ml-1.5 text-primary shrink-0" />)}
+                              <span className="text-right flex-1 leading-tight whitespace-normal break-words">{sub.name}</span>
                             </button>
                           ))}
                         </div>
-                      </ScrollArea>
+                      </div>
                     </div>
                   )}
                 </div>
