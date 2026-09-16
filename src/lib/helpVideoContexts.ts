@@ -44,8 +44,25 @@ export const HELP_VIDEO_GROUPS = Array.from(
   new Set(HELP_VIDEO_CONTEXTS.map((c) => c.group))
 );
 
-export const getContextLabel = (key: string) =>
-  HELP_VIDEO_CONTEXTS.find((c) => c.key === key)?.label || key;
+/** کلید راهنمای شناور (محل آزاد روی صفحه) */
+export const isFreeContextKey = (key: string) => key.startsWith('free:');
+
+export const freeContextRoute = (key: string) =>
+  isFreeContextKey(key) ? key.slice('free:'.length).split('#')[0] : '';
+
+export const makeFreeContextKey = (route: string) =>
+  `free:${route}#${Date.now().toString(36)}`;
+
+export const getContextLabel = (key: string) => {
+  const found = HELP_VIDEO_CONTEXTS.find((c) => c.key === key)?.label;
+  if (found) return found;
+  if (isFreeContextKey(key)) {
+    const route = freeContextRoute(key);
+    const page = HELP_VIDEO_PAGES.find((p) => p.route === route);
+    return `محل آزاد در ${page?.title || route}`;
+  }
+  return key;
+};
 
 export const getContext = (key: string) =>
   HELP_VIDEO_CONTEXTS.find((c) => c.key === key);
