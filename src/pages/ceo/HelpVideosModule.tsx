@@ -35,6 +35,9 @@ const emptyForm = {
   pos_x: null as number | null,
   pos_y: null as number | null,
   box_size: 56,
+  pos_x_mobile: null as number | null,
+  pos_y_mobile: null as number | null,
+  box_size_mobile: null as number | null,
 };
 
 export default function HelpVideosModule() {
