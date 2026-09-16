@@ -155,7 +155,7 @@ export function ServiceTypeSelectionDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-md max-h-[90vh] overflow-visible"
+        className="w-[calc(100vw-2rem)] sm:max-w-md max-h-[85vh] overflow-y-auto overflow-x-hidden"
         dir="rtl"
         style={{ zIndex: 200001 }}
         onPointerDownOutside={(e) => e.preventDefault()}
