@@ -1825,6 +1825,7 @@ export type Database = {
       help_videos: {
         Row: {
           box_size: number
+          box_size_mobile: number | null
           context_key: string
           created_at: string
           created_by: string | null
@@ -1834,7 +1835,9 @@ export type Database = {
           page_route: string | null
           placement: string
           pos_x: number | null
+          pos_x_mobile: number | null
           pos_y: number | null
+          pos_y_mobile: number | null
           poster_url: string | null
           sort_order: number
           storage_path: string | null
@@ -1844,6 +1847,7 @@ export type Database = {
         }
         Insert: {
           box_size?: number
+          box_size_mobile?: number | null
           context_key: string
           created_at?: string
           created_by?: string | null
@@ -1853,7 +1857,9 @@ export type Database = {
           page_route?: string | null
           placement?: string
           pos_x?: number | null
+          pos_x_mobile?: number | null
           pos_y?: number | null
+          pos_y_mobile?: number | null
           poster_url?: string | null
           sort_order?: number
           storage_path?: string | null
@@ -1863,6 +1869,7 @@ export type Database = {
         }
         Update: {
           box_size?: number
+          box_size_mobile?: number | null
           context_key?: string
           created_at?: string
           created_by?: string | null
@@ -1872,7 +1879,9 @@ export type Database = {
           page_route?: string | null
           placement?: string
           pos_x?: number | null
+          pos_x_mobile?: number | null
           pos_y?: number | null
+          pos_y_mobile?: number | null
           poster_url?: string | null
           sort_order?: number
           storage_path?: string | null
