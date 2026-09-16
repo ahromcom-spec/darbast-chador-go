@@ -104,14 +104,21 @@ export function ServiceTypeSelectionDialog({
   const navigateToForm = useCallback((leaf: Subcategory) => {
     if (isNavigating) return;
     setIsNavigating(true);
-    const formRoute = leaf.form_path || SUBCATEGORY_FORM_ROUTES[leaf.code || ''] || '/user/select-service';
+    const serviceType = serviceTypes.find(st => st.id === selectedServiceType);
+    // فقط برای «داربست فلزی» (کد ۱۰) از نقشه فرم‌های قدیمی استفاده می‌شود
+    const legacyRoute = serviceType?.code === '10'
+      ? SUBCATEGORY_FORM_ROUTES[leaf.code || '']
+      : undefined;
+    const formRoute = leaf.form_path || legacyRoute || '/form-not-available';
     onOpenChange(false);
     navigate(formRoute, {
       state: {
         fromMap: true,
         locationId,
         serviceTypeId: selectedServiceType,
+        serviceName: serviceType?.name || '',
         subcategoryId: leaf.id,
+        subcategoryName: leaf.name,
         subcategoryCode: leaf.code || '',
         returnToMap: true,
         locationAddress: locationInfo?.address_line || '',
