@@ -58,12 +58,32 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
     isMobile,
   ]);
 
+  /** اندازه کل صفحه (نه فقط پنجره) تا کادر به خودِ صفحه بچسبد و با اسکرول حرکت کند */
+  const [docSize, setDocSize] = useState({ w: 1, h: 1 });
+  useEffect(() => {
+    const measure = () =>
+      setDocSize({
+        w: Math.max(document.documentElement.scrollWidth, window.innerWidth),
+        h: Math.max(document.documentElement.scrollHeight, window.innerHeight),
+      });
+    measure();
+    window.addEventListener('resize', measure);
+    const t = window.setInterval(measure, 1000);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.clearInterval(t);
+    };
+  }, []);
+
   const applyPointer = useCallback((clientX: number, clientY: number) => {
+    const w = Math.max(document.documentElement.scrollWidth, window.innerWidth);
+    const h = Math.max(document.documentElement.scrollHeight, window.innerHeight);
     setPos({
-      x: clamp((clientX / window.innerWidth) * 100),
-      y: clamp((clientY / window.innerHeight) * 100),
+      x: clamp(((clientX + window.scrollX) / w) * 100),
+      y: clamp(((clientY + window.scrollY) / h) * 100),
     });
   }, []);
+
 
   useEffect(() => {
     if (!editing) return;
