@@ -84,6 +84,7 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
         }}
       >
         <div className="relative flex flex-col items-center gap-1">
+          {/* آیکون تلویزیونی با قاب قرمز: حس پخش فیلم مهم */}
           <button
             type="button"
             title={video.title}
@@ -99,12 +100,28 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
               setOpen(true);
             }}
             className={cn(
-              'flex items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105',
-              editing && 'cursor-move ring-4 ring-primary/30 animate-pulse'
+              'flex items-center justify-center rounded-lg bg-transparent shadow-[0_0_18px_rgba(220,38,38,0.55)] transition-transform hover:scale-105',
+              editing && 'cursor-move ring-4 ring-red-500/50 animate-pulse'
             )}
-            style={{ width: size, height: size }}
+            style={{ width: size, height: Math.round(size * 0.85) }}
           >
-            {editing ? <Move className="h-1/2 w-1/2" /> : <PlayCircle className="h-1/2 w-1/2" />}
+            {editing ? (
+              <Move className="h-1/2 w-1/2 text-red-600" />
+            ) : (
+              <svg viewBox="0 0 64 56" className="h-full w-full" fill="none" aria-hidden="true">
+                {/* آنتن تلویزیون */}
+                <path d="M24 14 L13 3" stroke="#dc2626" strokeWidth="4" strokeLinecap="round" />
+                <path d="M40 14 L51 3" stroke="#dc2626" strokeWidth="4" strokeLinecap="round" />
+                <path d="M24 14 L13 3" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" />
+                <path d="M40 14 L51 3" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" />
+                {/* قاب قرمز تلویزیون */}
+                <rect x="2" y="13" width="60" height="41" rx="8" fill="#0f172a" stroke="#dc2626" strokeWidth="5" />
+                {/* درخشش داخلی صفحه */}
+                <rect x="7" y="18" width="50" height="31" rx="5" fill="#1e293b" />
+                {/* مثلث پخش */}
+                <path d="M27 25 L43 33.5 L27 42 Z" fill="#ffffff" />
+              </svg>
+            )}
           </button>
 
           {!editing && (
