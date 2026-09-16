@@ -115,11 +115,81 @@ interface UploadOptions {
   onProgress?: (percentage: number, loaded: number, total: number) => void;
 }
 
+/** فایل‌های بزرگ‌تر از این حجم با آپلود قابل ادامه (resumable) فرستاده می‌شوند */
+const RESUMABLE_THRESHOLD = 40 * 1024 * 1024;
+
+/** آپلود قابل ادامه برای فایل‌های حجیم (چانک ۶ مگابایتی) */
+const uploadResumable = async ({
+  bucket,
+  path,
+  file,
+  label,
+  upsert = true,
+  contentType,
+  onProgress,
+}: UploadOptions): Promise<{ path: string }> => {
+  const [{ Upload }, { data: { session } }] = await Promise.all([
+    import('tus-js-client'),
+    supabase.auth.getSession(),
+  ]);
+
+  if (!session) throw new Error('Not authenticated');
+
+  const tracker = startTransfer('upload', label || file.name, file.size);
+  const baseUrl = import.meta.env.VITE_SUPABASE_URL;
+
+  return new Promise((resolve, reject) => {
+    const upload = new Upload(file, {
+      endpoint: `${baseUrl}/storage/v1/upload/resumable`,
+      retryDelays: [0, 2000, 5000, 10000, 20000],
+      chunkSize: 6 * 1024 * 1024,
+      removeFingerprintOnSuccess: true,
+      uploadDataDuringCreation: true,
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        'x-upsert': upsert ? 'true' : 'false',
+      },
+      metadata: {
+        bucketName: bucket,
+        objectName: path,
+        contentType: contentType || file.type || 'video/mp4',
+        cacheControl: '3600',
+      },
+      onProgress: (loaded, total) => {
+        tracker.update(loaded, total);
+        onProgress?.(Math.min(99, Math.round((loaded / total) * 100)), loaded, total);
+      },
+      onSuccess: () => {
+        tracker.finish();
+        onProgress?.(100, file.size, file.size);
+        resolve({ path });
+      },
+      onError: (error) => {
+        const msg = (error as Error)?.message || 'خطا در آپلود';
+        tracker.fail(msg);
+        reject(new Error(msg));
+      },
+    });
+
+    upload.findPreviousUploads().then((prev) => {
+      if (prev.length) upload.resumeFromPreviousUpload(prev[0]);
+      upload.start();
+    });
+  });
+};
+
 /**
  * Uploads a file to Supabase Storage with real-time progress reporting,
  * registering the transfer in the global progress panel.
  */
-export const uploadToStorageWithProgress = ({
+export const uploadToStorageWithProgress = (options: UploadOptions): Promise<{ path: string }> => {
+  if (options.file.size > RESUMABLE_THRESHOLD) {
+    return uploadResumable(options);
+  }
+  return uploadSingleRequest(options);
+};
+
+const uploadSingleRequest = ({
   bucket,
   path,
   file,
