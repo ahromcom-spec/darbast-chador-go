@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { Move, PlayCircle, Check, Minus, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   useFloatingHelpVideos,
   saveHelpVideoPlacement,
@@ -22,18 +24,39 @@ interface BubbleProps {
   canManage: boolean;
 }
 
+/** محل و اندازه ذخیره‌شده برای دستگاه فعلی (موبایل مقادیر خودش، در غیر این صورت مقادیر ویندوز) */
+const placementFor = (video: HelpVideo, isMobile: boolean) =>
+  isMobile
+    ? {
+        x: video.pos_x_mobile ?? video.pos_x ?? 90,
+        y: video.pos_y_mobile ?? video.pos_y ?? 80,
+        size: video.box_size_mobile ?? video.box_size ?? 56,
+      }
+    : { x: video.pos_x ?? 90, y: video.pos_y ?? 80, size: video.box_size || 56 };
+
 const HelpBubble = ({ video, canManage }: BubbleProps) => {
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [pos, setPos] = useState({ x: video.pos_x ?? 90, y: video.pos_y ?? 80 });
-  const [size, setSize] = useState(video.box_size || 56);
+  const initial = placementFor(video, isMobile);
+  const [pos, setPos] = useState({ x: initial.x, y: initial.y });
+  const [size, setSize] = useState(initial.size);
   const draggingRef = useRef(false);
   const movedRef = useRef(false);
 
   useEffect(() => {
-    setPos({ x: video.pos_x ?? 90, y: video.pos_y ?? 80 });
-    setSize(video.box_size || 56);
-  }, [video.pos_x, video.pos_y, video.box_size]);
+    const p = placementFor(video, isMobile);
+    setPos({ x: p.x, y: p.y });
+    setSize(p.size);
+  }, [
+    video.pos_x,
+    video.pos_y,
+    video.box_size,
+    video.pos_x_mobile,
+    video.pos_y_mobile,
+    video.box_size_mobile,
+    isMobile,
+  ]);
 
   const applyPointer = useCallback((clientX: number, clientY: number) => {
     setPos({
