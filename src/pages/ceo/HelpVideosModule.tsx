@@ -92,6 +92,9 @@ export default function HelpVideosModule() {
       pos_x: video.pos_x,
       pos_y: video.pos_y,
       box_size: video.box_size || 56,
+      pos_x_mobile: video.pos_x_mobile,
+      pos_y_mobile: video.pos_y_mobile,
+      box_size_mobile: video.box_size_mobile,
     });
     setDialogOpen(true);
   };
