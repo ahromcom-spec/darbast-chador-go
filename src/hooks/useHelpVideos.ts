@@ -18,6 +18,10 @@ export interface HelpVideo {
   pos_x: number | null;
   pos_y: number | null;
   box_size: number;
+  /** محل و اندازه مخصوص گوشی موبایل (اگر خالی باشد از مقادیر ویندوز استفاده می‌شود) */
+  pos_x_mobile: number | null;
+  pos_y_mobile: number | null;
+  box_size_mobile: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -35,6 +39,9 @@ export interface HelpVideoInput {
   pos_x?: number | null;
   pos_y?: number | null;
   box_size?: number;
+  pos_x_mobile?: number | null;
+  pos_y_mobile?: number | null;
+  box_size_mobile?: number | null;
 }
 
 const HELP_BUCKET = 'help-videos';
