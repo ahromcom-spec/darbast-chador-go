@@ -226,6 +226,9 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
       </Dialog>
     </>
   );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(bubble, document.body);
 };
 
 /**
