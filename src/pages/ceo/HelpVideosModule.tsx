@@ -11,9 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
+import { HelpContextPicker } from '@/components/help/HelpContextPicker';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -22,7 +20,7 @@ import { useCEORole } from '@/hooks/useCEORole';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { useGeneralManagerRole } from '@/hooks/useGeneralManagerRole';
 import { useHelpVideosAdmin, type HelpVideo } from '@/hooks/useHelpVideos';
-import { HELP_VIDEO_CONTEXTS, getContextLabel } from '@/lib/helpVideoContexts';
+import { getContextLabel } from '@/lib/helpVideoContexts';
 import { ContextualVideoHelp } from '@/components/help/ContextualVideoHelp';
 
 const emptyForm = {
@@ -65,13 +63,6 @@ export default function HelpVideosModule() {
     );
   }, [videos, search]);
 
-  const groupedContexts = useMemo(() => {
-    const map = new Map<string, typeof HELP_VIDEO_CONTEXTS>();
-    HELP_VIDEO_CONTEXTS.forEach((c) => {
-      map.set(c.group, [...(map.get(c.group) || []), c]);
-    });
-    return Array.from(map.entries());
-  }, []);
 
   const openNew = () => {
     setEditing(null);
@@ -279,24 +270,10 @@ export default function HelpVideosModule() {
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label>محل نمایش راهنما</Label>
-              <Select
+              <HelpContextPicker
                 value={form.context_key}
-                onValueChange={(v) => setForm((f) => ({ ...f, context_key: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="یک بخش از سایت را انتخاب کنید" />
-                </SelectTrigger>
-                <SelectContent className="max-h-72">
-                  {groupedContexts.map(([group, items]) => (
-                    <div key={group}>
-                      <div className="px-2 py-1 text-[11px] text-muted-foreground">{group}</div>
-                      {items.map((c) => (
-                        <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>
-                      ))}
-                    </div>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(v) => setForm((f) => ({ ...f, context_key: v }))}
+              />
             </div>
 
             <div className="space-y-1.5">
