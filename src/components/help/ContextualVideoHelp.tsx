@@ -17,7 +17,7 @@ interface ContextualVideoHelpProps {
   className?: string;
 }
 
-const VideoBody = ({ video }: { video: HelpVideo }) => {
+export const VideoBody = ({ video }: { video: HelpVideo }) => {
   const [url, setUrl] = useState<string | null>(null);
   const [buffered, setBuffered] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
