@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import { useServiceTypesWithSubcategories, Subcategory } from '@/hooks/useServiceTypesWithSubcategories';
 import { Layers, Loader2, ChevronDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ServiceTypeSelectionDialogProps {
@@ -180,15 +179,15 @@ export function ServiceTypeSelectionDialog({
                 onClick={() => { setTypeOpen(!typeOpen); setOpenLevel(null); }}
                 disabled={loading}
                 className={cn(
-                  "flex h-10 w-full items-center justify-between rounded-md border-2 border-input bg-background px-3 py-2 text-sm text-foreground",
+                  "flex min-h-10 w-full items-center justify-between gap-2 rounded-md border-2 border-input bg-background px-3 py-2 text-sm text-foreground text-right",
                   "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
                   "disabled:cursor-not-allowed disabled:opacity-50 shadow-sm hover:border-primary/50"
                 )}
               >
-                <span className={cn(!selectedServiceTypeData && "text-muted-foreground")}>
+                <span className={cn("flex-1 leading-tight whitespace-normal break-words", !selectedServiceTypeData && "text-muted-foreground")}>
                   {loading ? 'در حال بارگذاری...' : (selectedServiceTypeData?.name || 'انتخاب نوع خدمات')}
                 </span>
-                <ChevronDown className={cn("h-4 w-4 opacity-50 transition-transform", typeOpen && "rotate-180")} />
+                <ChevronDown className={cn("h-4 w-4 shrink-0 opacity-50 transition-transform", typeOpen && "rotate-180")} />
               </button>
               {typeOpen && (
                 <div className="mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
@@ -235,15 +234,15 @@ export function ServiceTypeSelectionDialog({
                     }}
                     disabled={list.length === 0}
                     className={cn(
-                      "flex h-10 w-full items-center justify-between rounded-md border-2 border-input bg-background px-3 py-2 text-sm text-foreground",
+                      "flex min-h-10 w-full items-center justify-between gap-2 rounded-md border-2 border-input bg-background px-3 py-2 text-sm text-foreground text-right",
                       "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
                       "disabled:cursor-not-allowed disabled:opacity-50 shadow-sm hover:border-primary/50"
                     )}
                   >
-                    <span className={cn(!currentNode && "text-muted-foreground")}>
+                    <span className={cn("flex-1 leading-tight whitespace-normal break-words", !currentNode && "text-muted-foreground")}>
                       {list.length === 0 ? 'موجود نیست' : (currentNode?.name || 'انتخاب کنید')}
                     </span>
-                    <ChevronDown className={cn("h-4 w-4 opacity-50 transition-transform", openLevel === idx && "rotate-180")} />
+                    <ChevronDown className={cn("h-4 w-4 shrink-0 opacity-50 transition-transform", openLevel === idx && "rotate-180")} />
                   </button>
                   {openLevel === idx && list.length > 0 && (
                     <div className="mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
