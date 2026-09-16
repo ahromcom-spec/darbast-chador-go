@@ -260,12 +260,12 @@ export function ServiceTypeSelectionDialog({
                                 currentId === sub.id && "bg-accent text-accent-foreground"
                               )}
                             >
-                              {currentId === sub.id && (<Check className="h-3 w-3 ml-1.5 text-primary" />)}
-                              <span className="text-right flex-1 leading-tight">{sub.name}</span>
+                              {currentId === sub.id && (<Check className="h-3 w-3 ml-1.5 text-primary shrink-0" />)}
+                              <span className="text-right flex-1 leading-tight whitespace-normal break-words">{sub.name}</span>
                             </button>
                           ))}
                         </div>
-                      </ScrollArea>
+                      </div>
                     </div>
                   )}
                 </div>
