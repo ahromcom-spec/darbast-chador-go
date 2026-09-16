@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Crosshair, ExternalLink, Hand, Loader2, MonitorPlay, Move, Minus, Plus, RefreshCw, Search } from 'lucide-react';
+import {
+  Check, Crosshair, ExternalLink, Hand, Loader2, MonitorPlay, Monitor, Smartphone, Move, Minus, Plus, RefreshCw, Search,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +23,10 @@ export interface HelpPlacement {
   pos_x: number | null;
   pos_y: number | null;
   box_size: number;
+  /** محل و اندازه مخصوص گوشی موبایل */
+  pos_x_mobile: number | null;
+  pos_y_mobile: number | null;
+  box_size_mobile: number | null;
 }
 
 interface HelpContextPickerProps {
@@ -30,10 +36,13 @@ interface HelpContextPickerProps {
   onPlacementChange?: (placement: HelpPlacement) => void;
 }
 
+type Device = 'desktop' | 'mobile';
+
 /**
  * انتخاب تصویری محل نمایش راهنما:
  * ابتدا صفحه انتخاب می‌شود، شمایل واقعی همان صفحه در یک کادر پیش‌نمایش نشان داده می‌شود،
  * و سپس با علامت زدن محل مورد نظر، فیلم راهنما به همان قسمت متصل می‌شود.
+ * محل نمایش برای ویندوز و گوشی موبایل جداگانه تعیین می‌شود.
  */
 export const HelpContextPicker = ({
   value,
@@ -45,6 +54,7 @@ export const HelpContextPicker = ({
   const [reloadKey, setReloadKey] = useState(0);
   const [frameLoading, setFrameLoading] = useState(true);
   const [marking, setMarking] = useState(true);
+  const [device, setDevice] = useState<Device>('desktop');
   const frameRef = useRef<HTMLIFrameElement | null>(null);
 
   const initialPage = useMemo(() => {
@@ -57,11 +67,16 @@ export const HelpContextPicker = ({
   }, [value]);
 
   const isFree = placement?.placement === 'floating';
-  const freePos = {
-    x: placement?.pos_x ?? 85,
-    y: placement?.pos_y ?? 80,
-  };
-  const freeSize = placement?.box_size ?? 56;
+  const isMobileDevice = device === 'mobile';
+
+  const freePos =
+    isMobileDevice
+      ? { x: placement?.pos_x_mobile ?? placement?.pos_x ?? 85, y: placement?.pos_y_mobile ?? placement?.pos_y ?? 80 }
+      : { x: placement?.pos_x ?? 85, y: placement?.pos_y ?? 80 };
+  const freeSize = isMobileDevice
+    ? placement?.box_size_mobile ?? placement?.box_size ?? 56
+    : placement?.box_size ?? 56;
+
   const previewBoxRef = useRef<HTMLDivElement | null>(null);
   const draggingRef = useRef(false);
 
@@ -87,27 +102,46 @@ export const HelpContextPicker = ({
     ? `${activePage.route}${activePage.route.includes('?') ? '&' : '?'}helpPreview=1`
     : '';
 
+  /** ساخت مقدار جدید با حفظ تنظیمات دستگاه دیگر */
+  const emit = (next: Partial<HelpPlacement>) => {
+    onPlacementChange?.({
+      placement: placement?.placement ?? 'anchor',
+      page_route: placement?.page_route ?? null,
+      pos_x: placement?.pos_x ?? null,
+      pos_y: placement?.pos_y ?? null,
+      box_size: placement?.box_size ?? 56,
+      pos_x_mobile: placement?.pos_x_mobile ?? null,
+      pos_y_mobile: placement?.pos_y_mobile ?? null,
+      box_size_mobile: placement?.box_size_mobile ?? null,
+      ...next,
+    });
+  };
+
   const selectSpot = (spot: HelpVideoContext) => {
     onChange(spot.key);
-    onPlacementChange?.({
-      placement: 'anchor',
-      page_route: activePage?.route ?? null,
-      pos_x: null,
-      pos_y: null,
-      box_size: freeSize,
-    });
+    emit({ placement: 'anchor', page_route: activePage?.route ?? null, pos_x: null, pos_y: null });
   };
 
   const enableFreeMode = () => {
     if (!activePage) return;
     if (!isFreeContextKey(value)) onChange(makeFreeContextKey(activePage.route));
-    onPlacementChange?.({
-      placement: 'floating',
-      page_route: activePage.route,
-      pos_x: freePos.x,
-      pos_y: freePos.y,
-      box_size: freeSize,
-    });
+    emit(
+      isMobileDevice
+        ? {
+            placement: 'floating',
+            page_route: activePage.route,
+            pos_x_mobile: freePos.x,
+            pos_y_mobile: freePos.y,
+            box_size_mobile: freeSize,
+          }
+        : {
+            placement: 'floating',
+            page_route: activePage.route,
+            pos_x: freePos.x,
+            pos_y: freePos.y,
+            box_size: freeSize,
+          }
+    );
   };
 
   const setFreePoint = (clientX: number, clientY: number) => {
@@ -116,25 +150,22 @@ export const HelpContextPicker = ({
     const rect = box.getBoundingClientRect();
     const x = Math.min(97, Math.max(0.5, ((clientX - rect.left) / rect.width) * 100));
     const y = Math.min(97, Math.max(0.5, ((clientY - rect.top) / rect.height) * 100));
-    onPlacementChange?.({
-      placement: 'floating',
-      page_route: activePage.route,
-      pos_x: x,
-      pos_y: y,
-      box_size: freeSize,
-    });
+    emit(
+      isMobileDevice
+        ? { placement: 'floating', page_route: activePage.route, pos_x_mobile: x, pos_y_mobile: y }
+        : { placement: 'floating', page_route: activePage.route, pos_x: x, pos_y: y }
+    );
   };
 
   const setFreeSize = (size: number) => {
     if (!activePage) return;
-    onPlacementChange?.({
-      placement: 'floating',
-      page_route: activePage.route,
-      pos_x: freePos.x,
-      pos_y: freePos.y,
-      box_size: Math.min(120, Math.max(36, size)),
-    });
+    const clamped = Math.min(120, Math.max(36, size));
+    emit(isMobileDevice ? { box_size_mobile: clamped } : { box_size: clamped });
   };
+
+  const frameStyle = isMobileDevice
+    ? { width: '390px', height: '700px', transform: 'scale(0.31)' }
+    : { width: '250%', height: '550px', transform: 'scale(0.4)' };
 
   return (
     <div className="space-y-3">
@@ -220,62 +251,106 @@ export const HelpContextPicker = ({
                 </span>
               </div>
 
-              <div
-                ref={previewBoxRef}
-                className="relative bg-background overflow-hidden"
-                style={{ height: 220, cursor: isFree && marking ? 'crosshair' : undefined }}
-                onPointerDown={(e) => {
-                  if (!isFree || !marking) return;
-                  draggingRef.current = true;
-                  setFreePoint(e.clientX, e.clientY);
-                }}
-                onPointerMove={(e) => {
-                  if (!isFree || !marking || !draggingRef.current) return;
-                  setFreePoint(e.clientX, e.clientY);
-                }}
-                onPointerUp={() => {
-                  draggingRef.current = false;
-                }}
-                onPointerLeave={() => {
-                  draggingRef.current = false;
-                }}
-              >
-                <iframe
-                  key={`${activePage.route}-${reloadKey}`}
-                  ref={frameRef}
-                  src={previewUrl}
-                  title={`پیش‌نمایش ${activePage.title}`}
-                  onLoad={() => setFrameLoading(false)}
-                  className="absolute top-0 right-0 origin-top-right border-0"
-                  style={{
-                    width: '250%',
-                    height: '550px',
-                    transform: 'scale(0.4)',
-                    pointerEvents: isFree && marking ? 'none' : 'auto',
+              {/* انتخاب دستگاه: ویندوز یا گوشی موبایل (هرکدام محل جداگانه) */}
+              <div className="flex items-center gap-1.5 border-b border-border bg-muted/20 px-2 py-1.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={device === 'desktop' ? 'default' : 'outline'}
+                  className="h-7 text-[11px] gap-1"
+                  onClick={() => {
+                    setDevice('desktop');
+                    setFrameLoading(true);
                   }}
-                />
-                {frameLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-background/70">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                  </div>
+                >
+                  <Monitor className="h-3 w-3" />
+                  ویندوز (کامپیوتر)
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={device === 'mobile' ? 'default' : 'outline'}
+                  className="h-7 text-[11px] gap-1"
+                  onClick={() => {
+                    setDevice('mobile');
+                    setFrameLoading(true);
+                  }}
+                >
+                  <Smartphone className="h-3 w-3" />
+                  گوشی موبایل
+                </Button>
+                <span className="text-[10px] text-muted-foreground">
+                  محل فیلم برای هر دستگاه جداگانه ذخیره می‌شود
+                </span>
+              </div>
+
+              <div
+                className={cn(
+                  'relative bg-background overflow-hidden',
+                  isMobileDevice && 'flex justify-center bg-muted/30 py-2'
                 )}
-                {isFree && (
-                  <>
-                    <div className={cn('absolute inset-0', !marking && 'pointer-events-none')} />
-                    <div
-                      className="absolute rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center ring-4 ring-primary/25 pointer-events-none"
-                      style={{
-                        top: `${freePos.y}%`,
-                        left: `${freePos.x}%`,
-                        width: Math.max(18, freeSize * 0.42),
-                        height: Math.max(18, freeSize * 0.42),
-                        transform: 'translate(-50%, -50%)',
-                      }}
-                    >
-                      <Move className="h-3 w-3" />
+                style={{ height: isMobileDevice ? 236 : 220 }}
+              >
+                <div
+                  ref={previewBoxRef}
+                  className={cn(
+                    'relative overflow-hidden bg-background',
+                    isMobileDevice
+                      ? 'w-[121px] h-[217px] rounded-[14px] border-2 border-foreground/40 shadow'
+                      : 'absolute inset-0'
+                  )}
+                  style={{ cursor: isFree && marking ? 'crosshair' : undefined }}
+                  onPointerDown={(e) => {
+                    if (!isFree || !marking) return;
+                    draggingRef.current = true;
+                    setFreePoint(e.clientX, e.clientY);
+                  }}
+                  onPointerMove={(e) => {
+                    if (!isFree || !marking || !draggingRef.current) return;
+                    setFreePoint(e.clientX, e.clientY);
+                  }}
+                  onPointerUp={() => {
+                    draggingRef.current = false;
+                  }}
+                  onPointerLeave={() => {
+                    draggingRef.current = false;
+                  }}
+                >
+                  <iframe
+                    key={`${activePage.route}-${reloadKey}-${device}`}
+                    ref={frameRef}
+                    src={previewUrl}
+                    title={`پیش‌نمایش ${activePage.title}`}
+                    onLoad={() => setFrameLoading(false)}
+                    className="absolute top-0 right-0 origin-top-right border-0"
+                    style={{
+                      ...frameStyle,
+                      pointerEvents: isFree && marking ? 'none' : 'auto',
+                    }}
+                  />
+                  {frameLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-background/70">
+                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
                     </div>
-                  </>
-                )}
+                  )}
+                  {isFree && (
+                    <>
+                      <div className={cn('absolute inset-0', !marking && 'pointer-events-none')} />
+                      <div
+                        className="absolute rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center ring-4 ring-primary/25 pointer-events-none"
+                        style={{
+                          top: `${freePos.y}%`,
+                          left: `${freePos.x}%`,
+                          width: Math.max(16, freeSize * (isMobileDevice ? 0.3 : 0.42)),
+                          height: Math.max(16, freeSize * (isMobileDevice ? 0.3 : 0.42)),
+                          transform: 'translate(-50%, -50%)',
+                        }}
+                      >
+                        <Move className="h-3 w-3" />
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* حالت محل آزاد: کشیدن کادر به هر نقطه از صفحه */}
@@ -336,7 +411,8 @@ export const HelpContextPicker = ({
                         <Plus className="h-3 w-3" />
                       </Button>
                       <span className="text-[10px] text-muted-foreground">
-                        اندازه: {freeSize}px — موقعیت: {Math.round(freePos.x)}٪ / {Math.round(freePos.y)}٪
+                        {isMobileDevice ? 'گوشی موبایل' : 'ویندوز'} — اندازه: {freeSize}px — موقعیت:{' '}
+                        {Math.round(freePos.x)}٪ / {Math.round(freePos.y)}٪
                       </span>
                     </>
                   )}
@@ -344,8 +420,8 @@ export const HelpContextPicker = ({
                 {isFree && (
                   <p className="text-[11px] text-muted-foreground">
                     در حالت «علامت‌گذاری» کادر را روی پیش‌نمایش بکشید تا محل فیلم تعیین شود؛ در حالت «حرکت در
-                    صفحه» می‌توانید خودِ صفحه پیش‌نمایش را اسکرول و جابجا کنید. بعد از ذخیره، روی خود صفحه هم
-                    با دکمه «جابجایی» می‌توانید آن را حرکت دهید.
+                    صفحه» می‌توانید خودِ صفحه پیش‌نمایش را اسکرول و جابجا کنید. فیلم راهنما همیشه در همان نقطه از
+                    صفحه ثابت می‌ماند و با اسکرول جابجا نمی‌شود.
                   </p>
                 )}
               </div>
