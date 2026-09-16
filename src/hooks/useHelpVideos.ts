@@ -130,19 +130,25 @@ export const useFloatingHelpVideos = (route: string) => {
   return { videos, loading, reload: load, setVideos };
 };
 
-/** ذخیره محل و اندازه جدید یک راهنمای شناور */
+/** ذخیره محل و اندازه جدید یک راهنمای شناور (به‌صورت جداگانه برای ویندوز و موبایل) */
 export const saveHelpVideoPlacement = async (
   id: string,
-  pos: { pos_x: number; pos_y: number; box_size?: number }
+  pos: { pos_x: number; pos_y: number; box_size?: number },
+  device: 'desktop' | 'mobile' = 'desktop'
 ) => {
-  const { error } = await supabase
-    .from('help_videos')
-    .update({
-      pos_x: pos.pos_x,
-      pos_y: pos.pos_y,
-      ...(pos.box_size ? { box_size: pos.box_size } : {}),
-    })
-    .eq('id', id);
+  const payload =
+    device === 'mobile'
+      ? {
+          pos_x_mobile: pos.pos_x,
+          pos_y_mobile: pos.pos_y,
+          ...(pos.box_size ? { box_size_mobile: pos.box_size } : {}),
+        }
+      : {
+          pos_x: pos.pos_x,
+          pos_y: pos.pos_y,
+          ...(pos.box_size ? { box_size: pos.box_size } : {}),
+        };
+  const { error } = await supabase.from('help_videos').update(payload).eq('id', id);
   if (error) throw error;
 };
 
