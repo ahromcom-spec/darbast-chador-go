@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ExternalLink, Loader2, MonitorPlay, Move, Minus, Plus, RefreshCw, Search } from 'lucide-react';
+import { Check, Crosshair, ExternalLink, Hand, Loader2, MonitorPlay, Move, Minus, Plus, RefreshCw, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
