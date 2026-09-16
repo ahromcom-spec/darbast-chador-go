@@ -223,14 +223,14 @@ export const HelpContextPicker = ({
               <div
                 ref={previewBoxRef}
                 className="relative bg-background overflow-hidden"
-                style={{ height: 220, cursor: isFree ? 'crosshair' : undefined }}
+                style={{ height: 220, cursor: isFree && marking ? 'crosshair' : undefined }}
                 onPointerDown={(e) => {
-                  if (!isFree) return;
+                  if (!isFree || !marking) return;
                   draggingRef.current = true;
                   setFreePoint(e.clientX, e.clientY);
                 }}
                 onPointerMove={(e) => {
-                  if (!isFree || !draggingRef.current) return;
+                  if (!isFree || !marking || !draggingRef.current) return;
                   setFreePoint(e.clientX, e.clientY);
                 }}
                 onPointerUp={() => {
@@ -247,7 +247,12 @@ export const HelpContextPicker = ({
                   title={`پیش‌نمایش ${activePage.title}`}
                   onLoad={() => setFrameLoading(false)}
                   className="absolute top-0 right-0 origin-top-right border-0"
-                  style={{ width: '250%', height: '550px', transform: 'scale(0.4)' }}
+                  style={{
+                    width: '250%',
+                    height: '550px',
+                    transform: 'scale(0.4)',
+                    pointerEvents: isFree && marking ? 'none' : 'auto',
+                  }}
                 />
                 {frameLoading && (
                   <div className="absolute inset-0 flex items-center justify-center bg-background/70">
@@ -256,7 +261,7 @@ export const HelpContextPicker = ({
                 )}
                 {isFree && (
                   <>
-                    <div className="absolute inset-0" />
+                    <div className={cn('absolute inset-0', !marking && 'pointer-events-none')} />
                     <div
                       className="absolute rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center ring-4 ring-primary/25 pointer-events-none"
                       style={{
