@@ -58,12 +58,32 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
     isMobile,
   ]);
 
+  /** اندازه کل صفحه (نه فقط پنجره) تا کادر به خودِ صفحه بچسبد و با اسکرول حرکت کند */
+  const [docSize, setDocSize] = useState({ w: 1, h: 1 });
+  useEffect(() => {
+    const measure = () =>
+      setDocSize({
+        w: Math.max(document.documentElement.scrollWidth, window.innerWidth),
+        h: Math.max(document.documentElement.scrollHeight, window.innerHeight),
+      });
+    measure();
+    window.addEventListener('resize', measure);
+    const t = window.setInterval(measure, 1000);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.clearInterval(t);
+    };
+  }, []);
+
   const applyPointer = useCallback((clientX: number, clientY: number) => {
+    const w = Math.max(document.documentElement.scrollWidth, window.innerWidth);
+    const h = Math.max(document.documentElement.scrollHeight, window.innerHeight);
     setPos({
-      x: clamp((clientX / window.innerWidth) * 100),
-      y: clamp((clientY / window.innerHeight) * 100),
+      x: clamp(((clientX + window.scrollX) / w) * 100),
+      y: clamp(((clientY + window.scrollY) / h) * 100),
     });
   }, []);
+
 
   useEffect(() => {
     if (!editing) return;
@@ -101,22 +121,23 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
   };
 
   /**
-   * کادر روی خودِ پنجره ثابت می‌شود و با اسکرول صفحه حرکت نمی‌کند؛
-   * برای اینکه بزرگ‌نمایی صفحه (zoom) این ثابت‌بودن را خراب نکند، به body پرتال می‌شود.
+   * کادر به نقطه‌ای از خودِ صفحه می‌چسبد (نه به پنجره) و با اسکرول بالا و پایین می‌رود،
+   * مثل کره زمین در صفحه نخست.
    */
   const bubble = (
     <>
       <div
-        className="fixed"
+        className="absolute"
         style={{
-          top: `${pos.y}%`,
-          left: `${pos.x}%`,
+          top: `${(pos.y / 100) * docSize.h}px`,
+          left: `${(pos.x / 100) * docSize.w}px`,
           transform: 'translate(-50%, -50%)',
           zIndex: 90,
           zoom: 1,
           touchAction: editing ? 'none' : undefined,
         } as React.CSSProperties}
       >
+
         <div className="relative flex flex-col items-center gap-1">
           {/* آیکون تلویزیونی با قاب قرمز: حس پخش فیلم مهم */}
           <button
