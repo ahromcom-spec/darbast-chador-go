@@ -78,6 +78,9 @@ export const VideoBody = ({ video }: { video: HelpVideo }) => {
           </div>
         )}
       </div>
+      <h3 className="text-center text-sm font-semibold text-foreground" dir="rtl">
+        {video.title}
+      </h3>
       {video.description && (
         <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
           {video.description}

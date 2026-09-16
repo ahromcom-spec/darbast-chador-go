@@ -107,6 +107,15 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
             {editing ? <Move className="h-1/2 w-1/2" /> : <PlayCircle className="h-1/2 w-1/2" />}
           </button>
 
+          {!editing && (
+            <span
+              className="max-w-40 rounded-md border border-border bg-background/95 px-2 py-1 text-center text-xs font-medium leading-5 text-foreground shadow"
+              dir="rtl"
+            >
+              {video.title}
+            </span>
+          )}
+
           {canManage && (
             <div className="flex items-center gap-1 rounded-full bg-background/95 border border-border px-1.5 py-0.5 shadow" dir="rtl">
               {editing ? (
