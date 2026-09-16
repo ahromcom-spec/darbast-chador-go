@@ -44,6 +44,7 @@ export const HelpContextPicker = ({
   const [search, setSearch] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [frameLoading, setFrameLoading] = useState(true);
+  const [marking, setMarking] = useState(true);
   const frameRef = useRef<HTMLIFrameElement | null>(null);
 
   const initialPage = useMemo(() => {
