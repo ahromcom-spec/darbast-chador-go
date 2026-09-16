@@ -20,7 +20,7 @@ import { useCEORole } from '@/hooks/useCEORole';
 import { useAdminRole } from '@/hooks/useAdminRole';
 import { useGeneralManagerRole } from '@/hooks/useGeneralManagerRole';
 import { useHelpVideosAdmin, type HelpVideo } from '@/hooks/useHelpVideos';
-import { HELP_VIDEO_CONTEXTS, getContextLabel } from '@/lib/helpVideoContexts';
+import { getContextLabel } from '@/lib/helpVideoContexts';
 import { ContextualVideoHelp } from '@/components/help/ContextualVideoHelp';
 
 const emptyForm = {
@@ -63,13 +63,6 @@ export default function HelpVideosModule() {
     );
   }, [videos, search]);
 
-  const groupedContexts = useMemo(() => {
-    const map = new Map<string, typeof HELP_VIDEO_CONTEXTS>();
-    HELP_VIDEO_CONTEXTS.forEach((c) => {
-      map.set(c.group, [...(map.get(c.group) || []), c]);
-    });
-    return Array.from(map.entries());
-  }, []);
 
   const openNew = () => {
     setEditing(null);
