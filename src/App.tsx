@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Toaster } from "@/components/ui/toaster";
+import FloatingHelpVideos from "@/components/help/FloatingHelpVideos";
 import MediaTransferPanel from "@/components/media/MediaTransferPanel";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -224,6 +225,7 @@ const App = () => {
                 <NajvaSubscriber />
                 <SiteNotificationSound />
                 <GlobalKeyboardShortcuts />
+              <FloatingHelpVideos />
               <GlobalIncomingCallPopup />
               
               <Suspense fallback={<PageLoader />}>

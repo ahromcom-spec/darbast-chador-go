@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { HelpContextPicker } from '@/components/help/HelpContextPicker';
+import { HelpContextPicker, type HelpPlacement } from '@/components/help/HelpContextPicker';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -30,6 +30,11 @@ const emptyForm = {
   video_url: '',
   storage_path: '' as string | null,
   is_active: true,
+  placement: 'anchor' as 'anchor' | 'floating',
+  page_route: null as string | null,
+  pos_x: null as number | null,
+  pos_y: null as number | null,
+  box_size: 56,
 };
 
 export default function HelpVideosModule() {
@@ -79,6 +84,11 @@ export default function HelpVideosModule() {
       video_url: video.video_url,
       storage_path: video.storage_path,
       is_active: video.is_active,
+      placement: (video.placement === 'floating' ? 'floating' : 'anchor'),
+      page_route: video.page_route,
+      pos_x: video.pos_x,
+      pos_y: video.pos_y,
+      box_size: video.box_size || 56,
     });
     setDialogOpen(true);
   };
@@ -121,6 +131,11 @@ export default function HelpVideosModule() {
           video_url: form.video_url.trim(),
           storage_path: form.storage_path || null,
           is_active: form.is_active,
+          placement: form.placement,
+          page_route: form.page_route,
+          pos_x: form.pos_x,
+          pos_y: form.pos_y,
+          box_size: form.box_size,
         },
         editing?.id
       );
@@ -273,6 +288,23 @@ export default function HelpVideosModule() {
               <HelpContextPicker
                 value={form.context_key}
                 onChange={(v) => setForm((f) => ({ ...f, context_key: v }))}
+                placement={{
+                  placement: form.placement,
+                  page_route: form.page_route,
+                  pos_x: form.pos_x,
+                  pos_y: form.pos_y,
+                  box_size: form.box_size,
+                }}
+                onPlacementChange={(pl: HelpPlacement) =>
+                  setForm((f) => ({
+                    ...f,
+                    placement: pl.placement,
+                    page_route: pl.page_route,
+                    pos_x: pl.pos_x,
+                    pos_y: pl.pos_y,
+                    box_size: pl.box_size,
+                  }))
+                }
               />
             </div>
 

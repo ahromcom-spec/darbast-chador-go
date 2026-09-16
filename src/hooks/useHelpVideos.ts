@@ -12,6 +12,12 @@ export interface HelpVideo {
   poster_url: string | null;
   is_active: boolean;
   sort_order: number;
+  /** anchor: روی بخش مشخص | floating: هرجای صفحه با مختصات دلخواه */
+  placement: 'anchor' | 'floating' | string;
+  page_route: string | null;
+  pos_x: number | null;
+  pos_y: number | null;
+  box_size: number;
   created_at: string;
   updated_at: string;
 }
@@ -24,6 +30,11 @@ export interface HelpVideoInput {
   storage_path?: string | null;
   poster_url?: string | null;
   is_active?: boolean;
+  placement?: 'anchor' | 'floating';
+  page_route?: string | null;
+  pos_x?: number | null;
+  pos_y?: number | null;
+  box_size?: number;
 }
 
 const HELP_BUCKET = 'help-videos';
@@ -79,6 +90,55 @@ export const useHelpVideo = (contextKey: string) => {
   return { video, loading };
 };
 
+/**
+ * راهنماهای شناور یک صفحه: با مختصات دلخواه روی همان صفحه نمایش داده می‌شوند.
+ */
+export const useFloatingHelpVideos = (route: string) => {
+  const [videos, setVideos] = useState<HelpVideo[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('help_videos')
+        .select('*')
+        .eq('placement', 'floating')
+        .eq('page_route', route)
+        .eq('is_active', true);
+      if (error) throw error;
+      setVideos((data as HelpVideo[]) || []);
+    } catch (err) {
+      console.error('Error loading floating help videos:', err);
+      setVideos([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [route]);
+
+  useEffect(() => {
+    setLoading(true);
+    load();
+  }, [load]);
+
+  return { videos, loading, reload: load, setVideos };
+};
+
+/** ذخیره محل و اندازه جدید یک راهنمای شناور */
+export const saveHelpVideoPlacement = async (
+  id: string,
+  pos: { pos_x: number; pos_y: number; box_size?: number }
+) => {
+  const { error } = await supabase
+    .from('help_videos')
+    .update({
+      pos_x: pos.pos_x,
+      pos_y: pos.pos_y,
+      ...(pos.box_size ? { box_size: pos.box_size } : {}),
+    })
+    .eq('id', id);
+  if (error) throw error;
+};
+
 /** Full CRUD for the admin management view. */
 export const useHelpVideosAdmin = () => {
   const [videos, setVideos] = useState<HelpVideo[]>([]);
@@ -117,6 +177,11 @@ export const useHelpVideosAdmin = () => {
         storage_path: input.storage_path ?? null,
         poster_url: input.poster_url ?? null,
         is_active: input.is_active ?? true,
+        placement: input.placement ?? 'anchor',
+        page_route: input.page_route ?? null,
+        pos_x: input.pos_x ?? null,
+        pos_y: input.pos_y ?? null,
+        box_size: input.box_size ?? 56,
         created_by: userData?.user?.id ?? null,
       };
 

@@ -1824,12 +1824,17 @@ export type Database = {
       }
       help_videos: {
         Row: {
+          box_size: number
           context_key: string
           created_at: string
           created_by: string | null
           description: string | null
           id: string
           is_active: boolean
+          page_route: string | null
+          placement: string
+          pos_x: number | null
+          pos_y: number | null
           poster_url: string | null
           sort_order: number
           storage_path: string | null
@@ -1838,12 +1843,17 @@ export type Database = {
           video_url: string
         }
         Insert: {
+          box_size?: number
           context_key: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
+          page_route?: string | null
+          placement?: string
+          pos_x?: number | null
+          pos_y?: number | null
           poster_url?: string | null
           sort_order?: number
           storage_path?: string | null
@@ -1852,12 +1862,17 @@ export type Database = {
           video_url: string
         }
         Update: {
+          box_size?: number
           context_key?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
+          page_route?: string | null
+          placement?: string
+          pos_x?: number | null
+          pos_y?: number | null
           poster_url?: string | null
           sort_order?: number
           storage_path?: string | null
