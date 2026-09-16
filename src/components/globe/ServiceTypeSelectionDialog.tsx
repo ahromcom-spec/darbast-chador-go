@@ -130,7 +130,7 @@ export function ServiceTypeSelectionDialog({
         districtName: locationInfo?.districts?.name || '',
       },
     });
-  }, [isNavigating, navigate, onOpenChange, locationId, selectedServiceType, locationInfo]);
+  }, [isNavigating, navigate, onOpenChange, locationId, selectedServiceType, serviceTypes, locationInfo]);
 
 
   const handleSelectServiceType = useCallback((typeId: string) => {
