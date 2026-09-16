@@ -195,6 +195,9 @@ export const useHelpVideosAdmin = () => {
         pos_x: input.pos_x ?? null,
         pos_y: input.pos_y ?? null,
         box_size: input.box_size ?? 56,
+        pos_x_mobile: input.pos_x_mobile ?? null,
+        pos_y_mobile: input.pos_y_mobile ?? null,
+        box_size_mobile: input.box_size_mobile ?? null,
         created_by: userData?.user?.id ?? null,
       };
 
