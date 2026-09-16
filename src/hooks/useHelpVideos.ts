@@ -18,6 +18,10 @@ export interface HelpVideo {
   pos_x: number | null;
   pos_y: number | null;
   box_size: number;
+  /** محل و اندازه مخصوص گوشی موبایل (اگر خالی باشد از مقادیر ویندوز استفاده می‌شود) */
+  pos_x_mobile: number | null;
+  pos_y_mobile: number | null;
+  box_size_mobile: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -35,6 +39,9 @@ export interface HelpVideoInput {
   pos_x?: number | null;
   pos_y?: number | null;
   box_size?: number;
+  pos_x_mobile?: number | null;
+  pos_y_mobile?: number | null;
+  box_size_mobile?: number | null;
 }
 
 const HELP_BUCKET = 'help-videos';
@@ -123,19 +130,25 @@ export const useFloatingHelpVideos = (route: string) => {
   return { videos, loading, reload: load, setVideos };
 };
 
-/** ذخیره محل و اندازه جدید یک راهنمای شناور */
+/** ذخیره محل و اندازه جدید یک راهنمای شناور (به‌صورت جداگانه برای ویندوز و موبایل) */
 export const saveHelpVideoPlacement = async (
   id: string,
-  pos: { pos_x: number; pos_y: number; box_size?: number }
+  pos: { pos_x: number; pos_y: number; box_size?: number },
+  device: 'desktop' | 'mobile' = 'desktop'
 ) => {
-  const { error } = await supabase
-    .from('help_videos')
-    .update({
-      pos_x: pos.pos_x,
-      pos_y: pos.pos_y,
-      ...(pos.box_size ? { box_size: pos.box_size } : {}),
-    })
-    .eq('id', id);
+  const payload =
+    device === 'mobile'
+      ? {
+          pos_x_mobile: pos.pos_x,
+          pos_y_mobile: pos.pos_y,
+          ...(pos.box_size ? { box_size_mobile: pos.box_size } : {}),
+        }
+      : {
+          pos_x: pos.pos_x,
+          pos_y: pos.pos_y,
+          ...(pos.box_size ? { box_size: pos.box_size } : {}),
+        };
+  const { error } = await supabase.from('help_videos').update(payload).eq('id', id);
   if (error) throw error;
 };
 
@@ -182,6 +195,9 @@ export const useHelpVideosAdmin = () => {
         pos_x: input.pos_x ?? null,
         pos_y: input.pos_y ?? null,
         box_size: input.box_size ?? 56,
+        pos_x_mobile: input.pos_x_mobile ?? null,
+        pos_y_mobile: input.pos_y_mobile ?? null,
+        box_size_mobile: input.box_size_mobile ?? null,
         created_by: userData?.user?.id ?? null,
       };
 

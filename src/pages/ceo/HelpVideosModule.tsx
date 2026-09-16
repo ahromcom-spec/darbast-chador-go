@@ -35,6 +35,9 @@ const emptyForm = {
   pos_x: null as number | null,
   pos_y: null as number | null,
   box_size: 56,
+  pos_x_mobile: null as number | null,
+  pos_y_mobile: null as number | null,
+  box_size_mobile: null as number | null,
 };
 
 export default function HelpVideosModule() {
@@ -89,6 +92,9 @@ export default function HelpVideosModule() {
       pos_x: video.pos_x,
       pos_y: video.pos_y,
       box_size: video.box_size || 56,
+      pos_x_mobile: video.pos_x_mobile,
+      pos_y_mobile: video.pos_y_mobile,
+      box_size_mobile: video.box_size_mobile,
     });
     setDialogOpen(true);
   };
@@ -136,6 +142,9 @@ export default function HelpVideosModule() {
           pos_x: form.pos_x,
           pos_y: form.pos_y,
           box_size: form.box_size,
+          pos_x_mobile: form.pos_x_mobile,
+          pos_y_mobile: form.pos_y_mobile,
+          box_size_mobile: form.box_size_mobile,
         },
         editing?.id
       );
@@ -294,6 +303,9 @@ export default function HelpVideosModule() {
                   pos_x: form.pos_x,
                   pos_y: form.pos_y,
                   box_size: form.box_size,
+                  pos_x_mobile: form.pos_x_mobile,
+                  pos_y_mobile: form.pos_y_mobile,
+                  box_size_mobile: form.box_size_mobile,
                 }}
                 onPlacementChange={(pl: HelpPlacement) =>
                   setForm((f) => ({
@@ -303,6 +315,9 @@ export default function HelpVideosModule() {
                     pos_x: pl.pos_x,
                     pos_y: pl.pos_y,
                     box_size: pl.box_size,
+                    pos_x_mobile: pl.pos_x_mobile,
+                    pos_y_mobile: pl.pos_y_mobile,
+                    box_size_mobile: pl.box_size_mobile,
                   }))
                 }
               />
