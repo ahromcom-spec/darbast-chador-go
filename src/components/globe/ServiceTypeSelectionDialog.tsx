@@ -246,8 +246,8 @@ export function ServiceTypeSelectionDialog({
                     <ChevronDown className={cn("h-4 w-4 opacity-50 transition-transform", openLevel === idx && "rotate-180")} />
                   </button>
                   {openLevel === idx && list.length > 0 && (
-                    <div className="absolute top-full right-0 left-0 mt-1 bg-popover border rounded-md shadow-lg overflow-hidden" style={{ zIndex: 300001 }}>
-                      <ScrollArea className="max-h-80">
+                    <div className="mt-1 bg-popover border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      <div>
                         <div className="p-1">
                           {list.map((sub) => (
                             <button
