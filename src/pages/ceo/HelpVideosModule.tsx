@@ -11,9 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
+import { HelpContextPicker } from '@/components/help/HelpContextPicker';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -279,24 +277,10 @@ export default function HelpVideosModule() {
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label>محل نمایش راهنما</Label>
-              <Select
+              <HelpContextPicker
                 value={form.context_key}
-                onValueChange={(v) => setForm((f) => ({ ...f, context_key: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="یک بخش از سایت را انتخاب کنید" />
-                </SelectTrigger>
-                <SelectContent className="max-h-72">
-                  {groupedContexts.map(([group, items]) => (
-                    <div key={group}>
-                      <div className="px-2 py-1 text-[11px] text-muted-foreground">{group}</div>
-                      {items.map((c) => (
-                        <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>
-                      ))}
-                    </div>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(v) => setForm((f) => ({ ...f, context_key: v }))}
+              />
             </div>
 
             <div className="space-y-1.5">
