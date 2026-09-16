@@ -295,6 +295,28 @@ export const HelpContextPicker = ({
                     <>
                       <Button
                         type="button"
+                        size="sm"
+                        variant={marking ? 'default' : 'outline'}
+                        className="h-7 text-[11px] gap-1"
+                        title="حالت علامت‌گذاری: با کشیدن روی پیش‌نمایش محل فیلم را تعیین کنید"
+                        onClick={() => setMarking(true)}
+                      >
+                        <Crosshair className="h-3 w-3" />
+                        علامت‌گذاری
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={!marking ? 'default' : 'outline'}
+                        className="h-7 text-[11px] gap-1"
+                        title="حالت حرکت: صفحه پیش‌نمایش را اسکرول و جابجا کنید"
+                        onClick={() => setMarking(false)}
+                      >
+                        <Hand className="h-3 w-3" />
+                        حرکت در صفحه
+                      </Button>
+                      <Button
+                        type="button"
                         size="icon"
                         variant="outline"
                         className="h-7 w-7"
