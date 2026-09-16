@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ExternalLink, Loader2, MonitorPlay, Move, Minus, Plus, RefreshCw, Search } from 'lucide-react';
+import { Check, Crosshair, ExternalLink, Hand, Loader2, MonitorPlay, Move, Minus, Plus, RefreshCw, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +44,7 @@ export const HelpContextPicker = ({
   const [search, setSearch] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [frameLoading, setFrameLoading] = useState(true);
+  const [marking, setMarking] = useState(true);
   const frameRef = useRef<HTMLIFrameElement | null>(null);
 
   const initialPage = useMemo(() => {
@@ -222,14 +223,14 @@ export const HelpContextPicker = ({
               <div
                 ref={previewBoxRef}
                 className="relative bg-background overflow-hidden"
-                style={{ height: 220, cursor: isFree ? 'crosshair' : undefined }}
+                style={{ height: 220, cursor: isFree && marking ? 'crosshair' : undefined }}
                 onPointerDown={(e) => {
-                  if (!isFree) return;
+                  if (!isFree || !marking) return;
                   draggingRef.current = true;
                   setFreePoint(e.clientX, e.clientY);
                 }}
                 onPointerMove={(e) => {
-                  if (!isFree || !draggingRef.current) return;
+                  if (!isFree || !marking || !draggingRef.current) return;
                   setFreePoint(e.clientX, e.clientY);
                 }}
                 onPointerUp={() => {
@@ -246,7 +247,12 @@ export const HelpContextPicker = ({
                   title={`پیش‌نمایش ${activePage.title}`}
                   onLoad={() => setFrameLoading(false)}
                   className="absolute top-0 right-0 origin-top-right border-0"
-                  style={{ width: '250%', height: '550px', transform: 'scale(0.4)' }}
+                  style={{
+                    width: '250%',
+                    height: '550px',
+                    transform: 'scale(0.4)',
+                    pointerEvents: isFree && marking ? 'none' : 'auto',
+                  }}
                 />
                 {frameLoading && (
                   <div className="absolute inset-0 flex items-center justify-center bg-background/70">
@@ -255,7 +261,7 @@ export const HelpContextPicker = ({
                 )}
                 {isFree && (
                   <>
-                    <div className="absolute inset-0" />
+                    <div className={cn('absolute inset-0', !marking && 'pointer-events-none')} />
                     <div
                       className="absolute rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center ring-4 ring-primary/25 pointer-events-none"
                       style={{
@@ -289,6 +295,28 @@ export const HelpContextPicker = ({
                     <>
                       <Button
                         type="button"
+                        size="sm"
+                        variant={marking ? 'default' : 'outline'}
+                        className="h-7 text-[11px] gap-1"
+                        title="حالت علامت‌گذاری: با کشیدن روی پیش‌نمایش محل فیلم را تعیین کنید"
+                        onClick={() => setMarking(true)}
+                      >
+                        <Crosshair className="h-3 w-3" />
+                        علامت‌گذاری
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={!marking ? 'default' : 'outline'}
+                        className="h-7 text-[11px] gap-1"
+                        title="حالت حرکت: صفحه پیش‌نمایش را اسکرول و جابجا کنید"
+                        onClick={() => setMarking(false)}
+                      >
+                        <Hand className="h-3 w-3" />
+                        حرکت در صفحه
+                      </Button>
+                      <Button
+                        type="button"
                         size="icon"
                         variant="outline"
                         className="h-7 w-7"
@@ -315,8 +343,9 @@ export const HelpContextPicker = ({
                 </div>
                 {isFree && (
                   <p className="text-[11px] text-muted-foreground">
-                    کادر را داخل پیش‌نمایش بکشید تا فیلم راهنما دقیقاً همان‌جای صفحه قرار بگیرد. بعد از ذخیره،
-                    روی خود صفحه هم می‌توانید با دکمه «جابجایی» آن را حرکت دهید.
+                    در حالت «علامت‌گذاری» کادر را روی پیش‌نمایش بکشید تا محل فیلم تعیین شود؛ در حالت «حرکت در
+                    صفحه» می‌توانید خودِ صفحه پیش‌نمایش را اسکرول و جابجا کنید. بعد از ذخیره، روی خود صفحه هم
+                    با دکمه «جابجایی» می‌توانید آن را حرکت دهید.
                   </p>
                 )}
               </div>
