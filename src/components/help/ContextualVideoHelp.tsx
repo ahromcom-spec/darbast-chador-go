@@ -69,7 +69,7 @@ export const VideoBody = ({ video }: { video: HelpVideo }) => {
               poster={video.poster_url || undefined}
               controls
               playsInline
-              preload="metadata"
+              preload="auto"
               className="w-full h-full object-contain"
             >
               مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند
