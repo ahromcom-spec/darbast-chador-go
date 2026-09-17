@@ -21,34 +21,42 @@ export const VideoBody = ({ video }: { video: HelpVideo }) => {
   const [url, setUrl] = useState<string | null>(null);
   const [buffered, setBuffered] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoId = video.id;
+  const videoTitle = video.title;
+  const storagePath = video.storage_path;
+  const videoUrl = video.video_url;
 
   useEffect(() => {
     let cancelled = false;
-    resolveHelpVideoUrl(video).then((resolved) => {
+    resolveHelpVideoUrl({ storage_path: storagePath, video_url: videoUrl } as HelpVideo).then((resolved) => {
       if (!cancelled) setUrl(resolved);
     });
     return () => {
       cancelled = true;
     };
-  }, [video]);
+    // فقط با تغییر خودِ فیلم آدرس دوباره ساخته می‌شود تا پخش قطع نشود
+  }, [videoId, storagePath, videoUrl]);
 
-  // نمایش لحظه‌ای میزان دریافت (دانلود) ویدیو
+  // نمایش میزان دریافت (دانلود) ویدیو — با به‌روزرسانی کم تا پخش روی موبایل کند نشود
   useEffect(() => {
     const el = videoRef.current;
     if (!el || !url) return;
-    const stop = trackVideoDownload(el, `دریافت ویدیو: ${video.title}`);
+    const stop = trackVideoDownload(el, `دریافت ویدیو: ${videoTitle}`);
+    let last = 0;
     const onProgress = () => {
       if (!el.duration || !isFinite(el.duration) || el.buffered.length === 0) return;
-      setBuffered(Math.round((el.buffered.end(el.buffered.length - 1) / el.duration) * 100));
+      const percent = Math.round((el.buffered.end(el.buffered.length - 1) / el.duration) * 100);
+      if (percent - last >= 10 || percent >= 100) {
+        last = percent;
+        setBuffered(percent);
+      }
     };
     el.addEventListener('progress', onProgress);
-    el.addEventListener('timeupdate', onProgress);
     return () => {
       el.removeEventListener('progress', onProgress);
-      el.removeEventListener('timeupdate', onProgress);
       stop();
     };
-  }, [url, video.title]);
+  }, [url, videoTitle]);
 
   return (
     <div className="space-y-3">
@@ -61,7 +69,7 @@ export const VideoBody = ({ video }: { video: HelpVideo }) => {
               poster={video.poster_url || undefined}
               controls
               playsInline
-              preload="metadata"
+              preload="auto"
               className="w-full h-full object-contain"
             >
               مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند

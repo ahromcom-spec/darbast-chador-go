@@ -268,12 +268,16 @@ export const trackVideoDownload = (el: HTMLVideoElement, label: string) => {
     return tracker;
   };
 
+  let lastPercent = -100;
   const onProgress = () => {
     if (finished) return;
     const duration = el.duration;
     if (!duration || !isFinite(duration) || el.buffered.length === 0) return;
     const buffered = el.buffered.end(el.buffered.length - 1);
     const percent = Math.round((buffered / duration) * 100);
+    // به‌روزرسانی کم‌تعداد تا پخش روی گوشی موبایل روان و بدون مکث بماند
+    if (percent - lastPercent < 5 && percent < 99) return;
+    lastPercent = percent;
     const t = ensure();
     t?.update(percent, 100);
     if (percent >= 99) {
