@@ -55,6 +55,14 @@ const mergeProjectsById = (projects: ProjectHierarchy[]) => {
   return Array.from(merged.values());
 };
 
+// آدرس سفارش‌های قابل مشاهده (مشتری/همکار) حتی اگر غیرفعال شده باشد باید روی نقشه بماند
+const forceActiveForVisibleOrders = (projects: ProjectHierarchy[], visibleIds: Set<string>) =>
+  projects.map((project) =>
+    visibleIds.has(project.id) && project.locations
+      ? { ...project, locations: { ...project.locations, is_active: true } }
+      : project
+  );
+
 export const useProjectsHierarchy = () => {
   const [projects, setProjects] = useState<ProjectHierarchy[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,6 +110,10 @@ export const useProjectsHierarchy = () => {
       const visibleOrderProjects = (visibleOrders || []) as VisibleOrderProject[];
       const visibleProjectIds = [...new Set(visibleOrderProjects
         .map(o => o.hierarchy_project_id).filter(Boolean) as string[])];
+      const visibleProjectIdSet = new Set<string>([
+        ...visibleProjectIds,
+        ...visibleOrderProjects.map(o => o.hierarchy_project_id || `order:${o.id}`),
+      ]);
 
       let quickProjectMetaMap = new Map<string, QuickProjectLocationMeta>();
       if (visibleProjectIds.length > 0) {
@@ -162,7 +174,7 @@ export const useProjectsHierarchy = () => {
         }) as ProjectHierarchy[];
 
       if (quickCustomerProjects.length > 0) {
-        setProjects(mergeProjectsById(quickCustomerProjects));
+        setProjects(forceActiveForVisibleOrders(mergeProjectsById(quickCustomerProjects), visibleProjectIdSet));
         setLoading(false);
       }
 
@@ -173,10 +185,13 @@ export const useProjectsHierarchy = () => {
       const ownedIds = new Set((ownedProjects || []).map(p => p.id));
 
       if (quickCustomerProjects.length === 0) {
-        setProjects(ownedProjects || []);
+        setProjects(forceActiveForVisibleOrders(ownedProjects || [], visibleProjectIdSet));
         setLoading(false);
       } else {
-        setProjects(mergeProjectsById([...(ownedProjects || []), ...quickCustomerProjects]));
+        setProjects(forceActiveForVisibleOrders(
+          mergeProjectsById([...(ownedProjects || []), ...quickCustomerProjects]),
+          visibleProjectIdSet
+        ));
       }
 
       const customerOnlyIds = visibleProjectIds
@@ -197,7 +212,10 @@ export const useProjectsHierarchy = () => {
 
 
       // ترکیب پروژه‌های مالکیتی و پروژه‌های مشتری
-      const uniqueProjects = mergeProjectsById([...(ownedProjects || []), ...quickCustomerProjects, ...customerProjects]);
+      const uniqueProjects = forceActiveForVisibleOrders(
+        mergeProjectsById([...(ownedProjects || []), ...quickCustomerProjects, ...customerProjects]),
+        visibleProjectIdSet
+      );
 
       setProjects(uniqueProjects);
     } catch (error) {
