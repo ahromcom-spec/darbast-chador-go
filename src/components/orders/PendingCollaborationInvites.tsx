@@ -621,6 +621,17 @@ export function PendingCollaborationInvites() {
                       <Badge variant="outline">{invite.order_notes.contact_phone}</Badge>
                     </div>
                   )}
+
+                  {/* عکس‌ها و فیلم‌های سفارش */}
+                  {isExpanded && (
+                    <div className="space-y-2 pt-2 border-t border-border/60">
+                      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <ImageIcon className="h-4 w-4 text-primary" />
+                        عکس‌ها و فیلم‌های سفارش
+                      </div>
+                      <OrderMediaPreview orderId={invite.order_id} pageSize={6} />
+                    </div>
+                  )}
                 </CollapsibleContent>
               </Collapsible>
             </div>
