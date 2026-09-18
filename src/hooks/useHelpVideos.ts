@@ -46,15 +46,39 @@ export interface HelpVideoInput {
 
 const HELP_BUCKET = 'help-videos';
 
+const resolvedUrlCache = new Map<string, { url: string; expiresAt: number }>();
+const pendingUrlRequests = new Map<string, Promise<string>>();
+
 /** Resolves a playable URL: storage paths become signed URLs, plain URLs pass through. */
 export const resolveHelpVideoUrl = async (video: HelpVideo): Promise<string> => {
-  if (video.storage_path) {
-    const { data } = await supabase.storage
-      .from(HELP_BUCKET)
-      .createSignedUrl(video.storage_path, 60 * 60 * 6);
-    if (data?.signedUrl) return data.signedUrl;
-  }
-  return video.video_url;
+  if (!video.storage_path) return video.video_url;
+
+  const cacheKey = `${HELP_BUCKET}/${video.storage_path}`;
+  const cached = resolvedUrlCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.url;
+
+  const pending = pendingUrlRequests.get(cacheKey);
+  if (pending) return pending;
+
+  const request = supabase.storage
+    .from(HELP_BUCKET)
+    .createSignedUrl(video.storage_path, 60 * 60 * 6)
+    .then(({ data, error }) => {
+      if (error) throw error;
+      const url = data?.signedUrl || video.video_url;
+      if (url) {
+        resolvedUrlCache.set(cacheKey, {
+          url,
+          // Refresh shortly before the six-hour signed URL expires.
+          expiresAt: Date.now() + 5.5 * 60 * 60 * 1000,
+        });
+      }
+      return url;
+    })
+    .finally(() => pendingUrlRequests.delete(cacheKey));
+
+  pendingUrlRequests.set(cacheKey, request);
+  return request;
 };
 
 /** Fetch a single active help video for a given context key. */

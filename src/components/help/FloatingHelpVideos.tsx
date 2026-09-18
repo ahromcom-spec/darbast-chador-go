@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { Move, PlayCircle, Check, Minus, Plus } from 'lucide-react';
@@ -270,12 +270,14 @@ export const FloatingHelpVideos = () => {
   const { isGeneralManager } = useGeneralManagerRole();
   const canManage = isCEO || isAdmin || isGeneralManager;
 
-  const seen = new Set<string>();
-  const videos = [...exact, ...byPath].filter((v) => {
-    if (seen.has(v.id)) return false;
-    seen.add(v.id);
-    return true;
-  });
+  const videos = useMemo(() => {
+    const seen = new Set<string>();
+    return [...exact, ...byPath].filter((video) => {
+      if (seen.has(video.id)) return false;
+      seen.add(video.id);
+      return true;
+    });
+  }, [exact, byPath]);
 
   if (videos.length === 0) return null;
 

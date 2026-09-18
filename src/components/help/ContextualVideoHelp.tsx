@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { trackVideoDownload } from '@/lib/mediaTransfers';
 import { HelpCircle, PlayCircle, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,10 +17,10 @@ interface ContextualVideoHelpProps {
   className?: string;
 }
 
-export const VideoBody = ({ video }: { video: HelpVideo }) => {
+export const VideoBody = memo(({ video }: { video: HelpVideo }) => {
   const [url, setUrl] = useState<string | null>(null);
-  const [buffered, setBuffered] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const bufferLabelRef = useRef<HTMLDivElement | null>(null);
   const videoId = video.id;
   const videoTitle = video.title;
   const storagePath = video.storage_path;
@@ -48,7 +48,10 @@ export const VideoBody = ({ video }: { video: HelpVideo }) => {
       const percent = Math.round((el.buffered.end(el.buffered.length - 1) / el.duration) * 100);
       if (percent - last >= 10 || percent >= 100) {
         last = percent;
-        setBuffered(percent);
+        if (bufferLabelRef.current) {
+          bufferLabelRef.current.textContent = `دریافت ویدیو: ${percent}%`;
+          bufferLabelRef.current.hidden = percent >= 100;
+        }
       }
     };
     el.addEventListener('progress', onProgress);
@@ -74,11 +77,11 @@ export const VideoBody = ({ video }: { video: HelpVideo }) => {
             >
               مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند
             </video>
-            {buffered > 0 && buffered < 100 && (
-              <div className="absolute top-2 left-2 rounded-md bg-black/60 px-2 py-0.5 text-[11px] text-white">
-                دریافت ویدیو: {buffered}%
-              </div>
-            )}
+            <div
+              ref={bufferLabelRef}
+              hidden
+              className="absolute top-2 left-2 rounded-md bg-black/60 px-2 py-0.5 text-[11px] text-white"
+            />
           </>
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -96,7 +99,9 @@ export const VideoBody = ({ video }: { video: HelpVideo }) => {
       )}
     </div>
   );
-};
+});
+
+VideoBody.displayName = 'VideoBody';
 
 export const ContextualVideoHelp = ({
   contextKey,
