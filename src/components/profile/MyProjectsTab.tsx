@@ -15,9 +15,11 @@ interface Address {
   id: string;
   title?: string;
   address_line: string;
+  is_shared?: boolean;
   provinces?: { name: string };
   districts?: { name: string };
 }
+
 
 interface Project {
   id: string;
