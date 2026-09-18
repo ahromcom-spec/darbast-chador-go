@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Users, Check, X, Package, MapPin, Calendar, Loader2, Phone, Ruler, Banknote, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { Users, Check, X, Package, MapPin, Calendar, Loader2, Phone, Ruler, Banknote, FileText, ChevronDown, ChevronUp, BadgeCheck, Image as ImageIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { OrderMediaPreview } from '@/components/profile/OrderMediaPreview';
 
 interface CollaborationInvite {
   id: string;
@@ -38,6 +39,9 @@ interface CollaborationInvite {
   detailed_address?: string;
   province_name?: string;
   description?: string;
+  collaborator_name?: string | null;
+  collaborator_role?: string | null;
+  can_manage_order?: boolean;
 }
 
 export function PendingCollaborationInvites() {
@@ -80,7 +84,10 @@ export function PendingCollaborationInvites() {
           inviter_user_id,
           status,
           invited_at,
-          can_view_financials
+          can_view_financials,
+          can_manage_order,
+          collaborator_name,
+          collaborator_role
         `)
         .or(`invitee_user_id.eq.${user.id},invitee_phone_number.eq.${profile.phone_number}`)
         .in('status', ['pending', 'manager_approved', 'pending_registration'])
