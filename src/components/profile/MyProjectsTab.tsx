@@ -71,8 +71,8 @@ export const MyProjectsTab = () => {
         supabase
           .from('locations')
           .select('id, title, address_line, provinces(name), districts(name)')
+          // آدرس سفارش‌های بسته/غیرفعال هم باید دیده شود (فیلتر نهایی بر اساس داشتن سفارش است)
           .eq('user_id', user.id)
-          .eq('is_active', true)
           .order('created_at', { ascending: false }),
         supabase
           .from('projects_hierarchy')
