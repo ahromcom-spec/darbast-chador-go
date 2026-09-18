@@ -50,6 +50,8 @@ interface Collaborator {
   responded_at: string | null;
   can_view_financials?: boolean;
   can_manage_order?: boolean;
+  collaborator_name?: string | null;
+  collaborator_role?: string | null;
   invitee_profile?: {
     full_name: string | null;
   };
@@ -80,6 +82,8 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
   const [newCanViewFinancials, setNewCanViewFinancials] = useState(true);
   const [newCanManageOrder, setNewCanManageOrder] = useState(false);
   const [updatingPermId, setUpdatingPermId] = useState<string | null>(null);
+  const [newCollabName, setNewCollabName] = useState('');
+  const [newCollabRole, setNewCollabRole] = useState('');
 
   const { toast } = useToast();
   const { user } = useAuth();
@@ -253,6 +257,8 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
           status: 'pending_manager',
           can_view_financials: newCanViewFinancials,
           can_manage_order: newCanManageOrder,
+          collaborator_name: newCollabName.trim() || null,
+          collaborator_role: newCollabRole.trim() || null,
         } as any);
 
 
@@ -264,6 +270,8 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
       });
 
       setPhoneNumber('');
+      setNewCollabName('');
+      setNewCollabRole('');
       setTargetUser(null);
       fetchCollaborators();
       onCollaboratorAdded?.();
@@ -399,11 +407,16 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">
-                        {collab.invitee_profile?.full_name || 'بدون نام'}
+                        {collab.collaborator_name || collab.invitee_profile?.full_name || 'بدون نام'}
                       </p>
                       <p className="text-xs text-muted-foreground" dir="ltr">
                         {collab.invitee_phone_number}
                       </p>
+                      {collab.collaborator_role && (
+                        <Badge variant="secondary" className="mt-1 text-[10px]">
+                          {collab.collaborator_role} سفارش
+                        </Badge>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
@@ -501,6 +514,45 @@ export function AddCollaborator({ orderId, orderCode, open, onOpenChange, onColl
               <p className="text-xs text-muted-foreground">شماره باید ۱۱ رقم باشد (مثال: 09100000000)</p>
             )}
           </div>
+
+          {/* نام و سمت همکار */}
+          <div className="space-y-3 rounded-lg border border-border/50 bg-muted/20 p-3">
+            <p className="text-sm font-medium">نام و سمت همکار (اختیاری)</p>
+            <div className="space-y-2">
+              <Label htmlFor="collab-name" className="text-xs">نام همکار</Label>
+              <Input
+                id="collab-name"
+                placeholder="مثال: آقای احمدی"
+                value={newCollabName}
+                onChange={(e) => setNewCollabName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="collab-role" className="text-xs">سمت همکار</Label>
+              <Input
+                id="collab-role"
+                placeholder="مثال: حسابدار، مدیر اجرایی، مدیرعامل"
+                value={newCollabRole}
+                onChange={(e) => setNewCollabRole(e.target.value)}
+              />
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {['حسابدار', 'مدیر اجرایی', 'مدیرعامل', 'کارفرما', 'ناظر'].map((r) => (
+                  <Button
+                    key={r}
+                    type="button"
+                    size="sm"
+                    variant={newCollabRole === r ? 'default' : 'outline'}
+                    className="h-7 text-xs"
+                    onClick={() => setNewCollabRole(r)}
+                  >
+                    {r}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+
 
           {/* Permissions for the new collaborator */}
           <div className="space-y-2 rounded-lg border border-border/50 bg-muted/30 p-3">

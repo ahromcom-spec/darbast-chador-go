@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Users, Check, X, Package, MapPin, Calendar, Loader2, Phone, Ruler, Banknote, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { Users, Check, X, Package, MapPin, Calendar, Loader2, Phone, Ruler, Banknote, FileText, ChevronDown, ChevronUp, BadgeCheck, Image as ImageIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { OrderMediaPreview } from '@/components/profile/OrderMediaPreview';
 
 interface CollaborationInvite {
   id: string;
@@ -38,6 +39,9 @@ interface CollaborationInvite {
   detailed_address?: string;
   province_name?: string;
   description?: string;
+  collaborator_name?: string | null;
+  collaborator_role?: string | null;
+  can_manage_order?: boolean;
 }
 
 export function PendingCollaborationInvites() {
@@ -80,7 +84,10 @@ export function PendingCollaborationInvites() {
           inviter_user_id,
           status,
           invited_at,
-          can_view_financials
+          can_view_financials,
+          can_manage_order,
+          collaborator_name,
+          collaborator_role
         `)
         .or(`invitee_user_id.eq.${user.id},invitee_phone_number.eq.${profile.phone_number}`)
         .in('status', ['pending', 'manager_approved', 'pending_registration'])
@@ -382,7 +389,18 @@ export function PendingCollaborationInvites() {
                     <Badge variant="default" className="text-base px-3 py-1">
                       سفارش #{invite.order_code}
                     </Badge>
+                    {invite.collaborator_role && (
+                      <Badge variant="secondary" className="gap-1">
+                        <BadgeCheck className="h-3.5 w-3.5" />
+                        {invite.collaborator_role} سفارش
+                        {invite.collaborator_name ? ` — ${invite.collaborator_name}` : ''}
+                      </Badge>
+                    )}
+                    {invite.can_view_financials && (
+                      <Badge variant="outline" className="text-xs">دسترسی به مبالغ و پرداخت</Badge>
+                    )}
                   </div>
+
 
                   {/* Service Type */}
                   {invite.subcategory_name && (
@@ -601,6 +619,17 @@ export function PendingCollaborationInvites() {
                       <Phone className="h-4 w-4 text-primary flex-shrink-0" />
                       <span className="font-medium text-foreground">شماره تماس: </span>
                       <Badge variant="outline">{invite.order_notes.contact_phone}</Badge>
+                    </div>
+                  )}
+
+                  {/* عکس‌ها و فیلم‌های سفارش */}
+                  {isExpanded && (
+                    <div className="space-y-2 pt-2 border-t border-border/60">
+                      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <ImageIcon className="h-4 w-4 text-primary" />
+                        عکس‌ها و فیلم‌های سفارش
+                      </div>
+                      <OrderMediaPreview orderId={invite.order_id} pageSize={6} />
                     </div>
                   )}
                 </CollapsibleContent>
