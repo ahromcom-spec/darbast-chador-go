@@ -146,8 +146,8 @@ export default function MyProjectsHierarchy() {
           provinces(name),
           districts(name)
         `)
+        // آدرس سفارش‌های بسته‌شده هم باید دیده شود؛ فیلتر نهایی بر اساس داشتن سفارش است
         .eq('user_id', user.id)
-        .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (locError) throw locError;
@@ -228,9 +228,51 @@ export default function MyProjectsHierarchy() {
         }
       }
 
+      // پروژه‌ها و آدرس‌های سفارش‌های همکاری/انتقالی که مالکشان کاربر دیگری است
+      const ownedProjectIds = new Set((projects || []).map((p: any) => p.id));
+      const sharedProjectIds = [...new Set(
+        orders.map(o => o.project_id).filter(id => id && !ownedProjectIds.has(id))
+      )];
+
+      let sharedProjects: any[] = [];
+      if (sharedProjectIds.length > 0) {
+        const { data: sharedProjData } = await supabase
+          .from('projects_hierarchy')
+          .select(`
+            id,
+            location_id,
+            service_type_id,
+            subcategory_id,
+            title,
+            service_types_v3(name, code),
+            subcategories(name, code)
+          `)
+          .in('id', sharedProjectIds);
+        sharedProjects = sharedProjData || [];
+      }
+
+      const ownedLocationIds = new Set((locations || []).map((l: any) => l.id));
+      const sharedLocationIds = [...new Set(
+        sharedProjects
+          .map((p: any) => p.location_id)
+          .filter((id: string) => id && !ownedLocationIds.has(id))
+      )];
+
+      let sharedLocations: any[] = [];
+      if (sharedLocationIds.length > 0) {
+        const { data: sharedLocData } = await supabase
+          .from('locations')
+          .select('id, title, address_line, province_id, district_id, provinces(name), districts(name)')
+          .in('id', sharedLocationIds);
+        sharedLocations = sharedLocData || [];
+      }
+
+      const allProjects = [...(projects || []), ...sharedProjects];
+      const allLocations = [...(locations || []), ...sharedLocations];
+
       // Group projects by location
       const projectsByLocation: { [key: string]: Project[] } = {};
-      projects?.forEach(project => {
+      allProjects.forEach((project: any) => {
         if (!projectsByLocation[project.location_id]) {
           projectsByLocation[project.location_id] = [];
         }
@@ -239,7 +281,7 @@ export default function MyProjectsHierarchy() {
 
       // گروه‌بندی سفارش‌ها بر اساس hierarchy_project_id
       const ordersByProject: { [key: string]: Order[] } = {};
-      projects?.forEach((project) => {
+      allProjects.forEach((project: any) => {
         ordersByProject[project.id] = (orders || [])
           .filter((o) => o.project_id === project.id)
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -263,7 +305,7 @@ export default function MyProjectsHierarchy() {
       });
 
       // فیلتر کردن آدرس‌ها: فقط آدرس‌هایی که پروژه با سفارش دارند
-      const filteredAddresses = (locations || []).filter(loc => 
+      const filteredAddresses = allLocations.filter((loc: any) =>
         addressesWithOrders.has(loc.id)
       );
 
