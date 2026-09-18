@@ -110,6 +110,10 @@ export const useProjectsHierarchy = () => {
       const visibleOrderProjects = (visibleOrders || []) as VisibleOrderProject[];
       const visibleProjectIds = [...new Set(visibleOrderProjects
         .map(o => o.hierarchy_project_id).filter(Boolean) as string[])];
+      const visibleProjectIdSet = new Set<string>([
+        ...visibleProjectIds,
+        ...visibleOrderProjects.map(o => o.hierarchy_project_id || `order:${o.id}`),
+      ]);
 
       let quickProjectMetaMap = new Map<string, QuickProjectLocationMeta>();
       if (visibleProjectIds.length > 0) {
