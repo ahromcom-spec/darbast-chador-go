@@ -241,9 +241,11 @@ export const MyProjectsTab = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    {address.is_shared && <Badge variant="outline" className="text-xs">همکاری</Badge>}
                     <Badge variant="secondary">{projects.length} پروژه</Badge>
                     {isOpen ? <ChevronDown className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
                   </div>
+
                 </div>
 
                 {isOpen && (
