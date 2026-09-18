@@ -57,7 +57,8 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .single();
 
-    if (!customer) throw new Error('Customer not found');
+    // مشتری ممکن است وجود نداشته باشد (همکار سفارش) — در ادامه با دسترسی همکاری بررسی می‌شود
+    if (!customer && (pay_all || statement_id)) throw new Error('Customer not found');
 
     const payableStatuses = ['pending', 'pending_execution', 'approved', 'completed', 'in_progress', 'paid'];
 
