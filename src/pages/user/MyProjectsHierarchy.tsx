@@ -146,8 +146,8 @@ export default function MyProjectsHierarchy() {
           provinces(name),
           districts(name)
         `)
+        // آدرس سفارش‌های بسته‌شده هم باید دیده شود؛ فیلتر نهایی بر اساس داشتن سفارش است
         .eq('user_id', user.id)
-        .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (locError) throw locError;
