@@ -132,16 +132,19 @@ serve(async (req) => {
       .single();
 
     if (orderError || !order) throw new Error('Order not found');
-    if (order.customer_id !== customer.id) {
-      // Allow accepted collaborators to pay for the order
+    if (!customer || order.customer_id !== customer.id) {
+      // Allow accepted collaborators with financial access to pay for the order
       const { data: collab } = await supabaseClient
         .from('order_collaborators')
-        .select('id')
+        .select('id, can_view_financials')
         .eq('order_id', order.id)
         .eq('invitee_user_id', user.id)
         .in('status', ['accepted', 'approved'])
         .maybeSingle();
       if (!collab) throw new Error('Order does not belong to user');
+      if ((collab as any).can_view_financials === false) {
+        throw new Error('Collaborator does not have payment access');
+      }
     }
 
     const allowedStatuses = ['pending', 'pending_execution', 'approved', 'completed', 'in_progress', 'paid'];
