@@ -891,7 +891,9 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           if (mapOrderFilter === 'archived' && !isArchivedOrder(o)) return false;
           return true;
         }
-        return isActiveExecutionOrder(o, new Set(Object.keys(repairOrders)));
+        // companyOrders پیش‌تر با وضعیت سفارش و درخواست تعمیر فیلتر شده است.
+        // بررسی دوباره repairOrders در اینجا باعث چرخه واکشی و بازسازی مداوم مارکرها می‌شد.
+        return true;
       });
 
 
@@ -1084,7 +1086,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
       console.error('خطا در دریافت عکس‌های پروژه:', error);
       setProjectsWithMedia(projects.map(p => ({ ...p, media: [], orders: [] })));
     }
-  }, [projects, activeExecutionOnly, companyOrders, repairOrders, mapOrderFilter]);
+  }, [projects, activeExecutionOnly, companyOrders, mapOrderFilter]);
 
   // دریافت درخواست‌های تعمیر باز برای سفارش‌های نمایش‌داده‌شده روی نقشه
   useEffect(() => {
@@ -2023,8 +2025,8 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
               ${addressLabelHtml}
               <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid #fff;background:#000;position:relative;">
                 <video src="${videoUrl}" autoplay muted playsinline preload="auto"
-                  onplay="this.dataset.cycleStart=Date.now()"
-                  onended="const elapsed=Date.now()-(parseInt(this.dataset.cycleStart)||0);const wait=Math.max(0,8000-elapsed);setTimeout(()=>{this.currentTime=0;this.play();},wait);"
+                  ontimeupdate="if(this.currentTime>=6){this.currentTime=0;this.play().catch(()=>{});}"
+                  onended="this.currentTime=0;this.play().catch(()=>{});"
                   style="width:100%;height:100%;object-fit:cover;pointer-events:none;">
                 </video>
                 <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));height:18px;display:flex;align-items:center;justify-content:center;">
@@ -3192,7 +3194,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
     } else {
       console.warn('[HybridGlobe] No markers to display on map');
     }
-  }, [projectsWithMedia, loading, mapReady, navigate, selectedProject, expandedClusters, repairOrders]);
+  }, [projectsWithMedia, loading, mapReady, navigate, expandedClusters, repairOrders]);
 
   // تغییر نمای نقشه بین استاندارد و ماهواره‌ای
   useEffect(() => {
