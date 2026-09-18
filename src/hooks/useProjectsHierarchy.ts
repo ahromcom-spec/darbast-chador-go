@@ -174,7 +174,7 @@ export const useProjectsHierarchy = () => {
         }) as ProjectHierarchy[];
 
       if (quickCustomerProjects.length > 0) {
-        setProjects(mergeProjectsById(quickCustomerProjects));
+        setProjects(forceActiveForVisibleOrders(mergeProjectsById(quickCustomerProjects), visibleProjectIdSet));
         setLoading(false);
       }
 
@@ -185,10 +185,13 @@ export const useProjectsHierarchy = () => {
       const ownedIds = new Set((ownedProjects || []).map(p => p.id));
 
       if (quickCustomerProjects.length === 0) {
-        setProjects(ownedProjects || []);
+        setProjects(forceActiveForVisibleOrders(ownedProjects || [], visibleProjectIdSet));
         setLoading(false);
       } else {
-        setProjects(mergeProjectsById([...(ownedProjects || []), ...quickCustomerProjects]));
+        setProjects(forceActiveForVisibleOrders(
+          mergeProjectsById([...(ownedProjects || []), ...quickCustomerProjects]),
+          visibleProjectIdSet
+        ));
       }
 
       const customerOnlyIds = visibleProjectIds
@@ -209,7 +212,10 @@ export const useProjectsHierarchy = () => {
 
 
       // ترکیب پروژه‌های مالکیتی و پروژه‌های مشتری
-      const uniqueProjects = mergeProjectsById([...(ownedProjects || []), ...quickCustomerProjects, ...customerProjects]);
+      const uniqueProjects = forceActiveForVisibleOrders(
+        mergeProjectsById([...(ownedProjects || []), ...quickCustomerProjects, ...customerProjects]),
+        visibleProjectIdSet
+      );
 
       setProjects(uniqueProjects);
     } catch (error) {
