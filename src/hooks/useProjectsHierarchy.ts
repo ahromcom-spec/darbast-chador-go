@@ -55,6 +55,14 @@ const mergeProjectsById = (projects: ProjectHierarchy[]) => {
   return Array.from(merged.values());
 };
 
+// آدرس سفارش‌های قابل مشاهده (مشتری/همکار) حتی اگر غیرفعال شده باشد باید روی نقشه بماند
+const forceActiveForVisibleOrders = (projects: ProjectHierarchy[], visibleIds: Set<string>) =>
+  projects.map((project) =>
+    visibleIds.has(project.id) && project.locations
+      ? { ...project, locations: { ...project.locations, is_active: true } }
+      : project
+  );
+
 export const useProjectsHierarchy = () => {
   const [projects, setProjects] = useState<ProjectHierarchy[]>([]);
   const [loading, setLoading] = useState(true);
