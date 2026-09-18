@@ -15,6 +15,8 @@ interface Collaborator {
   invited_at: string;
   inviter_name?: string;
   invitee_name?: string;
+  collaborator_name?: string | null;
+  collaborator_role?: string | null;
 }
 
 interface OrderCollaboratorsListProps {
@@ -47,7 +49,7 @@ export function OrderCollaboratorsList({ orderId, showForManagers = false, isOwn
       // Fetch collaborators
       const { data: collabs, error } = await supabase
         .from('order_collaborators')
-        .select('id, invitee_user_id, invitee_phone_number, inviter_user_id, status, invited_at')
+        .select('id, invitee_user_id, invitee_phone_number, inviter_user_id, status, invited_at, collaborator_name, collaborator_role')
         .eq('order_id', orderId)
         .order('invited_at', { ascending: false });
 
@@ -185,10 +187,13 @@ export function OrderCollaboratorsList({ orderId, showForManagers = false, isOwn
             
             return (
               <div key={collab.id} className="flex items-center justify-between p-2 bg-background rounded-md">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <User className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">{collab.invitee_name || 'کاربر'}</span>
+                  <span className="text-sm font-medium">{collab.collaborator_name || collab.invitee_name || 'کاربر'}</span>
                   <span className="text-xs text-muted-foreground" dir="ltr">({collab.invitee_phone_number})</span>
+                  {collab.collaborator_role && (
+                    <Badge variant="secondary" className="text-xs">{collab.collaborator_role} سفارش</Badge>
+                  )}
                   {collab.invitee_user_id === user?.id && (
                     <Badge variant="outline" className="text-xs">شما</Badge>
                   )}
