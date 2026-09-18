@@ -389,7 +389,18 @@ export function PendingCollaborationInvites() {
                     <Badge variant="default" className="text-base px-3 py-1">
                       سفارش #{invite.order_code}
                     </Badge>
+                    {invite.collaborator_role && (
+                      <Badge variant="secondary" className="gap-1">
+                        <BadgeCheck className="h-3.5 w-3.5" />
+                        {invite.collaborator_role} سفارش
+                        {invite.collaborator_name ? ` — ${invite.collaborator_name}` : ''}
+                      </Badge>
+                    )}
+                    {invite.can_view_financials && (
+                      <Badge variant="outline" className="text-xs">دسترسی به مبالغ و پرداخت</Badge>
+                    )}
                   </div>
+
 
                   {/* Service Type */}
                   {invite.subcategory_name && (
