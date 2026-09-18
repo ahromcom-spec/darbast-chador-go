@@ -92,14 +92,51 @@ export const MyProjectsTab = () => {
         created_at: p.created_at,
       }));
 
+      // پروژه‌های سفارش‌های همکاری/انتقالی که مالک آن‌ها کاربر دیگری است
+      const ownedProjectIds = new Set((projRes.data || []).map((p: any) => p.id));
+      const sharedProjectIds = [...new Set(
+        orders.map(o => o.project_id).filter(id => id && !ownedProjectIds.has(id))
+      )];
+
+      let sharedProjects: any[] = [];
+      if (sharedProjectIds.length > 0) {
+        const { data: sharedData } = await supabase
+          .from('projects_hierarchy')
+          .select('id, location_id, service_types_v3(name, code), subcategories(name, code)')
+          .in('id', sharedProjectIds);
+        sharedProjects = sharedData || [];
+      }
+
+      const allProjects = [...(projRes.data || []), ...sharedProjects];
+
+      // آدرس سفارش همکاری هم باید در فهرست آدرس‌های کاربر مقصد دیده شود
+      const ownedLocationIds = new Set((locRes.data || []).map((l: any) => l.id));
+      const sharedLocationIds = [...new Set(
+        sharedProjects
+          .map((p: any) => p.location_id)
+          .filter((id: string) => id && !ownedLocationIds.has(id))
+      )];
+
+      let sharedLocations: any[] = [];
+      if (sharedLocationIds.length > 0) {
+        const { data: sharedLocData } = await supabase
+          .from('locations')
+          .select('id, title, address_line, provinces(name), districts(name)')
+          .in('id', sharedLocationIds);
+        sharedLocations = sharedLocData || [];
+      }
+
+      const sharedLocationIdSet = new Set(sharedLocations.map((l: any) => l.id));
+      const allLocations = [...(locRes.data || []), ...sharedLocations];
+
       const projByLoc: Record<string, Project[]> = {};
-      (projRes.data || []).forEach((p: any) => {
+      allProjects.forEach((p: any) => {
         if (!projByLoc[p.location_id]) projByLoc[p.location_id] = [];
         projByLoc[p.location_id].push(p);
       });
 
       const ordByProj: Record<string, Order[]> = {};
-      (projRes.data || []).forEach((p: any) => {
+      allProjects.forEach((p: any) => {
         ordByProj[p.id] = orders
           .filter(o => o.project_id === p.id)
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -116,9 +153,14 @@ export const MyProjectsTab = () => {
         }
       });
 
-      setAddresses((locRes.data || []).filter((l: any) => addressesWithOrders.has(l.id)) as any);
+      setAddresses(
+        allLocations
+          .filter((l: any) => addressesWithOrders.has(l.id))
+          .map((l: any) => ({ ...l, is_shared: sharedLocationIdSet.has(l.id) })) as any
+      );
       setProjectsByLocation(filteredProjByLoc);
       setOrdersByProject(ordByProj);
+
     } catch (error: any) {
       console.error("Error fetching projects hierarchy:", error);
       toast({ variant: "destructive", title: "خطا", description: error.message });
