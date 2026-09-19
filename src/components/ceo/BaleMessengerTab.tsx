@@ -63,6 +63,40 @@ export const BaleMessengerTab = () => {
   );
   const [testMedia, setTestMedia] = useState("");
   const [logFilter, setLogFilter] = useState<"all" | "media" | "text">("all");
+  const [resendingId, setResendingId] = useState<string | null>(null);
+
+  const resendLog = async (l: MessengerLog) => {
+    const target = l.phone || l.chat_id;
+    if (!target) {
+      toast.error("شماره یا شناسه گیرنده برای ارسال مجدد ثبت نشده است");
+      return;
+    }
+    if (isMediaLog(l) && !l.media_url) {
+      toast.error("فایل این ردیف ثبت نشده و ارسال مجدد ممکن نیست");
+      return;
+    }
+    setResendingId(l.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-bale-message", {
+        body: {
+          phone: l.phone || undefined,
+          chatId: l.phone ? undefined : l.chat_id,
+          text: isMediaLog(l) ? "" : l.text || "",
+          media: l.media_url ? [{ url: l.media_url, kind: l.kind }] : [],
+          orderCode: l.order_code || undefined,
+          force: true,
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.success === false) toast.error("ارسال مجدد موفق نبود");
+      else toast.success("ارسال مجدد انجام شد");
+      load();
+    } catch (e: any) {
+      toast.error(e?.message || "خطا در ارسال مجدد");
+    } finally {
+      setResendingId(null);
+    }
+  };
 
   const isMediaLog = (l: MessengerLog) => l.kind === "photo" || l.kind === "video";
   const filteredLogs = logs.filter((l) =>
@@ -343,6 +377,7 @@ export const BaleMessengerTab = () => {
                     <TableHead>فایل</TableHead>
                     <TableHead>سفارش</TableHead>
                     <TableHead>وضعیت</TableHead>
+                    <TableHead>ارسال مجدد</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -383,6 +418,21 @@ export const BaleMessengerTab = () => {
                             {l.provider_response}
                           </p>
                         ) : null}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={resendingId === l.id}
+                          onClick={() => resendLog(l)}
+                        >
+                          {resendingId === l.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin ml-1" />
+                          ) : (
+                            <Send className="h-3.5 w-3.5 ml-1" />
+                          )}
+                          ارسال مجدد
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
