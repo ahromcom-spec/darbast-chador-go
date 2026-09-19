@@ -243,7 +243,6 @@ export default function OrderDetail() {
   const [showEditExpertPricingDialog, setShowEditExpertPricingDialog] = useState(false);
   const [showRenewalDialog, setShowRenewalDialog] = useState(false);
   const [approvedCollectionDate, setApprovedCollectionDate] = useState<string | null>(null);
-  const [isOrderDetailsExpanded, setIsOrderDetailsExpanded] = useState(false);
   const [isPriceDetailsExpanded, setIsPriceDetailsExpanded] = useState(false);
   const [isLocationSectionExpanded, setIsLocationSectionExpanded] = useState(false);
   const [isDetailsSectionExpanded, setIsDetailsSectionExpanded] = useState(false);
@@ -1371,7 +1370,7 @@ export default function OrderDetail() {
                   <div className="flex items-center justify-between gap-3">
                     <CardTitle className="flex items-center gap-2 text-base">
                       <ClipboardList className="h-5 w-5 text-primary" />
-                      جزئیات سفارش و مراحل سفارش
+                      جزئیات سفارش
                     </CardTitle>
                     <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isDetailsSectionExpanded ? "rotate-180" : ""}`} />
                   </div>
@@ -1381,12 +1380,7 @@ export default function OrderDetail() {
                 <CardContent className="space-y-6">
           {/* Order Details from Notes or Payment Amount */}
           {(parsedNotes || order.payment_amount || notesParseError) && (
-            <Collapsible open={isOrderDetailsExpanded} onOpenChange={setIsOrderDetailsExpanded}>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle>جزئیات سفارش</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+                <div className="space-y-4">
                   {/* Summary View - Always Visible */}
                   {parsedNotes && (
                     <div className="space-y-3">
@@ -1526,25 +1520,7 @@ export default function OrderDetail() {
                     </div>
                   )}
 
-                  {/* Toggle Button */}
-                  <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="sm" className="w-full gap-2">
-                      {isOrderDetailsExpanded ? (
-                        <>
-                          <ChevronUp className="h-4 w-4" />
-                          بستن جزئیات
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown className="h-4 w-4" />
-                          دیگر جزئیات سفارش
-                        </>
-                      )}
-                    </Button>
-                  </CollapsibleTrigger>
-
-                  {/* Expanded Details */}
-                  <CollapsibleContent className="space-y-6">
+                  <div className="space-y-6">
                     {/* بلوک کرایه اجناس داربست - جزئیات بیشتر */}
                     {parsedNotes && parsedNotes.service_type === 'کرایه اجناس داربست' && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1920,13 +1896,15 @@ export default function OrderDetail() {
                         </section>
                       </div>
                     )}
-                  </CollapsibleContent>
-                </CardContent>
-              </Card>
-            </Collapsible>
+                  </div>
+                </div>
           )}
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
 
-          {/* Timeline */}
+          {/* Timeline - independent from order details */}
           <OrderTimeline
             orderStatus={order.status === 'paid' && remainingAmountForPayment > 0 ? 'awaiting_payment' : order.status}
             createdAt={order.created_at}
@@ -1943,10 +1921,6 @@ export default function OrderDetail() {
             totalPaid={order.total_paid}
             totalPrice={order.total_price}
           />
-                </CardContent>
-              </CollapsibleContent>
-            </Card>
-          </Collapsible>
 
           {/* Repair and Collection Request Buttons - Outside the collapsible order details card */}
           {(parsedNotes || order.payment_amount || notesParseError) && (
