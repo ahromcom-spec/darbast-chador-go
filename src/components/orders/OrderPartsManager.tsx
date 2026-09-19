@@ -868,22 +868,72 @@ export function OrderPartsManager({ open, onOpenChange, order, onUpdated }: Orde
                         ) : (
                           <div className="space-y-2">
                             {partRenewals.map((r) => (
-                              <div key={r.id} className="flex items-center justify-between gap-2 rounded-md border p-2 text-xs">
-                                <div className="space-y-0.5">
-                                  <p className="font-medium">تمدید ماه {(r.renewal_number + 1).toLocaleString('fa-IR')}</p>
-                                  <p className="text-muted-foreground">
-                                    {r.new_start_date ? formatPersianDate(r.new_start_date) : '-'} تا{' '}
-                                    {r.new_end_date ? formatPersianDate(r.new_end_date) : '-'}
-                                  </p>
+                              <div key={r.id} className="rounded-md border p-2 text-xs space-y-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="space-y-0.5">
+                                    <p className="font-medium">تمدید ماه {(r.renewal_number + 1).toLocaleString('fa-IR')}</p>
+                                    <p className="text-muted-foreground">
+                                      {r.new_start_date ? formatPersianDate(r.new_start_date) : '-'} تا{' '}
+                                      {r.new_end_date ? formatPersianDate(r.new_end_date) : '-'}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <span className="font-bold" dir="ltr">
+                                      {Number(r.renewal_price || 0).toLocaleString('fa-IR')} تومان
+                                    </span>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      title="ویرایش تمدید"
+                                      onClick={() => (editingRenewalId === r.id ? setEditingRenewalId(null) : startEditRenewal(r))}
+                                    >
+                                      <Pencil className="h-4 w-4 text-primary" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => deleteRenewal(r.id, part.id)}>
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold" dir="ltr">
-                                    {Number(r.renewal_price || 0).toLocaleString('fa-IR')} تومان
-                                  </span>
-                                  <Button variant="ghost" size="icon" onClick={() => deleteRenewal(r.id, part.id)}>
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                  </Button>
-                                </div>
+                                {editingRenewalId === r.id && (
+                                  <div className="space-y-2 rounded-md bg-muted/50 p-2">
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div className="space-y-1">
+                                        <Label className="text-[10px]">تاریخ شروع</Label>
+                                        <PersianDatePicker
+                                          timeMode="none"
+                                          value={renewalDraft.start || undefined}
+                                          onChange={(v) => setRenewalDraft((prev) => ({ ...prev, start: v || '' }))}
+                                        />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <Label className="text-[10px]">تاریخ پایان</Label>
+                                        <PersianDatePicker
+                                          timeMode="none"
+                                          value={renewalDraft.end || undefined}
+                                          onChange={(v) => setRenewalDraft((prev) => ({ ...prev, end: v || '' }))}
+                                        />
+                                      </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <Label className="text-[10px]">مبلغ تمدید (تومان)</Label>
+                                      <Input
+                                        dir="ltr"
+                                        inputMode="numeric"
+                                        value={renewalDraft.price}
+                                        onChange={(e) => setRenewalDraft((prev) => ({ ...prev, price: e.target.value }))}
+                                      />
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <Button size="sm" className="gap-1 flex-1" onClick={() => updateRenewal(r)} disabled={busyId !== null}>
+                                        <Save className="h-3.5 w-3.5" />
+                                        ذخیره ویرایش
+                                      </Button>
+                                      <Button size="sm" variant="outline" onClick={() => setEditingRenewalId(null)}>
+                                        انصراف
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
