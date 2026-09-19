@@ -351,7 +351,24 @@ serve(async (req: Request): Promise<Response> => {
     if (safirKey && safirBotId && safirPhone) {
       for (const item of botMediaFailed) {
         const kind = isVideoUrl(item) ? "video" : "photo";
-        const up = await safirUpload(item.url);
+        let up = await safirUpload(item.url);
+
+        // فیلم حجیم: اول نسخه کم‌حجم‌شده، در غیر این‌صورت صف کاهش خودکار حجم
+        if (!up.fileId && up.tooBig && kind === "video") {
+          const alt = await resolveCompressed(item.url);
+          if (alt) up = await safirUpload(alt);
+          if (!up.fileId) {
+            await queueCompression(item.url, up.size);
+            const r = {
+              ok: false,
+              raw: `حجم فیلم زیاد است؛ کاهش خودکار کیفیت و کوتاه‌کردن انتهای فیلم در صف قرار گرفت (${up.raw})`,
+            };
+            await log(kind, item.url, r);
+            results.push({ kind, ok: false, url: item.url });
+            continue;
+          }
+        }
+
         if (!up.fileId) {
           const r = { ok: false, raw: `آپلود در بله ناموفق: ${up.raw}` };
           await log(kind, item.url, r);
