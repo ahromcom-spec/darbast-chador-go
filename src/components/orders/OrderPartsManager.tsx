@@ -20,6 +20,7 @@ import {
   ChevronDown,
   Ruler,
   Loader2,
+  Pencil,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -452,7 +453,13 @@ export function OrderPartsManager({ open, onOpenChange, order, onUpdated }: Orde
       const lastEnd = partRenewals.length > 0
         ? partRenewals.reduce((prev, cur) => (prev.renewal_number > cur.renewal_number ? prev : cur)).new_end_date
         : part.rental_end_date || (part.rental_start_date ? addMonths(new Date(part.rental_start_date), 1).toISOString() : null);
-      const startDate = lastEnd ? new Date(lastEnd) : new Date();
+      const manual = renewalDates[part.id];
+      const startDate = manual?.start ? new Date(manual.start) : (lastEnd ? new Date(lastEnd) : new Date());
+      const endDate = manual?.end ? new Date(manual.end) : addMonths(startDate, 1);
+      if (manual?.start && manual?.end && endDate <= startDate) {
+        toast({ variant: 'destructive', title: 'خطا', description: 'تاریخ پایان تمدید باید بعد از تاریخ شروع باشد' });
+        return;
+      }
       const nextNumber = partRenewals.length > 0
         ? Math.max(...partRenewals.map((r) => r.renewal_number)) + 1
         : 1;
@@ -468,7 +475,7 @@ export function OrderPartsManager({ open, onOpenChange, order, onUpdated }: Orde
         renewal_number: nextNumber,
         previous_end_date: lastEnd,
         new_start_date: startDate.toISOString(),
-        new_end_date: addMonths(startDate, 1).toISOString(),
+        new_end_date: endDate.toISOString(),
         original_price: Number(part.price || 0),
         renewal_price: price,
         status: 'approved',
@@ -477,6 +484,7 @@ export function OrderPartsManager({ open, onOpenChange, order, onUpdated }: Orde
       } as any);
       if (error) throw error;
       setRenewalPrice((prev) => ({ ...prev, [part.id]: '' }));
+      setRenewalDates((prev) => ({ ...prev, [part.id]: { start: '', end: '' } }));
       toast({ title: '✓ تمدید ثبت شد', description: partLabel(part.part_number, part.title) });
       await load();
       onUpdated?.();
