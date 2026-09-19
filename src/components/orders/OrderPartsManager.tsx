@@ -322,18 +322,20 @@ export function OrderPartsManager({ open, onOpenChange, order, onUpdated }: Orde
     }
     setBusyId(part.id);
     try {
+      // اگر تاریخ درخواست به‌صورت دستی وارد شده، همان استفاده شود
+      const reqDate = part.collection_requested_at || new Date().toISOString();
       const { error } = await supabase.from('collection_requests').insert({
         order_id: order.id,
         part_id: part.id,
         customer_id: order.customer_id,
         description: `درخواست فک ${partLabel(part.part_number, part.title)}`,
-        requested_date: new Date().toISOString(),
+        requested_date: reqDate,
         status: 'pending',
       } as any);
       if (error) throw error;
       await supabase
         .from('order_parts')
-        .update({ status: 'awaiting_collection', collection_requested_at: new Date().toISOString() })
+        .update({ status: 'awaiting_collection', collection_requested_at: reqDate })
         .eq('id', part.id);
       toast({ title: '✓ درخواست فک ثبت شد', description: partLabel(part.part_number, part.title) });
       await load();
@@ -348,16 +350,67 @@ export function OrderPartsManager({ open, onOpenChange, order, onUpdated }: Orde
   const markCollected = async (part: OrderPartRow) => {
     setBusyId(part.id);
     try {
+      // اگر تاریخ فک به‌صورت دستی وارد شده، همان استفاده شود
+      const collectedDate = part.collected_at || new Date().toISOString();
       const { error } = await supabase
         .from('order_parts')
-        .update({ status: 'collected', collected_at: new Date().toISOString() })
+        .update({ status: 'collected', collected_at: collectedDate })
         .eq('id', part.id);
       if (error) throw error;
+      // آخرین درخواست فک این قسمت را تکمیل‌شده علامت بزن
+      await supabase
+        .from('collection_requests')
+        .update({ status: 'completed', completed_at: collectedDate } as any)
+        .eq('part_id', part.id)
+        .neq('status', 'completed');
       toast({ title: '✓ ثبت شد', description: `${partLabel(part.part_number, part.title)} فک و جمع‌آوری شد.` });
       await load();
       onUpdated?.();
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'خطا', description: err.message || 'ثبت فک با خطا مواجه شد' });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  // ویرایش دستی تاریخ درخواست فک / تاریخ فک شدن
+  const updatePartDate = async (
+    part: OrderPartRow,
+    field: 'collection_requested_at' | 'collected_at',
+    value: string | null
+  ) => {
+    setBusyId(part.id);
+    try {
+      const updates: any = { [field]: value };
+      // اگر تاریخ فک دستی ثبت شد و قسمت هنوز فک‌شده نیست، وضعیت هم هماهنگ شود
+      if (field === 'collected_at' && value && part.status !== 'collected') {
+        updates.status = 'collected';
+      }
+      if (field === 'collection_requested_at' && value && part.status === 'active') {
+        updates.status = 'awaiting_collection';
+      }
+      const { error } = await supabase
+        .from('order_parts')
+        .update(updates)
+        .eq('id', part.id);
+      if (error) throw error;
+      // همگام‌سازی با درخواست فک مرتبط
+      if (field === 'collection_requested_at' && value) {
+        await supabase
+          .from('collection_requests')
+          .update({ requested_date: value } as any)
+          .eq('part_id', part.id);
+      }
+      if (field === 'collected_at' && value) {
+        await supabase
+          .from('collection_requests')
+          .update({ status: 'completed', completed_at: value } as any)
+          .eq('part_id', part.id)
+          .neq('status', 'completed');
+      }
+      await load();
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'خطا', description: err.message || 'ویرایش تاریخ با خطا مواجه شد' });
     } finally {
       setBusyId(null);
     }
@@ -722,14 +775,27 @@ export function OrderPartsManager({ open, onOpenChange, order, onUpdated }: Orde
                         </Button>
                       </div>
 
-                      {(part.collection_requested_at || part.collected_at) && (
-                        <div className="text-xs text-muted-foreground space-y-1">
-                          {part.collection_requested_at && (
-                            <p>تاریخ درخواست فک: {formatPersianDate(part.collection_requested_at)}</p>
-                          )}
-                          {part.collected_at && <p>تاریخ فک شدن: {formatPersianDate(part.collected_at)}</p>}
+                      {/* تاریخ درخواست فک و تاریخ فک — قابل ویرایش دستی */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-md border bg-muted/30 p-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">تاریخ درخواست فک</Label>
+                          <PersianDatePicker
+                            timeMode="none"
+                            value={part.collection_requested_at || undefined}
+                            onChange={(v) => updatePartDate(part, 'collection_requested_at', v)}
+                          />
+                          <p className="text-[10px] text-muted-foreground">می‌توانید تاریخ گذشته را دستی وارد کنید</p>
                         </div>
-                      )}
+                        <div className="space-y-1">
+                          <Label className="text-xs">تاریخ فک شدن (جمع‌آوری)</Label>
+                          <PersianDatePicker
+                            timeMode="none"
+                            value={part.collected_at || undefined}
+                            onChange={(v) => updatePartDate(part, 'collected_at', v)}
+                          />
+                          <p className="text-[10px] text-muted-foreground">اگر چند روز پیش فک شده، تاریخ همان روز را انتخاب کنید</p>
+                        </div>
+                      </div>
 
                       <Separator />
 
