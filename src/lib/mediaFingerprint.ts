@@ -76,12 +76,13 @@ export async function findDuplicateProjectMedia(
     fileSize?: number | null;
     fileType?: string | null;
     filePath?: string | null;
+    mediaDate?: string | null;
   }
 ): Promise<{ id: string; file_path: string } | null> {
   try {
     const { data } = await supabase
       .from('project_media')
-      .select('id, file_path, file_size, file_type, content_hash, duration_seconds')
+      .select('id, file_path, file_size, file_type, content_hash, duration_seconds, media_date')
       .eq('project_id', projectId);
 
     const rows = data || [];
@@ -102,6 +103,8 @@ export async function findDuplicateProjectMedia(
         if (r.file_type !== 'video' || !r.duration_seconds) return false;
         const durOk = Math.abs(Number(r.duration_seconds) - Number(opts.durationSeconds)) <= 0.5;
         if (!durOk) return false;
+        // فیلم با همان مدت‌زمان فقط وقتی تکراری است که برای همان تاریخ ثبت شده باشد
+        if (opts.mediaDate && r.media_date && String(r.media_date) !== String(opts.mediaDate)) return false;
         if (!opts.fileSize || !r.file_size) return true;
         const diff = Math.abs(Number(r.file_size) - Number(opts.fileSize));
         return diff / Math.max(Number(r.file_size), Number(opts.fileSize)) <= 0.03;
@@ -115,6 +118,7 @@ export async function findDuplicateProjectMedia(
     return null;
   }
 }
+
 
 /** کلید یکتای نمایش برای حذف تکراری‌ها در گالری (روی داده‌های قدیمی هم کار می‌کند) */
 export function mediaDedupeKey(m: {

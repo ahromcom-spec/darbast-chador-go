@@ -3194,6 +3194,7 @@ export default function DailyReportModule() {
           fileSize: m.file_size,
           fileType: m.file_type,
           filePath: m.file_path,
+          mediaDate: dateStr,
         });
         if (duplicate) {
           await supabase.from('daily_report_order_media')
@@ -3210,6 +3211,7 @@ export default function DailyReportModule() {
           file_size: m.file_size,
           mime_type: m.mime_type,
           created_at: `${dateStr}T12:00:00+03:30`,
+          media_date: dateStr,
           content_hash: (m as any).content_hash ?? null,
           duration_seconds: (m as any).duration_seconds ?? null,
         });
