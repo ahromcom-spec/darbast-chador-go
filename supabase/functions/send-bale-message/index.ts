@@ -53,12 +53,15 @@ serve(async (req: Request): Promise<Response> => {
   try {
     const body: BaleRequest = await req.json();
     const token = Deno.env.get("TELEGRAM_BOT_TOKEN");
-    if (!token) {
+    const safirKey = Deno.env.get("BALE_SAFIR_API_KEY");
+    const safirBotId = Number(Deno.env.get("BALE_BOT_ID") || 0);
+    if (!token && !safirKey) {
       return new Response(JSON.stringify({ error: "توکن ربات بله تنظیم نشده است" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     // اتصال ربات: ثبت وب‌هوک بله روی سرور و دریافت اطلاعات ربات
     if ((body as any).action === "setup") {
