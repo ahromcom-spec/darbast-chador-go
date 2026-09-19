@@ -405,6 +405,7 @@ export function OrderRowMediaUpload({
         fileSize,
         fileType,
         filePath,
+        mediaDate: date,
       });
       if (duplicate) return;
 
@@ -416,6 +417,7 @@ export function OrderRowMediaUpload({
         file_size: fileSize,
         mime_type: mimeType,
         created_at: `${date}T12:00:00+03:30`,
+        media_date: date,
         content_hash: fingerprint?.contentHash ?? null,
         duration_seconds: fingerprint?.durationSeconds ?? null,
       });

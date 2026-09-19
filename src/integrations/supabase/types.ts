@@ -3541,6 +3541,7 @@ export type Database = {
           file_size: number
           file_type: string
           id: string
+          media_date: string | null
           mime_type: string
           project_id: string
           thumbnail_path: string | null
@@ -3555,6 +3556,7 @@ export type Database = {
           file_size: number
           file_type: string
           id?: string
+          media_date?: string | null
           mime_type: string
           project_id: string
           thumbnail_path?: string | null
@@ -3569,6 +3571,7 @@ export type Database = {
           file_size?: number
           file_type?: string
           id?: string
+          media_date?: string | null
           mime_type?: string
           project_id?: string
           thumbnail_path?: string | null
