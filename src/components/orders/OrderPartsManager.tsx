@@ -20,6 +20,7 @@ import {
   ChevronDown,
   Ruler,
   Loader2,
+  Pencil,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -146,6 +147,9 @@ export function OrderPartsManager({ open, onOpenChange, order, onUpdated }: Orde
   const [splitting, setSplitting] = useState(false);
   const [openPartId, setOpenPartId] = useState<string | null>(null);
   const [renewalPrice, setRenewalPrice] = useState<Record<string, string>>({});
+  const [renewalDates, setRenewalDates] = useState<Record<string, { start: string; end: string }>>({});
+  const [editingRenewalId, setEditingRenewalId] = useState<string | null>(null);
+  const [renewalDraft, setRenewalDraft] = useState<{ start: string; end: string; price: string }>({ start: '', end: '', price: '' });
 
   const orderNotes = useMemo(() => {
     if (!order?.notes) return null;
@@ -449,7 +453,13 @@ export function OrderPartsManager({ open, onOpenChange, order, onUpdated }: Orde
       const lastEnd = partRenewals.length > 0
         ? partRenewals.reduce((prev, cur) => (prev.renewal_number > cur.renewal_number ? prev : cur)).new_end_date
         : part.rental_end_date || (part.rental_start_date ? addMonths(new Date(part.rental_start_date), 1).toISOString() : null);
-      const startDate = lastEnd ? new Date(lastEnd) : new Date();
+      const manual = renewalDates[part.id];
+      const startDate = manual?.start ? new Date(manual.start) : (lastEnd ? new Date(lastEnd) : new Date());
+      const endDate = manual?.end ? new Date(manual.end) : addMonths(startDate, 1);
+      if (manual?.start && manual?.end && endDate <= startDate) {
+        toast({ variant: 'destructive', title: 'خطا', description: 'تاریخ پایان تمدید باید بعد از تاریخ شروع باشد' });
+        return;
+      }
       const nextNumber = partRenewals.length > 0
         ? Math.max(...partRenewals.map((r) => r.renewal_number)) + 1
         : 1;
@@ -465,7 +475,7 @@ export function OrderPartsManager({ open, onOpenChange, order, onUpdated }: Orde
         renewal_number: nextNumber,
         previous_end_date: lastEnd,
         new_start_date: startDate.toISOString(),
-        new_end_date: addMonths(startDate, 1).toISOString(),
+        new_end_date: endDate.toISOString(),
         original_price: Number(part.price || 0),
         renewal_price: price,
         status: 'approved',
@@ -474,6 +484,7 @@ export function OrderPartsManager({ open, onOpenChange, order, onUpdated }: Orde
       } as any);
       if (error) throw error;
       setRenewalPrice((prev) => ({ ...prev, [part.id]: '' }));
+      setRenewalDates((prev) => ({ ...prev, [part.id]: { start: '', end: '' } }));
       toast({ title: '✓ تمدید ثبت شد', description: partLabel(part.part_number, part.title) });
       await load();
       onUpdated?.();
@@ -493,6 +504,53 @@ export function OrderPartsManager({ open, onOpenChange, order, onUpdated }: Orde
       onUpdated?.();
     } catch (err: any) {
       toast({ variant: 'destructive', title: 'خطا', description: err.message || 'حذف تمدید با خطا مواجه شد' });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const startEditRenewal = (r: PartRenewal) => {
+    setEditingRenewalId(r.id);
+    setRenewalDraft({
+      start: r.new_start_date || '',
+      end: r.new_end_date || '',
+      price: r.renewal_price !== null && r.renewal_price !== undefined ? String(r.renewal_price) : '',
+    });
+  };
+
+  const updateRenewal = async (r: PartRenewal) => {
+    if (!renewalDraft.start || !renewalDraft.end) {
+      toast({ variant: 'destructive', title: 'خطا', description: 'تاریخ شروع و پایان تمدید را انتخاب کنید' });
+      return;
+    }
+    const startDate = new Date(renewalDraft.start);
+    const endDate = new Date(renewalDraft.end);
+    if (endDate <= startDate) {
+      toast({ variant: 'destructive', title: 'خطا', description: 'تاریخ پایان باید بعد از تاریخ شروع باشد' });
+      return;
+    }
+    const price = parseLocalizedNumber(renewalDraft.price || '');
+    if (price <= 0) {
+      toast({ variant: 'destructive', title: 'خطا', description: 'مبلغ تمدید معتبر نیست' });
+      return;
+    }
+    setBusyId(r.part_id || r.id);
+    try {
+      const { error } = await supabase
+        .from('order_renewals')
+        .update({
+          new_start_date: startDate.toISOString(),
+          new_end_date: endDate.toISOString(),
+          renewal_price: price,
+        })
+        .eq('id', r.id);
+      if (error) throw error;
+      setEditingRenewalId(null);
+      toast({ title: '✓ تمدید ویرایش شد' });
+      await load();
+      onUpdated?.();
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'خطا', description: err.message || 'ویرایش تمدید با خطا مواجه شد' });
     } finally {
       setBusyId(null);
     }
@@ -810,41 +868,124 @@ export function OrderPartsManager({ open, onOpenChange, order, onUpdated }: Orde
                         ) : (
                           <div className="space-y-2">
                             {partRenewals.map((r) => (
-                              <div key={r.id} className="flex items-center justify-between gap-2 rounded-md border p-2 text-xs">
-                                <div className="space-y-0.5">
-                                  <p className="font-medium">تمدید ماه {(r.renewal_number + 1).toLocaleString('fa-IR')}</p>
-                                  <p className="text-muted-foreground">
-                                    {r.new_start_date ? formatPersianDate(r.new_start_date) : '-'} تا{' '}
-                                    {r.new_end_date ? formatPersianDate(r.new_end_date) : '-'}
-                                  </p>
+                              <div key={r.id} className="rounded-md border p-2 text-xs space-y-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="space-y-0.5">
+                                    <p className="font-medium">تمدید ماه {(r.renewal_number + 1).toLocaleString('fa-IR')}</p>
+                                    <p className="text-muted-foreground">
+                                      {r.new_start_date ? formatPersianDate(r.new_start_date) : '-'} تا{' '}
+                                      {r.new_end_date ? formatPersianDate(r.new_end_date) : '-'}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <span className="font-bold" dir="ltr">
+                                      {Number(r.renewal_price || 0).toLocaleString('fa-IR')} تومان
+                                    </span>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      title="ویرایش تمدید"
+                                      onClick={() => (editingRenewalId === r.id ? setEditingRenewalId(null) : startEditRenewal(r))}
+                                    >
+                                      <Pencil className="h-4 w-4 text-primary" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => deleteRenewal(r.id, part.id)}>
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold" dir="ltr">
-                                    {Number(r.renewal_price || 0).toLocaleString('fa-IR')} تومان
-                                  </span>
-                                  <Button variant="ghost" size="icon" onClick={() => deleteRenewal(r.id, part.id)}>
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                  </Button>
-                                </div>
+                                {editingRenewalId === r.id && (
+                                  <div className="space-y-2 rounded-md bg-muted/50 p-2">
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div className="space-y-1">
+                                        <Label className="text-[10px]">تاریخ شروع</Label>
+                                        <PersianDatePicker
+                                          timeMode="none"
+                                          value={renewalDraft.start || undefined}
+                                          onChange={(v) => setRenewalDraft((prev) => ({ ...prev, start: v || '' }))}
+                                        />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <Label className="text-[10px]">تاریخ پایان</Label>
+                                        <PersianDatePicker
+                                          timeMode="none"
+                                          value={renewalDraft.end || undefined}
+                                          onChange={(v) => setRenewalDraft((prev) => ({ ...prev, end: v || '' }))}
+                                        />
+                                      </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <Label className="text-[10px]">مبلغ تمدید (تومان)</Label>
+                                      <Input
+                                        dir="ltr"
+                                        inputMode="numeric"
+                                        value={renewalDraft.price}
+                                        onChange={(e) => setRenewalDraft((prev) => ({ ...prev, price: e.target.value }))}
+                                      />
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <Button size="sm" className="gap-1 flex-1" onClick={() => updateRenewal(r)} disabled={busyId !== null}>
+                                        <Save className="h-3.5 w-3.5" />
+                                        ذخیره ویرایش
+                                      </Button>
+                                      <Button size="sm" variant="outline" onClick={() => setEditingRenewalId(null)}>
+                                        انصراف
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
                         )}
-                        <div className="flex items-end gap-2">
-                          <div className="space-y-1 flex-1">
-                            <Label className="text-xs">مبلغ تمدید یک ماه (تومان)</Label>
-                            <Input
-                              dir="ltr"
-                              inputMode="numeric"
-                              placeholder={String(Number(part.price || 0) || '')}
-                              value={renewalPrice[part.id] || ''}
-                              onChange={(e) => setRenewalPrice((prev) => ({ ...prev, [part.id]: e.target.value }))}
-                            />
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-[10px]">تاریخ شروع تمدید (اختیاری)</Label>
+                              <PersianDatePicker
+                                timeMode="none"
+                                value={renewalDates[part.id]?.start || undefined}
+                                onChange={(v) =>
+                                  setRenewalDates((prev) => ({
+                                    ...prev,
+                                    [part.id]: { start: v || '', end: prev[part.id]?.end || '' },
+                                  }))
+                                }
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[10px]">تاریخ پایان تمدید (اختیاری)</Label>
+                              <PersianDatePicker
+                                timeMode="none"
+                                value={renewalDates[part.id]?.end || undefined}
+                                onChange={(v) =>
+                                  setRenewalDates((prev) => ({
+                                    ...prev,
+                                    [part.id]: { start: prev[part.id]?.start || '', end: v || '' },
+                                  }))
+                                }
+                              />
+                            </div>
                           </div>
-                          <Button size="sm" className="gap-2" onClick={() => addRenewal(part)} disabled={busyId === part.id}>
-                            <Plus className="h-4 w-4" />
-                            ثبت تمدید
-                          </Button>
+                          <p className="text-[10px] text-muted-foreground">
+                            اگر تاریخی انتخاب نکنید، تمدید به‌صورت خودکار از پایان دوره قبلی و به مدت یک ماه ثبت می‌شود.
+                          </p>
+                          <div className="flex items-end gap-2">
+                            <div className="space-y-1 flex-1">
+                              <Label className="text-xs">مبلغ تمدید یک ماه (تومان)</Label>
+                              <Input
+                                dir="ltr"
+                                inputMode="numeric"
+                                placeholder={String(Number(part.price || 0) || '')}
+                                value={renewalPrice[part.id] || ''}
+                                onChange={(e) => setRenewalPrice((prev) => ({ ...prev, [part.id]: e.target.value }))}
+                              />
+                            </div>
+                            <Button size="sm" className="gap-2" onClick={() => addRenewal(part)} disabled={busyId === part.id}>
+                              <Plus className="h-4 w-4" />
+                              ثبت تمدید
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </CollapsibleContent>
