@@ -1208,6 +1208,10 @@ export default function OrderDetail() {
             onStatusChange={fetchOrderDetails}
           />
 
+          {/* پیام‌های همکاری سفارش برای دارندگان سفارش و همکاران */}
+          <OrderCollaborationInfo orderId={order.id} />
+
+
           {/* Expert Pricing Request Section */}
           {isExpertPricingRequest && (
             <Card className="border-2 border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20">
