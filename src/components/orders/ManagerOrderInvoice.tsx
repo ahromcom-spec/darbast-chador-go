@@ -103,6 +103,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
   const [subcategoryName, setSubcategoryName] = useState('');
   const [repairRequests, setRepairRequests] = useState<RepairRequest[]>([]);
   const [renewals, setRenewals] = useState<OrderRenewal[]>([]);
+  const [parts, setParts] = useState<InvoicePart[]>([]);
   const [freshFinancials, setFreshFinancials] = useState<FreshFinancials | null>(null);
   const [collectionRequestDate, setCollectionRequestDate] = useState<string | null>(null);
   const [collectionConfirmedDate, setCollectionConfirmedDate] = useState<string | null>(null);
