@@ -709,6 +709,7 @@ export default function ExecutivePendingOrders() {
           try {
             await sendPushNotification({
               user_id: customerData.user_id,
+              order_id: orderId,
               title: '🔧 اجرای سفارش شروع شد',
               body: `سفارش شما با کد ${orderCode} وارد مرحله اجرا شد.`,
               link: '/profile?tab=orders',
@@ -767,6 +768,7 @@ export default function ExecutivePendingOrders() {
           try {
             await sendPushNotification({
               user_id: customerData.user_id,
+              order_id: orderId,
               title: '✅ اجرای سفارش تکمیل شد',
               body: `سفارش شما با کد ${orderCode} با موفقیت اجرا شد و در انتظار پرداخت است.`,
               link: '/profile?tab=orders',
@@ -993,6 +995,7 @@ export default function ExecutivePendingOrders() {
           try {
             await sendPushNotification({
               user_id: customerData.user_id,
+              order_id: selectedOrder.id,
               title: notificationTitle,
               body: notificationBody,
               link: '/profile?tab=orders'

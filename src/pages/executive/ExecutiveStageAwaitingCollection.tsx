@@ -221,6 +221,7 @@ export default function ExecutiveStageAwaitingCollection() {
             try {
               await sendPushNotification({
                 user_id: customerData.user_id,
+                order_id: orderId,
                 title: message.title,
                 body: message.body,
                 link: '/profile?tab=orders',
@@ -311,6 +312,7 @@ export default function ExecutiveStageAwaitingCollection() {
             // ارسال Push Notification به گوشی کاربر
             await sendPushNotification({
               user_id: customerData.user_id,
+              order_id: orderId,
               title: notificationTitle,
               body: notificationBody,
               link: '/profile?tab=orders',

@@ -219,6 +219,7 @@ export default function ExecutiveStageAwaitingPayment() {
               // ارسال Push Notification به گوشی کاربر
               await sendPushNotification({
                 user_id: customerData.user_id,
+                order_id: orderId,
                 title: message.title,
                 body: message.body,
                 link: `/user/orders/${orderId}`,

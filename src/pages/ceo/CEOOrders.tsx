@@ -288,6 +288,7 @@ export const CEOOrders = () => {
         if (order.customer_id) {
           sendPushNotification({
             user_id: order.customer_id,
+            order_id: order.id,
             title: '✓ سفارش شما تایید نهایی شد',
             body: `سفارش ${order.code} تایید شد و به مرحله اجرا ارسال گردید.`,
             link: `/user/orders/${order.id}`,

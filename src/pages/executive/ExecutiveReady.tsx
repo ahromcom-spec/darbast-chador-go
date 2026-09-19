@@ -230,6 +230,7 @@ export default function ExecutiveReady() {
               // ارسال Push Notification به گوشی کاربر
               await sendPushNotification({
                 user_id: customerData.user_id,
+                order_id: orderId,
                 title: message.title,
                 body: message.body,
                 link: `/user/orders/${orderId}`,
@@ -297,6 +298,7 @@ export default function ExecutiveReady() {
         // ارسال Push Notification به گوشی کاربر
         await sendPushNotification({
           user_id: customerData.user_id,
+          order_id: orderId,
           title: '🚀 اجرای سفارش آغاز شد',
           body: `سفارش شما با کد ${orderCode} در حال اجرا قرار گرفت و تیم اجرایی مشغول انجام کار هستند.`,
           link: `/user/orders/${orderId}`,
