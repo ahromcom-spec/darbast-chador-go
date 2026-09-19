@@ -61,6 +61,14 @@ export const BaleMessengerTab = () => {
     "خدمات ساختمانی و منزل اهرم\nگزارش پیشرفت پروژه برای شما ارسال شد.\nahrom.ir",
   );
   const [testMedia, setTestMedia] = useState("");
+  const [logFilter, setLogFilter] = useState<"all" | "media" | "text">("all");
+
+  const isMediaLog = (l: MessengerLog) => l.kind === "photo" || l.kind === "video";
+  const filteredLogs = logs.filter((l) =>
+    logFilter === "all" ? true : logFilter === "media" ? isMediaLog(l) : !isMediaLog(l),
+  );
+  const mediaSentCount = logs.filter((l) => isMediaLog(l) && l.status === "sent").length;
+  const mediaFailedCount = logs.filter((l) => isMediaLog(l) && l.status !== "sent").length;
 
   const load = async () => {
     setLoading(true);
@@ -224,7 +232,7 @@ export const BaleMessengerTab = () => {
               بارگذاری مجدد
             </Button>
             <span className="text-xs text-muted-foreground">
-              ارسال پیام‌ها با وب‌سرویس رسمی بله بر پایه شماره موبایل انجام می‌شود؛ نیازی به استارت کردن ربات {settings.bot_username || "@ahrom_ir_bot"} توسط مشتری نیست. عکس و فیلم برای کاربرانی که ربات را استارت کرده‌اند به‌صورت فایل و برای بقیه به‌صورت لینک ارسال می‌شود.
+              ارسال پیام‌ها با وب‌سرویس رسمی بله بر پایه شماره موبایل انجام می‌شود؛ نیازی به استارت کردن ربات {settings.bot_username || "@ahrom_ir_bot"} توسط مشتری نیست. خود عکس و فیلم (نه لینک) برای مشتری ارسال می‌شود؛ فایل‌های سنگین‌تر از ۴۵ مگابایت قابل ارسال نیستند و در گزارش پایین علت آن ثبت می‌شود.
             </span>
           </div>
         </CardContent>
