@@ -509,6 +509,53 @@ export function OrderPartsManager({ open, onOpenChange, order, onUpdated }: Orde
     }
   };
 
+  const startEditRenewal = (r: PartRenewal) => {
+    setEditingRenewalId(r.id);
+    setRenewalDraft({
+      start: r.new_start_date || '',
+      end: r.new_end_date || '',
+      price: r.renewal_price !== null && r.renewal_price !== undefined ? String(r.renewal_price) : '',
+    });
+  };
+
+  const updateRenewal = async (r: PartRenewal) => {
+    if (!renewalDraft.start || !renewalDraft.end) {
+      toast({ variant: 'destructive', title: 'خطا', description: 'تاریخ شروع و پایان تمدید را انتخاب کنید' });
+      return;
+    }
+    const startDate = new Date(renewalDraft.start);
+    const endDate = new Date(renewalDraft.end);
+    if (endDate <= startDate) {
+      toast({ variant: 'destructive', title: 'خطا', description: 'تاریخ پایان باید بعد از تاریخ شروع باشد' });
+      return;
+    }
+    const price = parseLocalizedNumber(renewalDraft.price || '');
+    if (price <= 0) {
+      toast({ variant: 'destructive', title: 'خطا', description: 'مبلغ تمدید معتبر نیست' });
+      return;
+    }
+    setBusyId(r.part_id || r.id);
+    try {
+      const { error } = await supabase
+        .from('order_renewals')
+        .update({
+          new_start_date: startDate.toISOString(),
+          new_end_date: endDate.toISOString(),
+          renewal_price: price,
+        })
+        .eq('id', r.id);
+      if (error) throw error;
+      setEditingRenewalId(null);
+      toast({ title: '✓ تمدید ویرایش شد' });
+      await load();
+      onUpdated?.();
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'خطا', description: err.message || 'ویرایش تمدید با خطا مواجه شد' });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const updateDraft = (partId: string, patch: Partial<{ title: string; description: string; price: string; rental_start_date: string; dims: DimRow[] }>) => {
     setDrafts((prev) => ({ ...prev, [partId]: { ...prev[partId], ...patch } }));
   };
