@@ -767,14 +767,27 @@ export function OrderPartsManager({ open, onOpenChange, order, onUpdated }: Orde
                         </Button>
                       </div>
 
-                      {(part.collection_requested_at || part.collected_at) && (
-                        <div className="text-xs text-muted-foreground space-y-1">
-                          {part.collection_requested_at && (
-                            <p>تاریخ درخواست فک: {formatPersianDate(part.collection_requested_at)}</p>
-                          )}
-                          {part.collected_at && <p>تاریخ فک شدن: {formatPersianDate(part.collected_at)}</p>}
+                      {/* تاریخ درخواست فک و تاریخ فک — قابل ویرایش دستی */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-md border bg-muted/30 p-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">تاریخ درخواست فک</Label>
+                          <PersianDatePicker
+                            timeMode="none"
+                            value={part.collection_requested_at || undefined}
+                            onChange={(v) => updatePartDate(part, 'collection_requested_at', v)}
+                          />
+                          <p className="text-[10px] text-muted-foreground">می‌توانید تاریخ گذشته را دستی وارد کنید</p>
                         </div>
-                      )}
+                        <div className="space-y-1">
+                          <Label className="text-xs">تاریخ فک شدن (جمع‌آوری)</Label>
+                          <PersianDatePicker
+                            timeMode="none"
+                            value={part.collected_at || undefined}
+                            onChange={(v) => updatePartDate(part, 'collected_at', v)}
+                          />
+                          <p className="text-[10px] text-muted-foreground">اگر چند روز پیش فک شده، تاریخ همان روز را انتخاب کنید</p>
+                        </div>
+                      </div>
 
                       <Separator />
 
