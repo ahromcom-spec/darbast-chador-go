@@ -229,33 +229,19 @@ export const notifyOrderParties = async (
   try {
     if (!orderId) return { success: false, recipients: 0, error: 'missing orderId' };
 
-    const { data, error } = await supabase.rpc('get_order_notification_recipients' as any, {
-      _order_id: orderId,
+    const ids = await getOrderNotificationRecipients(orderId);
+    if (ids.length === 0) return { success: true, recipients: 0 };
+
+    const res = await sendPushNotification({
+      user_id: ids[0],
+      title: payload.title,
+      body: payload.body,
+      link: payload.link,
+      order_id: orderId,
+      type: payload.type || 'info',
     });
-    if (error) throw error;
 
-    const ids = Array.from(
-      new Set(
-        ((data as { user_id: string }[] | null) || [])
-          .map((r) => r.user_id)
-          .filter(Boolean)
-      )
-    );
-
-    await Promise.all(
-      ids.map((uid) =>
-        sendPushNotification({
-          user_id: uid,
-          title: payload.title,
-          body: payload.body,
-          link: payload.link,
-          order_id: orderId,
-          type: payload.type || 'info',
-        })
-      )
-    );
-
-    return { success: true, recipients: ids.length };
+    return { success: res.success, recipients: ids.length, error: res.error };
   } catch (err: any) {
     console.error('[notifyOrderParties] Exception:', err);
     return { success: false, recipients: 0, error: err.message };
