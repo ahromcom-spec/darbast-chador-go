@@ -81,7 +81,7 @@ export const BaleMessengerTab = () => {
         body: {
           phone: l.phone || undefined,
           chatId: l.phone ? undefined : l.chat_id,
-          text: isMediaLog(l) ? l.text || "" : l.text || "",
+          text: isMediaLog(l) ? "" : l.text || "",
           media: l.media_url ? [{ url: l.media_url, kind: l.kind }] : [],
           orderCode: l.order_code || undefined,
           force: true,
@@ -377,6 +377,7 @@ export const BaleMessengerTab = () => {
                     <TableHead>فایل</TableHead>
                     <TableHead>سفارش</TableHead>
                     <TableHead>وضعیت</TableHead>
+                    <TableHead>ارسال مجدد</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
