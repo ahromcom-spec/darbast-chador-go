@@ -88,7 +88,19 @@ export interface InvoiceExtras {
   provinceName: string;
   subcategoryName: string;
   repairRequests: Array<{ id: string; description: string | null; estimated_cost: number | null; final_cost: number | null; status: string; created_at: string }>;
-  renewals: Array<{ id: string; renewal_number: number | null; status: string | null; renewal_price: number | null; new_start_date: string | null; new_end_date: string | null }>;
+  renewals: Array<{ id: string; renewal_number: number | null; status: string | null; renewal_price: number | null; new_start_date: string | null; new_end_date: string | null; part_id?: string | null }>;
+  parts?: Array<{
+    id: string;
+    part_number: number;
+    title: string | null;
+    description: string | null;
+    dimensions: any;
+    total_area: number | null;
+    price: number | null;
+    rental_start_date: string | null;
+    rental_end_date: string | null;
+    status: string;
+  }>;
   freshFinancials: { payment_amount: number | null; total_price: number | null; total_paid: number | null } | null;
   collectionRequestDate: string | null;
   collectionConfirmedDate: string | null;
@@ -103,6 +115,7 @@ export const emptyInvoiceExtras = (): InvoiceExtras => ({
   subcategoryName: '',
   repairRequests: [],
   renewals: [],
+  parts: [],
   freshFinancials: null,
   collectionRequestDate: null,
   collectionConfirmedDate: null,
@@ -448,6 +461,14 @@ export function buildOrderInvoiceHtml(
     customerCode,
     payments,
   } = extras;
+  const orderParts = (extras.parts || []).filter((p) => p.status !== 'cancelled');
+  const partOrdinals = ['اول', 'دوم', 'سوم', 'چهارم', 'پنجم', 'ششم', 'هفتم', 'هشتم', 'نهم', 'دهم'];
+  const partTitle = (partNumber: number, title?: string | null) => {
+    const base = `قسمت ${partOrdinals[partNumber - 1] || partNumber} سفارش`;
+    const extra = (title || '').trim();
+    return extra ? `${base} - ${extra}` : base;
+  };
+  const partById = new Map(orderParts.map((p) => [p.id, p]));
   const parsedNotes = order.notes && typeof order.notes === 'object' ? order.notes : parseOrderNotes(order.notes);
     const dimensions = parsedNotes?.dimensions;
     const scaffoldingType = parsedNotes?.service_type || parsedNotes?.scaffoldingType || parsedNotes?.scaffold_type;
@@ -748,6 +769,53 @@ export function buildOrderInvoiceHtml(
           </thead>
           <tbody>
             ${(() => {
+              // قسمت‌های سفارش: هر قسمت یک ردیف جدا در فاکتور
+              if (orderParts.length > 0) {
+                return orderParts.map((p, i) => {
+                  const dims = Array.isArray(p.dimensions) ? p.dimensions : [];
+                  const hasW = dims.some((d: any) => Number(d?.width) > 0);
+                  const unit = hasW ? 'متر مکعب' : 'متر مربع';
+                  const validDims = dims.filter((d: any) => Number(d?.length) > 0 && Number(d?.height) > 0);
+                  const computedArea = validDims.reduce((s: number, d: any) => {
+                    const l = Number(d?.length) || 0, w = Number(d?.width) || 0, h = Number(d?.height) || 0;
+                    return s + (hasW ? l * (w > 0 ? w : 1) * h : l * h);
+                  }, 0);
+                  const areaNum = computedArea > 0 ? computedArea : Number(p.total_area || 0);
+                  const dimLines = validDims.map((d: any) => {
+                    const l = Number(d?.length) || 0, w = Number(d?.width) || 0, h = Number(d?.height) || 0;
+                    const v = hasW ? l * (w > 0 ? w : 1) * h : l * h;
+                    const expr = hasW
+                      ? `${l.toLocaleString('fa-IR')} × ${(w > 0 ? w : 1).toLocaleString('fa-IR')} × ${h.toLocaleString('fa-IR')}`
+                      : `${l.toLocaleString('fa-IR')} × ${h.toLocaleString('fa-IR')}`;
+                    return `<div style="font-size:11.5px;color:#475569;">${expr} = ${v.toLocaleString('fa-IR')}</div>`;
+                  }).join('');
+                  const areaCell = areaNum > 0
+                    ? `${dimLines}<strong>${parseFloat(areaNum.toFixed(2)).toLocaleString('fa-IR')} ${unit}</strong>`
+                    : (dimLines || '-');
+                  const price = Number(p.price || 0);
+                  const start = p.rental_start_date || order.rental_start_date || null;
+                  const end = p.rental_end_date
+                    || (start ? new Date(new Date(start).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString() : null);
+                  const descLine = p.description
+                    ? `<div style="font-size:11.5px;color:#334155;margin-top:2px;">${escapeHtml(p.description)}</div>`
+                    : '';
+                  const statusLine = p.status === 'collected'
+                    ? `<div style="font-size:11px;color:#16a34a;margin-top:2px;">فک و جمع‌آوری شد</div>`
+                    : p.status === 'awaiting_collection'
+                      ? `<div style="font-size:11px;color:#ca8a04;margin-top:2px;">در انتظار فک</div>`
+                      : '';
+                  return `
+                    <tr>
+                      <td>${(i + 1).toLocaleString('fa-IR')}</td>
+                      <td style="text-align:right;"><strong>${escapeHtml(partTitle(p.part_number, p.title))}</strong>${descLine}${statusLine}</td>
+                      <td>${start ? formatPersianDate(start) : '-'}</td>
+                      <td>${end ? formatPersianDate(end) : '-'}</td>
+                      <td>${areaCell}</td>
+                      <td>${price > 0 ? `<strong>${price.toLocaleString('fa-IR')}</strong>` : '-'}</td>
+                    </tr>
+                  `;
+                }).join('');
+              }
               // Expert pricing multi-scaffold support
               const expertScaffolds = (parsedNotes?.is_multi_scaffold && Array.isArray(parsedNotes?.scaffolds)) ? parsedNotes.scaffolds : [];
               const scaffoldPrices = Array.isArray(parsedNotes?.scaffold_prices) ? parsedNotes.scaffold_prices : [];
@@ -857,9 +925,11 @@ export function buildOrderInvoiceHtml(
             })()}
 
             ${(() => {
-              const baseCount = Array.isArray(parsedNotes?.multi_scaffolds) && parsedNotes.multi_scaffolds.length > 0
-                ? parsedNotes.multi_scaffolds.length
-                : 1;
+              const baseCount = orderParts.length > 0
+                ? orderParts.length
+                : Array.isArray(parsedNotes?.multi_scaffolds) && parsedNotes.multi_scaffolds.length > 0
+                  ? parsedNotes.multi_scaffolds.length
+                  : 1;
               const baseDescText = description
                 ? escapeHtml(description)
                 : escapeHtml(`${scaffoldTypeName} - ${subtypeName}`);
@@ -873,16 +943,23 @@ export function buildOrderInvoiceHtml(
               const dimLine = dimProduct
                 ? `<div style="font-size:11px;color:#475569;margin-top:2px;">ابعاد: ${dimProduct}${dimComputed > 0 ? ` = ${dimComputed.toLocaleString('fa-IR')} ${getMeasurementUnit()}` : ''}</div>`
                 : '';
-              const renewalRows = renewals.map((renewal, idx) => `
+              const renewalRows = renewals.map((renewal, idx) => {
+                const linkedPart = renewal.part_id ? partById.get(renewal.part_id) : undefined;
+                const renewalDesc = linkedPart
+                  ? escapeHtml(partTitle(linkedPart.part_number, linkedPart.title)) + (linkedPart.description ? ` - ${escapeHtml(linkedPart.description)}` : '')
+                  : baseDescText;
+                const renewalDims = linkedPart ? '' : dimLine;
+                return `
                 <tr class="renewal-row">
                   <td>${(idx + baseCount + 1).toLocaleString('fa-IR')}</td>
-                  <td style="text-align:right;"><strong>تمدید ماه ${(renewal.renewal_number + 1)?.toLocaleString('fa-IR') || (idx + baseCount + 1).toLocaleString('fa-IR')}</strong><div style="font-size:11.5px;color:#334155;margin-top:2px;">${baseDescText}</div>${dimLine}</td>
+                  <td style="text-align:right;"><strong>تمدید ماه ${(renewal.renewal_number + 1)?.toLocaleString('fa-IR') || (idx + baseCount + 1).toLocaleString('fa-IR')}</strong><div style="font-size:11.5px;color:#334155;margin-top:2px;">${renewalDesc}</div>${renewalDims}</td>
                   <td>${renewal.new_start_date ? formatPersianDate(renewal.new_start_date) : '-'}</td>
                   <td>${renewal.new_end_date ? formatPersianDate(renewal.new_end_date) : '-'}</td>
                   <td>-</td>
                   <td>${Number(renewal.renewal_price || 0).toLocaleString('fa-IR')}</td>
                 </tr>
-              `).join('');
+              `;
+              }).join('');
               const repairRows = repairRequests.map((repair, idx) => `
                 <tr class="repair-row">
                   <td>${(idx + baseCount + renewals.length + 1).toLocaleString('fa-IR')}</td>

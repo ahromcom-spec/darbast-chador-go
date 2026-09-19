@@ -62,6 +62,20 @@ interface OrderRenewal {
   renewal_price: number | null;
   new_start_date: string | null;
   new_end_date: string | null;
+  part_id?: string | null;
+}
+
+interface InvoicePart {
+  id: string;
+  part_number: number;
+  title: string | null;
+  description: string | null;
+  dimensions: any;
+  total_area: number | null;
+  price: number | null;
+  rental_start_date: string | null;
+  rental_end_date: string | null;
+  status: string;
 }
 
 interface FreshFinancials {
@@ -89,6 +103,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
   const [subcategoryName, setSubcategoryName] = useState('');
   const [repairRequests, setRepairRequests] = useState<RepairRequest[]>([]);
   const [renewals, setRenewals] = useState<OrderRenewal[]>([]);
+  const [parts, setParts] = useState<InvoicePart[]>([]);
   const [freshFinancials, setFreshFinancials] = useState<FreshFinancials | null>(null);
   const [collectionRequestDate, setCollectionRequestDate] = useState<string | null>(null);
   const [collectionConfirmedDate, setCollectionConfirmedDate] = useState<string | null>(null);
@@ -191,12 +206,20 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
       // Fetch approved renewals (additional monthly costs)
       const { data: renewalData } = await supabase
         .from('order_renewals')
-        .select('id, renewal_number, status, renewal_price, new_start_date, new_end_date')
+        .select('id, renewal_number, status, renewal_price, new_start_date, new_end_date, part_id')
         .eq('order_id', order.id)
         .eq('status', 'approved')
         .order('renewal_number', { ascending: true });
 
       if (renewalData) setRenewals(renewalData as OrderRenewal[]);
+
+      // Fetch order parts (each part becomes its own invoice row)
+      const { data: partsData } = await supabase
+        .from('order_parts')
+        .select('id, part_number, title, description, dimensions, total_area, price, rental_start_date, rental_end_date, status')
+        .eq('order_id', order.id)
+        .order('part_number', { ascending: true });
+      setParts((partsData || []) as any);
 
       // Fetch latest financial snapshot (avoid stale values in printed invoice)
       const { data: financialData } = await supabase
@@ -251,6 +274,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
     subcategoryName,
     repairRequests,
     renewals,
+    parts,
     freshFinancials,
     collectionRequestDate,
     collectionConfirmedDate,

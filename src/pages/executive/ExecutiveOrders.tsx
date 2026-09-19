@@ -37,6 +37,8 @@ import { Receipt } from 'lucide-react';
 import { RentalStartDatePicker } from '@/components/orders/RentalStartDatePicker';
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 import ProjectV3AssignmentsInfo from '@/components/orders/ProjectV3AssignmentsInfo';
+import { OrderPartsManager } from '@/components/orders/OrderPartsManager';
+import { Layers } from 'lucide-react';
 
 // مراحل اجرایی سفارش - key برای UI، statusMapping برای status در دیتابیس، executionStageMapping برای execution_stage
 // IMPORTANT: pending_execution باید به status = 'pending_execution' در دیتابیس مپ شود
@@ -200,6 +202,7 @@ export default function ExecutiveOrders() {
   const [editEndDate, setEditEndDate] = useState('');
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [collaboratorDialogOpen, setCollaboratorDialogOpen] = useState(false);
+  const [partsDialogOpen, setPartsDialogOpen] = useState(false);
   // Archive states
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [bulkArchiveDialogOpen, setBulkArchiveDialogOpen] = useState(false);
@@ -1694,6 +1697,19 @@ export default function ExecutiveOrders() {
                     <Users className="h-4 w-4" />
                     افزودن پرسنل
                   </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setPartsDialogOpen(true);
+                    }}
+                    className="gap-2 border-primary/40 text-primary"
+                  >
+                    <Layers className="h-4 w-4" />
+                    قسمت‌های سفارش
+                  </Button>
                 </div>
 
                 <Separator className="my-2" />
@@ -2497,6 +2513,24 @@ export default function ExecutiveOrders() {
           onCollaboratorAdded={fetchOrders}
         />
       )}
+
+      {selectedOrder && (
+        <OrderPartsManager
+          open={partsDialogOpen}
+          onOpenChange={setPartsDialogOpen}
+          order={{
+            id: selectedOrder.id,
+            code: selectedOrder.code,
+            customer_id: selectedOrder.customer_id,
+            payment_amount: selectedOrder.payment_amount,
+            total_price: selectedOrder.total_price,
+            rental_start_date: selectedOrder.rental_start_date,
+            notes: selectedOrder.notes,
+          }}
+          onUpdated={fetchOrders}
+        />
+      )}
+
 
       {/* Collection Request Dialog */}
       {selectedOrder && (

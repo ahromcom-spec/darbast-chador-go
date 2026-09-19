@@ -779,6 +779,7 @@ export type Database = {
           description: string | null
           id: string
           order_id: string
+          part_id: string | null
           requested_date: string | null
           status: string
           updated_at: string
@@ -793,6 +794,7 @@ export type Database = {
           description?: string | null
           id?: string
           order_id: string
+          part_id?: string | null
           requested_date?: string | null
           status?: string
           updated_at?: string
@@ -807,6 +809,7 @@ export type Database = {
           description?: string | null
           id?: string
           order_id?: string
+          part_id?: string | null
           requested_date?: string | null
           status?: string
           updated_at?: string
@@ -824,6 +827,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collection_requests_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "order_parts"
             referencedColumns: ["id"]
           },
         ]
@@ -2792,6 +2802,74 @@ export type Database = {
           },
         ]
       }
+      order_parts: {
+        Row: {
+          collected_at: string | null
+          collection_requested_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          dimensions: Json
+          id: string
+          notes: string | null
+          order_id: string
+          part_number: number
+          price: number
+          rental_end_date: string | null
+          rental_start_date: string | null
+          status: string
+          title: string | null
+          total_area: number | null
+          updated_at: string
+        }
+        Insert: {
+          collected_at?: string | null
+          collection_requested_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          dimensions?: Json
+          id?: string
+          notes?: string | null
+          order_id: string
+          part_number: number
+          price?: number
+          rental_end_date?: string | null
+          rental_start_date?: string | null
+          status?: string
+          title?: string | null
+          total_area?: number | null
+          updated_at?: string
+        }
+        Update: {
+          collected_at?: string | null
+          collection_requested_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          dimensions?: Json
+          id?: string
+          notes?: string | null
+          order_id?: string
+          part_number?: number
+          price?: number
+          rental_end_date?: string | null
+          rental_start_date?: string | null
+          status?: string
+          title?: string | null
+          total_area?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_parts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_payments: {
         Row: {
           amount: number
@@ -2920,6 +2998,7 @@ export type Database = {
           new_start_date: string
           order_id: string
           original_price: number | null
+          part_id: string | null
           previous_end_date: string | null
           rejection_reason: string | null
           renewal_number: number
@@ -2938,6 +3017,7 @@ export type Database = {
           new_start_date: string
           order_id: string
           original_price?: number | null
+          part_id?: string | null
           previous_end_date?: string | null
           rejection_reason?: string | null
           renewal_number?: number
@@ -2956,6 +3036,7 @@ export type Database = {
           new_start_date?: string
           order_id?: string
           original_price?: number | null
+          part_id?: string | null
           previous_end_date?: string | null
           rejection_reason?: string | null
           renewal_number?: number
@@ -2976,6 +3057,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_renewals_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "order_parts"
             referencedColumns: ["id"]
           },
         ]
