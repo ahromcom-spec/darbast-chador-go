@@ -769,6 +769,53 @@ export function buildOrderInvoiceHtml(
           </thead>
           <tbody>
             ${(() => {
+              // قسمت‌های سفارش: هر قسمت یک ردیف جدا در فاکتور
+              if (orderParts.length > 0) {
+                return orderParts.map((p, i) => {
+                  const dims = Array.isArray(p.dimensions) ? p.dimensions : [];
+                  const hasW = dims.some((d: any) => Number(d?.width) > 0);
+                  const unit = hasW ? 'متر مکعب' : 'متر مربع';
+                  const validDims = dims.filter((d: any) => Number(d?.length) > 0 && Number(d?.height) > 0);
+                  const computedArea = validDims.reduce((s: number, d: any) => {
+                    const l = Number(d?.length) || 0, w = Number(d?.width) || 0, h = Number(d?.height) || 0;
+                    return s + (hasW ? l * (w > 0 ? w : 1) * h : l * h);
+                  }, 0);
+                  const areaNum = computedArea > 0 ? computedArea : Number(p.total_area || 0);
+                  const dimLines = validDims.map((d: any) => {
+                    const l = Number(d?.length) || 0, w = Number(d?.width) || 0, h = Number(d?.height) || 0;
+                    const v = hasW ? l * (w > 0 ? w : 1) * h : l * h;
+                    const expr = hasW
+                      ? `${l.toLocaleString('fa-IR')} × ${(w > 0 ? w : 1).toLocaleString('fa-IR')} × ${h.toLocaleString('fa-IR')}`
+                      : `${l.toLocaleString('fa-IR')} × ${h.toLocaleString('fa-IR')}`;
+                    return `<div style="font-size:11.5px;color:#475569;">${expr} = ${v.toLocaleString('fa-IR')}</div>`;
+                  }).join('');
+                  const areaCell = areaNum > 0
+                    ? `${dimLines}<strong>${parseFloat(areaNum.toFixed(2)).toLocaleString('fa-IR')} ${unit}</strong>`
+                    : (dimLines || '-');
+                  const price = Number(p.price || 0);
+                  const start = p.rental_start_date || order.rental_start_date || null;
+                  const end = p.rental_end_date
+                    || (start ? new Date(new Date(start).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString() : null);
+                  const descLine = p.description
+                    ? `<div style="font-size:11.5px;color:#334155;margin-top:2px;">${escapeHtml(p.description)}</div>`
+                    : '';
+                  const statusLine = p.status === 'collected'
+                    ? `<div style="font-size:11px;color:#16a34a;margin-top:2px;">فک و جمع‌آوری شد</div>`
+                    : p.status === 'awaiting_collection'
+                      ? `<div style="font-size:11px;color:#ca8a04;margin-top:2px;">در انتظار فک</div>`
+                      : '';
+                  return `
+                    <tr>
+                      <td>${(i + 1).toLocaleString('fa-IR')}</td>
+                      <td style="text-align:right;"><strong>${escapeHtml(partTitle(p.part_number, p.title))}</strong>${descLine}${statusLine}</td>
+                      <td>${start ? formatPersianDate(start) : '-'}</td>
+                      <td>${end ? formatPersianDate(end) : '-'}</td>
+                      <td>${areaCell}</td>
+                      <td>${price > 0 ? `<strong>${price.toLocaleString('fa-IR')}</strong>` : '-'}</td>
+                    </tr>
+                  `;
+                }).join('');
+              }
               // Expert pricing multi-scaffold support
               const expertScaffolds = (parsedNotes?.is_multi_scaffold && Array.isArray(parsedNotes?.scaffolds)) ? parsedNotes.scaffolds : [];
               const scaffoldPrices = Array.isArray(parsedNotes?.scaffold_prices) ? parsedNotes.scaffold_prices : [];
