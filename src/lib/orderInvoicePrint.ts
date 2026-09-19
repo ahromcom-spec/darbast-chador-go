@@ -88,7 +88,19 @@ export interface InvoiceExtras {
   provinceName: string;
   subcategoryName: string;
   repairRequests: Array<{ id: string; description: string | null; estimated_cost: number | null; final_cost: number | null; status: string; created_at: string }>;
-  renewals: Array<{ id: string; renewal_number: number | null; status: string | null; renewal_price: number | null; new_start_date: string | null; new_end_date: string | null }>;
+  renewals: Array<{ id: string; renewal_number: number | null; status: string | null; renewal_price: number | null; new_start_date: string | null; new_end_date: string | null; part_id?: string | null }>;
+  parts?: Array<{
+    id: string;
+    part_number: number;
+    title: string | null;
+    description: string | null;
+    dimensions: any;
+    total_area: number | null;
+    price: number | null;
+    rental_start_date: string | null;
+    rental_end_date: string | null;
+    status: string;
+  }>;
   freshFinancials: { payment_amount: number | null; total_price: number | null; total_paid: number | null } | null;
   collectionRequestDate: string | null;
   collectionConfirmedDate: string | null;
@@ -103,6 +115,7 @@ export const emptyInvoiceExtras = (): InvoiceExtras => ({
   subcategoryName: '',
   repairRequests: [],
   renewals: [],
+  parts: [],
   freshFinancials: null,
   collectionRequestDate: null,
   collectionConfirmedDate: null,
