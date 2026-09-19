@@ -419,6 +419,21 @@ export const BaleMessengerTab = () => {
                           </p>
                         ) : null}
                       </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={resendingId === l.id}
+                          onClick={() => resendLog(l)}
+                        >
+                          {resendingId === l.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin ml-1" />
+                          ) : (
+                            <Send className="h-3.5 w-3.5 ml-1" />
+                          )}
+                          ارسال مجدد
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
