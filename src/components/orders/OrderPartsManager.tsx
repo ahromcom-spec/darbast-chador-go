@@ -146,6 +146,9 @@ export function OrderPartsManager({ open, onOpenChange, order, onUpdated }: Orde
   const [splitting, setSplitting] = useState(false);
   const [openPartId, setOpenPartId] = useState<string | null>(null);
   const [renewalPrice, setRenewalPrice] = useState<Record<string, string>>({});
+  const [renewalDates, setRenewalDates] = useState<Record<string, { start: string; end: string }>>({});
+  const [editingRenewalId, setEditingRenewalId] = useState<string | null>(null);
+  const [renewalDraft, setRenewalDraft] = useState<{ start: string; end: string; price: string }>({ start: '', end: '', price: '' });
 
   const orderNotes = useMemo(() => {
     if (!order?.notes) return null;
