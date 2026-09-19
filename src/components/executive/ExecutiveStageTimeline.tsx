@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { sendNotificationSchema } from '@/lib/rpcValidation';
 import { sendOrderSms } from '@/lib/orderSms';
+import { sendPushNotification } from '@/lib/notifications';
 
 interface ExecutiveStage {
   key: string;
