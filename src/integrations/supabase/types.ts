@@ -2174,6 +2174,75 @@ export type Database = {
           },
         ]
       }
+      media_compression_jobs: {
+        Row: {
+          attempts: number
+          chat_id: string | null
+          created_at: string
+          error: string | null
+          id: string
+          kind: string
+          order_code: string | null
+          order_id: string | null
+          output_bucket: string | null
+          output_path: string | null
+          output_size: number | null
+          phone: string | null
+          provider: string
+          source_bucket: string | null
+          source_path: string | null
+          source_size: number | null
+          source_url: string
+          status: string
+          text_body: string | null
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          chat_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          order_code?: string | null
+          order_id?: string | null
+          output_bucket?: string | null
+          output_path?: string | null
+          output_size?: number | null
+          phone?: string | null
+          provider?: string
+          source_bucket?: string | null
+          source_path?: string | null
+          source_size?: number | null
+          source_url: string
+          status?: string
+          text_body?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          chat_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          order_code?: string | null
+          order_id?: string | null
+          output_bucket?: string | null
+          output_path?: string | null
+          output_size?: number | null
+          phone?: string | null
+          provider?: string
+          source_bucket?: string | null
+          source_path?: string | null
+          source_size?: number | null
+          source_url?: string
+          status?: string
+          text_body?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       messenger_chats: {
         Row: {
           chat_id: string
