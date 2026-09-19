@@ -199,17 +199,29 @@ serve(async (req: Request): Promise<Response> => {
     // آپلود فایل رسانه در سفیر و گرفتن شناسه فایل برای ارسال خود فایل (نه لینک)
     const MAX_UPLOAD_BYTES = 45 * 1024 * 1024;
     const safirUpload = async (url: string) => {
-      if (!safirKey) return { fileId: "", raw: "کلید سفیر موجود نیست" };
+      if (!safirKey) return { fileId: "", raw: "کلید سفیر موجود نیست", tooBig: false, size: 0 };
       try {
         const fileRes = await fetch(url);
-        if (!fileRes.ok) return { fileId: "", raw: `دانلود فایل ناموفق (${fileRes.status})` };
+        if (!fileRes.ok) {
+          return { fileId: "", raw: `دانلود فایل ناموفق (${fileRes.status})`, tooBig: false, size: 0 };
+        }
         const lenHeader = Number(fileRes.headers.get("content-length") || 0);
         if (lenHeader && lenHeader > MAX_UPLOAD_BYTES) {
-          return { fileId: "", raw: `حجم فایل بیش از حد مجاز است (${Math.round(lenHeader / 1048576)}MB)` };
+          return {
+            fileId: "",
+            raw: `حجم فایل بیش از حد مجاز است (${Math.round(lenHeader / 1048576)}MB)`,
+            tooBig: true,
+            size: lenHeader,
+          };
         }
         const buf = new Uint8Array(await fileRes.arrayBuffer());
         if (buf.byteLength > MAX_UPLOAD_BYTES) {
-          return { fileId: "", raw: `حجم فایل بیش از حد مجاز است (${Math.round(buf.byteLength / 1048576)}MB)` };
+          return {
+            fileId: "",
+            raw: `حجم فایل بیش از حد مجاز است (${Math.round(buf.byteLength / 1048576)}MB)`,
+            tooBig: true,
+            size: buf.byteLength,
+          };
         }
         const contentType = fileRes.headers.get("content-type") || "application/octet-stream";
         const name = (url.split("?")[0].split("/").pop() || "file").slice(-80);
@@ -228,9 +240,72 @@ serve(async (req: Request): Promise<Response> => {
         } catch {
           /* پاسخ غیر JSON */
         }
-        return { fileId, raw: raw.slice(0, 500) };
+        return { fileId, raw: raw.slice(0, 500), tooBig: false, size: buf.byteLength };
       } catch (e) {
-        return { fileId: "", raw: e instanceof Error ? e.message : String(e) };
+        return {
+          fileId: "",
+          raw: e instanceof Error ? e.message : String(e),
+          tooBig: false,
+          size: 0,
+        };
+      }
+    };
+
+    // مسیر فایل در انبار پروژه را از آدرس استخراج می‌کند (برای کاهش حجم خودکار)
+    const parseStorage = (url: string) => {
+      const m = url.match(/\/storage\/v1\/object\/(?:sign|public|authenticated)\/([^/]+)\/([^?]+)/);
+      if (!m) return { bucket: "", path: "" };
+      return { bucket: m[1], path: decodeURIComponent(m[2]) };
+    };
+
+    // نسخه کم‌حجم‌شده آماده را پیدا می‌کند
+    const resolveCompressed = async (sourceUrl: string) => {
+      const { path } = parseStorage(sourceUrl);
+      const q = supabase
+        .from("media_compression_jobs")
+        .select("output_bucket, output_path")
+        .eq("status", "done")
+        .not("output_path", "is", null)
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      const { data } = path
+        ? await q.eq("source_path", path)
+        : await q.eq("source_url", sourceUrl);
+      const job = data?.[0];
+      if (!job?.output_path) return "";
+      const { data: signed } = await supabase.storage
+        .from(job.output_bucket || "project-media")
+        .createSignedUrl(job.output_path, 60 * 60 * 6);
+      return signed?.signedUrl || "";
+    };
+
+    // فیلم حجیم را در صف کاهش حجم خودکار می‌گذارد
+    const queueCompression = async (sourceUrl: string, size: number) => {
+      const { bucket, path } = parseStorage(sourceUrl);
+      try {
+        const { data: existing } = await supabase
+          .from("media_compression_jobs")
+          .select("id")
+          .in("status", ["pending", "processing"])
+          .eq(path ? "source_path" : "source_url", path || sourceUrl)
+          .limit(1);
+        if (existing && existing.length > 0) return;
+        await supabase.from("media_compression_jobs").insert({
+          provider: "bale",
+          source_url: sourceUrl,
+          source_bucket: bucket || null,
+          source_path: path || null,
+          phone: phone || null,
+          chat_id: String(chatId),
+          text_body: text || null,
+          order_id: body.orderId ?? null,
+          order_code: body.orderCode ?? null,
+          kind: "video",
+          status: "pending",
+          source_size: size || null,
+        });
+      } catch (e) {
+        console.warn("[send-bale-message] queue failed:", e);
       }
     };
 
