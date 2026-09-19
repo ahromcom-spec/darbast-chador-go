@@ -925,9 +925,11 @@ export function buildOrderInvoiceHtml(
             })()}
 
             ${(() => {
-              const baseCount = Array.isArray(parsedNotes?.multi_scaffolds) && parsedNotes.multi_scaffolds.length > 0
-                ? parsedNotes.multi_scaffolds.length
-                : 1;
+              const baseCount = orderParts.length > 0
+                ? orderParts.length
+                : Array.isArray(parsedNotes?.multi_scaffolds) && parsedNotes.multi_scaffolds.length > 0
+                  ? parsedNotes.multi_scaffolds.length
+                  : 1;
               const baseDescText = description
                 ? escapeHtml(description)
                 : escapeHtml(`${scaffoldTypeName} - ${subtypeName}`);
@@ -941,10 +943,16 @@ export function buildOrderInvoiceHtml(
               const dimLine = dimProduct
                 ? `<div style="font-size:11px;color:#475569;margin-top:2px;">ابعاد: ${dimProduct}${dimComputed > 0 ? ` = ${dimComputed.toLocaleString('fa-IR')} ${getMeasurementUnit()}` : ''}</div>`
                 : '';
-              const renewalRows = renewals.map((renewal, idx) => `
+              const renewalRows = renewals.map((renewal, idx) => {
+                const linkedPart = renewal.part_id ? partById.get(renewal.part_id) : undefined;
+                const renewalDesc = linkedPart
+                  ? escapeHtml(partTitle(linkedPart.part_number, linkedPart.title)) + (linkedPart.description ? ` - ${escapeHtml(linkedPart.description)}` : '')
+                  : baseDescText;
+                const renewalDims = linkedPart ? '' : dimLine;
+                return `
                 <tr class="renewal-row">
                   <td>${(idx + baseCount + 1).toLocaleString('fa-IR')}</td>
-                  <td style="text-align:right;"><strong>تمدید ماه ${(renewal.renewal_number + 1)?.toLocaleString('fa-IR') || (idx + baseCount + 1).toLocaleString('fa-IR')}</strong><div style="font-size:11.5px;color:#334155;margin-top:2px;">${baseDescText}</div>${dimLine}</td>
+                  <td style="text-align:right;"><strong>تمدید ماه ${(renewal.renewal_number + 1)?.toLocaleString('fa-IR') || (idx + baseCount + 1).toLocaleString('fa-IR')}</strong><div style="font-size:11.5px;color:#334155;margin-top:2px;">${renewalDesc}</div>${renewalDims}</td>
                   <td>${renewal.new_start_date ? formatPersianDate(renewal.new_start_date) : '-'}</td>
                   <td>${renewal.new_end_date ? formatPersianDate(renewal.new_end_date) : '-'}</td>
                   <td>-</td>
