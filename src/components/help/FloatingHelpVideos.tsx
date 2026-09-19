@@ -262,24 +262,29 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
 export const FloatingHelpVideos = () => {
   const location = useLocation();
   const routeWithQuery = `${location.pathname}${location.search}`;
-  const { videos: exact } = useFloatingHelpVideos(routeWithQuery);
-  const { videos: byPath } = useFloatingHelpVideos(location.pathname);
+  const { videos, loading } = useFloatingHelpVideos(routeWithQuery);
+  const [pagePainted, setPagePainted] = useState(false);
 
   const { isCEO } = useCEORole();
   const { isAdmin } = useAdminRole();
   const { isGeneralManager } = useGeneralManagerRole();
   const canManage = isCEO || isAdmin || isGeneralManager;
 
-  const videos = useMemo(() => {
-    const seen = new Set<string>();
-    return [...exact, ...byPath].filter((video) => {
-      if (seen.has(video.id)) return false;
-      seen.add(video.id);
-      return true;
+  // دو فریم صبر می‌کنیم تا محتوای اصلی صفحه واقعاً روی نمایشگر نقش ببندد.
+  // خود این بخش داخل Suspense قرار دارد، پس هنگام پنجره «در حال بارگذاری» اصلاً رندر نمی‌شود.
+  useEffect(() => {
+    setPagePainted(false);
+    let secondFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => setPagePainted(true));
     });
-  }, [exact, byPath]);
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    };
+  }, [routeWithQuery]);
 
-  if (videos.length === 0) return null;
+  if (loading || !pagePainted || videos.length === 0) return null;
 
   return (
     <>
