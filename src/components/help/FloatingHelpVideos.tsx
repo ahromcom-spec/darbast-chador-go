@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { Move, PlayCircle, Check, Minus, Plus } from 'lucide-react';
@@ -262,13 +262,23 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
 export const FloatingHelpVideos = () => {
   const location = useLocation();
   const routeWithQuery = `${location.pathname}${location.search}`;
-  const { videos, loading } = useFloatingHelpVideos(routeWithQuery);
+  const { videos: exactVideos, loading: exactLoading } = useFloatingHelpVideos(routeWithQuery);
+  const { videos: pathVideos, loading: pathLoading } = useFloatingHelpVideos(location.pathname);
   const [pagePainted, setPagePainted] = useState(false);
 
   const { isCEO } = useCEORole();
   const { isAdmin } = useAdminRole();
   const { isGeneralManager } = useGeneralManagerRole();
   const canManage = isCEO || isAdmin || isGeneralManager;
+
+  const videos = useMemo(() => {
+    const seen = new Set<string>();
+    return [...exactVideos, ...pathVideos].filter((video) => {
+      if (seen.has(video.id)) return false;
+      seen.add(video.id);
+      return true;
+    });
+  }, [exactVideos, pathVideos]);
 
   // دو فریم صبر می‌کنیم تا محتوای اصلی صفحه واقعاً روی نمایشگر نقش ببندد.
   // خود این بخش داخل Suspense قرار دارد، پس هنگام پنجره «در حال بارگذاری» اصلاً رندر نمی‌شود.
@@ -284,7 +294,7 @@ export const FloatingHelpVideos = () => {
     };
   }, [routeWithQuery]);
 
-  if (loading || !pagePainted || videos.length === 0) return null;
+  if (exactLoading || pathLoading || !pagePainted || videos.length === 0) return null;
 
   return (
     <>
