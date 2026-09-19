@@ -938,21 +938,54 @@ export function OrderPartsManager({ open, onOpenChange, order, onUpdated }: Orde
                             ))}
                           </div>
                         )}
-                        <div className="flex items-end gap-2">
-                          <div className="space-y-1 flex-1">
-                            <Label className="text-xs">مبلغ تمدید یک ماه (تومان)</Label>
-                            <Input
-                              dir="ltr"
-                              inputMode="numeric"
-                              placeholder={String(Number(part.price || 0) || '')}
-                              value={renewalPrice[part.id] || ''}
-                              onChange={(e) => setRenewalPrice((prev) => ({ ...prev, [part.id]: e.target.value }))}
-                            />
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-[10px]">تاریخ شروع تمدید (اختیاری)</Label>
+                              <PersianDatePicker
+                                timeMode="none"
+                                value={renewalDates[part.id]?.start || undefined}
+                                onChange={(v) =>
+                                  setRenewalDates((prev) => ({
+                                    ...prev,
+                                    [part.id]: { start: v || '', end: prev[part.id]?.end || '' },
+                                  }))
+                                }
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[10px]">تاریخ پایان تمدید (اختیاری)</Label>
+                              <PersianDatePicker
+                                timeMode="none"
+                                value={renewalDates[part.id]?.end || undefined}
+                                onChange={(v) =>
+                                  setRenewalDates((prev) => ({
+                                    ...prev,
+                                    [part.id]: { start: prev[part.id]?.start || '', end: v || '' },
+                                  }))
+                                }
+                              />
+                            </div>
                           </div>
-                          <Button size="sm" className="gap-2" onClick={() => addRenewal(part)} disabled={busyId === part.id}>
-                            <Plus className="h-4 w-4" />
-                            ثبت تمدید
-                          </Button>
+                          <p className="text-[10px] text-muted-foreground">
+                            اگر تاریخی انتخاب نکنید، تمدید به‌صورت خودکار از پایان دوره قبلی و به مدت یک ماه ثبت می‌شود.
+                          </p>
+                          <div className="flex items-end gap-2">
+                            <div className="space-y-1 flex-1">
+                              <Label className="text-xs">مبلغ تمدید یک ماه (تومان)</Label>
+                              <Input
+                                dir="ltr"
+                                inputMode="numeric"
+                                placeholder={String(Number(part.price || 0) || '')}
+                                value={renewalPrice[part.id] || ''}
+                                onChange={(e) => setRenewalPrice((prev) => ({ ...prev, [part.id]: e.target.value }))}
+                              />
+                            </div>
+                            <Button size="sm" className="gap-2" onClick={() => addRenewal(part)} disabled={busyId === part.id}>
+                              <Plus className="h-4 w-4" />
+                              ثبت تمدید
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </CollapsibleContent>
