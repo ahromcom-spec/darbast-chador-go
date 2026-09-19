@@ -2514,6 +2514,24 @@ export default function ExecutiveOrders() {
         />
       )}
 
+      {selectedOrder && (
+        <OrderPartsManager
+          open={partsDialogOpen}
+          onOpenChange={setPartsDialogOpen}
+          order={{
+            id: selectedOrder.id,
+            code: selectedOrder.code,
+            customer_id: selectedOrder.customer_id,
+            payment_amount: selectedOrder.payment_amount,
+            total_price: selectedOrder.total_price,
+            rental_start_date: selectedOrder.rental_start_date,
+            notes: selectedOrder.notes,
+          }}
+          onUpdated={fetchOrders}
+        />
+      )}
+
+
       {/* Collection Request Dialog */}
       {selectedOrder && (
         <CollectionRequestDialog
