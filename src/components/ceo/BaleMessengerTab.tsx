@@ -238,6 +238,9 @@ export const BaleMessengerTab = () => {
         </CardContent>
       </Card>
 
+      <BaleVideoCompressionPanel />
+
+
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">ارسال آزمایشی / دستی</CardTitle>
