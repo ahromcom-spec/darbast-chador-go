@@ -381,9 +381,17 @@ export function OrderPartsManager({ open, onOpenChange, order, onUpdated }: Orde
   ) => {
     setBusyId(part.id);
     try {
+      const updates: any = { [field]: value };
+      // اگر تاریخ فک دستی ثبت شد و قسمت هنوز فک‌شده نیست، وضعیت هم هماهنگ شود
+      if (field === 'collected_at' && value && part.status !== 'collected') {
+        updates.status = 'collected';
+      }
+      if (field === 'collection_requested_at' && value && part.status === 'active') {
+        updates.status = 'awaiting_collection';
+      }
       const { error } = await supabase
         .from('order_parts')
-        .update({ [field]: value } as any)
+        .update(updates)
         .eq('id', part.id);
       if (error) throw error;
       // همگام‌سازی با درخواست فک مرتبط
