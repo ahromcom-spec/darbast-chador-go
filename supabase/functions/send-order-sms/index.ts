@@ -477,20 +477,40 @@ const handler = async (req: Request): Promise<Response> => {
       if (baleAllowed) {
         const media: Array<{ url: string; type: "photo" | "video" }> = [];
         if (messenger?.send_media !== false && orderId) {
-          const { data: mediaRows } = await supabase
-            .from("project_media")
+          const seen = new Set<string>();
+          const pushRows = (rows: any[] | null) => {
+            for (const row of rows ?? []) {
+              const path = String(row?.file_path || "");
+              if (!path || seen.has(path)) continue;
+              seen.add(path);
+              const type = String(row?.file_type || "").startsWith("video") ? "video" : "photo";
+              const { data: pub } = supabase.storage.from("project-media").getPublicUrl(path);
+              if (pub?.publicUrl) media.push({ url: pub.publicUrl, type });
+            }
+          };
+
+          // اول رسانه‌های تأییدشده مدیرعامل، سپس رسانه‌های ثبت‌شده روی سفارش
+          const { data: approvedRows } = await supabase
+            .from("approved_media")
             .select("file_path, file_type")
-            .eq("project_id", orderId)
+            .eq("order_id", orderId)
+            .eq("status", "approved")
+            .eq("is_visible", true)
             .order("created_at", { ascending: false })
-            .limit(4);
-          for (const row of mediaRows ?? []) {
-            const type = String((row as any).file_type || "").startsWith("video") ? "video" : "photo";
-            const { data: pub } = supabase.storage
-              .from("project-media")
-              .getPublicUrl((row as any).file_path);
-            if (pub?.publicUrl) media.push({ url: pub.publicUrl, type });
+            .limit(6);
+          pushRows(approvedRows as any[]);
+
+          if (media.length < 6) {
+            const { data: mediaRows } = await supabase
+              .from("project_media")
+              .select("file_path, file_type")
+              .eq("project_id", orderId)
+              .order("created_at", { ascending: false })
+              .limit(6 - media.length);
+            pushRows(mediaRows as any[]);
           }
         }
+
 
         await fetch(`${supabaseUrl}/functions/v1/send-bale-message`, {
           method: "POST",
