@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { sendNotificationSchema } from '@/lib/rpcValidation';
 import { sendOrderSms } from '@/lib/orderSms';
+import { sendPushNotification } from '@/lib/notifications';
 
 interface ExecutiveStage {
   key: string;
@@ -118,14 +119,13 @@ export const ExecutiveStageTimeline = ({
               await supabase.rpc('send_notification', validated as { _user_id: string; _title: string; _body: string; _link?: string; _type?: string });
               
               // ارسال Push Notification به گوشی کاربر
-              await supabase.functions.invoke('send-push-notification', {
-                body: {
-                  user_id: customerData.user_id,
-                  title: message.title,
-                  body: message.body,
-                  link: `/user/orders/${projectId}`,
-                  type: 'order-stage'
-                }
+              await sendPushNotification({
+                user_id: customerData.user_id,
+                order_id: projectId,
+                title: message.title,
+                body: message.body,
+                link: `/user/orders/${projectId}`,
+                type: 'order-stage'
               });
 
               const smsStatusMap: Record<string, any> = {

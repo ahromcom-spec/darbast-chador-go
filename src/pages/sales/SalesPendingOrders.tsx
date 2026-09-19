@@ -192,6 +192,7 @@ export default function SalesPendingOrders() {
       if (selectedOrder.customer_id) {
         sendPushNotification({
           user_id: selectedOrder.customer_id,
+          order_id: selectedOrder.id,
           title: '✓ سفارش شما تایید شد',
           body: `سفارش ${selectedOrder.code} تایید شد و به مرحله بعد ارسال گردید.`,
           link: `/user/orders/${selectedOrder.id}`,

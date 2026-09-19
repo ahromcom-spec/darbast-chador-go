@@ -124,6 +124,7 @@ const ZarinpalCallback = () => {
             if (user?.id && paidAmount > 0) {
               sendPushNotification({
                 user_id: user.id,
+                order_id: orderId || undefined,
                 title: 'پرداخت موفق ✓',
                 body: `پرداخت ${paidAmount.toLocaleString('fa-IR')} تومان برای سفارش ${orderCode} با موفقیت انجام شد.`,
                 link: orderId ? `/user/orders/${orderId}` : '/user/my-orders',

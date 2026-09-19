@@ -683,6 +683,7 @@ export default function ExecutiveOrders() {
           // ارسال Push Notification به گوشی کاربر
           await sendPushNotification({
             user_id: customerData.user_id,
+            order_id: orderId,
             title: '✅ سفارش اجرا شد',
             body: `سفارش شما با کد ${orderCode} با موفقیت اجرا شد.`,
             link: `/user/orders/${orderId}`,
@@ -884,6 +885,7 @@ export default function ExecutiveOrders() {
               // ارسال Push Notification به گوشی کاربر
               await sendPushNotification({
                 user_id: customerData.user_id,
+                order_id: orderId,
                 title: message.title,
                 body: message.body,
                 link: `/user/orders/${orderId}`,
@@ -1226,6 +1228,7 @@ export default function ExecutiveOrders() {
             // ارسال Push Notification
             await sendPushNotification({
               user_id: customerData.user_id,
+              order_id: selectedOrder.id,
               title: '❌ سفارش رد شد',
               body: `سفارش ${selectedOrder.code} رد شد. دلیل: ${rejectionReason}`,
               link: `/user/orders/${selectedOrder.id}`,

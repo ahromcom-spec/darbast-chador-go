@@ -48,6 +48,51 @@ const getCEOUserId = async (): Promise<string | null> => {
  * Send a Najva push + in-app notification to a specific user via the
  * `send-push-notification` edge function. Suppressed during admin impersonation.
  */
+const invokePush = async (
+  userId: string,
+  payload: PushNotificationPayload
+): Promise<{ success: boolean; error?: string }> => {
+  const { error } = await supabase.functions.invoke('send-push-notification', {
+    body: {
+      user_id: userId,
+      title: payload.title,
+      body: payload.body,
+      link: payload.link,
+      type: payload.type || 'info',
+    },
+  });
+  if (error) {
+    console.error('[sendPushNotification] error', error);
+    return { success: false, error: error.message };
+  }
+  return { success: true };
+};
+
+/**
+ * Resolve everyone entitled to an order's notifications: the current owner
+ * (after a transfer this is only the new customer) plus accepted collaborators.
+ */
+export const getOrderNotificationRecipients = async (orderId: string): Promise<string[]> => {
+  try {
+    const { data, error } = await supabase.rpc('get_order_notification_recipients' as any, {
+      _order_id: orderId,
+    });
+    if (error) throw error;
+    return Array.from(
+      new Set(((data as { user_id: string }[] | null) || []).map((r) => r.user_id).filter(Boolean))
+    );
+  } catch (err) {
+    console.error('[getOrderNotificationRecipients] error', err);
+    return [];
+  }
+};
+
+/**
+ * Send a Najva push + in-app notification. When `order_id` is provided the
+ * notification fans out to the order's current owner and all accepted
+ * collaborators (so transferred orders never notify the previous owner).
+ * Suppressed during admin impersonation.
+ */
 export const sendPushNotification = async (
   payload: PushNotificationPayload
 ): Promise<{ success: boolean; error?: string }> => {
@@ -56,22 +101,18 @@ export const sendPushNotification = async (
       console.log('[sendPushNotification] Skipped (admin impersonating)');
       return { success: true };
     }
-    if (!payload.user_id) return { success: false, error: 'missing user_id' };
 
-    const { error } = await supabase.functions.invoke('send-push-notification', {
-      body: {
-        user_id: payload.user_id,
-        title: payload.title,
-        body: payload.body,
-        link: payload.link,
-        type: payload.type || 'info',
-      },
-    });
-    if (error) {
-      console.error('[sendPushNotification] error', error);
-      return { success: false, error: error.message };
+    if (payload.order_id) {
+      const recipients = await getOrderNotificationRecipients(payload.order_id);
+      if (recipients.length > 0) {
+        const results = await Promise.all(recipients.map((uid) => invokePush(uid, payload)));
+        const failed = results.find((r) => !r.success);
+        return failed ? { success: false, error: failed.error } : { success: true };
+      }
     }
-    return { success: true };
+
+    if (!payload.user_id) return { success: false, error: 'missing user_id' };
+    return await invokePush(payload.user_id, payload);
   } catch (err: any) {
     console.error('[sendPushNotification] Exception:', err);
     return { success: false, error: err.message };
@@ -173,6 +214,37 @@ export const notifyCEOPayment = async (params: {
   } catch (err: any) {
     console.error('[notifyCEOPayment] Exception:', err);
     return { success: false, error: err.message };
+  }
+};
+
+/**
+ * Send a notification to everyone currently entitled to an order:
+ * the current owner (after a transfer this is the new customer only)
+ * plus every accepted collaborator of that order.
+ */
+export const notifyOrderParties = async (
+  orderId: string,
+  payload: { title: string; body: string; link?: string; type?: string }
+): Promise<{ success: boolean; recipients: number; error?: string }> => {
+  try {
+    if (!orderId) return { success: false, recipients: 0, error: 'missing orderId' };
+
+    const ids = await getOrderNotificationRecipients(orderId);
+    if (ids.length === 0) return { success: true, recipients: 0 };
+
+    const res = await sendPushNotification({
+      user_id: ids[0],
+      title: payload.title,
+      body: payload.body,
+      link: payload.link,
+      order_id: orderId,
+      type: payload.type || 'info',
+    });
+
+    return { success: res.success, recipients: ids.length, error: res.error };
+  } catch (err: any) {
+    console.error('[notifyOrderParties] Exception:', err);
+    return { success: false, recipients: 0, error: err.message };
   }
 };
 

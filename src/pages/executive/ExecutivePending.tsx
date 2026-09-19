@@ -300,6 +300,7 @@ export default function ExecutivePending() {
             // ارسال Push Notification به گوشی کاربر
             await sendPushNotification({
               user_id: customerData.user_id,
+              order_id: selectedOrder.id,
               title: '✅ سفارش شما تایید شد',
               body: `سفارش شما با کد ${selectedOrder.code} توسط تیم مدیریت تایید شد و آماده اجرا است.`,
               link: `/user/orders/${selectedOrder.id}`,

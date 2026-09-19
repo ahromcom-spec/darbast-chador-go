@@ -253,6 +253,7 @@ export function MultiPaymentDialog({
           const remaining = (totalPrice || 0) - newTotalPaid;
           await sendPushNotification({
             user_id: customerData.user_id,
+            order_id: orderId,
             title: 'پرداخت ثبت شد ✓',
             body: remaining > 0
               ? `مبلغ ${amount.toLocaleString('fa-IR')} تومان برای سفارش ${orderCode} ثبت شد. مانده: ${remaining.toLocaleString('fa-IR')} تومان`
