@@ -224,7 +224,7 @@ export const BaleMessengerTab = () => {
               بارگذاری مجدد
             </Button>
             <span className="text-xs text-muted-foreground">
-              مشتری باید یک‌بار ربات {settings.bot_username || "@ahrom_ir_bot"} را در بله استارت کند تا پیام‌ها را دریافت کند.
+              ارسال پیام‌ها با وب‌سرویس رسمی بله بر پایه شماره موبایل انجام می‌شود؛ نیازی به استارت کردن ربات {settings.bot_username || "@ahrom_ir_bot"} توسط مشتری نیست. عکس و فیلم برای کاربرانی که ربات را استارت کرده‌اند به‌صورت فایل و برای بقیه به‌صورت لینک ارسال می‌شود.
             </span>
           </div>
         </CardContent>

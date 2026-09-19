@@ -53,12 +53,15 @@ serve(async (req: Request): Promise<Response> => {
   try {
     const body: BaleRequest = await req.json();
     const token = Deno.env.get("TELEGRAM_BOT_TOKEN");
-    if (!token) {
+    const safirKey = Deno.env.get("BALE_SAFIR_API_KEY");
+    const safirBotId = Number(Deno.env.get("BALE_BOT_ID") || 0);
+    if (!token && !safirKey) {
       return new Response(JSON.stringify({ error: "توکن ربات بله تنظیم نشده است" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     // اتصال ربات: ثبت وب‌هوک بله روی سرور و دریافت اطلاعات ربات
     if ((body as any).action === "setup") {
@@ -95,6 +98,7 @@ serve(async (req: Request): Promise<Response> => {
 
     // شناسه گفتگو: اول از جدول ثبت‌شده، سپس شماره تماس با پیش‌شماره ۹۸
     let chatId = (body.chatId || "").toString().trim();
+    let hasRegisteredChat = !!chatId;
     if (!chatId && phone) {
       const { data: known } = await supabase
         .from("messenger_chats")
@@ -102,7 +106,12 @@ serve(async (req: Request): Promise<Response> => {
         .eq("provider", "bale")
         .eq("phone", phone)
         .maybeSingle();
-      chatId = known?.chat_id || `98${phone.slice(1)}`;
+      if (known?.chat_id) {
+        chatId = known.chat_id;
+        hasRegisteredChat = true;
+      } else {
+        chatId = `98${phone.slice(1)}`;
+      }
     }
 
     if (!chatId) {
@@ -111,6 +120,7 @@ serve(async (req: Request): Promise<Response> => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     if (!text && (!body.media || body.media.length === 0)) {
       return new Response(JSON.stringify({ error: "متن یا رسانه لازم است" }), {
@@ -155,29 +165,59 @@ serve(async (req: Request): Promise<Response> => {
       }
     };
 
+    // ارسال با وب‌سرویس سفیر بله بر پایه شماره تماس (بدون نیاز به شروع گفتگو توسط کاربر)
+    const safirSend = async (message: string) => {
+      if (!safirKey || !safirBotId || !phone) {
+        return { ok: false, raw: "کلید سفیر یا شماره تماس موجود نیست" };
+      }
+      const res = await fetch("https://safir.bale.ai/api/v3/send_message", {
+        method: "POST",
+        headers: { "api-access-key": safirKey, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bot_id: safirBotId,
+          phone_number: `98${phone.replace(/^0/, "")}`,
+          message_data: { message: { text: message } },
+        }),
+      });
+      const raw = await res.text();
+      return { ok: res.ok, raw: raw.slice(0, 500) };
+    };
+
     const results: Array<{ kind: string; ok: boolean }> = [];
     const mediaAllowed = settings?.send_media !== false;
     const media = mediaAllowed ? (body.media || []).filter((m) => m?.url).slice(0, 10) : [];
+    const canUseBot = !!token && hasRegisteredChat;
 
     let firstCaptionUsed = false;
-    for (const item of media) {
-      const isVideo = item.type === "video" || /\.(mp4|mov|webm|mkv)(\?|$)/i.test(item.url);
-      const method = isVideo ? "sendVideo" : "sendPhoto";
-      const payload: Record<string, unknown> = { chat_id: chatId };
-      payload[isVideo ? "video" : "photo"] = item.url;
-      if (text && !firstCaptionUsed) {
-        payload.caption = text.slice(0, 1000);
-        firstCaptionUsed = true;
+    if (canUseBot) {
+      for (const item of media) {
+        const isVideo = item.type === "video" || /\.(mp4|mov|webm|mkv)(\?|$)/i.test(item.url);
+        const method = isVideo ? "sendVideo" : "sendPhoto";
+        const payload: Record<string, unknown> = { chat_id: chatId };
+        payload[isVideo ? "video" : "photo"] = item.url;
+        if (text && !firstCaptionUsed) {
+          payload.caption = text.slice(0, 1000);
+          firstCaptionUsed = true;
+        }
+        const r = await call(method, payload);
+        await log(isVideo ? "video" : "photo", item.url, r);
+        results.push({ kind: isVideo ? "video" : "photo", ok: r.ok });
       }
-      const r = await call(method, payload);
-      await log(isVideo ? "video" : "photo", item.url, r);
-      results.push({ kind: isVideo ? "video" : "photo", ok: r.ok });
+
+      if (text && !firstCaptionUsed) {
+        const r = await call("sendMessage", { chat_id: chatId, text });
+        await log("text", text, r);
+        results.push({ kind: "text", ok: r.ok });
+      }
     }
 
-    if (text && !firstCaptionUsed) {
-      const r = await call("sendMessage", { chat_id: chatId, text });
-      await log("text", text, r);
-      results.push({ kind: "text", ok: r.ok });
+    // اگر گفتگوی ثبت‌شده نداریم یا ارسال با ربات موفق نبود، از سفیر استفاده می‌کنیم
+    if (!results.some((r) => r.ok)) {
+      const linkLines = media.map((m) => m.url);
+      const message = [text, ...linkLines].filter(Boolean).join("\n");
+      const r = await safirSend(message || "پیام جدید از خدمات ساختمانی اهرم — ahrom.ir");
+      await log("text", message, r);
+      results.push({ kind: "safir", ok: r.ok });
     }
 
     const success = results.some((r) => r.ok);
@@ -185,6 +225,7 @@ serve(async (req: Request): Promise<Response> => {
       status: success ? 200 : 502,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("[send-bale-message] error:", msg);
