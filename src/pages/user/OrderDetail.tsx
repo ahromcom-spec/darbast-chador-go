@@ -57,14 +57,11 @@ import {
 } from "lucide-react";
 import { OrderTransfer } from "@/components/orders/OrderTransfer";
 import { AddCollaborator } from "@/components/orders/AddCollaborator";
-import { OrderCollaboratorsList } from "@/components/orders/OrderCollaboratorsList";
-import { OrderOwnershipChain } from "@/components/orders/OrderOwnershipChain";
+import { OwnershipAndCollaboratorsSection } from "@/components/orders/OwnershipAndCollaboratorsSection";
 import { RepairRequestDialog } from "@/components/orders/RepairRequestDialog";
 import { CollectionRequestDialog } from "@/components/orders/CollectionRequestDialog";
 import { RenewalRequestDialog } from "@/components/orders/RenewalRequestDialog";
 import { ManagerOrderInvoice } from "@/components/orders/ManagerOrderInvoice";
-import { OrderForOthersInfo } from "@/components/orders/OrderForOthersInfo";
-import { OrderCollaborationInfo } from "@/components/orders/OrderCollaborationInfo";
 
 import OrderRatingSection from "@/components/orders/OrderRatingSection";
 import { useProjectRatings, RatingCriteria } from "@/hooks/useRatings";
@@ -250,7 +247,6 @@ export default function OrderDetail() {
   const [isLocationSectionExpanded, setIsLocationSectionExpanded] = useState(false);
   const [isDetailsSectionExpanded, setIsDetailsSectionExpanded] = useState(false);
   const [isRequestsSectionExpanded, setIsRequestsSectionExpanded] = useState(false);
-  const [isOwnershipSectionExpanded, setIsOwnershipSectionExpanded] = useState(false);
   const [isConfirmingPrice, setIsConfirmingPrice] = useState(false);
   const [showAdvancePayment, setShowAdvancePayment] = useState(false);
   const [advancePaymentAmount, setAdvancePaymentAmount] = useState(0);
@@ -1203,16 +1199,6 @@ export default function OrderDetail() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Order For Others Info - نمایش اطلاعات سفارش برای دیگران */}
-          <OrderForOthersInfo 
-            orderId={order.id}
-            onStatusChange={fetchOrderDetails}
-          />
-
-          {/* پیام‌های همکاری سفارش برای دارندگان سفارش و همکاران */}
-          <OrderCollaborationInfo orderId={order.id} />
-
 
           {/* Expert Pricing Request Section */}
           {isExpertPricingRequest && (
@@ -3308,23 +3294,7 @@ export default function OrderDetail() {
             onClose={() => setSelectedImage(null)}
           />
 
-          <Collapsible open={isOwnershipSectionExpanded} onOpenChange={setIsOwnershipSectionExpanded}>
-            <Card>
-              <CollapsibleTrigger asChild>
-                <CardHeader className="cursor-pointer hover:bg-muted/40 transition-colors rounded-t-lg">
-                  <div className="flex items-center justify-between gap-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Users className="h-5 w-5 text-primary" />
-                      زنجیره مالکیت سفارش
-                    </CardTitle>
-                    <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isOwnershipSectionExpanded ? "rotate-180" : ""}`} />
-                  </div>
-                </CardHeader>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <CardContent className="space-y-6">
-          {/* زنجیره مالکیت سفارش */}
-          <OrderOwnershipChain
+          <OwnershipAndCollaboratorsSection
             orderId={order.id}
             currentOwnerId={order.customer_id}
             ownerName={order.customer_name || ''}
@@ -3333,19 +3303,8 @@ export default function OrderDetail() {
             transferredFromPhone={order.transferred_from_phone}
             executedBy={order.executed_by}
             approvedBy={order.approved_by}
+            onStatusChange={fetchOrderDetails}
           />
-
-          {/* لیست همکاران سفارش */}
-          <OrderCollaboratorsList 
-            orderId={order.id} 
-            isOwner={true} 
-            ownerName={order.customer_name || ''} 
-            ownerPhone={order.customer_phone || ''} 
-          />
-                </CardContent>
-              </CollapsibleContent>
-            </Card>
-          </Collapsible>
 
           {/* بخش چت و تعامل با مدیریت */}
           <OrderChat orderId={order.id} orderStatus={order.status} />
