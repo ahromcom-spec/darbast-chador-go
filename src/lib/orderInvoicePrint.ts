@@ -958,7 +958,8 @@ export function buildOrderInvoiceHtml(
                   <td>-</td>
                   <td>${Number(renewal.renewal_price || 0).toLocaleString('fa-IR')}</td>
                 </tr>
-              `).join('');
+              `;
+              }).join('');
               const repairRows = repairRequests.map((repair, idx) => `
                 <tr class="repair-row">
                   <td>${(idx + baseCount + renewals.length + 1).toLocaleString('fa-IR')}</td>
