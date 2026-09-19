@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadToStorageWithProgress } from '@/lib/mediaTransfers';
 
@@ -127,6 +127,9 @@ export const useHelpVideo = (contextKey: string) => {
 export const useFloatingHelpVideos = (route: string) => {
   const [videos, setVideos] = useState<HelpVideo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadedRoute, setLoadedRoute] = useState<string | null>(null);
+  const currentRouteRef = useRef(route);
+  currentRouteRef.current = route;
 
   const load = useCallback(async () => {
     try {
@@ -137,21 +140,35 @@ export const useFloatingHelpVideos = (route: string) => {
         .eq('page_route', route)
         .eq('is_active', true);
       if (error) throw error;
-      setVideos((data as HelpVideo[]) || []);
+      // نتیجه درخواست صفحه قبلی نباید پس از جابه‌جایی روی صفحه جدید ظاهر شود.
+      if (currentRouteRef.current === route) {
+        setVideos((data as HelpVideo[]) || []);
+        setLoadedRoute(route);
+      }
     } catch (err) {
       console.error('Error loading floating help videos:', err);
-      setVideos([]);
+      if (currentRouteRef.current === route) {
+        setVideos([]);
+        setLoadedRoute(route);
+      }
     } finally {
-      setLoading(false);
+      if (currentRouteRef.current === route) setLoading(false);
     }
   }, [route]);
 
   useEffect(() => {
     setLoading(true);
+    setLoadedRoute(null);
     load();
   }, [load]);
 
-  return { videos, loading, reload: load, setVideos };
+  const isCurrentRouteLoaded = loadedRoute === route;
+  return {
+    videos: isCurrentRouteLoaded ? videos : [],
+    loading: loading || !isCurrentRouteLoaded,
+    reload: load,
+    setVideos,
+  };
 };
 
 /** ذخیره محل و اندازه جدید یک راهنمای شناور (به‌صورت جداگانه برای ویندوز و موبایل) */

@@ -225,13 +225,13 @@ const App = () => {
                 <NajvaSubscriber />
                 <SiteNotificationSound />
                 <GlobalKeyboardShortcuts />
-              <FloatingHelpVideos />
               <GlobalIncomingCallPopup />
               
               <Suspense fallback={<PageLoader />}>
                 <AnalyticsTracker>
                 <div className="flex-1 flex flex-col bg-background">
                   <Header />
+                  <FloatingHelpVideos />
                   <Routes>
               <Route path="/auth/login" element={<Login />} />
               <Route path="/auth/register" element={<Register />} />
