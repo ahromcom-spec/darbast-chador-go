@@ -461,6 +461,14 @@ export function buildOrderInvoiceHtml(
     customerCode,
     payments,
   } = extras;
+  const orderParts = (extras.parts || []).filter((p) => p.status !== 'cancelled');
+  const partOrdinals = ['اول', 'دوم', 'سوم', 'چهارم', 'پنجم', 'ششم', 'هفتم', 'هشتم', 'نهم', 'دهم'];
+  const partTitle = (partNumber: number, title?: string | null) => {
+    const base = `قسمت ${partOrdinals[partNumber - 1] || partNumber} سفارش`;
+    const extra = (title || '').trim();
+    return extra ? `${base} - ${extra}` : base;
+  };
+  const partById = new Map(orderParts.map((p) => [p.id, p]));
   const parsedNotes = order.notes && typeof order.notes === 'object' ? order.notes : parseOrderNotes(order.notes);
     const dimensions = parsedNotes?.dimensions;
     const scaffoldingType = parsedNotes?.service_type || parsedNotes?.scaffoldingType || parsedNotes?.scaffold_type;
