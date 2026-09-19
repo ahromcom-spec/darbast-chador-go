@@ -165,33 +165,88 @@ serve(async (req: Request): Promise<Response> => {
       }
     };
 
+    const safirPhone = phone ? `98${phone.replace(/^0/, "")}` : "";
+
     // ارسال با وب‌سرویس سفیر بله بر پایه شماره تماس (بدون نیاز به شروع گفتگو توسط کاربر)
-    const safirSend = async (message: string) => {
-      if (!safirKey || !safirBotId || !phone) {
+    const safirSend = async (message: string, fileId?: string) => {
+      if (!safirKey || !safirBotId || !safirPhone) {
         return { ok: false, raw: "کلید سفیر یا شماره تماس موجود نیست" };
       }
+      const msg: Record<string, unknown> = {};
+      if (message) msg.text = message.slice(0, 3000);
+      if (fileId) msg.file_id = fileId;
       const res = await fetch("https://safir.bale.ai/api/v3/send_message", {
         method: "POST",
         headers: { "api-access-key": safirKey, "Content-Type": "application/json" },
         body: JSON.stringify({
           bot_id: safirBotId,
-          phone_number: `98${phone.replace(/^0/, "")}`,
-          message_data: { message: { text: message } },
+          phone_number: safirPhone,
+          message_data: { message: msg },
         }),
       });
       const raw = await res.text();
-      return { ok: res.ok, raw: raw.slice(0, 500) };
+      let ok = res.ok;
+      try {
+        const parsed = JSON.parse(raw);
+        const errs = parsed?.error_data;
+        if (parsed?.error || (Array.isArray(errs) && errs.length > 0)) ok = false;
+      } catch {
+        /* پاسخ غیر JSON */
+      }
+      return { ok, raw: raw.slice(0, 500) };
     };
 
-    const results: Array<{ kind: string; ok: boolean }> = [];
+    // آپلود فایل رسانه در سفیر و گرفتن شناسه فایل برای ارسال خود فایل (نه لینک)
+    const MAX_UPLOAD_BYTES = 45 * 1024 * 1024;
+    const safirUpload = async (url: string) => {
+      if (!safirKey) return { fileId: "", raw: "کلید سفیر موجود نیست" };
+      try {
+        const fileRes = await fetch(url);
+        if (!fileRes.ok) return { fileId: "", raw: `دانلود فایل ناموفق (${fileRes.status})` };
+        const lenHeader = Number(fileRes.headers.get("content-length") || 0);
+        if (lenHeader && lenHeader > MAX_UPLOAD_BYTES) {
+          return { fileId: "", raw: `حجم فایل بیش از حد مجاز است (${Math.round(lenHeader / 1048576)}MB)` };
+        }
+        const buf = new Uint8Array(await fileRes.arrayBuffer());
+        if (buf.byteLength > MAX_UPLOAD_BYTES) {
+          return { fileId: "", raw: `حجم فایل بیش از حد مجاز است (${Math.round(buf.byteLength / 1048576)}MB)` };
+        }
+        const contentType = fileRes.headers.get("content-type") || "application/octet-stream";
+        const name = (url.split("?")[0].split("/").pop() || "file").slice(-80);
+        const form = new FormData();
+        form.append("file", new Blob([buf], { type: contentType }), name);
+        const upRes = await fetch("https://safir.bale.ai/api/v3/upload_file", {
+          method: "POST",
+          headers: { "api-access-key": safirKey },
+          body: form,
+        });
+        const raw = await upRes.text();
+        let fileId = "";
+        try {
+          const parsed = JSON.parse(raw);
+          fileId = parsed?.file_id || parsed?.data?.file_id || parsed?.result?.file_id || "";
+        } catch {
+          /* پاسخ غیر JSON */
+        }
+        return { fileId, raw: raw.slice(0, 500) };
+      } catch (e) {
+        return { fileId: "", raw: e instanceof Error ? e.message : String(e) };
+      }
+    };
+
+    const results: Array<{ kind: string; ok: boolean; url?: string }> = [];
     const mediaAllowed = settings?.send_media !== false;
     const media = mediaAllowed ? (body.media || []).filter((m) => m?.url).slice(0, 10) : [];
     const canUseBot = !!token && hasRegisteredChat;
+    const isVideoUrl = (m: MediaItem) =>
+      m.type === "video" || /\.(mp4|mov|webm|mkv|m4v)(\?|$)/i.test(m.url);
 
+    let textDelivered = false;
     let firstCaptionUsed = false;
+
     if (canUseBot) {
       for (const item of media) {
-        const isVideo = item.type === "video" || /\.(mp4|mov|webm|mkv)(\?|$)/i.test(item.url);
+        const isVideo = isVideoUrl(item);
         const method = isVideo ? "sendVideo" : "sendPhoto";
         const payload: Record<string, unknown> = { chat_id: chatId };
         payload[isVideo ? "video" : "photo"] = item.url;
@@ -201,30 +256,70 @@ serve(async (req: Request): Promise<Response> => {
         }
         const r = await call(method, payload);
         await log(isVideo ? "video" : "photo", item.url, r);
-        results.push({ kind: isVideo ? "video" : "photo", ok: r.ok });
+        results.push({ kind: isVideo ? "video" : "photo", ok: r.ok, url: item.url });
+        if (r.ok && firstCaptionUsed) textDelivered = true;
       }
 
-      if (text && !firstCaptionUsed) {
+      if (text && !textDelivered) {
         const r = await call("sendMessage", { chat_id: chatId, text });
         await log("text", text, r);
         results.push({ kind: "text", ok: r.ok });
+        if (r.ok) textDelivered = true;
       }
     }
 
-    // اگر گفتگوی ثبت‌شده نداریم یا ارسال با ربات موفق نبود، از سفیر استفاده می‌کنیم
-    if (!results.some((r) => r.ok)) {
-      const linkLines = media.map((m) => m.url);
-      const message = [text, ...linkLines].filter(Boolean).join("\n");
-      const r = await safirSend(message || "پیام جدید از خدمات ساختمانی اهرم — ahrom.ir");
-      await log("text", message, r);
-      results.push({ kind: "safir", ok: r.ok });
+    // ارسال با سفیر: خود عکس و فیلم به‌صورت فایل برای شماره موبایل ارسال می‌شود
+    const botMediaFailed = media.filter(
+      (m) => !results.some((r) => r.ok && r.url === m.url),
+    );
+
+    if (safirKey && safirBotId && safirPhone) {
+      for (const item of botMediaFailed) {
+        const kind = isVideoUrl(item) ? "video" : "photo";
+        const up = await safirUpload(item.url);
+        if (!up.fileId) {
+          const r = { ok: false, raw: `آپلود در بله ناموفق: ${up.raw}` };
+          await log(kind, item.url, r);
+          results.push({ kind, ok: false, url: item.url });
+          continue;
+        }
+        const caption = !textDelivered ? text : "";
+        const r = await safirSend(caption, up.fileId);
+        if (r.ok && caption) textDelivered = true;
+        await log(kind, item.url, r);
+        results.push({ kind, ok: r.ok, url: item.url });
+      }
+
+      if (text && !textDelivered) {
+        const r = await safirSend(text);
+        await log("text", text, r);
+        results.push({ kind: "text", ok: r.ok });
+        if (r.ok) textDelivered = true;
+      }
+    }
+
+    if (results.length === 0) {
+      const r = await safirSend(text || "پیام جدید از خدمات ساختمانی اهرم — ahrom.ir");
+      await log("text", text, r);
+      results.push({ kind: "text", ok: r.ok });
     }
 
     const success = results.some((r) => r.ok);
-    return new Response(JSON.stringify({ success, results, chatId }), {
-      status: success ? 200 : 502,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    const mediaResults = results.filter((r) => r.kind === "photo" || r.kind === "video");
+    return new Response(
+      JSON.stringify({
+        success,
+        results,
+        chatId,
+        mediaSent: mediaResults.filter((r) => r.ok).length,
+        mediaFailed: mediaResults.filter((r) => !r.ok).length,
+      }),
+      {
+        status: success ? 200 : 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+
 
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
