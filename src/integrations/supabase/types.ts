@@ -6678,6 +6678,12 @@ export type Database = {
         }
         Returns: string
       }
+      get_order_notification_recipients: {
+        Args: { _order_id: string }
+        Returns: {
+          user_id: string
+        }[]
+      }
       get_orders_with_customer_info: {
         Args: never
         Returns: {
