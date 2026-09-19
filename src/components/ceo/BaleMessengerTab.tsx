@@ -292,10 +292,34 @@ export const BaleMessengerTab = () => {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">گزارش ارسال بله ({logs.length.toLocaleString("fa-IR")})</CardTitle>
+          <div className="flex flex-wrap items-center gap-2 pt-2">
+            <Badge variant="default" className="text-xs">
+              عکس و فیلم ارسال‌شده: {mediaSentCount.toLocaleString("fa-IR")}
+            </Badge>
+            <Badge variant={mediaFailedCount > 0 ? "destructive" : "secondary"} className="text-xs">
+              عکس و فیلم ناموفق: {mediaFailedCount.toLocaleString("fa-IR")}
+            </Badge>
+            <div className="flex gap-1 mr-auto">
+              {([
+                ["all", "همه"],
+                ["media", "عکس و فیلم"],
+                ["text", "متن"],
+              ] as const).map(([key, label]) => (
+                <Button
+                  key={key}
+                  size="sm"
+                  variant={logFilter === key ? "default" : "outline"}
+                  onClick={() => setLogFilter(key)}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {logs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">پیامی ارسال نشده است.</p>
+          {filteredLogs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">موردی برای نمایش نیست.</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -304,12 +328,13 @@ export const BaleMessengerTab = () => {
                     <TableHead>تاریخ</TableHead>
                     <TableHead>گیرنده</TableHead>
                     <TableHead>نوع</TableHead>
+                    <TableHead>فایل</TableHead>
                     <TableHead>سفارش</TableHead>
                     <TableHead>وضعیت</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {logs.map((l) => (
+                  {filteredLogs.map((l) => (
                     <TableRow key={l.id}>
                       <TableCell className="text-xs whitespace-nowrap">
                         {new Date(l.created_at).toLocaleString("fa-IR")}
@@ -318,11 +343,34 @@ export const BaleMessengerTab = () => {
                       <TableCell className="text-xs">
                         {l.kind === "video" ? "فیلم" : l.kind === "photo" ? "عکس" : "متن"}
                       </TableCell>
+                      <TableCell className="text-xs">
+                        {l.media_url ? (
+                          <a
+                            href={l.media_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-primary underline"
+                          >
+                            مشاهده فایل
+                          </a>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
                       <TableCell dir="ltr" className="text-xs">{l.order_code || "—"}</TableCell>
                       <TableCell>
                         <Badge variant={l.status === "sent" ? "default" : "destructive"}>
-                          {l.status === "sent" ? "ارسال شد" : "ناموفق"}
+                          {l.status === "sent"
+                            ? l.kind === "text"
+                              ? "ارسال شد"
+                              : "فایل ارسال شد"
+                            : "ناموفق"}
                         </Badge>
+                        {l.status !== "sent" && l.provider_response ? (
+                          <p className="text-[10px] text-muted-foreground mt-1 max-w-[220px] truncate">
+                            {l.provider_response}
+                          </p>
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -332,6 +380,7 @@ export const BaleMessengerTab = () => {
           )}
         </CardContent>
       </Card>
+
     </div>
   );
 };
