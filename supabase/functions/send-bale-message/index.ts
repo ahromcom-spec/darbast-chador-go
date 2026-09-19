@@ -98,6 +98,7 @@ serve(async (req: Request): Promise<Response> => {
 
     // شناسه گفتگو: اول از جدول ثبت‌شده، سپس شماره تماس با پیش‌شماره ۹۸
     let chatId = (body.chatId || "").toString().trim();
+    let hasRegisteredChat = !!chatId;
     if (!chatId && phone) {
       const { data: known } = await supabase
         .from("messenger_chats")
@@ -105,7 +106,12 @@ serve(async (req: Request): Promise<Response> => {
         .eq("provider", "bale")
         .eq("phone", phone)
         .maybeSingle();
-      chatId = known?.chat_id || `98${phone.slice(1)}`;
+      if (known?.chat_id) {
+        chatId = known.chat_id;
+        hasRegisteredChat = true;
+      } else {
+        chatId = `98${phone.slice(1)}`;
+      }
     }
 
     if (!chatId) {
@@ -114,6 +120,7 @@ serve(async (req: Request): Promise<Response> => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     if (!text && (!body.media || body.media.length === 0)) {
       return new Response(JSON.stringify({ error: "متن یا رسانه لازم است" }), {
