@@ -1095,6 +1095,35 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
           onSuccess={load}
         />
       )}
+      {allCheques && (
+        <StatementChequesDialog
+          open={!!allCheques}
+          onOpenChange={(o) => !o && setAllCheques(null)}
+          statementId={allCheques.statements[0]?.id || ''}
+          statementIds={allCheques.statements.map(s => s.id)}
+          statementNumber={0}
+          scopeLabel="همه صورتحساب‌ها"
+          customerName={allCheques.customer_id ? allCheques.full_name : null}
+          onSuccess={load}
+        />
+      )}
+      {discountTarget && (
+        <StatementDiscountDialog
+          open={!!discountTarget}
+          onOpenChange={(o) => !o && setDiscountTarget(null)}
+          scope={discountTarget.scope}
+          statementId={discountTarget.scope === 'statement' ? discountTarget.statement.id : undefined}
+          statementNumber={discountTarget.scope === 'statement' ? discountTarget.statement.statement_number : undefined}
+          customerId={discountTarget.customer.customer_id}
+          customerName={discountTarget.customer.full_name}
+          currentAmount={discountTarget.scope === 'statement' ? discountTarget.statement.discount_amount : discountTarget.customer.global_discount}
+          currentNote={discountTarget.scope === 'statement' ? discountTarget.statement.discount_note : discountTarget.customer.global_discount_note}
+          remaining={discountTarget.scope === 'statement'
+            ? discountTarget.statement.total_remaining + discountTarget.statement.discount_amount
+            : discountTarget.customer.total_remaining + discountTarget.customer.global_discount}
+          onSuccess={load}
+        />
+      )}
       {globalPay && (() => {
         const { orders, anchor } = buildAllOrders(globalPay);
         if (!anchor) return null;
