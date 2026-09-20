@@ -230,7 +230,7 @@ export function StatementChequesDialog({ open, onOpenChange, statementId, statem
             مدیریت چک‌های صورتحساب
           </DialogTitle>
           <DialogDescription>
-            صورتحساب شماره {new Intl.NumberFormat('fa-IR').format(statementNumber)} — {customerName || ''}
+            {scopeLabel || `صورتحساب شماره ${new Intl.NumberFormat('fa-IR').format(statementNumber)}`} — {customerName || ''}
           </DialogDescription>
         </DialogHeader>
 
