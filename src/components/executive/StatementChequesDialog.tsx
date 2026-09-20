@@ -14,7 +14,11 @@ interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   statementId: string;
+  /** در حالت کل مشتری: شناسه همه صورتحساب‌ها */
+  statementIds?: string[];
   statementNumber: number;
+  /** برچسب دامنه نمایش، مثلاً «همه صورتحساب‌ها» */
+  scopeLabel?: string;
   customerName: string | null;
   onSuccess?: () => void;
 }
