@@ -134,6 +134,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
   const [chequesStmt, setChequesStmt] = useState<{ statement: Statement; customer: CustomerGroup } | null>(null);
   const [globalPay, setGlobalPay] = useState<CustomerGroup | null>(null);
   const [globalHistory, setGlobalHistory] = useState<CustomerGroup | null>(null);
+  const [allCheques, setAllCheques] = useState<CustomerGroup | null>(null);
   const [discountTarget, setDiscountTarget] = useState<
     { scope: 'statement'; statement: Statement; customer: CustomerGroup } | { scope: 'global'; customer: CustomerGroup } | null
   >(null);
