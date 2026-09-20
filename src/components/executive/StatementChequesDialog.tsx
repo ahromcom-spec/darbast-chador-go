@@ -48,7 +48,7 @@ const statusMeta: Record<string, { label: string; cls: string }> = {
   bounced: { label: 'برگشت خورده', cls: 'bg-red-100 text-red-800 border-red-300' },
 };
 
-export function StatementChequesDialog({ open, onOpenChange, statementId, statementNumber, customerName, onSuccess }: Props) {
+export function StatementChequesDialog({ open, onOpenChange, statementId, statementIds, statementNumber, scopeLabel, customerName, onSuccess }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -61,11 +61,11 @@ export function StatementChequesDialog({ open, onOpenChange, statementId, statem
   const load = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('cheques')
-        .select('*')
-        .eq('statement_id', statementId)
-        .order('due_date', { ascending: true });
+      const base = supabase.from('cheques').select('*');
+      const query = statementIds && statementIds.length > 0
+        ? base.in('statement_id', statementIds)
+        : base.eq('statement_id', statementId);
+      const { data, error } = await query.order('due_date', { ascending: true });
       if (error) throw error;
       const list = (data || []) as any as Cheque[];
       setCheques(list);
