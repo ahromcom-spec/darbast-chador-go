@@ -1162,6 +1162,44 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_global_discounts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          discount_amount: number
+          discount_note: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          discount_amount?: number
+          discount_note?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          discount_amount?: number
+          discount_note?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_global_discounts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_statements: {
         Row: {
           address: string | null
@@ -1171,6 +1209,8 @@ export type Database = {
           created_at: string
           customer_id: string
           detailed_address: string | null
+          discount_amount: number
+          discount_note: string | null
           id: string
           is_archived: boolean
           is_deep_archived: boolean
@@ -1190,6 +1230,8 @@ export type Database = {
           created_at?: string
           customer_id: string
           detailed_address?: string | null
+          discount_amount?: number
+          discount_note?: string | null
           id?: string
           is_archived?: boolean
           is_deep_archived?: boolean
@@ -1209,6 +1251,8 @@ export type Database = {
           created_at?: string
           customer_id?: string
           detailed_address?: string | null
+          discount_amount?: number
+          discount_note?: string | null
           id?: string
           is_archived?: boolean
           is_deep_archived?: boolean

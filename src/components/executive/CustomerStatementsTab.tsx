@@ -9,7 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ChevronDown, ChevronUp, FileText, Lock, Unlock, Search, User, Phone, Banknote, History, ArrowRightLeft, FileCheck, Eye, Archive, ArchiveRestore } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileText, Lock, Unlock, Search, User, Phone, Banknote, History, ArrowRightLeft, FileCheck, Eye, Archive, ArchiveRestore, BadgePercent } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ManagerOrderInvoice from '@/components/orders/ManagerOrderInvoice';
 import { StatementInvoiceDialog } from '@/components/executive/StatementInvoiceDialog';
@@ -17,6 +17,8 @@ import { StatementManualPaymentDialog } from '@/components/executive/StatementMa
 import { StatementPaymentsHistoryDialog } from '@/components/executive/StatementPaymentsHistoryDialog';
 import PaymentSubmissionsReviewDialog from '@/components/payments/PaymentSubmissionsReviewDialog';
 import { StatementChequesDialog } from '@/components/executive/StatementChequesDialog';
+import { StatementDiscountDialog } from '@/components/executive/StatementDiscountDialog';
+import { AllStatementsInvoiceDialog } from '@/components/executive/AllStatementsInvoiceDialog';
 import { TransferOrderStatementDialog } from '@/components/executive/TransferOrderStatementDialog';
 import { extractOrderDescription } from '@/lib/orderDescription';
 
@@ -52,6 +54,9 @@ interface Statement {
   cheque_pending: number;
   /** چک‌های برگشتی */
   cheque_bounced: number;
+  /** تخفیف ثبت‌شده روی این صورتحساب */
+  discount_amount: number;
+  discount_note: string | null;
   /** بایگانی صورتحساب */
   is_archived: boolean;
   /** بایگانی عمیق صورتحساب */
@@ -81,6 +86,13 @@ interface CustomerGroup {
   cheque_cleared: number;
   cheque_pending: number;
   cheque_bounced: number;
+  /** جمع تخفیف‌های صورتحساب‌ها */
+  discount_statements: number;
+  /** تخفیف کلی مشتری */
+  global_discount: number;
+  global_discount_note: string | null;
+  /** جمع تخفیف (صورتحساب‌ها + کلی) */
+  discount_total: number;
 }
 
 
@@ -122,6 +134,9 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
   const [chequesStmt, setChequesStmt] = useState<{ statement: Statement; customer: CustomerGroup } | null>(null);
   const [globalPay, setGlobalPay] = useState<CustomerGroup | null>(null);
   const [globalHistory, setGlobalHistory] = useState<CustomerGroup | null>(null);
+  const [discountTarget, setDiscountTarget] = useState<
+    { scope: 'statement'; statement: Statement; customer: CustomerGroup } | { scope: 'global'; customer: CustomerGroup } | null
+  >(null);
   const [archiveView, setArchiveView] = useState<'active' | 'archived' | 'deep'>('active');
 
 
@@ -183,6 +198,15 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
 
 
 
+      // تخفیف کلی هر مشتری
+      const { data: globalDiscountRows } = await supabase
+        .from('customer_global_discounts' as any)
+        .select('customer_id, discount_amount, discount_note')
+        .in('customer_id', customerIds);
+      const globalDiscountByCustomer = new Map<string, { amount: number; note: string | null }>(
+        ((globalDiscountRows || []) as any[]).map(r => [r.customer_id, { amount: Number(r.discount_amount) || 0, note: r.discount_note || null }])
+      );
+
       const { data: customers } = await supabase
         .from('customers')
         .select('id, user_id')
@@ -233,6 +257,11 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
             cheque_cleared: 0,
             cheque_pending: 0,
             cheque_bounced: 0,
+            discount_statements: 0,
+            global_discount: globalDiscountByCustomer.get(s.customer_id)?.amount || 0,
+            global_discount_note: globalDiscountByCustomer.get(s.customer_id)?.note || null,
+            discount_total: 0,
+
 
           });
 
@@ -303,11 +332,13 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
           total_paid,
           total_paid_actual,
           overpaid: Math.max(total_paid_actual - total_amount, 0),
-          total_remaining: Math.max(total_amount - total_paid, 0),
+          total_remaining: Math.max(total_amount - total_paid - (Number(s.discount_amount) || 0), 0),
           cheque_total: chequeByStatement.get(s.id)?.total || 0,
           cheque_cleared: chequeByStatement.get(s.id)?.cleared || 0,
           cheque_pending: chequeByStatement.get(s.id)?.pending || 0,
           cheque_bounced: chequeByStatement.get(s.id)?.bounced || 0,
+          discount_amount: Number(s.discount_amount) || 0,
+          discount_note: s.discount_note || null,
           is_archived: !!s.is_archived,
           is_deep_archived: !!s.is_deep_archived,
           archived_at: s.archived_at || null,
@@ -328,13 +359,16 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
         // Hide empty auto-created statements; keep only statements with orders or those manually created by a manager.
         const visible = g.statements.filter(s => s.orders.length > 0 || (s as any).is_manual === true);
         const total_amount = visible.reduce((a, s) => a + s.total_amount, 0);
-        const total_remaining = visible.reduce((a, s) => a + s.total_remaining, 0);
         const total_paid_actual = visible.reduce((a, s) => a + (s.total_paid_actual || 0), 0);
         const cheque_total = visible.reduce((a, s) => a + (s.cheque_total || 0), 0);
         const cheque_cleared = visible.reduce((a, s) => a + (s.cheque_cleared || 0), 0);
         const cheque_pending = visible.reduce((a, s) => a + (s.cheque_pending || 0), 0);
         const cheque_bounced = visible.reduce((a, s) => a + (s.cheque_bounced || 0), 0);
-        return { ...g, statements: visible, total_amount, total_remaining, total_paid_actual, cheque_total, cheque_cleared, cheque_pending, cheque_bounced, overpaid: Math.max(total_paid_actual - total_amount, 0) };
+        const discount_statements = visible.reduce((a, s) => a + (s.discount_amount || 0), 0);
+        const discount_total = discount_statements + (g.global_discount || 0);
+        // مانده کل: جمع مانده صورتحساب‌ها (تخفیف هر صورتحساب لحاظ شده) منهای تخفیف کلی مشتری
+        const total_remaining = Math.max(visible.reduce((a, s) => a + s.total_remaining, 0) - (g.global_discount || 0), 0);
+        return { ...g, statements: visible, total_amount, total_remaining, total_paid_actual, cheque_total, cheque_cleared, cheque_pending, cheque_bounced, discount_statements, discount_total, overpaid: Math.max(total_paid_actual - total_amount, 0) };
 
 
       }).filter(g => g.statements.length > 0);
@@ -562,6 +596,12 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                             اضافه‌پرداخت: {formatPrice(g.overpaid)}
                           </Badge>
                         )}
+                        {g.discount_total > 0 && (
+                          <Badge className="bg-emerald-500/20 text-emerald-800 border border-emerald-500/40">
+                            تخفیف: {formatPrice(g.discount_total)}
+                            {g.global_discount > 0 ? ` (کلی: ${formatPrice(g.global_discount)})` : ''}
+                          </Badge>
+                        )}
                         <span className="text-sm text-red-600">مانده: <b>{formatPrice(g.total_remaining)}</b></span>
 
                         <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 flex-wrap">
@@ -585,6 +625,56 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                           >
                             <History className="h-3.5 w-3.5" />
                             تاریخچه پرداخت کل
+                          </Button>
+                          <AllStatementsInvoiceDialog
+                            customerName={g.full_name}
+                            customerPhone={g.phone_number}
+                            customerCode={g.customer_code}
+                            globalDiscount={g.global_discount}
+                            globalDiscountNote={g.global_discount_note}
+                            statements={g.statements.map(s => ({
+                              statement_number: s.statement_number,
+                              status: s.status,
+                              addresses: s.addresses,
+                              serviceTypes: s.serviceTypes,
+                              discount_amount: s.discount_amount,
+                              discount_note: s.discount_note,
+                              cheque_total: s.cheque_total,
+                              cheque_cleared: s.cheque_cleared,
+                              cheque_pending: s.cheque_pending,
+                              cheque_bounced: s.cheque_bounced,
+                              orders: s.orders.map(o => ({
+                                id: o.id,
+                                code: o.code,
+                                status: o.status,
+                                total: o.total,
+                                paid: o.paid,
+                                remaining: o.remaining,
+                                created_at: o.created_at,
+                                subcategory_name: o.subcategory_name,
+                                description: o.description,
+                              })),
+                            }))}
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1 border-amber-400 text-amber-700 hover:bg-amber-50"
+                            onClick={() => setAllCheques(g)}
+                            title="مدیریت چک‌های همه صورتحساب‌های این مشتری"
+                          >
+                            <FileCheck className="h-3.5 w-3.5" />
+                            مدیریت چک‌های کل
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1 border-emerald-400 text-emerald-700 hover:bg-emerald-50"
+                            onClick={() => setDiscountTarget({ scope: 'global', customer: g })}
+                            title="ثبت تخفیف کلی روی همه صورتحساب‌های مشتری"
+                          >
+                            <BadgePercent className="h-3.5 w-3.5" />
+                            تخفیف کلی
                           </Button>
                         </div>
                         {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -644,6 +734,10 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                       <span className="text-amber-700">اضافه‌پرداخت: {formatPrice(s.overpaid)}</span>
                                     )}
 
+                                    {s.discount_amount > 0 && (
+                                      <span className="text-emerald-700">تخفیف: {formatPrice(s.discount_amount)}{s.discount_note ? ` (${s.discount_note})` : ''}</span>
+                                    )}
+
                                     <span className="text-red-600">مانده: {formatPrice(s.total_remaining)}</span>
 
                                     <div onClick={(e) => e.stopPropagation()} className="inline-block">
@@ -660,6 +754,8 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                         detailedAddress={s.detailed_address}
                                         addresses={s.addresses}
                                         orders={s.orders}
+                                        discountAmount={s.discount_amount}
+                                        discountNote={s.discount_note}
                                       />
                                     </div>
                                     <div onClick={(e) => e.stopPropagation()} className="inline-block">
@@ -698,6 +794,15 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                     >
                                       <FileCheck className="h-3.5 w-3.5" />
                                       مدیریت چک‌ها
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="gap-1 border-emerald-400 text-emerald-700 hover:bg-emerald-50"
+                                      onClick={(e) => { e.stopPropagation(); setDiscountTarget({ scope: 'statement', statement: s, customer: g }); }}
+                                    >
+                                      <BadgePercent className="h-3.5 w-3.5" />
+                                      {s.discount_amount > 0 ? 'ویرایش تخفیف' : 'تخفیف'}
                                     </Button>
                                     {s.status === 'open' && (
                                       <Button
