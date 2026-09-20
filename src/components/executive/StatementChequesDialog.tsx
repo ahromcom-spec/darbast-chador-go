@@ -87,7 +87,7 @@ export function StatementChequesDialog({ open, onOpenChange, statementId, statem
     }
   };
 
-  useEffect(() => { if (open) load(); }, [open, statementId]);
+  useEffect(() => { if (open) load(); }, [open, statementId, (statementIds || []).join(',')]);
 
   const handleClear = async (ch: Cheque) => {
     if (!user?.id) return;
