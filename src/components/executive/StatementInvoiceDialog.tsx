@@ -57,6 +57,9 @@ interface Props {
   detailedAddress: string | null;
   addresses?: string[];
   orders: StatementInvoiceOrder[];
+  /** تخفیف ثبت‌شده روی این صورتحساب */
+  discountAmount?: number;
+  discountNote?: string | null;
 }
 
 export const StatementInvoiceDialog = (props: Props) => {
@@ -66,7 +69,8 @@ export const StatementInvoiceDialog = (props: Props) => {
 
   const totalAmount = props.orders.reduce((a, o) => a + o.total, 0);
   const totalPaid = props.orders.reduce((a, o) => a + o.paid, 0);
-  const totalRemaining = Math.max(totalAmount - totalPaid, 0);
+  const discount = Math.max(0, Number(props.discountAmount) || 0);
+  const totalRemaining = Math.max(totalAmount - totalPaid - discount, 0);
 
   const styles = `
     <style>
@@ -97,6 +101,7 @@ export const StatementInvoiceDialog = (props: Props) => {
       .info-table td.nowrap { white-space: nowrap; }
       .orders-table tbody tr:nth-child(even) td { background: #f1f5f9; }
       .total-row td { background: #fef3c7 !important; font-weight: bold; font-size: 14px; }
+      .discount-row td { background: #dcfce7 !important; color: #15803d; font-weight: bold; }
       .summary-section { margin-top: 8px; }
       .signatures-section { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 18px; padding: 8px 0; }
       .signature-box { text-align: center; }
@@ -200,6 +205,11 @@ export const StatementInvoiceDialog = (props: Props) => {
               <td class="nowrap">${fmt(o.remaining)}</td>
             </tr>
           `).join('')}
+          ${discount > 0 ? `
+          <tr class="discount-row">
+            <td colspan="5" style="text-align:left; padding-left:15px;">تخفیف صورتحساب${props.discountNote ? ` (${escapeHtml(props.discountNote)})` : ''}:</td>
+            <td class="nowrap" colspan="3">− ${fmt(discount)}</td>
+          </tr>` : ''}
           <tr class="total-row">
             <td colspan="5" style="text-align:left; padding-left:15px;">جمع کل صورتحساب:</td>
             <td class="nowrap">${fmt(totalAmount)}</td>
@@ -221,6 +231,11 @@ export const StatementInvoiceDialog = (props: Props) => {
           <td class="label-cell">پرداخت شده:</td>
           <td class="value-cell nowrap" style="color:#16a34a; font-weight:bold;">${fmt(totalPaid)} تومان</td>
         </tr>
+        ${discount > 0 ? `
+        <tr>
+          <td class="label-cell">تخفیف:</td>
+          <td class="value-cell nowrap" colspan="5" style="color:#15803d; font-weight:bold;">− ${fmt(discount)} تومان${props.discountNote ? ` (${escapeHtml(props.discountNote)})` : ''}</td>
+        </tr>` : ''}
         <tr>
           <td class="label-cell">مانده قابل پرداخت:</td>
           <td class="value-cell nowrap" colspan="5" style="color:#dc2626; font-weight:bold; font-size:14px;">${fmt(totalRemaining)} تومان</td>

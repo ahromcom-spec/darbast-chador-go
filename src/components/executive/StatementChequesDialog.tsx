@@ -14,7 +14,11 @@ interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   statementId: string;
+  /** در حالت کل مشتری: شناسه همه صورتحساب‌ها */
+  statementIds?: string[];
   statementNumber: number;
+  /** برچسب دامنه نمایش، مثلاً «همه صورتحساب‌ها» */
+  scopeLabel?: string;
   customerName: string | null;
   onSuccess?: () => void;
 }
@@ -44,7 +48,7 @@ const statusMeta: Record<string, { label: string; cls: string }> = {
   bounced: { label: 'برگشت خورده', cls: 'bg-red-100 text-red-800 border-red-300' },
 };
 
-export function StatementChequesDialog({ open, onOpenChange, statementId, statementNumber, customerName, onSuccess }: Props) {
+export function StatementChequesDialog({ open, onOpenChange, statementId, statementIds, statementNumber, scopeLabel, customerName, onSuccess }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -57,11 +61,11 @@ export function StatementChequesDialog({ open, onOpenChange, statementId, statem
   const load = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('cheques')
-        .select('*')
-        .eq('statement_id', statementId)
-        .order('due_date', { ascending: true });
+      const base = supabase.from('cheques').select('*');
+      const query = statementIds && statementIds.length > 0
+        ? base.in('statement_id', statementIds)
+        : base.eq('statement_id', statementId);
+      const { data, error } = await query.order('due_date', { ascending: true });
       if (error) throw error;
       const list = (data || []) as any as Cheque[];
       setCheques(list);
@@ -83,7 +87,7 @@ export function StatementChequesDialog({ open, onOpenChange, statementId, statem
     }
   };
 
-  useEffect(() => { if (open) load(); }, [open, statementId]);
+  useEffect(() => { if (open) load(); }, [open, statementId, (statementIds || []).join(',')]);
 
   const handleClear = async (ch: Cheque) => {
     if (!user?.id) return;
@@ -226,7 +230,7 @@ export function StatementChequesDialog({ open, onOpenChange, statementId, statem
             مدیریت چک‌های صورتحساب
           </DialogTitle>
           <DialogDescription>
-            صورتحساب شماره {new Intl.NumberFormat('fa-IR').format(statementNumber)} — {customerName || ''}
+            {scopeLabel || `صورتحساب شماره ${new Intl.NumberFormat('fa-IR').format(statementNumber)}`} — {customerName || ''}
           </DialogDescription>
         </DialogHeader>
 
