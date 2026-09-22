@@ -1,3 +1,4 @@
+import { isBillableRepair, repairCost } from '@/lib/repairBilling';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';

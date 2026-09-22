@@ -1,3 +1,4 @@
+import { isBillableRepair, repairCost } from '@/lib/repairBilling';
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
