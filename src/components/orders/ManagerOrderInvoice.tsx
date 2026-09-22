@@ -1,3 +1,4 @@
+import { isBillableRepair } from '@/lib/repairBilling';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -201,7 +202,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
         .eq('order_id', order.id)
         .order('created_at', { ascending: true });
       
-      if (repairData) setRepairRequests(repairData);
+      if (repairData) setRepairRequests((repairData as any[]).filter(isBillableRepair));
 
       // Fetch approved renewals (additional monthly costs)
       const { data: renewalData } = await supabase

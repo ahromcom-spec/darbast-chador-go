@@ -1,6 +1,7 @@
 // Shared printable-invoice builder for orders.
 // Extracted from ManagerOrderInvoice so the documents archive can generate
 // exactly the same printable invoice (tables + full details) for each order.
+import { isBillableRepair } from '@/lib/repairBilling';
 import { supabase } from '@/integrations/supabase/client';
 import { formatPersianDate, formatPersianDateTime } from '@/lib/dateUtils';
 import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
@@ -1246,7 +1247,7 @@ export async function fetchInvoiceExtras(order: InvoiceOrderLike): Promise<Invoi
   ]);
   extras.provinceName = (prov as any)?.data?.name || '';
   extras.subcategoryName = (sub as any)?.data?.name || '';
-  extras.repairRequests = ((repairs as any)?.data || []) as any;
+  extras.repairRequests = (((repairs as any)?.data || []) as any[]).filter(isBillableRepair) as any;
   extras.renewals = ((renewals as any)?.data || []) as any;
   extras.freshFinancials = ((fin as any)?.data || null) as any;
   const c = (collection as any)?.data;
