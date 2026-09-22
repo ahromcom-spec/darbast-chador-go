@@ -1,7 +1,7 @@
 // Shared printable-invoice builder for orders.
 // Extracted from ManagerOrderInvoice so the documents archive can generate
 // exactly the same printable invoice (tables + full details) for each order.
-import { isBillableRepair, repairCost } from '@/lib/repairBilling';
+import { isBillableRepair } from '@/lib/repairBilling';
 import { supabase } from '@/integrations/supabase/client';
 import { formatPersianDate, formatPersianDateTime } from '@/lib/dateUtils';
 import { parseOrderNotes } from '@/components/orders/OrderDetailsView';

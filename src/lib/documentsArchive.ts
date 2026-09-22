@@ -1,3 +1,4 @@
+import { isBillableRepair } from '@/lib/repairBilling';
 import JSZip from 'jszip';
 import { supabase } from '@/integrations/supabase/client';
 import { formatPersianDate } from '@/lib/dateUtils';
@@ -237,7 +238,7 @@ export async function fetchArchiveDocs(f: ArchiveFilters): Promise<ArchiveDoc[]>
         ...emptyInvoiceExtras(),
         provinceName: provMap[o.province_id] || '',
         subcategoryName: subMap[o.subcategory_id] || '',
-        repairRequests: (repairsBy[o.id] || []) as any,
+        repairRequests: ((repairsBy[o.id] || []) as any[]).filter(isBillableRepair) as any,
         renewals: (renewalsBy[o.id] || []) as any,
         freshFinancials: {
           payment_amount: o.payment_amount ?? null,
