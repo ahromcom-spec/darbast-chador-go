@@ -7101,6 +7101,10 @@ export type Database = {
         Args: { _reason?: string; _service_id: string }
         Returns: undefined
       }
+      restore_rejected_order: {
+        Args: { _order_id: string }
+        Returns: undefined
+      }
       save_module_version: {
         Args: {
           p_data_snapshot: Json
