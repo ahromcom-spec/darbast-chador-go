@@ -606,8 +606,8 @@ export default function OrderDetail() {
       
       if (repairRes.data && repairRes.data.length > 0) {
         setRepairRequests(repairRes.data);
-        const approvedRepairs = repairRes.data.filter((r: any) => ['approved', 'completed'].includes(r.status));
-        const totalRepairCost = approvedRepairs.reduce((sum: number, r: any) => sum + (r.final_cost || 0), 0);
+        const approvedRepairs = repairRes.data.filter((r: any) => isBillableRepair(r));
+        const totalRepairCost = approvedRepairs.reduce((sum: number, r: any) => sum + repairCost(r), 0);
         setApprovedRepairCost(totalRepairCost);
       } else {
         setRepairRequests([]);
@@ -2091,7 +2091,7 @@ export default function OrderDetail() {
                             </div>
                           ))}
                           {repairRequests
-                            .filter((req: any) => ['approved', 'completed'].includes(req.status) && (req.final_cost || 0) > 0)
+                            .filter((req: any) => isBillableRepair(req) && repairCost(req) > 0)
                             .map((req: any, idx: number) => (
                             <div key={req.id || idx} className="space-y-1">
                               <div className="flex items-center justify-between p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
