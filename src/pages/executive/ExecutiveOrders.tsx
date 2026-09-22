@@ -717,12 +717,24 @@ export default function ExecutiveOrders() {
     if (!stage) return;
 
     try {
+      // اگر سفارش رد شده است، ابتدا با تابع امن به «در انتظار تایید» برگردانده می‌شود
+      const { data: statusRow } = await supabase
+        .from('projects_v3')
+        .select('status')
+        .eq('id', orderId)
+        .single();
+      if (statusRow?.status === 'rejected') {
+        const { error: restoreError } = await (supabase as any).rpc('restore_rejected_order', { _order_id: orderId });
+        if (restoreError) throw restoreError;
+      }
+
       // دریافت اطلاعات سفارش برای ارسال اعلان
       const { data: orderData } = await supabase
         .from('projects_v3')
         .select('customer_id, code, notes, payment_amount, subcategory_id')
         .eq('id', orderId)
         .single();
+
 
       // تایید سفارش بدون نیاز به ثبت قیمت یا متراژ مجاز است؛
       // قیمت و متراژ می‌توانند در مراحل بعدی تعیین شوند.
