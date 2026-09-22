@@ -723,7 +723,8 @@ export default function ExecutiveOrders() {
         .select('status')
         .eq('id', orderId)
         .single();
-      if (statusRow?.status === 'rejected') {
+      const wasRejected = statusRow?.status === 'rejected';
+      if (wasRejected) {
         const { error: restoreError } = await (supabase as any).rpc('restore_rejected_order', { _order_id: orderId });
         if (restoreError) throw restoreError;
       }
@@ -842,6 +843,7 @@ export default function ExecutiveOrders() {
       // به‌روزرسانی سریع UI
       const updated = updatedRows[0];
       setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, ...updated } : o)));
+      if (wasRejected) fetchOrders();
 
       // ارسال اعلان به مشتری
       if (orderData?.customer_id) {
@@ -1753,7 +1755,7 @@ export default function ExecutiveOrders() {
                     }}
                   >
                     <SelectTrigger className="flex-1 h-9">
-                      <SelectValue placeholder="انتخاب مرحله" />
+                      <SelectValue placeholder={order.status === 'rejected' ? 'رد شده — برای بازگرداندن، مرحله را انتخاب کنید' : 'انتخاب مرحله'} />
                     </SelectTrigger>
                     <SelectContent>
                       {executionStages.map((stage) => (
@@ -1969,6 +1971,35 @@ export default function ExecutiveOrders() {
                       <Archive className="h-4 w-4" />
                       بایگانی
                     </Button>
+                  )}
+
+                  {/* بازگرداندن سفارش رد شده */}
+                  {order.status === 'rejected' && (
+                    <>
+                      <Button
+                        onClick={() => {
+                          setPendingStageChange({ orderId: order.id, newStage: 'pending' });
+                          setStageChangeConfirmOpen(true);
+                        }}
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        بازگرداندن به انتظار تایید
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setPendingStageChange({ orderId: order.id, newStage: 'pending_execution' });
+                          setStageChangeConfirmOpen(true);
+                        }}
+                        size="sm"
+                        className="gap-2"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        تایید و انتقال به انتظار اجرا
+                      </Button>
+                    </>
                   )}
 
                   {/* دکمه تایید سفارش */}
