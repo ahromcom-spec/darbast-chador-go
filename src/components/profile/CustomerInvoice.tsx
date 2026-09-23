@@ -60,6 +60,8 @@ interface StatementGroup {
   is_manual: boolean;
   is_archived: boolean;
   is_deep_archived: boolean;
+  discount_amount: number;
+  discount_note: string | null;
 }
 
 const statusLabels: Record<string, string> = {
@@ -92,6 +94,7 @@ export const CustomerInvoice = () => {
   const [payAmountInput, setPayAmountInput] = useState('');
   const [paying, setPaying] = useState(false);
   const [view, setView] = useState<'active' | 'archived'>('active');
+  const [globalDiscount, setGlobalDiscount] = useState<{ amount: number; note: string | null }>({ amount: 0, note: null });
 
   useEffect(() => {
     if (user) load();
@@ -168,6 +171,14 @@ export const CustomerInvoice = () => {
         .order('statement_number', { ascending: false });
       if (e1) throw e1;
 
+      // تخفیف کلی مشتری
+      const { data: gd } = await supabase
+        .from('customer_global_discounts' as any)
+        .select('discount_amount, discount_note')
+        .eq('customer_id', customer.id)
+        .maybeSingle();
+      setGlobalDiscount({ amount: Math.max(0, Number((gd as any)?.discount_amount) || 0), note: (gd as any)?.discount_note || null });
+
       const { data: orders, error: e2 } = await supabase
         .from('projects_v3')
         .select('id, code, status, payment_amount, total_price, total_paid, created_at, statement_id, address, detailed_address, notes, subcategories(name)')
@@ -214,7 +225,9 @@ export const CustomerInvoice = () => {
           created_at: s.created_at,
           total_amount,
           total_paid,
-          total_remaining: Math.max(total_amount - total_paid, 0),
+          total_remaining: Math.max(total_amount - total_paid - (Number(s.discount_amount) || 0), 0),
+          discount_amount: Math.max(0, Number(s.discount_amount) || 0),
+          discount_note: s.discount_note || null,
           subcategory_name: matchingOrders[0]?.subcategories?.name || null,
           address: s.address || matchingOrders[0]?.address || null,
           detailed_address: s.detailed_address || matchingOrders[0]?.detailed_address || null,
@@ -284,6 +297,8 @@ export const CustomerInvoice = () => {
             is_manual: false,
             is_archived: false,
             is_deep_archived: false,
+            discount_amount: 0,
+            discount_note: null,
           } as StatementGroup;
         }
       }
@@ -316,15 +331,23 @@ export const CustomerInvoice = () => {
   const archivedStatements = statements.filter(s => s.is_archived);
   const visibleStatements = view === 'archived' ? archivedStatements : activeStatements;
 
-  const summary = visibleStatements.reduce(
+  const baseSummary = visibleStatements.reduce(
     (a, s) => ({
       count: a.count + s.orders.length,
       total: a.total + s.total_amount,
       paid: a.paid + s.total_paid,
       remaining: a.remaining + s.total_remaining,
+      discount: a.discount + (s.discount_amount || 0),
     }),
-    { count: 0, total: 0, paid: 0, remaining: 0 }
+    { count: 0, total: 0, paid: 0, remaining: 0, discount: 0 }
   );
+  // تخفیف کلی مشتری فقط روی صورتحساب‌های فعال اعمال می‌شود
+  const appliedGlobalDiscount = view === 'active' ? globalDiscount.amount : 0;
+  const summary = {
+    ...baseSummary,
+    discount: baseSummary.discount + appliedGlobalDiscount,
+    remaining: Math.max(baseSummary.remaining - appliedGlobalDiscount, 0),
+  };
 
 
   if (loading) return <LoadingSpinner />;
@@ -359,9 +382,28 @@ export const CustomerInvoice = () => {
             <TrendingDown className="h-6 w-6 mx-auto mb-2 text-red-600" />
             <p className="text-xs text-muted-foreground">مانده بدهی</p>
             <p className="text-sm font-bold text-red-600">{formatPrice(summary.remaining)}</p>
+            {summary.discount > 0 && (
+              <p className="text-[11px] text-emerald-700 mt-1">با احتساب تخفیف {formatPrice(summary.discount)}</p>
+            )}
           </CardContent>
         </Card>
       </div>
+
+      {summary.discount > 0 && (
+        <Card className="border-emerald-300 bg-emerald-500/5">
+          <CardContent className="p-3 text-sm space-y-1">
+            <p className="font-bold text-emerald-700">تخفیف‌های اعمال‌شده: {formatPrice(summary.discount)}</p>
+            {baseSummary.discount > 0 && (
+              <p className="text-xs text-muted-foreground">تخفیف صورتحساب‌ها: {formatPrice(baseSummary.discount)}</p>
+            )}
+            {appliedGlobalDiscount > 0 && (
+              <p className="text-xs text-muted-foreground">
+                تخفیف کلی: {formatPrice(appliedGlobalDiscount)}{globalDiscount.note ? ` (${globalDiscount.note})` : ''}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* پرداخت کلی همه صورتحساب‌ها (آبشاری از پایین‌ترین شماره صورتحساب) */}
       {summary.remaining > 0 && (
@@ -469,6 +511,9 @@ export const CustomerInvoice = () => {
 
                           <span className="text-sm font-bold">{formatPrice(s.total_amount)}</span>
                           <span className="text-xs text-green-600">پرداختی: {formatPrice(s.total_paid)}</span>
+                          {s.discount_amount > 0 && (
+                            <span className="text-xs text-emerald-700">تخفیف: {formatPrice(s.discount_amount)}</span>
+                          )}
                           <span className="text-xs text-red-600">مانده: {formatPrice(s.total_remaining)}</span>
                           <div onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-2">
                             {s.status === 'open' && s.orders.length > 0 && (
@@ -500,6 +545,8 @@ export const CustomerInvoice = () => {
                               address={(s.addresses.length > 0 ? s.addresses : ((s.address || s.detailed_address) ? [[s.address, s.detailed_address].filter(Boolean).join(' - ')] : [])).join(' | ') || null}
                               detailedAddress={null}
                               orders={s.orders}
+                              discountAmount={s.discount_amount}
+                              discountNote={s.discount_note}
                             />
                           </div>
                           {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -556,7 +603,7 @@ export const CustomerInvoice = () => {
                               <TableCell colSpan={4} className="text-right font-bold whitespace-nowrap">جمع صورتحساب</TableCell>
                               <TableCell className="font-bold whitespace-nowrap">{formatPrice(s.total_amount)}</TableCell>
                               <TableCell className="font-bold text-green-600 whitespace-nowrap">{formatPrice(s.total_paid)}</TableCell>
-                              <TableCell className="font-bold text-red-600 whitespace-nowrap">{formatPrice(s.total_remaining)}</TableCell>
+                              <TableCell className="font-bold text-red-600 whitespace-nowrap">{formatPrice(s.total_remaining + s.discount_amount)}</TableCell>
                               <TableCell colSpan={2} className="whitespace-nowrap">
                                 {s.status === 'closed' && (
                                   <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
@@ -565,6 +612,22 @@ export const CustomerInvoice = () => {
                                 )}
                               </TableCell>
                             </TableRow>
+                            {s.discount_amount > 0 && (
+                              <TableRow>
+                                <TableCell colSpan={6} className="text-right font-bold text-emerald-700 whitespace-nowrap">
+                                  تخفیف صورتحساب{s.discount_note ? ` (${s.discount_note})` : ''}
+                                </TableCell>
+                                <TableCell className="font-bold text-emerald-700 whitespace-nowrap">− {formatPrice(s.discount_amount)}</TableCell>
+                                <TableCell colSpan={2} />
+                              </TableRow>
+                            )}
+                            {s.discount_amount > 0 && (
+                              <TableRow>
+                                <TableCell colSpan={6} className="text-right font-bold whitespace-nowrap">مانده قابل پرداخت پس از تخفیف</TableCell>
+                                <TableCell className="font-bold text-red-600 whitespace-nowrap">{formatPrice(s.total_remaining)}</TableCell>
+                                <TableCell colSpan={2} />
+                              </TableRow>
+                            )}
                           </TableFooter>
                         </Table>
                        )}
