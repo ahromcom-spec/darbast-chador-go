@@ -39,6 +39,8 @@ interface Props {
   onSuccess?: () => void;
   /** Label shown instead of "صورتحساب شماره X" (used for the all-statements payment) */
   scopeLabel?: string;
+  /** تخفیف(های) ثبت‌شده که از مانده قابل پرداخت کسر می‌شود */
+  discount?: number;
 }
 
 
@@ -48,7 +50,7 @@ const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0
 type PayMode = 'cash' | 'cheque';
 
 export function StatementManualPaymentDialog({
-  open, onOpenChange, statementId, statementNumber, customerId, customerName, orders, onSuccess, scopeLabel,
+  open, onOpenChange, statementId, statementNumber, customerId, customerName, orders, onSuccess, scopeLabel, discount,
 }: Props) {
 
   const { user } = useAuth();
@@ -78,7 +80,9 @@ export function StatementManualPaymentDialog({
   const [zoomOpen, setZoomOpen] = useState(false);
   const [zoomUrl, setZoomUrl] = useState<string | null>(null);
 
-  const totalRemaining = orders.reduce((a, o) => a + o.remaining, 0);
+  const discountValue = Math.max(0, Number(discount) || 0);
+  // مانده قابل پرداخت = جمع مانده فاکتورها منهای تخفیف صورتحساب
+  const totalRemaining = Math.max(orders.reduce((a, o) => a + o.remaining, 0) - discountValue, 0);
 
   useEffect(() => {
     if (open) {
@@ -379,6 +383,9 @@ export function StatementManualPaymentDialog({
           <DialogDescription>
             {scopeLabel || `صورتحساب شماره ${new Intl.NumberFormat('fa-IR').format(statementNumber)}`} — مانده فعلی:{' '}
             <span className="font-bold text-red-600">{fmt(totalRemaining)}</span>
+            {discountValue > 0 && (
+              <span className="block text-xs text-emerald-700 mt-1">با احتساب تخفیف {fmt(discountValue)}</span>
+            )}
           </DialogDescription>
 
         </DialogHeader>
