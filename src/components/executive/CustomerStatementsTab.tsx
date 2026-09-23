@@ -402,13 +402,16 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
       .filter(g => g.statements.length > 0)
       .map(g => {
         const total_amount = g.statements.reduce((a, s) => a + s.total_amount, 0);
-        const total_remaining = g.statements.reduce((a, s) => a + s.total_remaining, 0);
+        // تخفیف هر صورتحساب داخل total_remaining همان صورتحساب لحاظ شده؛ تخفیف کلی مشتری هم کسر می‌شود
+        const total_remaining = Math.max(g.statements.reduce((a, s) => a + s.total_remaining, 0) - (g.global_discount || 0), 0);
+        const discount_statements = g.statements.reduce((a, s) => a + (s.discount_amount || 0), 0);
+        const discount_total = discount_statements + (g.global_discount || 0);
         const total_paid_actual = g.statements.reduce((a, s) => a + (s.total_paid_actual || 0), 0);
         const cheque_total = g.statements.reduce((a, s) => a + (s.cheque_total || 0), 0);
         const cheque_cleared = g.statements.reduce((a, s) => a + (s.cheque_cleared || 0), 0);
         const cheque_pending = g.statements.reduce((a, s) => a + (s.cheque_pending || 0), 0);
         const cheque_bounced = g.statements.reduce((a, s) => a + (s.cheque_bounced || 0), 0);
-        return { ...g, total_amount, total_remaining, total_paid_actual, cheque_total, cheque_cleared, cheque_pending, cheque_bounced, overpaid: Math.max(total_paid_actual - total_amount, 0) };
+        return { ...g, total_amount, total_remaining, discount_statements, discount_total, total_paid_actual, cheque_total, cheque_cleared, cheque_pending, cheque_bounced, overpaid: Math.max(total_paid_actual - total_amount, 0) };
       });
 
     const q = search.trim().toLowerCase();
@@ -974,9 +977,25 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                         <TableCell colSpan={4} className="text-right font-bold">جمع صورتحساب</TableCell>
                                         <TableCell className="font-bold">{formatPrice(s.total_amount)}</TableCell>
                                         <TableCell className="font-bold text-green-600">{formatPrice(s.total_paid)}</TableCell>
-                                        <TableCell className="font-bold text-red-600">{formatPrice(s.total_remaining)}</TableCell>
+                                        <TableCell className="font-bold text-red-600">{formatPrice(s.total_remaining + s.discount_amount)}</TableCell>
                                         <TableCell colSpan={2} />
                                       </TableRow>
+                                      {s.discount_amount > 0 && (
+                                        <TableRow>
+                                          <TableCell colSpan={6} className="text-right font-bold text-emerald-700">
+                                            تخفیف صورتحساب{s.discount_note ? ` (${s.discount_note})` : ''}
+                                          </TableCell>
+                                          <TableCell className="font-bold text-emerald-700">− {formatPrice(s.discount_amount)}</TableCell>
+                                          <TableCell colSpan={2} />
+                                        </TableRow>
+                                      )}
+                                      {s.discount_amount > 0 && (
+                                        <TableRow>
+                                          <TableCell colSpan={6} className="text-right font-bold">مانده قابل پرداخت پس از تخفیف</TableCell>
+                                          <TableCell className="font-bold text-red-600">{formatPrice(s.total_remaining)}</TableCell>
+                                          <TableCell colSpan={2} />
+                                        </TableRow>
+                                      )}
                                     </TableFooter>
                                   </Table>
                                 )}
@@ -1047,6 +1066,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
             remaining: o.remaining,
             created_at: o.created_at,
           }))}
+          discount={payingStmt.statement.discount_amount}
           onSuccess={load}
         />
       )}
@@ -1137,6 +1157,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
             customerName={globalPay.full_name}
             orders={orders}
             scopeLabel={`کل صورتحساب‌ها (${new Intl.NumberFormat('fa-IR').format(globalPay.statements.length)} صورتحساب)`}
+            discount={globalPay.discount_total}
             onSuccess={load}
           />
         );

@@ -271,7 +271,7 @@ export async function fetchArchiveDocs(f: ArchiveFilters): Promise<ArchiveDoc[]>
     let q = supabase
       .from('customer_statements')
       .select(
-        'id, statement_number, customer_id, status, total_amount, total_paid, address, detailed_address, created_at, closed_at',
+        'id, statement_number, customer_id, status, total_amount, total_paid, address, detailed_address, created_at, closed_at, discount_amount, discount_note',
       )
       .order('created_at', { ascending: false })
       .limit(500);
@@ -323,12 +323,14 @@ export async function fetchArchiveDocs(f: ArchiveFilters): Promise<ArchiveDoc[]>
       ]);
       const total = Number(st.total_amount) || 0;
       const paid = Number(st.total_paid) || 0;
+      const stDiscount = Math.max(0, Number((st as any).discount_amount) || 0);
       const body =
         summaryBox([
           { label: 'وضعیت', value: st.status === 'closed' ? 'بسته شده' : 'باز' },
           { label: 'مبلغ کل', value: `${fa(total)} تومان` },
           { label: 'پرداخت شده', value: `${fa(paid)} تومان` },
-          { label: 'باقیمانده', value: `${fa(Math.max(total - paid, 0))} تومان` },
+          ...(stDiscount > 0 ? [{ label: 'تخفیف', value: `− ${fa(stDiscount)} تومان` }] : []),
+          { label: 'باقیمانده', value: `${fa(Math.max(total - paid - stDiscount, 0))} تومان` },
         ]) +
         `<div style="font-size:13px;font-weight:700;margin:10px 0 6px;">سفارش‌های این صورتحساب</div>` +
         table(['کد سفارش', 'کارفرما', 'آدرس', 'تاریخ', 'مبلغ', 'پرداخت شده'], rows);
