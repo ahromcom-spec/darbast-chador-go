@@ -402,13 +402,16 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
       .filter(g => g.statements.length > 0)
       .map(g => {
         const total_amount = g.statements.reduce((a, s) => a + s.total_amount, 0);
-        const total_remaining = g.statements.reduce((a, s) => a + s.total_remaining, 0);
+        // تخفیف هر صورتحساب داخل total_remaining همان صورتحساب لحاظ شده؛ تخفیف کلی مشتری هم کسر می‌شود
+        const total_remaining = Math.max(g.statements.reduce((a, s) => a + s.total_remaining, 0) - (g.global_discount || 0), 0);
+        const discount_statements = g.statements.reduce((a, s) => a + (s.discount_amount || 0), 0);
+        const discount_total = discount_statements + (g.global_discount || 0);
         const total_paid_actual = g.statements.reduce((a, s) => a + (s.total_paid_actual || 0), 0);
         const cheque_total = g.statements.reduce((a, s) => a + (s.cheque_total || 0), 0);
         const cheque_cleared = g.statements.reduce((a, s) => a + (s.cheque_cleared || 0), 0);
         const cheque_pending = g.statements.reduce((a, s) => a + (s.cheque_pending || 0), 0);
         const cheque_bounced = g.statements.reduce((a, s) => a + (s.cheque_bounced || 0), 0);
-        return { ...g, total_amount, total_remaining, total_paid_actual, cheque_total, cheque_cleared, cheque_pending, cheque_bounced, overpaid: Math.max(total_paid_actual - total_amount, 0) };
+        return { ...g, total_amount, total_remaining, discount_statements, discount_total, total_paid_actual, cheque_total, cheque_cleared, cheque_pending, cheque_bounced, overpaid: Math.max(total_paid_actual - total_amount, 0) };
       });
 
     const q = search.trim().toLowerCase();
