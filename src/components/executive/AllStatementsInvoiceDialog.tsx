@@ -162,17 +162,21 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
               <td class="nowrap">${fmt(o.remaining)}</td>
             </tr>
           `).join('')}
-          ${s.discount_amount > 0 ? `
-          <tr class="discount-row">
-            <td colspan="5" style="text-align:left; padding-left:15px;">تخفیف این صورتحساب${s.discount_note ? ` (${escapeHtml(s.discount_note)})` : ''}:</td>
-            <td class="nowrap" colspan="3">− ${fmt(s.discount_amount)}</td>
-          </tr>` : ''}
           <tr class="sub-row">
             <td colspan="5" style="text-align:left; padding-left:15px;">جمع صورتحساب شماره ${fmt(s.statement_number)}:</td>
             <td class="nowrap">${fmt(sTotal)}</td>
             <td class="nowrap">${fmt(sPaid)}</td>
-            <td class="nowrap">${fmt(sRemaining)}</td>
+            <td class="nowrap">${fmt(Math.max(sTotal - sPaid, 0))}</td>
           </tr>
+          ${s.discount_amount > 0 ? `
+          <tr class="discount-row">
+            <td colspan="7" style="text-align:left; padding-left:15px;">تخفیف این صورتحساب${s.discount_note ? ` (${escapeHtml(s.discount_note)})` : ''}:</td>
+            <td class="nowrap">− ${fmt(s.discount_amount)}</td>
+          </tr>
+          <tr class="sub-row">
+            <td colspan="7" style="text-align:left; padding-left:15px;">مانده صورتحساب شماره ${fmt(s.statement_number)} پس از تخفیف:</td>
+            <td class="nowrap">${fmt(sRemaining)}</td>
+          </tr>` : ''}
         </tbody>
       </table>
     `;
@@ -216,12 +220,27 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
 
       <table class="orders-table">
         <tbody>
-          <tr class="total-row">
+          <tr class="${totalDiscount > 0 ? 'sub-row' : 'total-row'}">
             <td colspan="5" style="text-align:left; padding-left:15px;">جمع کل همه صورتحساب‌ها (${fmt(ordersCount)} فاکتور):</td>
             <td class="nowrap">${fmt(totalAmount)}</td>
             <td class="nowrap">${fmt(totalPaid)}</td>
             <td class="nowrap">${fmt(Math.max(totalAmount - totalPaid, 0))}</td>
           </tr>
+          ${statementDiscounts > 0 ? `
+          <tr class="discount-row">
+            <td colspan="7" style="text-align:left; padding-left:15px;">جمع تخفیف صورتحساب‌ها:</td>
+            <td class="nowrap">− ${fmt(statementDiscounts)}</td>
+          </tr>` : ''}
+          ${props.globalDiscount > 0 ? `
+          <tr class="discount-row">
+            <td colspan="7" style="text-align:left; padding-left:15px;">تخفیف کلی${props.globalDiscountNote ? ` (${escapeHtml(props.globalDiscountNote)})` : ''}:</td>
+            <td class="nowrap">− ${fmt(props.globalDiscount)}</td>
+          </tr>` : ''}
+          ${totalDiscount > 0 ? `
+          <tr class="total-row">
+            <td colspan="7" style="text-align:left; padding-left:15px;">مانده قابل پرداخت پس از تخفیف:</td>
+            <td class="nowrap">${fmt(totalRemaining)}</td>
+          </tr>` : ''}
         </tbody>
       </table>
 

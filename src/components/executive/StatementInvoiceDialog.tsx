@@ -102,6 +102,7 @@ export const StatementInvoiceDialog = (props: Props) => {
       .orders-table tbody tr:nth-child(even) td { background: #f1f5f9; }
       .total-row td { background: #fef3c7 !important; font-weight: bold; font-size: 14px; }
       .discount-row td { background: #dcfce7 !important; color: #15803d; font-weight: bold; }
+      .sub-row td { background: #f8fafc !important; font-weight: bold; }
       .summary-section { margin-top: 8px; }
       .signatures-section { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 18px; padding: 8px 0; }
       .signature-box { text-align: center; }
@@ -205,17 +206,21 @@ export const StatementInvoiceDialog = (props: Props) => {
               <td class="nowrap">${fmt(o.remaining)}</td>
             </tr>
           `).join('')}
-          ${discount > 0 ? `
-          <tr class="discount-row">
-            <td colspan="5" style="text-align:left; padding-left:15px;">تخفیف صورتحساب${props.discountNote ? ` (${escapeHtml(props.discountNote)})` : ''}:</td>
-            <td class="nowrap" colspan="3">− ${fmt(discount)}</td>
-          </tr>` : ''}
-          <tr class="total-row">
+          <tr class="${discount > 0 ? 'sub-row' : 'total-row'}">
             <td colspan="5" style="text-align:left; padding-left:15px;">جمع کل صورتحساب:</td>
             <td class="nowrap">${fmt(totalAmount)}</td>
             <td class="nowrap">${fmt(totalPaid)}</td>
-            <td class="nowrap">${fmt(totalRemaining)}</td>
+            <td class="nowrap">${fmt(Math.max(totalAmount - totalPaid, 0))}</td>
           </tr>
+          ${discount > 0 ? `
+          <tr class="discount-row">
+            <td colspan="7" style="text-align:left; padding-left:15px;">تخفیف صورتحساب${props.discountNote ? ` (${escapeHtml(props.discountNote)})` : ''}:</td>
+            <td class="nowrap">− ${fmt(discount)}</td>
+          </tr>
+          <tr class="total-row">
+            <td colspan="7" style="text-align:left; padding-left:15px;">مانده قابل پرداخت پس از تخفیف:</td>
+            <td class="nowrap">${fmt(totalRemaining)}</td>
+          </tr>` : ''}
         </tbody>
       </table>
 
