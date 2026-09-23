@@ -977,9 +977,25 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                         <TableCell colSpan={4} className="text-right font-bold">جمع صورتحساب</TableCell>
                                         <TableCell className="font-bold">{formatPrice(s.total_amount)}</TableCell>
                                         <TableCell className="font-bold text-green-600">{formatPrice(s.total_paid)}</TableCell>
-                                        <TableCell className="font-bold text-red-600">{formatPrice(s.total_remaining)}</TableCell>
+                                        <TableCell className="font-bold text-red-600">{formatPrice(s.total_remaining + s.discount_amount)}</TableCell>
                                         <TableCell colSpan={2} />
                                       </TableRow>
+                                      {s.discount_amount > 0 && (
+                                        <TableRow>
+                                          <TableCell colSpan={6} className="text-right font-bold text-emerald-700">
+                                            تخفیف صورتحساب{s.discount_note ? ` (${s.discount_note})` : ''}
+                                          </TableCell>
+                                          <TableCell className="font-bold text-emerald-700">− {formatPrice(s.discount_amount)}</TableCell>
+                                          <TableCell colSpan={2} />
+                                        </TableRow>
+                                      )}
+                                      {s.discount_amount > 0 && (
+                                        <TableRow>
+                                          <TableCell colSpan={6} className="text-right font-bold">مانده قابل پرداخت پس از تخفیف</TableCell>
+                                          <TableCell className="font-bold text-red-600">{formatPrice(s.total_remaining)}</TableCell>
+                                          <TableCell colSpan={2} />
+                                        </TableRow>
+                                      )}
                                     </TableFooter>
                                   </Table>
                                 )}
@@ -1050,6 +1066,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
             remaining: o.remaining,
             created_at: o.created_at,
           }))}
+          discount={payingStmt.statement.discount_amount}
           onSuccess={load}
         />
       )}
@@ -1140,6 +1157,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
             customerName={globalPay.full_name}
             orders={orders}
             scopeLabel={`کل صورتحساب‌ها (${new Intl.NumberFormat('fa-IR').format(globalPay.statements.length)} صورتحساب)`}
+            discount={globalPay.discount_total}
             onSuccess={load}
           />
         );
