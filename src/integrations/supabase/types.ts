@@ -5181,6 +5181,44 @@ export type Database = {
           },
         ]
       }
+      service_pricing_rates: {
+        Row: {
+          created_at: string
+          field_key: string
+          id: string
+          option_value: string
+          subcategory_id: string
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          field_key: string
+          id?: string
+          option_value?: string
+          subcategory_id: string
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          field_key?: string
+          id?: string
+          option_value?: string
+          subcategory_id?: string
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_pricing_rates_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_requests: {
         Row: {
           created_at: string
@@ -6108,6 +6146,7 @@ export type Database = {
           code: string
           created_at: string | null
           form_path: string | null
+          form_schema: Json | null
           id: string
           is_active: boolean | null
           is_service_active: boolean
@@ -6120,6 +6159,7 @@ export type Database = {
           code: string
           created_at?: string | null
           form_path?: string | null
+          form_schema?: Json | null
           id?: string
           is_active?: boolean | null
           is_service_active?: boolean
@@ -6132,6 +6172,7 @@ export type Database = {
           code?: string
           created_at?: string | null
           form_path?: string | null
+          form_schema?: Json | null
           id?: string
           is_active?: boolean | null
           is_service_active?: boolean
