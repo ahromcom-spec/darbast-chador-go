@@ -102,6 +102,7 @@ const CustomServiceForm = lazy(() => import("./pages/custom/CustomServiceForm"))
 
 const TicketList = lazy(() => import("./pages/tickets/TicketList"));
 const FormNotAvailable = lazy(() => import("./pages/user/FormNotAvailable"));
+const GenericServiceForm = lazy(() => import("./pages/custom/GenericServiceForm"));
 const NewTicket = lazy(() => import("./pages/tickets/NewTicket"));
 const TicketDetail = lazy(() => import("./pages/tickets/TicketDetail"));
 const ContractorRegister = lazy(() => import("./pages/contractor/ContractorRegister"));
@@ -254,6 +255,7 @@ const App = () => {
                   <ScaffoldingRentalForm />
                 </ProtectedRoute>
               } />
+              <Route path="/service/form" element={<ProtectedRoute><GenericServiceForm /></ProtectedRoute>} />
               <Route path="/custom-service/form" element={
                 <ProtectedRoute>
                   <CustomServiceForm />

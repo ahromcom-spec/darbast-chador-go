@@ -181,7 +181,7 @@ export default function SelectLocation() {
     };
     
     // اگر فرم برای این زیرشاخه موجود نیست، به صفحه "فرم موجود نیست" برود
-    return formPaths[subcategoryCode] || '/form-not-available';
+    return formPaths[subcategoryCode] || '/service/form';
   };
 
   if (!serviceSelection) {
