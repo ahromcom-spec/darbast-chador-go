@@ -149,10 +149,10 @@ export default function GenericServiceForm() {
       await uploadMedia(created.id);
       try {
         await notifyManagers({
-          title: mode === 'expert' ? '🧮 درخواست قیمت‌گذاری کارشناسی' : '📦 سفارش جدید',
-          body: `سفارش ${created.code} - ${state.subcategoryName || state.serviceName || ''}`,
-          link: `/executive/orders`,
-        } as any);
+          orderCode: created.code, orderId: created.id,
+          serviceType: `${state.serviceName || ''} - ${state.subcategoryName || ''}${mode === 'expert' ? ' (درخواست قیمت‌گذاری کارشناسی)' : ''}`,
+          address: addr, customerName: notes.customerName, customerPhone: notes.phoneNumber,
+        });
       } catch { /* optional */ }
       toast({ title: 'ثبت شد', description: `سفارش با کد ${created.code} ثبت و برای بررسی به مدیریت ارسال شد.` });
       navigate(`/user/orders/${created.id}`);

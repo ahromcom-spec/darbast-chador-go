@@ -16,6 +16,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { ServicePricingRatesDialog } from '@/components/ceo/ServicePricingRatesDialog';
 
 interface ServiceType {
   id: string;
@@ -49,6 +50,7 @@ export default function DynamicServicesModule() {
   const [editCode, setEditCode] = useState('');
   const [editForm, setEditForm] = useState('');
   const [newRootName, setNewRootName] = useState('');
+  const [pricingSub, setPricingSub] = useState<Sub | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -226,6 +228,7 @@ export default function DynamicServicesModule() {
                   <Plus className="h-4 w-4" />
                 </Button>
               )}
+              <Button size="sm" variant="outline" onClick={() => setPricingSub(s)} title="قیمت‌گذاری فرم">قیمت فرم</Button>
               <Button size="sm" variant="ghost" onClick={() => startEditSub(s)}><Pencil className="h-4 w-4" /></Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -341,6 +344,12 @@ export default function DynamicServicesModule() {
             )}
           </CardContent>
         </Card>
+        <ServicePricingRatesDialog
+          open={!!pricingSub}
+          onOpenChange={(o) => !o && setPricingSub(null)}
+          subcategory={pricingSub}
+          serviceName={types.find(t => t.id === pricingSub?.service_type_id)?.name || ''}
+        />
       </div>
     </div>
   );

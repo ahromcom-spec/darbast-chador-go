@@ -108,7 +108,7 @@ export function ServiceTypeSelectionDialog({
     const legacyRoute = serviceType?.code === '10'
       ? SUBCATEGORY_FORM_ROUTES[leaf.code || '']
       : undefined;
-    const formRoute = leaf.form_path || legacyRoute || '/form-not-available';
+    const formRoute = leaf.form_path || legacyRoute || '/service/form';
     onOpenChange(false);
     navigate(formRoute, {
       state: {

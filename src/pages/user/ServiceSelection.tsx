@@ -136,7 +136,8 @@ export default function ServiceSelection() {
       '30': '/scaffolding/rental-form', // اجاره داربست
     };
 
-    return formMap[subcategoryCode] || '/form-not-available';
+    if (!serviceTypeName?.includes('داربست')) return '/service/form';
+    return formMap[subcategoryCode] || '/service/form';
   };
 
 

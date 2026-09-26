@@ -61,6 +61,10 @@ export default function SelectLocation() {
     if ((sub as any)?.is_service_active === false) return '/form-not-available';
     const custom = (sub as any)?.form_path as string | null | undefined;
     if (custom && custom.startsWith('/')) return custom;
+    if (serviceSelection.serviceName && !String(serviceSelection.serviceName).includes('داربست')) {
+      if (String(serviceSelection.serviceName).includes('قالی')) return '/carpet-cleaning/form';
+      return '/service/form';
+    }
     return getFormPath(serviceSelection.subcategoryCode);
   };
 
@@ -181,7 +185,7 @@ export default function SelectLocation() {
     };
     
     // اگر فرم برای این زیرشاخه موجود نیست، به صفحه "فرم موجود نیست" برود
-    return formPaths[subcategoryCode] || '/form-not-available';
+    return formPaths[subcategoryCode] || '/service/form';
   };
 
   if (!serviceSelection) {
