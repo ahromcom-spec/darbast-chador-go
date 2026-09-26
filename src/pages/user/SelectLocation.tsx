@@ -61,6 +61,10 @@ export default function SelectLocation() {
     if ((sub as any)?.is_service_active === false) return '/form-not-available';
     const custom = (sub as any)?.form_path as string | null | undefined;
     if (custom && custom.startsWith('/')) return custom;
+    if (serviceSelection.serviceName && !String(serviceSelection.serviceName).includes('داربست')) {
+      if (String(serviceSelection.serviceName).includes('قالی')) return '/carpet-cleaning/form';
+      return '/service/form';
+    }
     return getFormPath(serviceSelection.subcategoryCode);
   };
 
