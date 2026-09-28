@@ -179,12 +179,14 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
                 style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))' }}
               >
                 {/* آنتن تلویزیون */}
-                <path d="M24 14 L13 3" stroke="#dc2626" strokeWidth="4" strokeLinecap="round" />
-                <path d="M40 14 L51 3" stroke="#dc2626" strokeWidth="4" strokeLinecap="round" />
-                <path d="M24 14 L13 3" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" />
-                <path d="M40 14 L51 3" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" />
+                <path d="M24 13 L13 2" stroke="#dc2626" strokeWidth="4" strokeLinecap="round" />
+                <path d="M40 13 L51 2" stroke="#dc2626" strokeWidth="4" strokeLinecap="round" />
+                {/* قاب قرمز تلویزیون */}
+                <rect x="6" y="13" width="52" height="36" rx="7" fill="#dc2626" />
+                {/* صفحه مشکی داخل تلویزیون */}
+                <rect x="11" y="18" width="42" height="26" rx="4" fill="#0a0a0a" />
                 {/* مثلث پخش */}
-                <path d="M27 22 L43 30.5 L27 39 Z" fill="#ffffff" />
+                <path d="M28 23 L42 31 L28 39 Z" fill="#ffffff" />
               </svg>
             )}
           </button>
