@@ -19,6 +19,30 @@ import { useGeneralManagerRole } from '@/hooks/useGeneralManagerRole';
 
 const clamp = (n: number) => Math.min(97, Math.max(0.5, n));
 
+/** محل ذخیره‌شده هر کاربر روی همان دستگاه (بدون دسترسی مدیریتی) */
+const localPosKey = (id: string, isMobile: boolean) =>
+  `help-video-pos-${isMobile ? 'mobile' : 'desktop'}-${id}`;
+
+const readLocalPos = (id: string, isMobile: boolean) => {
+  try {
+    const raw = localStorage.getItem(localPosKey(id, isMobile));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.x === 'number' && typeof parsed?.y === 'number') return parsed as { x: number; y: number };
+  } catch {
+    /* ignore */
+  }
+  return null;
+};
+
+const writeLocalPos = (id: string, isMobile: boolean, pos: { x: number; y: number }) => {
+  try {
+    localStorage.setItem(localPosKey(id, isMobile), JSON.stringify(pos));
+  } catch {
+    /* ignore */
+  }
+};
+
 interface BubbleProps {
   video: HelpVideo;
   canManage: boolean;
@@ -38,17 +62,28 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  /** جابه‌جایی با نگه‌داشتن (برای همه کاربران) */
+  const [holdDragging, setHoldDragging] = useState(false);
   const initial = placementFor(video, isMobile);
-  const [pos, setPos] = useState({ x: initial.x, y: initial.y });
+  const [pos, setPos] = useState(() => readLocalPos(video.id, isMobile) ?? { x: initial.x, y: initial.y });
   const [size, setSize] = useState(initial.size);
   const draggingRef = useRef(false);
   const movedRef = useRef(false);
+  const holdTimerRef = useRef<number | null>(null);
+  const holdWasRef = useRef(false);
+  const downPointRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const p = placementFor(video, isMobile);
-    setPos({ x: p.x, y: p.y });
+    const local = readLocalPos(video.id, isMobile);
+    if (local) {
+      setPos(local);
+    } else {
+      setPos({ x: p.x, y: p.y });
+    }
     setSize(p.size);
   }, [
+    video.id,
     video.pos_x,
     video.pos_y,
     video.box_size,
@@ -57,6 +92,14 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
     video.box_size_mobile,
     isMobile,
   ]);
+
+  // پاک‌سازی زمان‌سنج نگه‌داشتن هنگامUnmount
+  useEffect(
+    () => () => {
+      if (holdTimerRef.current !== null) window.clearTimeout(holdTimerRef.current);
+    },
+    []
+  );
 
   /** اندازه کل صفحه (نه فقط پنجره) تا کادر به خودِ صفحه بچسبد و با اسکرول حرکت کند */
   const [docSize, setDocSize] = useState({ w: 1, h: 1 });
@@ -88,8 +131,19 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
   }, []);
 
 
+  /** ذخیره محل پس از رهاکردن: مدیران روی پایگاه داده (سراسری)، سایر کاربران روی همین دستگاه */
+  const persistPlacementRef = useRef<() => void>(() => {});
+  persistPlacementRef.current = () => {
+    if (canManage) {
+      save();
+    } else {
+      writeLocalPos(video.id, isMobile, { x: pos.x, y: pos.y });
+      toast({ title: 'محل آیکون فیلم راهنما ذخیره شد' });
+    }
+  };
+
   useEffect(() => {
-    if (!editing) return;
+    if (!editing && !holdDragging) return;
     const onMove = (e: PointerEvent) => {
       if (!draggingRef.current) return;
       movedRef.current = true;
@@ -97,7 +151,12 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
       applyPointer(e.clientX, e.clientY);
     };
     const onUp = () => {
+      if (draggingRef.current && holdWasRef.current) {
+        persistPlacementRef.current();
+      }
       draggingRef.current = false;
+      holdWasRef.current = false;
+      setHoldDragging(false);
     };
     window.addEventListener('pointermove', onMove, { passive: false });
     window.addEventListener('pointerup', onUp);
@@ -105,7 +164,7 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
     };
-  }, [editing, applyPointer]);
+  }, [editing, holdDragging, applyPointer]);
 
   const save = async () => {
     try {
@@ -153,20 +212,69 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
             title={video.title}
             aria-label={video.title}
             onPointerDown={(e) => {
-              if (!editing) return;
-              draggingRef.current = true;
-              movedRef.current = false;
               (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+              downPointRef.current = { x: e.clientX, y: e.clientY };
+              movedRef.current = false;
+              holdWasRef.current = false;
+              if (editing) {
+                draggingRef.current = true;
+                return;
+              }
+              // نگه‌داشتن انگشت/موس: آیکون قابل جابه‌جایی می‌شود
+              if (holdTimerRef.current !== null) window.clearTimeout(holdTimerRef.current);
+              holdTimerRef.current = window.setTimeout(() => {
+                holdTimerRef.current = null;
+                draggingRef.current = true;
+                holdWasRef.current = true;
+                setHoldDragging(true);
+              }, 450);
+            }}
+            onPointerMove={(e) => {
+              // اگر پیش از پایان نگه‌داشتن حرکت کرد، جابه‌جایی آغاز نشود
+              if (!draggingRef.current && holdTimerRef.current !== null && downPointRef.current) {
+                const dx = e.clientX - downPointRef.current.x;
+                const dy = e.clientY - downPointRef.current.y;
+                if (Math.abs(dx) + Math.abs(dy) > 10) {
+                  window.clearTimeout(holdTimerRef.current);
+                  holdTimerRef.current = null;
+                }
+              }
+            }}
+            onPointerUp={() => {
+              if (holdTimerRef.current !== null) {
+                window.clearTimeout(holdTimerRef.current);
+                holdTimerRef.current = null;
+              }
+            }}
+            onPointerCancel={() => {
+              if (holdTimerRef.current !== null) {
+                window.clearTimeout(holdTimerRef.current);
+                holdTimerRef.current = null;
+              }
+              draggingRef.current = false;
+              holdWasRef.current = false;
+              setHoldDragging(false);
+            }}
+            onContextMenu={(e) => {
+              // جلوگیری از منوی لمس هنگام نگه‌داشتن روی موبایل
+              if (holdDragging) e.preventDefault();
             }}
             onClick={() => {
-              if (editing) return;
+              if (editing || movedRef.current) return;
               setOpen(true);
             }}
             className={cn(
               'flex items-center justify-center rounded-lg bg-transparent transition-transform hover:scale-105',
-              editing && 'cursor-move ring-4 ring-red-500/50 animate-pulse'
+              (editing || holdDragging) && 'cursor-move ring-4 ring-red-500/50',
+              editing && 'animate-pulse'
             )}
-            style={{ width: size, height: Math.round(size * 0.85) }}
+            style={{
+              width: size,
+              height: Math.round(size * 0.85),
+              touchAction: 'none',
+              userSelect: 'none',
+              WebkitTouchCallout: 'none',
+            } as React.CSSProperties}
           >
             {editing ? (
               <Move className="h-1/2 w-1/2 text-red-600" />
