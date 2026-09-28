@@ -62,17 +62,28 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  /** جابه‌جایی با نگه‌داشتن (برای همه کاربران) */
+  const [holdDragging, setHoldDragging] = useState(false);
   const initial = placementFor(video, isMobile);
-  const [pos, setPos] = useState({ x: initial.x, y: initial.y });
+  const [pos, setPos] = useState(() => readLocalPos(video.id, isMobile) ?? { x: initial.x, y: initial.y });
   const [size, setSize] = useState(initial.size);
   const draggingRef = useRef(false);
   const movedRef = useRef(false);
+  const holdTimerRef = useRef<number | null>(null);
+  const holdWasRef = useRef(false);
+  const downPointRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const p = placementFor(video, isMobile);
-    setPos({ x: p.x, y: p.y });
+    const local = readLocalPos(video.id, isMobile);
+    if (local) {
+      setPos(local);
+    } else {
+      setPos({ x: p.x, y: p.y });
+    }
     setSize(p.size);
   }, [
+    video.id,
     video.pos_x,
     video.pos_y,
     video.box_size,
@@ -81,6 +92,14 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
     video.box_size_mobile,
     isMobile,
   ]);
+
+  // پاک‌سازی زمان‌سنج نگه‌داشتن هنگامUnmount
+  useEffect(
+    () => () => {
+      if (holdTimerRef.current !== null) window.clearTimeout(holdTimerRef.current);
+    },
+    []
+  );
 
   /** اندازه کل صفحه (نه فقط پنجره) تا کادر به خودِ صفحه بچسبد و با اسکرول حرکت کند */
   const [docSize, setDocSize] = useState({ w: 1, h: 1 });
