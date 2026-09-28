@@ -110,28 +110,39 @@ export function ManagerRenewalDialog({
 
   // همگام‌سازی total_price با جمع payment_amount + تمدیدهای تایید شده
   const syncOrderTotalPrice = async () => {
-    const [{ data: orderRow, error: orderError }, { data: approvedRows, error: renewalsError }] = await Promise.all([
+    const [
+      { data: orderRow, error: orderError },
+      { data: approvedRows, error: renewalsError },
+      { data: repairRows },
+      { data: partRows },
+    ] = await Promise.all([
       supabase.from('projects_v3').select('payment_amount, total_price').eq('id', orderId).single(),
       supabase.from('order_renewals').select('renewal_price').eq('order_id', orderId).eq('status', 'approved'),
+      supabase.from('repair_requests').select('final_cost, estimated_cost').eq('order_id', orderId)
+        .in('status', ['approved', 'awaiting_repair', 'repaired', 'completed', 'paid']),
+      (supabase as any).from('order_parts').select('price, status').eq('order_id', orderId).neq('status', 'cancelled'),
     ]);
 
     if (orderError) throw orderError;
     if (renewalsError) throw renewalsError;
 
     const approvedSum = (approvedRows || []).reduce((sum: number, r: any) => sum + toNumber(r.renewal_price), 0);
+    const repairsSum = (repairRows || []).reduce((sum: number, r: any) => sum + toNumber(r.final_cost ?? r.estimated_cost), 0);
+    const parts = (partRows || []) as any[];
 
     const paymentAmount = toNumber(orderRow?.payment_amount);
     const currentTotal = toNumber(orderRow?.total_price);
 
-    // پایه قیمت: ترجیح با payment_amount. اگر نبود، از total_price فعلی منهای جمع تمدیدها حدس می‌زنیم.
-    const baseAmount =
-      paymentAmount > 0
+    // پایه قیمت: قسمت‌های سفارش، سپس payment_amount، وگرنه total_price فعلی منهای تمدید و تعمیر
+    const baseAmount = parts.length > 0
+      ? parts.reduce((s, p) => s + toNumber(p.price), 0)
+      : paymentAmount > 0
         ? paymentAmount
         : currentTotal > 0
-          ? Math.max(0, currentTotal - approvedSum)
+          ? Math.max(0, currentTotal - approvedSum - repairsSum)
           : toNumber(originalPrice);
 
-    const newTotalPrice = baseAmount + approvedSum;
+    const newTotalPrice = baseAmount + approvedSum + repairsSum;
 
     const { error: updateError } = await supabase
       .from('projects_v3')
