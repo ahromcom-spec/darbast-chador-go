@@ -42,6 +42,8 @@ interface ManagerOrderInvoiceProps {
     province_id?: string;
     subcategory_id?: string;
     rental_start_date?: string | null;
+    execution_end_date?: string | null;
+    execution_stage_updated_at?: string | null;
   };
   hidePrice?: boolean; // Hide price/financial information in invoice
   className?: string;
@@ -102,6 +104,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
   const [messages, setMessages] = useState<Array<{ message: string; is_staff: boolean; created_at: string; user_id: string }>>([]);
   const [provinceName, setProvinceName] = useState('');
   const [subcategoryName, setSubcategoryName] = useState('');
+  const [subcategoryCode, setSubcategoryCode] = useState<string | null>(null);
   const [repairRequests, setRepairRequests] = useState<RepairRequest[]>([]);
   const [renewals, setRenewals] = useState<OrderRenewal[]>([]);
   const [parts, setParts] = useState<InvoicePart[]>([]);
@@ -179,7 +182,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
       if (order.province_id) {
         const { data: province } = await supabase
           .from('provinces')
-          .select('name')
+          .select('name, code')
           .eq('id', order.province_id)
           .single();
         if (province) setProvinceName(province.name);
@@ -192,7 +195,10 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
           .select('name')
           .eq('id', order.subcategory_id)
           .single();
-        if (subcategory) setSubcategoryName(subcategory.name);
+        if (subcategory) {
+          setSubcategoryName(subcategory.name);
+          setSubcategoryCode(subcategory.code);
+        }
       }
 
       // Fetch repair requests
@@ -273,6 +279,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
     mediaUrls,
     provinceName,
     subcategoryName,
+    subcategoryCode,
     repairRequests,
     renewals,
     parts,
