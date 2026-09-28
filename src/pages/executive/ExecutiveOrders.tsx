@@ -39,6 +39,7 @@ import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 import ProjectV3AssignmentsInfo from '@/components/orders/ProjectV3AssignmentsInfo';
 import { OrderPartsManager } from '@/components/orders/OrderPartsManager';
 import { Layers } from 'lucide-react';
+import { isScaffoldingNoMaterials } from '@/lib/scaffoldingSubtype';
 
 // مراحل اجرایی سفارش - key برای UI، statusMapping برای status در دیتابیس، executionStageMapping برای execution_stage
 // IMPORTANT: pending_execution باید به status = 'pending_execution' در دیتابیس مپ شود
@@ -1387,6 +1388,7 @@ export default function ExecutiveOrders() {
           </Card>
         ) : (
           filteredOrders.map((order) => {
+            const isNoMaterialsScaffold = isScaffoldingNoMaterials(order);
             const isSelected = selectedOrderIds.has(order.id);
 
             const notesObj =
@@ -1758,9 +1760,13 @@ export default function ExecutiveOrders() {
                       <SelectValue placeholder={order.status === 'rejected' ? 'رد شده — برای بازگرداندن، مرحله را انتخاب کنید' : 'انتخاب مرحله'} />
                     </SelectTrigger>
                     <SelectContent>
-                      {executionStages.map((stage) => (
+                      {executionStages
+                        .filter((stage) => !isNoMaterialsScaffold || !['awaiting_collection', 'in_collection', 'collected'].includes(stage.key))
+                        .map((stage) => (
                         <SelectItem key={stage.key} value={stage.key}>
-                          {stage.label}
+                          {isNoMaterialsScaffold
+                            ? ({ pending_execution: 'در انتظار نصب یا فک', in_progress: 'در حال نصب یا فک', order_executed: 'نصب یا فک انجام شد' }[stage.key] || stage.label)
+                            : stage.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1805,7 +1811,7 @@ export default function ExecutiveOrders() {
                 )}
 
                 {/* نمایش تاریخ شروع کرایه داربست - فقط برای مراحل بعد از اجرا */}
-                {(order.execution_stage === 'order_executed' || 
+                {!isNoMaterialsScaffold && (order.execution_stage === 'order_executed' || 
                   order.execution_stage === 'awaiting_payment' || 
                   order.execution_stage === 'awaiting_collection' || 
                   order.execution_stage === 'in_collection' || 
@@ -1833,7 +1839,7 @@ export default function ExecutiveOrders() {
                 )}
 
                 {/* نمایش وضعیت درخواست جمع‌آوری */}
-                {order.collection_request ? (
+                {!isNoMaterialsScaffold && (order.collection_request ? (
                   <div className={`p-3 rounded-lg border ${
                     order.collection_request.status === 'approved' 
                       ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' 
@@ -1954,7 +1960,7 @@ export default function ExecutiveOrders() {
                       )}
                     </div>
                   </div>
-                )}
+                ))}
 
                 <div className="flex gap-2 flex-wrap pt-2">
                   {/* دکمه بایگانی - برای سفارشات رد شده */}
@@ -2042,7 +2048,7 @@ export default function ExecutiveOrders() {
                       className="gap-2 bg-blue-600 hover:bg-blue-700"
                     >
                       <Clock className="h-4 w-4" />
-                      شروع اجرا
+                      {isNoMaterialsScaffold ? 'شروع نصب یا فک' : 'شروع اجرا'}
                     </Button>
                   )}
 
@@ -2054,7 +2060,7 @@ export default function ExecutiveOrders() {
                       className="gap-2 bg-green-600 hover:bg-green-700"
                     >
                       <CheckCircle className="h-4 w-4" />
-                      اجرا شد
+                      {isNoMaterialsScaffold ? 'نصب یا فک انجام شد' : 'اجرا شد'}
                     </Button>
                   )}
 
@@ -2093,7 +2099,7 @@ export default function ExecutiveOrders() {
                   )}
 
                   {/* دکمه در انتظار جمع‌آوری - برای awaiting_payment و فقط وقتی تاریخ جمع‌آوری تنظیم شده یا درخواست تایید شده */}
-                  {order.execution_stage === 'awaiting_payment' && (
+                  {!isNoMaterialsScaffold && order.execution_stage === 'awaiting_payment' && (
                     (() => {
                       // تاریخ تثبیت شده یا درخواست جمع‌آوری تایید شده باشد
                       const hasConfirmedDate = !!order.customer_completion_date;
@@ -2118,7 +2124,7 @@ export default function ExecutiveOrders() {
                   )}
 
                   {/* دکمه در حال جمع‌آوری - برای awaiting_collection */}
-                  {order.execution_stage === 'awaiting_collection' && (
+                  {!isNoMaterialsScaffold && order.execution_stage === 'awaiting_collection' && (
                     <Button
                       onClick={() => handleStageChange(order.id, 'in_collection')}
                       size="sm"
@@ -2130,7 +2136,7 @@ export default function ExecutiveOrders() {
                   )}
 
                   {/* دکمه جمع‌آوری شد - برای in_collection */}
-                  {order.execution_stage === 'in_collection' && (
+                  {!isNoMaterialsScaffold && order.execution_stage === 'in_collection' && (
                     <Button
                       onClick={() => handleStageChange(order.id, 'collected')}
                       size="sm"
@@ -2142,7 +2148,7 @@ export default function ExecutiveOrders() {
                   )}
 
                   {/* دکمه اتمام سفارش - برای collected */}
-                  {order.execution_stage === 'collected' && (
+                  {!isNoMaterialsScaffold && order.execution_stage === 'collected' && (
                     <Button
                       onClick={() => handleStageChange(order.id, 'closed')}
                       size="sm"
@@ -2154,7 +2160,7 @@ export default function ExecutiveOrders() {
                   )}
 
                   {/* دکمه درخواست جمع‌آوری - فقط بعد از اجرای سفارش و قبل از اتمام */}
-                  {order.status !== 'closed' && (order.execution_stage === 'order_executed' || 
+                  {!isNoMaterialsScaffold && order.status !== 'closed' && (order.execution_stage === 'order_executed' || 
                     order.execution_stage === 'awaiting_payment' || 
                     order.execution_stage === 'awaiting_collection' || 
                     order.execution_stage === 'in_collection' || 
