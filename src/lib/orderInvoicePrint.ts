@@ -5,6 +5,7 @@ import { isBillableRepair } from '@/lib/repairBilling';
 import { supabase } from '@/integrations/supabase/client';
 import { formatPersianDate, formatPersianDateTime } from '@/lib/dateUtils';
 import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
+import { isScaffoldingNoMaterials } from '@/lib/scaffoldingSubtype';
 
 export function escapeHtml(value: unknown): string {
   if (value === null || value === undefined) return '';
@@ -81,6 +82,8 @@ export interface InvoiceOrderLike {
   province_id?: string;
   subcategory_id?: string;
   rental_start_date?: string | null;
+  execution_end_date?: string | null;
+  execution_stage_updated_at?: string | null;
 }
 
 export interface InvoiceExtras {
@@ -88,6 +91,7 @@ export interface InvoiceExtras {
   mediaUrls: Record<string, string>;
   provinceName: string;
   subcategoryName: string;
+  subcategoryCode?: string | null;
   repairRequests: Array<{ id: string; description: string | null; estimated_cost: number | null; final_cost: number | null; status: string; created_at: string }>;
   renewals: Array<{ id: string; renewal_number: number | null; status: string | null; renewal_price: number | null; new_start_date: string | null; new_end_date: string | null; part_id?: string | null }>;
   parts?: Array<{
@@ -454,6 +458,7 @@ export function buildOrderInvoiceHtml(
     mediaUrls,
     provinceName,
     subcategoryName,
+    subcategoryCode,
     repairRequests,
     renewals,
     freshFinancials,
@@ -476,6 +481,11 @@ export function buildOrderInvoiceHtml(
     const ceilingSubtype = parsedNotes?.ceilingSubtype || parsedNotes?.ceiling_subtype;
     const description = parsedNotes?.description || parsedNotes?.installationDescription || parsedNotes?.additional_notes || parsedNotes?.locationPurpose;
     const installDate = parsedNotes?.installationDateTime || parsedNotes?.installation_date || parsedNotes?.installDate || parsedNotes?.install_date;
+    const isNoMaterialsScaffold = isScaffoldingNoMaterials({ subcategory_code: subcategoryCode, subcategoryName, notes: order.notes }, parsedNotes);
+    const invoiceStartDate = isNoMaterialsScaffold ? installDate : order.rental_start_date;
+    const invoiceEndDate = isNoMaterialsScaffold
+      ? (order.execution_end_date || order.execution_stage_updated_at)
+      : (order.rental_start_date ? new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString() : null);
     const dueDate = parsedNotes?.dueDateTime || parsedNotes?.due_date || parsedNotes?.dueDate;
     const conditions = parsedNotes?.conditions || parsedNotes?.serviceConditions;
     
@@ -622,7 +632,7 @@ export function buildOrderInvoiceHtml(
           <div class="header-flank">
             <div class="side-logo"><img src="/ahrom-logo.png" alt="اهرم" /></div>
             <div class="header-center">
-              <div class="company-title">${escapeHtml(resolveInvoiceTitle(scaffoldingType, subcategoryName))}</div>
+              <div class="company-title">${escapeHtml(isNoMaterialsScaffold ? 'فاکتور اجرای داربست فلزی بدون اجناس اهرُم' : resolveInvoiceTitle(scaffoldingType, subcategoryName))}</div>
               <div class="company-website">www.ahrom.ir</div>
               <div class="company-contacts">
                 دفتر: <span dir="ltr">025 3886 5040</span> &nbsp;|&nbsp; همراه محمدی: <span dir="ltr">0912 551 1494</span> &nbsp;|&nbsp; تلفن گویا: <span dir="ltr">900000319</span>
@@ -717,7 +727,12 @@ export function buildOrderInvoiceHtml(
           <tr>
             <td class="label-cell" colspan="6" style="text-align:center; font-size:14px;">📅 تاریخ‌های مهم</td>
           </tr>
-          <tr>
+          ${isNoMaterialsScaffold ? `<tr>
+            <td class="label-cell" style="white-space:nowrap;">تاریخ درخواست نصب یا فک داربست فلزی:</td>
+            <td class="value-cell" colspan="2" style="white-space:nowrap;">${installDate ? formatPersianDateTime(installDate) : '-'}</td>
+            <td class="label-cell" style="white-space:nowrap;">تاریخ نصب یا فک داربست فلزی:</td>
+            <td class="value-cell" colspan="2" style="white-space:nowrap;">${order.execution_end_date || order.execution_stage_updated_at ? formatPersianDateTime(order.execution_end_date || order.execution_stage_updated_at || '') : '-'}</td>
+          </tr>` : `<tr>
             <td class="label-cell" style="white-space:nowrap;">تاریخ شروع کرایه:</td>
             <td class="value-cell" style="white-space:nowrap;">${order.rental_start_date ? formatPersianDate(order.rental_start_date) : '-'}</td>
             <td class="label-cell" style="white-space:nowrap;">تاریخ درخواست جمع‌آوری:</td>
@@ -730,7 +745,7 @@ export function buildOrderInvoiceHtml(
             <td class="value-cell">${conditions?.totalMonths || '۱'} ماه</td>
             <td class="label-cell">پیوست:</td>
             <td class="value-cell" colspan="3">${invoiceImages.length > 0 ? `دارد (${invoiceImages.length} تصویر)` : 'ندارد'}</td>
-          </tr>
+          </tr>`}
         </table>
 
         ${conditions ? `
@@ -762,8 +777,8 @@ export function buildOrderInvoiceHtml(
             <tr>
               <th>ردیف</th>
               <th>شرح خدمات</th>
-              <th>تاریخ شروع</th>
-              <th>تاریخ پایان</th>
+              <th>${isNoMaterialsScaffold ? 'تاریخ درخواست نصب یا فک' : 'تاریخ شروع'}</th>
+              <th>${isNoMaterialsScaffold ? 'تاریخ نصب یا فک' : 'تاریخ پایان'}</th>
               <th>متراژ/تعداد</th>
               <th>مبلغ کل (تومان)</th>
             </tr>
@@ -848,8 +863,8 @@ export function buildOrderInvoiceHtml(
                     <tr>
                       <td>${(i + 1).toLocaleString('fa-IR')}</td>
                       <td style="text-align:right;">${label}${desc}</td>
-                      <td>${order.rental_start_date ? formatPersianDate(order.rental_start_date) : '-'}</td>
-                      <td>${order.rental_start_date ? formatPersianDate(new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()) : '-'}</td>
+                      <td>${invoiceStartDate ? formatPersianDate(invoiceStartDate) : '-'}</td>
+                      <td>${invoiceEndDate ? formatPersianDate(invoiceEndDate) : '-'}</td>
                       <td>${areaCell}</td>
                       <td>${priceCell}</td>
                     </tr>
@@ -884,13 +899,13 @@ export function buildOrderInvoiceHtml(
                   const itemDesc = snap.locationPurpose || description || '';
                   const serviceText = itemDesc
                     ? `${label} - ${escapeHtml(itemDesc)}`
-                    : `${label} - کرایه ماه اول - ${escapeHtml(typeName)}`;
+                      : `${label} - ${isNoMaterialsScaffold ? 'اجرای' : 'کرایه ماه اول'} - ${escapeHtml(typeName)}`;
                   return `
                     <tr>
                       <td>${(i + 1).toLocaleString('fa-IR')}</td>
                       <td style="text-align:right;">${serviceText}</td>
-                      <td>${order.rental_start_date ? formatPersianDate(order.rental_start_date) : '-'}</td>
-                      <td>${order.rental_start_date ? formatPersianDate(new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()) : '-'}</td>
+                      <td>${invoiceStartDate ? formatPersianDate(invoiceStartDate) : '-'}</td>
+                      <td>${invoiceEndDate ? formatPersianDate(invoiceEndDate) : '-'}</td>
                       <td>${areaCell}</td>
                       <td>${priceCell}</td>
                     </tr>
@@ -915,9 +930,9 @@ export function buildOrderInvoiceHtml(
               return `
             <tr>
               <td>۱</td>
-              <td style="text-align:right;">${isCustomService ? customServiceCell : (description ? escapeHtml(description) : `کرایه ماه اول - ${scaffoldTypeName} - ${subtypeName}`)}</td>
-              <td>${order.rental_start_date ? formatPersianDate(order.rental_start_date) : '-'}</td>
-              <td>${order.rental_start_date ? formatPersianDate(new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()) : '-'}</td>
+              <td style="text-align:right;">${isCustomService ? customServiceCell : (description ? escapeHtml(description) : `${isNoMaterialsScaffold ? 'اجرای' : 'کرایه ماه اول -'} ${scaffoldTypeName} - ${subtypeName}`)}</td>
+              <td>${isNoMaterialsScaffold ? (installDate ? formatPersianDate(installDate) : '-') : (order.rental_start_date ? formatPersianDate(order.rental_start_date) : '-')}</td>
+              <td>${isNoMaterialsScaffold ? (order.execution_end_date || order.execution_stage_updated_at ? formatPersianDate(order.execution_end_date || order.execution_stage_updated_at || '') : '-') : (order.rental_start_date ? formatPersianDate(new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()) : '-')}</td>
               <td>${isCustomService ? customMeasureCell : areaCell}</td>
 
               <td>${priceCell}</td>
@@ -1034,8 +1049,8 @@ export function buildOrderInvoiceHtml(
             <tr>
               <th>ردیف</th>
               <th>شرح خدمات</th>
-              <th>تاریخ شروع</th>
-              <th>تاریخ پایان</th>
+              <th>${isNoMaterialsScaffold ? 'تاریخ درخواست نصب یا فک' : 'تاریخ شروع'}</th>
+              <th>${isNoMaterialsScaffold ? 'تاریخ نصب یا فک' : 'تاریخ پایان'}</th>
               <th>متراژ/تعداد</th>
             </tr>
           </thead>
@@ -1065,8 +1080,8 @@ export function buildOrderInvoiceHtml(
                     <tr>
                       <td>${(i + 1).toLocaleString('fa-IR')}</td>
                       <td style="text-align:right;">${label}${desc}</td>
-                      <td>${order.rental_start_date ? formatPersianDate(order.rental_start_date) : '-'}</td>
-                      <td>${order.rental_start_date ? formatPersianDate(new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()) : '-'}</td>
+                      <td>${invoiceStartDate ? formatPersianDate(invoiceStartDate) : '-'}</td>
+                      <td>${invoiceEndDate ? formatPersianDate(invoiceEndDate) : '-'}</td>
                       <td>${areaCell}</td>
                     </tr>
                   `;
@@ -1095,13 +1110,13 @@ export function buildOrderInvoiceHtml(
                   const itemDesc = snap.locationPurpose || description || '';
                   const serviceText = itemDesc
                     ? `${label} - ${escapeHtml(itemDesc)}`
-                    : `${label} - کرایه ماه اول - ${escapeHtml(typeName)}`;
+                      : `${label} - ${isNoMaterialsScaffold ? 'اجرای' : 'کرایه ماه اول'} - ${escapeHtml(typeName)}`;
                   return `
                     <tr>
                       <td>${(i + 1).toLocaleString('fa-IR')}</td>
                       <td style="text-align:right;">${serviceText}</td>
-                      <td>${order.rental_start_date ? formatPersianDate(order.rental_start_date) : '-'}</td>
-                      <td>${order.rental_start_date ? formatPersianDate(new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()) : '-'}</td>
+                      <td>${invoiceStartDate ? formatPersianDate(invoiceStartDate) : '-'}</td>
+                      <td>${invoiceEndDate ? formatPersianDate(invoiceEndDate) : '-'}</td>
                       <td>${areaCell}</td>
                     </tr>
                   `;
@@ -1119,9 +1134,9 @@ export function buildOrderInvoiceHtml(
               return `
             <tr>
               <td>۱</td>
-              <td style="text-align:right;">${isCustomService ? customServiceCell : (description ? escapeHtml(description) : `کرایه ماه اول - ${scaffoldTypeName} - ${subtypeName}`)}</td>
-              <td>${order.rental_start_date ? formatPersianDate(order.rental_start_date) : '-'}</td>
-              <td>${order.rental_start_date ? formatPersianDate(new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()) : '-'}</td>
+              <td style="text-align:right;">${isCustomService ? customServiceCell : (description ? escapeHtml(description) : `${isNoMaterialsScaffold ? 'اجرای' : 'کرایه ماه اول -'} ${scaffoldTypeName} - ${subtypeName}`)}</td>
+              <td>${isNoMaterialsScaffold ? (installDate ? formatPersianDate(installDate) : '-') : (order.rental_start_date ? formatPersianDate(order.rental_start_date) : '-')}</td>
+              <td>${isNoMaterialsScaffold ? (order.execution_end_date || order.execution_stage_updated_at ? formatPersianDate(order.execution_end_date || order.execution_stage_updated_at || '') : '-') : (order.rental_start_date ? formatPersianDate(new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()) : '-')}</td>
               <td>${isCustomService ? customMeasureCell : areaCellNoPrice}</td>
 
             </tr>
@@ -1237,7 +1252,7 @@ export async function fetchInvoiceExtras(order: InvoiceOrderLike): Promise<Invoi
   const extras = emptyInvoiceExtras();
   const [prov, sub, repairs, renewals, fin, collection, pays, profile] = await Promise.all([
     order.province_id ? supabase.from('provinces').select('name').eq('id', order.province_id).maybeSingle() : Promise.resolve({ data: null } as any),
-    order.subcategory_id ? supabase.from('subcategories').select('name').eq('id', order.subcategory_id).maybeSingle() : Promise.resolve({ data: null } as any),
+    order.subcategory_id ? supabase.from('subcategories').select('name, code').eq('id', order.subcategory_id).maybeSingle() : Promise.resolve({ data: null } as any),
     supabase.from('repair_requests').select('id, description, estimated_cost, final_cost, status, created_at').eq('order_id', order.id).order('created_at', { ascending: true }),
     supabase.from('order_renewals').select('id, renewal_number, status, renewal_price, new_start_date, new_end_date').eq('order_id', order.id).eq('status', 'approved').order('renewal_number', { ascending: true }),
     supabase.from('projects_v3').select('payment_amount, total_price, total_paid').eq('id', order.id).maybeSingle(),
@@ -1247,6 +1262,7 @@ export async function fetchInvoiceExtras(order: InvoiceOrderLike): Promise<Invoi
   ]);
   extras.provinceName = (prov as any)?.data?.name || '';
   extras.subcategoryName = (sub as any)?.data?.name || '';
+  extras.subcategoryCode = (sub as any)?.data?.code || null;
   extras.repairRequests = (((repairs as any)?.data || []) as any[]).filter(isBillableRepair) as any;
   extras.renewals = ((renewals as any)?.data || []) as any;
   extras.freshFinancials = ((fin as any)?.data || null) as any;

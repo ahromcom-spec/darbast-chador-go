@@ -78,6 +78,7 @@ import { EditExpertPricingDialog } from "@/components/orders/EditExpertPricingDi
 import { applyFixedPriceToBreakdown } from "@/lib/priceBreakdown";
 import PaymentProofDialog from "@/components/payments/PaymentProofDialog";
 import PaymentSubmissionsList from "@/components/payments/PaymentSubmissionsList";
+import { isScaffoldingNoMaterials } from '@/lib/scaffoldingSubtype';
 
 const PAYMENT_GATEWAY_UNAVAILABLE_MESSAGE = 'درگاه پرداخت زرین‌پال در حال حاضر در دسترس نیست. لطفاً چند دقیقه دیگر دوباره تلاش کنید.';
 
@@ -257,6 +258,7 @@ export default function OrderDetail() {
   const [myCollabPerms, setMyCollabPerms] = useState<{ can_view_financials: boolean; can_manage_order: boolean } | null>(null);
 
   const [proofRefreshKey, setProofRefreshKey] = useState(0);
+  const isNoMaterialsScaffold = order ? isScaffoldingNoMaterials(order, parsedNotes) : false;
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -1921,6 +1923,7 @@ export default function OrderDetail() {
             approvals={approvals}
             totalPaid={order.total_paid}
             totalPrice={order.total_price}
+            isScaffoldingNoMaterials={isNoMaterialsScaffold}
           />
 
           {/* Repair and Collection Request Buttons - Outside the collapsible order details card */}
@@ -1966,7 +1969,7 @@ export default function OrderDetail() {
                         </div>
                       )}
                       {/* تاریخ شروع کرایه داربست - از دیتابیس (توسط مدیر ثبت شده) */}
-                      {order.rental_start_date && (
+                      {order.rental_start_date && !isNoMaterialsScaffold && (
                         <div className="p-4 bg-white dark:bg-green-900/30 rounded-xl border border-green-200 dark:border-green-700 shadow-sm">
                           <span className="text-xs text-green-600 dark:text-green-400 block mb-1">تاریخ شروع کرایه داربست</span>
                           <span className="font-bold text-base text-foreground">
@@ -1975,7 +1978,7 @@ export default function OrderDetail() {
                         </div>
                       )}
                       {/* تاریخ جمع‌آوری - از دیتابیس */}
-                      {order.customer_completion_date && (
+                      {order.customer_completion_date && !isNoMaterialsScaffold && (
                         <div className="p-4 bg-white dark:bg-amber-900/30 rounded-xl border border-amber-200 dark:border-amber-700 shadow-sm">
                           <span className="text-xs text-amber-600 dark:text-amber-400 block mb-1">تاریخ جمع‌آوری داربست</span>
                           <span className="font-bold text-base text-foreground">
@@ -2614,7 +2617,7 @@ export default function OrderDetail() {
                 )}
 
                 {/* دکمه درخواست جمع‌آوری - برای سفارش‌های در حال اجرا، اجرا شده و پرداخت شده خدمات اجرای داربست به همراه اجناس */}
-                {order.subcategory?.code === '10' && 
+                {order.subcategory?.code === '10' && !isNoMaterialsScaffold &&
                  ['in_progress', 'completed', 'paid'].includes(order.status) && (
                   <section className="rounded-2xl border-2 border-teal-300 dark:border-teal-800 bg-teal-50/50 dark:bg-teal-950/20 p-4 space-y-3">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
