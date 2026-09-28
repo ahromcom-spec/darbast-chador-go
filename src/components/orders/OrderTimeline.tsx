@@ -291,11 +291,11 @@ export const OrderTimeline = ({
         : (executionStage === 'collected' || isStageCompletedByNumber(7))) && orderStatus !== 'closed',
       details: orderStatus === 'closed'
         ? 'سفارش با موفقیت به اتمام رسید ✓' 
-        : (isScaffoldingNoMaterials
-          ? (fullyPaid ? 'نصب یا فک انجام شده و پرداخت تسویه شده است؛ منتظر اتمام نهایی سفارش' : 'پس از پرداخت، سفارش آماده اتمام نهایی است')
-          : (executionStage === 'collected' || isStageCompletedByNumber(7)))
-          ? 'منتظر تایید نهایی مدیر برای اتمام سفارش'
-          : undefined,
+        : isScaffoldingNoMaterials
+          ? (currentStageNumber >= 3 ? (fullyPaid ? 'نصب یا فک انجام شده و پرداخت تسویه شده است؛ منتظر اتمام نهایی سفارش' : 'پس از پرداخت، سفارش آماده اتمام نهایی است') : undefined)
+          : (executionStage === 'collected' || isStageCompletedByNumber(7))
+            ? 'منتظر تایید نهایی مدیر برای اتمام سفارش'
+            : undefined,
     },
   ].filter((step) => !isScaffoldingNoMaterials || !['awaiting_collection', 'in_collection', 'collected'].includes(step.status));
 

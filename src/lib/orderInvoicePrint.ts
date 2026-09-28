@@ -476,16 +476,16 @@ export function buildOrderInvoiceHtml(
   };
   const partById = new Map(orderParts.map((p) => [p.id, p]));
   const parsedNotes = order.notes && typeof order.notes === 'object' ? order.notes : parseOrderNotes(order.notes);
-    const isNoMaterialsScaffold = isScaffoldingNoMaterials({ subcategory_code: subcategoryCode, subcategoryName, notes: order.notes }, parsedNotes);
-    const invoiceStartDate = isNoMaterialsScaffold ? installDate : order.rental_start_date;
-    const invoiceEndDate = isNoMaterialsScaffold
-      ? (order.execution_end_date || order.execution_stage_updated_at)
-      : (order.rental_start_date ? new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString() : null);
     const dimensions = parsedNotes?.dimensions;
     const scaffoldingType = parsedNotes?.service_type || parsedNotes?.scaffoldingType || parsedNotes?.scaffold_type;
     const ceilingSubtype = parsedNotes?.ceilingSubtype || parsedNotes?.ceiling_subtype;
     const description = parsedNotes?.description || parsedNotes?.installationDescription || parsedNotes?.additional_notes || parsedNotes?.locationPurpose;
     const installDate = parsedNotes?.installationDateTime || parsedNotes?.installation_date || parsedNotes?.installDate || parsedNotes?.install_date;
+    const isNoMaterialsScaffold = isScaffoldingNoMaterials({ subcategory_code: subcategoryCode, subcategoryName, notes: order.notes }, parsedNotes);
+    const invoiceStartDate = isNoMaterialsScaffold ? installDate : order.rental_start_date;
+    const invoiceEndDate = isNoMaterialsScaffold
+      ? (order.execution_end_date || order.execution_stage_updated_at)
+      : (order.rental_start_date ? new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString() : null);
     const dueDate = parsedNotes?.dueDateTime || parsedNotes?.due_date || parsedNotes?.dueDate;
     const conditions = parsedNotes?.conditions || parsedNotes?.serviceConditions;
     
