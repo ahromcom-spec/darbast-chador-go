@@ -197,7 +197,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
           .single();
         if (subcategory) {
           setSubcategoryName(subcategory.name);
-          setSubcategoryCode(subcategory.code);
+          setSubcategoryCode((subcategory as { name: string; code?: string | null }).code || null);
         }
       }
 

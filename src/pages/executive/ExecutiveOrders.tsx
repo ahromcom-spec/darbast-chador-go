@@ -2159,6 +2159,17 @@ export default function ExecutiveOrders() {
                     </Button>
                   )}
 
+                  {isNoMaterialsScaffold && order.execution_stage === 'awaiting_payment' && (
+                    <Button
+                      onClick={() => handleStageChange(order.id, 'closed')}
+                      size="sm"
+                      className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      اتمام سفارش
+                    </Button>
+                  )}
+
                   {/* دکمه درخواست جمع‌آوری - فقط بعد از اجرای سفارش و قبل از اتمام */}
                   {!isNoMaterialsScaffold && order.status !== 'closed' && (order.execution_stage === 'order_executed' || 
                     order.execution_stage === 'awaiting_payment' || 

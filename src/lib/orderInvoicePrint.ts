@@ -477,6 +477,10 @@ export function buildOrderInvoiceHtml(
   const partById = new Map(orderParts.map((p) => [p.id, p]));
   const parsedNotes = order.notes && typeof order.notes === 'object' ? order.notes : parseOrderNotes(order.notes);
     const isNoMaterialsScaffold = isScaffoldingNoMaterials({ subcategory_code: subcategoryCode, subcategoryName, notes: order.notes }, parsedNotes);
+    const invoiceStartDate = isNoMaterialsScaffold ? installDate : order.rental_start_date;
+    const invoiceEndDate = isNoMaterialsScaffold
+      ? (order.execution_end_date || order.execution_stage_updated_at)
+      : (order.rental_start_date ? new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString() : null);
     const dimensions = parsedNotes?.dimensions;
     const scaffoldingType = parsedNotes?.service_type || parsedNotes?.scaffoldingType || parsedNotes?.scaffold_type;
     const ceilingSubtype = parsedNotes?.ceilingSubtype || parsedNotes?.ceiling_subtype;
@@ -859,8 +863,8 @@ export function buildOrderInvoiceHtml(
                     <tr>
                       <td>${(i + 1).toLocaleString('fa-IR')}</td>
                       <td style="text-align:right;">${label}${desc}</td>
-                      <td>${order.rental_start_date ? formatPersianDate(order.rental_start_date) : '-'}</td>
-                      <td>${order.rental_start_date ? formatPersianDate(new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()) : '-'}</td>
+                      <td>${invoiceStartDate ? formatPersianDate(invoiceStartDate) : '-'}</td>
+                      <td>${invoiceEndDate ? formatPersianDate(invoiceEndDate) : '-'}</td>
                       <td>${areaCell}</td>
                       <td>${priceCell}</td>
                     </tr>
@@ -895,13 +899,13 @@ export function buildOrderInvoiceHtml(
                   const itemDesc = snap.locationPurpose || description || '';
                   const serviceText = itemDesc
                     ? `${label} - ${escapeHtml(itemDesc)}`
-                    : `${label} - کرایه ماه اول - ${escapeHtml(typeName)}`;
+                      : `${label} - ${isNoMaterialsScaffold ? 'اجرای' : 'کرایه ماه اول'} - ${escapeHtml(typeName)}`;
                   return `
                     <tr>
                       <td>${(i + 1).toLocaleString('fa-IR')}</td>
                       <td style="text-align:right;">${serviceText}</td>
-                      <td>${order.rental_start_date ? formatPersianDate(order.rental_start_date) : '-'}</td>
-                      <td>${order.rental_start_date ? formatPersianDate(new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()) : '-'}</td>
+                      <td>${invoiceStartDate ? formatPersianDate(invoiceStartDate) : '-'}</td>
+                      <td>${invoiceEndDate ? formatPersianDate(invoiceEndDate) : '-'}</td>
                       <td>${areaCell}</td>
                       <td>${priceCell}</td>
                     </tr>
@@ -1076,8 +1080,8 @@ export function buildOrderInvoiceHtml(
                     <tr>
                       <td>${(i + 1).toLocaleString('fa-IR')}</td>
                       <td style="text-align:right;">${label}${desc}</td>
-                      <td>${order.rental_start_date ? formatPersianDate(order.rental_start_date) : '-'}</td>
-                      <td>${order.rental_start_date ? formatPersianDate(new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()) : '-'}</td>
+                      <td>${invoiceStartDate ? formatPersianDate(invoiceStartDate) : '-'}</td>
+                      <td>${invoiceEndDate ? formatPersianDate(invoiceEndDate) : '-'}</td>
                       <td>${areaCell}</td>
                     </tr>
                   `;
@@ -1106,13 +1110,13 @@ export function buildOrderInvoiceHtml(
                   const itemDesc = snap.locationPurpose || description || '';
                   const serviceText = itemDesc
                     ? `${label} - ${escapeHtml(itemDesc)}`
-                    : `${label} - کرایه ماه اول - ${escapeHtml(typeName)}`;
+                      : `${label} - ${isNoMaterialsScaffold ? 'اجرای' : 'کرایه ماه اول'} - ${escapeHtml(typeName)}`;
                   return `
                     <tr>
                       <td>${(i + 1).toLocaleString('fa-IR')}</td>
                       <td style="text-align:right;">${serviceText}</td>
-                      <td>${order.rental_start_date ? formatPersianDate(order.rental_start_date) : '-'}</td>
-                      <td>${order.rental_start_date ? formatPersianDate(new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()) : '-'}</td>
+                      <td>${invoiceStartDate ? formatPersianDate(invoiceStartDate) : '-'}</td>
+                      <td>${invoiceEndDate ? formatPersianDate(invoiceEndDate) : '-'}</td>
                       <td>${areaCell}</td>
                     </tr>
                   `;

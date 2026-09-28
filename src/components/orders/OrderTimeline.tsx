@@ -286,10 +286,14 @@ export const OrderTimeline = ({
       // اتمام سفارش فقط وقتی که واقعاً سفارش بسته شده باشد (closed)
       completed: orderStatus === 'closed',
       // فعال وقتی همه مراحل قبلی انجام شده ولی هنوز closed نشده
-      active: (executionStage === 'collected' || isStageCompletedByNumber(7)) && orderStatus !== 'closed',
+      active: (isScaffoldingNoMaterials
+        ? (fullyPaid || executionStage === 'awaiting_payment' || currentStageNumber >= 3)
+        : (executionStage === 'collected' || isStageCompletedByNumber(7))) && orderStatus !== 'closed',
       details: orderStatus === 'closed'
         ? 'سفارش با موفقیت به اتمام رسید ✓' 
-        : (executionStage === 'collected' || isStageCompletedByNumber(7))
+        : (isScaffoldingNoMaterials
+          ? (fullyPaid ? 'نصب یا فک انجام شده و پرداخت تسویه شده است؛ منتظر اتمام نهایی سفارش' : 'پس از پرداخت، سفارش آماده اتمام نهایی است')
+          : (executionStage === 'collected' || isStageCompletedByNumber(7)))
           ? 'منتظر تایید نهایی مدیر برای اتمام سفارش'
           : undefined,
     },
