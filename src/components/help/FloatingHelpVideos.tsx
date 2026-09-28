@@ -19,6 +19,30 @@ import { useGeneralManagerRole } from '@/hooks/useGeneralManagerRole';
 
 const clamp = (n: number) => Math.min(97, Math.max(0.5, n));
 
+/** محل ذخیره‌شده هر کاربر روی همان دستگاه (بدون دسترسی مدیریتی) */
+const localPosKey = (id: string, isMobile: boolean) =>
+  `help-video-pos-${isMobile ? 'mobile' : 'desktop'}-${id}`;
+
+const readLocalPos = (id: string, isMobile: boolean) => {
+  try {
+    const raw = localStorage.getItem(localPosKey(id, isMobile));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.x === 'number' && typeof parsed?.y === 'number') return parsed as { x: number; y: number };
+  } catch {
+    /* ignore */
+  }
+  return null;
+};
+
+const writeLocalPos = (id: string, isMobile: boolean, pos: { x: number; y: number }) => {
+  try {
+    localStorage.setItem(localPosKey(id, isMobile), JSON.stringify(pos));
+  } catch {
+    /* ignore */
+  }
+};
+
 interface BubbleProps {
   video: HelpVideo;
   canManage: boolean;
