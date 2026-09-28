@@ -36,6 +36,7 @@ import { ExpertPricingEditDialog } from './ExpertPricingEditDialog';
 import { InvoiceEmployerOverrideDialog } from './InvoiceEmployerOverrideDialog';
 import { applyFixedPriceToBreakdown } from '@/lib/priceBreakdown';
 import { OrderDiscountPanel } from './OrderDiscountPanel';
+import { isScaffoldingNoMaterials } from '@/lib/scaffoldingSubtype';
 
 
 const scaffoldingTypeLabels: Record<string, string> = {
@@ -112,6 +113,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   const { toast } = useToast();
   
   const parsedNotes = typeof order.notes === 'object' ? order.notes : parseOrderNotes(order.notes);
+  const isNoMaterialsScaffold = isScaffoldingNoMaterials(order, parsedNotes);
 
   // Fetch approved/completed repair costs, renewals, approvals, and collection date
   useEffect(() => {
@@ -2168,6 +2170,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         approvals={orderApprovals}
         totalPaid={order.total_paid}
         totalPrice={order.total_price || order.payment_amount}
+        isScaffoldingNoMaterials={isNoMaterialsScaffold}
       />
 
       {/* زنجیره انتقال و همکاری بین مدیران */}
@@ -2216,7 +2219,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
           <Wrench className="h-4 w-4" />
           نیاز به تعمیر داربست
         </Button>
-        {['completed', 'paid'].includes(order.status || '') && (
+        {!isNoMaterialsScaffold && ['completed', 'paid'].includes(order.status || '') && (
           <Button 
             variant="outline" 
             className="gap-2"
@@ -2229,7 +2232,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
           </Button>
         )}
         {/* دکمه تمدید سفارش - برای سفارش‌های اجرا شده یا در حال اجرا با تاریخ شروع کرایه */}
-        {(['in_progress', 'completed', 'paid'].includes(order.status || '') || order.rental_start_date) && (
+        {!isNoMaterialsScaffold && (['in_progress', 'completed', 'paid'].includes(order.status || '') || order.rental_start_date) && (
           <Button 
             variant="outline" 
             className="gap-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
