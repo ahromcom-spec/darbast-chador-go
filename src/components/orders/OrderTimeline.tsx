@@ -32,6 +32,7 @@ interface OrderTimelineProps {
   totalPaid?: number | null; // مجموع پرداخت شده
   totalPrice?: number | null; // مبلغ کل سفارش
   hideAmounts?: boolean; // پنهان کردن مبالغ (برای ماژول‌های اجرایی بدون دسترسی مالی)
+  isScaffoldingNoMaterials?: boolean;
   approvals?: Array<{
     approver_role: string;
     approved_at: string | null;
@@ -76,6 +77,7 @@ export const OrderTimeline = ({
   totalPaid,
   totalPrice,
   hideAmounts = false,
+  isScaffoldingNoMaterials = false,
   approvals = [],
 }: OrderTimelineProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -171,43 +173,43 @@ export const OrderTimeline = ({
     },
     {
       status: 'pending_execution',
-      label: 'در انتظار اجرا',
+      label: isScaffoldingNoMaterials ? 'در انتظار نصب یا فک' : 'در انتظار اجرا',
       icon: Clock,
       date: finalApprovalDate,
       completed: isStageCompletedByNumber(1),
       active: isCurrentStageByNumber(1) || orderStatus === 'pending_execution',
       details: isStageCompletedByNumber(1)
-        ? 'سفارش وارد مرحله اجرا شد ✓'
+        ? (isScaffoldingNoMaterials ? 'سفارش وارد مرحله نصب یا فک شد ✓' : 'سفارش وارد مرحله اجرا شد ✓')
         : executionStartDate 
           ? `زمان شروع اجرا: ${formatDate(executionStartDate)?.date} - ${formatDate(executionStartDate)?.time}`
           : (isCurrentStageByNumber(1) || orderStatus === 'pending_execution')
-            ? 'سفارش تایید شد و منتظر شروع اجراست'
+            ? (isScaffoldingNoMaterials ? 'سفارش تایید شد و منتظر شروع نصب یا فک است' : 'سفارش تایید شد و منتظر شروع اجراست')
             : undefined,
     },
     {
       status: 'in_progress',
-      label: 'در حال اجرا',
+      label: isScaffoldingNoMaterials ? 'در حال نصب یا فک' : 'در حال اجرا',
       icon: PlayCircle,
       date: executionStartDate,
       completed: isStageCompletedByNumber(2),
       active: isCurrentStageByNumber(2),
       details: isStageCompletedByNumber(2)
-        ? 'اجرا با موفقیت انجام شد ✓'
+        ? (isScaffoldingNoMaterials ? 'نصب یا فک با موفقیت انجام شد ✓' : 'اجرا با موفقیت انجام شد ✓')
         : executionEndDate 
           ? `مدت زمان اجرا: تا ${formatDate(executionEndDate)?.date} - ${formatDate(executionEndDate)?.time}`
           : isCurrentStageByNumber(2)
-            ? 'تیم اجرایی در حال انجام کار هستند'
+            ? (isScaffoldingNoMaterials ? 'تیم اجرایی در حال نصب یا فک داربست است' : 'تیم اجرایی در حال انجام کار هستند')
             : undefined,
     },
     {
       status: 'order_executed',
-      label: 'اجرا شده',
+      label: isScaffoldingNoMaterials ? 'نصب یا فک انجام شد' : 'اجرا شده',
       icon: CheckCircle2,
       date: executionStage === 'order_executed' ? executionStageUpdatedAt : undefined,
       completed: isStageCompletedByNumber(3),
       active: isCurrentStageByNumber(3),
       details: isStageCompletedByNumber(3) || isCurrentStageByNumber(3)
-        ? 'نصب داربست با موفقیت انجام شد ✓'
+        ? (isScaffoldingNoMaterials ? 'نصب یا فک داربست فلزی با موفقیت انجام شد ✓' : 'نصب داربست با موفقیت انجام شد ✓')
         : undefined,
     },
     (() => {
@@ -291,7 +293,7 @@ export const OrderTimeline = ({
           ? 'منتظر تایید نهایی مدیر برای اتمام سفارش'
           : undefined,
     },
-  ];
+  ].filter((step) => !isScaffoldingNoMaterials || !['awaiting_collection', 'in_collection', 'collected'].includes(step.status));
 
   // Find current active step
   const currentStep = fullyPaid && (executionStage === 'awaiting_payment' || currentStageNumber === 4)
@@ -312,11 +314,11 @@ export const OrderTimeline = ({
     // اگر execution_stage موجود باشد، از آن استفاده کنیم
     if (executionStage) {
       const executionStageLabels: Record<string, string> = {
-        'approved': 'در انتظار اجرا',
-        'pending_execution': 'در انتظار اجرا',
-        'ready': 'آماده اجرا',
-        'in_progress': 'در حال اجرا',
-        'order_executed': 'اجرا شده',
+        'approved': isScaffoldingNoMaterials ? 'در انتظار نصب یا فک' : 'در انتظار اجرا',
+        'pending_execution': isScaffoldingNoMaterials ? 'در انتظار نصب یا فک' : 'در انتظار اجرا',
+        'ready': isScaffoldingNoMaterials ? 'آماده نصب یا فک' : 'آماده اجرا',
+        'in_progress': isScaffoldingNoMaterials ? 'در حال نصب یا فک' : 'در حال اجرا',
+        'order_executed': isScaffoldingNoMaterials ? 'نصب یا فک انجام شد' : 'اجرا شده',
         'awaiting_payment': fullyPaid ? 'پرداخت شد' : 'در انتظار پرداخت',
         'awaiting_collection': 'در انتظار جمع‌آوری',
         'in_collection': 'در حال جمع‌آوری',
