@@ -131,8 +131,19 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
   }, []);
 
 
+  /** ذخیره محل پس از رهاکردن: مدیران روی پایگاه داده (سراسری)، سایر کاربران روی همین دستگاه */
+  const persistPlacementRef = useRef<() => void>(() => {});
+  persistPlacementRef.current = () => {
+    if (canManage) {
+      save();
+    } else {
+      writeLocalPos(video.id, isMobile, { x: pos.x, y: pos.y });
+      toast({ title: 'محل آیکون فیلم راهنما ذخیره شد' });
+    }
+  };
+
   useEffect(() => {
-    if (!editing) return;
+    if (!editing && !holdDragging) return;
     const onMove = (e: PointerEvent) => {
       if (!draggingRef.current) return;
       movedRef.current = true;
@@ -140,7 +151,12 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
       applyPointer(e.clientX, e.clientY);
     };
     const onUp = () => {
+      if (draggingRef.current && holdWasRef.current) {
+        persistPlacementRef.current();
+      }
       draggingRef.current = false;
+      holdWasRef.current = false;
+      setHoldDragging(false);
     };
     window.addEventListener('pointermove', onMove, { passive: false });
     window.addEventListener('pointerup', onUp);
@@ -148,7 +164,7 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
     };
-  }, [editing, applyPointer]);
+  }, [editing, holdDragging, applyPointer]);
 
   const save = async () => {
     try {
