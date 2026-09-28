@@ -141,8 +141,13 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
         } as React.CSSProperties}
       >
 
-        <div className="relative flex flex-col items-center gap-1">
-          {/* آیکون تلویزیونی با قاب قرمز: حس پخش فیلم مهم */}
+        {/* شیشه‌ای ۶۰٪: آیکون و نوشته روی هوا، بدون هیچ کادر پشت */}
+        <div
+          className={cn(
+            'relative flex flex-col items-center gap-1 transition-opacity duration-300',
+            editing ? 'opacity-100' : 'opacity-60'
+          )}
+        >
           <button
             type="button"
             title={video.title}
@@ -158,7 +163,7 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
               setOpen(true);
             }}
             className={cn(
-              'flex items-center justify-center rounded-lg bg-transparent shadow-[0_0_18px_rgba(220,38,38,0.55)] transition-transform hover:scale-105',
+              'flex items-center justify-center rounded-lg bg-transparent transition-transform hover:scale-105',
               editing && 'cursor-move ring-4 ring-red-500/50 animate-pulse'
             )}
             style={{ width: size, height: Math.round(size * 0.85) }}
@@ -166,26 +171,29 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
             {editing ? (
               <Move className="h-1/2 w-1/2 text-red-600" />
             ) : (
-              <svg viewBox="0 0 64 56" className="h-full w-full" fill="none" aria-hidden="true">
+              <svg
+                viewBox="0 0 64 56"
+                className="h-full w-full"
+                fill="none"
+                aria-hidden="true"
+                style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))' }}
+              >
                 {/* آنتن تلویزیون */}
                 <path d="M24 14 L13 3" stroke="#dc2626" strokeWidth="4" strokeLinecap="round" />
                 <path d="M40 14 L51 3" stroke="#dc2626" strokeWidth="4" strokeLinecap="round" />
                 <path d="M24 14 L13 3" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" />
                 <path d="M40 14 L51 3" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" />
-                {/* قاب قرمز تلویزیون */}
-                <rect x="2" y="13" width="60" height="41" rx="8" fill="#0f172a" stroke="#dc2626" strokeWidth="5" />
-                {/* درخشش داخلی صفحه */}
-                <rect x="7" y="18" width="50" height="31" rx="5" fill="#1e293b" />
                 {/* مثلث پخش */}
-                <path d="M27 25 L43 33.5 L27 42 Z" fill="#ffffff" />
+                <path d="M27 22 L43 30.5 L27 39 Z" fill="#ffffff" />
               </svg>
             )}
           </button>
 
           {!editing && (
             <span
-              className="max-w-40 rounded-md border border-border bg-background/95 px-2 py-1 text-center text-xs font-medium leading-5 text-foreground shadow"
+              className="max-w-40 text-center text-xs font-medium leading-5 text-foreground"
               dir="rtl"
+              style={{ textShadow: '0 1px 2px rgba(0,0,0,0.45), 0 0 8px rgba(255,255,255,0.35)' }}
             >
               {video.title}
             </span>
