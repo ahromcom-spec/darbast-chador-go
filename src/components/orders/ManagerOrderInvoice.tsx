@@ -65,6 +65,7 @@ interface OrderRenewal {
   renewal_price: number | null;
   new_start_date: string | null;
   new_end_date: string | null;
+  manager_notes?: string | null;
   part_id?: string | null;
 }
 
@@ -213,7 +214,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
       // Fetch approved renewals (additional monthly costs)
       const { data: renewalData } = await supabase
         .from('order_renewals')
-        .select('id, renewal_number, status, renewal_price, new_start_date, new_end_date, part_id')
+        .select('id, renewal_number, status, renewal_price, new_start_date, new_end_date, manager_notes, part_id')
         .eq('order_id', order.id)
         .eq('status', 'approved')
         .order('renewal_number', { ascending: true });
