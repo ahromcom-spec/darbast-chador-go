@@ -93,7 +93,7 @@ export interface InvoiceExtras {
   subcategoryName: string;
   subcategoryCode?: string | null;
   repairRequests: Array<{ id: string; description: string | null; estimated_cost: number | null; final_cost: number | null; status: string; created_at: string }>;
-  renewals: Array<{ id: string; renewal_number: number | null; status: string | null; renewal_price: number | null; new_start_date: string | null; new_end_date: string | null; part_id?: string | null }>;
+  renewals: Array<{ id: string; renewal_number: number | null; status: string | null; renewal_price: number | null; new_start_date: string | null; new_end_date: string | null; manager_notes?: string | null; part_id?: string | null }>;
   parts?: Array<{
     id: string;
     part_number: number;
@@ -964,11 +964,14 @@ export function buildOrderInvoiceHtml(
                 const renewalDesc = linkedPart
                   ? escapeHtml(partTitle(linkedPart.part_number, linkedPart.title)) + (linkedPart.description ? ` - ${escapeHtml(linkedPart.description)}` : '')
                   : baseDescText;
+                 const renewalNote = renewal.manager_notes?.trim()
+                   ? `<div style="font-size:12px;color:#0f172a;margin-top:3px;white-space:pre-line;"><strong>شرح تمدید:</strong> ${escapeHtml(renewal.manager_notes.trim())}</div>`
+                   : '';
                 const renewalDims = linkedPart ? '' : dimLine;
                 return `
                 <tr class="renewal-row">
                   <td>${(idx + baseCount + 1).toLocaleString('fa-IR')}</td>
-                  <td style="text-align:right;"><strong>تمدید ماه ${(renewal.renewal_number + 1)?.toLocaleString('fa-IR') || (idx + baseCount + 1).toLocaleString('fa-IR')}</strong><div style="font-size:11.5px;color:#334155;margin-top:2px;">${renewalDesc}</div>${renewalDims}</td>
+                   <td style="text-align:right;"><strong>تمدید ماه ${(renewal.renewal_number + 1)?.toLocaleString('fa-IR') || (idx + baseCount + 1).toLocaleString('fa-IR')}</strong>${renewalNote}<div style="font-size:11.5px;color:#334155;margin-top:2px;">${renewalDesc}</div>${renewalDims}</td>
                   <td>${renewal.new_start_date ? formatPersianDate(renewal.new_start_date) : '-'}</td>
                   <td>${renewal.new_end_date ? formatPersianDate(renewal.new_end_date) : '-'}</td>
                   <td>-</td>
@@ -1159,15 +1162,20 @@ export function buildOrderInvoiceHtml(
               const dimLine = dimProduct
                 ? `<div style="font-size:11px;color:#475569;margin-top:2px;">ابعاد: ${dimProduct}${dimComputed > 0 ? ` = ${dimComputed.toLocaleString('fa-IR')} ${getMeasurementUnit()}` : ''}</div>`
                 : '';
-              const renewalRows = renewals.map((renewal, idx) => `
-                <tr class="renewal-row">
-                  <td>${(idx + baseCount + 1).toLocaleString('fa-IR')}</td>
-                  <td style="text-align:right;"><strong>تمدید ماه ${(renewal.renewal_number + 1)?.toLocaleString('fa-IR') || (idx + baseCount + 1).toLocaleString('fa-IR')}</strong><div style="font-size:11.5px;color:#334155;margin-top:2px;">${baseDescText}</div>${dimLine}</td>
-                  <td>${renewal.new_start_date ? formatPersianDate(renewal.new_start_date) : '-'}</td>
-                  <td>${renewal.new_end_date ? formatPersianDate(renewal.new_end_date) : '-'}</td>
-                  <td>-</td>
-                </tr>
-              `).join('');
+              const renewalRows = renewals.map((renewal, idx) => {
+                const renewalNote = renewal.manager_notes?.trim()
+                  ? `<div style="font-size:12px;color:#0f172a;margin-top:3px;white-space:pre-line;"><strong>شرح تمدید:</strong> ${escapeHtml(renewal.manager_notes.trim())}</div>`
+                  : '';
+                return `
+                  <tr class="renewal-row">
+                    <td>${(idx + baseCount + 1).toLocaleString('fa-IR')}</td>
+                    <td style="text-align:right;"><strong>تمدید ماه ${(renewal.renewal_number + 1)?.toLocaleString('fa-IR') || (idx + baseCount + 1).toLocaleString('fa-IR')}</strong>${renewalNote}<div style="font-size:11.5px;color:#334155;margin-top:2px;">${baseDescText}</div>${dimLine}</td>
+                    <td>${renewal.new_start_date ? formatPersianDate(renewal.new_start_date) : '-'}</td>
+                    <td>${renewal.new_end_date ? formatPersianDate(renewal.new_end_date) : '-'}</td>
+                    <td>-</td>
+                  </tr>
+                `;
+              }).join('');
               const repairRows = repairRequests.map((repair, idx) => `
                 <tr class="repair-row">
                   <td>${(idx + baseCount + renewals.length + 1).toLocaleString('fa-IR')}</td>
@@ -1254,7 +1262,7 @@ export async function fetchInvoiceExtras(order: InvoiceOrderLike): Promise<Invoi
     order.province_id ? supabase.from('provinces').select('name').eq('id', order.province_id).maybeSingle() : Promise.resolve({ data: null } as any),
     order.subcategory_id ? supabase.from('subcategories').select('name, code').eq('id', order.subcategory_id).maybeSingle() : Promise.resolve({ data: null } as any),
     supabase.from('repair_requests').select('id, description, estimated_cost, final_cost, status, created_at').eq('order_id', order.id).order('created_at', { ascending: true }),
-    supabase.from('order_renewals').select('id, renewal_number, status, renewal_price, new_start_date, new_end_date').eq('order_id', order.id).eq('status', 'approved').order('renewal_number', { ascending: true }),
+    supabase.from('order_renewals').select('id, renewal_number, status, renewal_price, new_start_date, new_end_date, manager_notes, part_id').eq('order_id', order.id).eq('status', 'approved').order('renewal_number', { ascending: true }),
     supabase.from('projects_v3').select('payment_amount, total_price, total_paid').eq('id', order.id).maybeSingle(),
     supabase.from('collection_requests').select('requested_date, confirmed_date, completed_at, status').eq('order_id', order.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('order_payments').select('id, amount, payment_method, receipt_number, notes, payment_date, created_at').eq('order_id', order.id).order('payment_date', { ascending: true }),

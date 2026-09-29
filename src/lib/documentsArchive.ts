@@ -189,7 +189,7 @@ export async function fetchArchiveDocs(f: ArchiveFilters): Promise<ArchiveDoc[]>
         ? fetchAll((ids) =>
             supabase
               .from('order_renewals')
-              .select('id, order_id, renewal_number, status, renewal_price, new_start_date, new_end_date')
+              .select('id, order_id, renewal_number, status, renewal_price, new_start_date, new_end_date, manager_notes, part_id')
               .in('order_id', ids)
               .eq('status', 'approved')
               .order('renewal_number', { ascending: true }),
