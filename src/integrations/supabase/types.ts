@@ -3668,6 +3668,7 @@ export type Database = {
         Row: {
           content_hash: string | null
           created_at: string
+          description: string | null
           duration_seconds: number | null
           file_path: string
           file_size: number
@@ -3683,6 +3684,7 @@ export type Database = {
         Insert: {
           content_hash?: string | null
           created_at?: string
+          description?: string | null
           duration_seconds?: number | null
           file_path: string
           file_size: number
@@ -3698,6 +3700,7 @@ export type Database = {
         Update: {
           content_hash?: string | null
           created_at?: string
+          description?: string | null
           duration_seconds?: number | null
           file_path?: string
           file_size?: number
