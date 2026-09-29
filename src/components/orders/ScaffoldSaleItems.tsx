@@ -8,8 +8,8 @@ import { parseLocalizedNumber } from '@/lib/numberParsing';
 import { Trash2 } from 'lucide-react';
 
 export const SCAFFOLD_SALE_ITEMS: { k: string; l: string }[] = [
-  { k: 'pipe6', l: 'لوله 6 متری' }, { k: 'pipe5', l: 'لوله 5 متری' }, { k: 'pipe4', l: 'لوله 4 متری' },
-  { k: 'pipe3', l: 'لوله 3 متری' }, { k: 'pipe2', l: 'لوله 2 متری' }, { k: 'pipe1', l: 'لوله 1 متری' },
+  { k: 'pipe6', l: '6 متری' }, { k: 'pipe5', l: '5 متری' }, { k: 'pipe4', l: '4 متری' },
+  { k: 'pipe3', l: '3 متری' }, { k: 'pipe2', l: '2 متری' }, { k: 'pipe1', l: '1 متری' },
   { k: 'mold1', l: 'قالب یک متری' }, { k: 'mold70', l: 'قالب 70 سانتی' }, { k: 'mold50', l: 'قالب 50 سانتی' },
   { k: 'mold30', l: 'قالب 30 سانتی' }, { k: 'clamp', l: 'بست چهارپیچ داربست' }, { k: 'coupler', l: 'رابط داربست' },
 ];
