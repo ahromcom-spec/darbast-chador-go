@@ -167,6 +167,23 @@ serve(async (req: Request): Promise<Response> => {
 
     const safirPhone = phone ? `98${phone.replace(/^0/, "")}` : "";
 
+    // سرور سفیر گاهی اتصال را لحظه‌ای رد می‌کند؛ چند بار با فاصله دوباره تلاش می‌کنیم
+    const safirFetch = async (u: string, init: RequestInit) => {
+      const delays = [0, 3000, 8000, 15000];
+      let lastErr: unknown;
+      for (const d of delays) {
+        if (d) await new Promise((r) => setTimeout(r, d));
+        try {
+          const res = await fetch(u, init);
+          if (res.status >= 500 || res.status === 429) { lastErr = new Error(`HTTP ${res.status}`); continue; }
+          return res;
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+      throw lastErr;
+    };
+
     // ارسال با وب‌سرویس سفیر بله بر پایه شماره تماس (بدون نیاز به شروع گفتگو توسط کاربر)
     const safirSend = async (message: string, fileId?: string) => {
       if (!safirKey || !safirBotId || !safirPhone) {
