@@ -73,11 +73,40 @@ export const useLocations = () => {
           districts (name)
         `)
         .eq('user_id', user.id)
-        .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setLocations(data || []);
+      const all = (data || []) as Location[];
+
+      // آدرس‌هایی که سفارش دارند (حتی بایگانی‌شده) نمایش داده می‌شوند؛
+      // فقط اگر همه سفارش‌ها حذف شده باشند و بیش از یک ماه گذشته باشد، آدرس حذف می‌شود.
+      const inactiveIds = all.filter(l => !l.is_active).map(l => l.id);
+      const keep = new Set<string>();
+      if (inactiveIds.length > 0) {
+        const { data: hps } = await supabase
+          .from('projects_hierarchy')
+          .select('id, location_id')
+          .in('location_id', inactiveIds);
+        const hpToLoc = new Map<string, string>();
+        (hps || []).forEach((h: any) => h.location_id && hpToLoc.set(h.id, h.location_id));
+        const hpIds = [...hpToLoc.keys()];
+        if (hpIds.length > 0) {
+          const { data: orders } = await supabase
+            .from('projects_v3')
+            .select('hierarchy_project_id, is_deep_archived, deep_archived_at')
+            .in('hierarchy_project_id', hpIds);
+          const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+          (orders || []).forEach((o: any) => {
+            const deletedLongAgo =
+              o.is_deep_archived && o.deep_archived_at && new Date(o.deep_archived_at).getTime() < cutoff;
+            if (!deletedLongAgo) {
+              const loc = hpToLoc.get(o.hierarchy_project_id);
+              if (loc) keep.add(loc);
+            }
+          });
+        }
+      }
+      setLocations(all.filter(l => l.is_active || keep.has(l.id)));
     } catch (error) {
       console.error('خطا در بارگذاری آدرس‌ها:', error);
     } finally {
