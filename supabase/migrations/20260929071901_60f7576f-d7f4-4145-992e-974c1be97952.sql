@@ -1,0 +1,1 @@
+ALTER TABLE public.project_media ADD COLUMN IF NOT EXISTS description text;
