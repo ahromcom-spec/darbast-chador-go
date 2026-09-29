@@ -4983,6 +4983,56 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_stage_changes: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          executed_at: string | null
+          id: string
+          last_error: string | null
+          notify_customer: boolean
+          order_id: string
+          run_at: string
+          state: string
+          target_label: string | null
+          target_stage: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          executed_at?: string | null
+          id?: string
+          last_error?: string | null
+          notify_customer?: boolean
+          order_id: string
+          run_at: string
+          state?: string
+          target_label?: string | null
+          target_stage: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          executed_at?: string | null
+          id?: string
+          last_error?: string | null
+          notify_customer?: boolean
+          order_id?: string
+          run_at?: string
+          state?: string
+          target_label?: string | null
+          target_stage?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_stage_changes_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_activity_types: {
         Row: {
           created_at: string | null
@@ -6618,6 +6668,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      can_schedule_stage_changes: { Args: { _uid: string }; Returns: boolean }
       cancel_contractor_service_exit: {
         Args: { _service_id: string }
         Returns: undefined
