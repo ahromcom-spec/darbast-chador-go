@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,7 @@ import { parseLocalizedNumber } from '@/lib/numberParsing';
 import { compressImages, isImageFile } from '@/lib/imageOptimizer';
 import { buildMediaFingerprint, findDuplicateProjectMedia } from '@/lib/mediaFingerprint';
 import { computeEstimate, getFormSchema, Rate } from '@/lib/serviceFormSchemas';
+import { ScaffoldSaleItems, isScaffoldSaleSub, SaleResult } from '@/components/orders/ScaffoldSaleItems';
 import { MapPin, Calculator, UserCheck, Send } from 'lucide-react';
 
 export default function GenericServiceForm() {
@@ -38,6 +39,9 @@ export default function GenericServiceForm() {
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState<false | 'order' | 'expert'>(false);
   const [status, setStatus] = useState('');
+  const isSale = isScaffoldSaleSub(state.subcategoryName);
+  const [sale, setSale] = useState<SaleResult | null>(null);
+  const onSale = useCallback((r: SaleResult) => setSale(r), []);
 
   useEffect(() => {
     if (!subcategoryId) return;
@@ -47,7 +51,7 @@ export default function GenericServiceForm() {
       .then(({ data }) => setRates(((data as any) || []) as Rate[]));
   }, [subcategoryId]);
 
-  const fields = useMemo(() => getFormSchema(state.serviceName, state.subcategoryName, stored), [state.serviceName, state.subcategoryName, stored]);
+  const fields = useMemo(() => isSale ? [] : getFormSchema(state.serviceName, state.subcategoryName, stored), [isSale, state.serviceName, state.subcategoryName, stored]);
   const numericValues = useMemo(() => {
     const o: Record<string, any> = {};
     for (const f of fields) {
@@ -56,7 +60,13 @@ export default function GenericServiceForm() {
     }
     return o;
   }, [values, fields]);
-  const estimate = useMemo(() => computeEstimate(fields, numericValues, rates), [fields, numericValues, rates]);
+  const baseEstimate = useMemo(() => computeEstimate(fields, numericValues, rates), [fields, numericValues, rates]);
+  const estimate = useMemo(() => {
+    if (!isSale) return baseEstimate;
+    const lines = (sale?.lines || []).filter(l => l.unit_price > 0).map(l => ({ label: `${l.label} (${l.qty.toLocaleString('fa-IR')} عدد × ${l.unit_price.toLocaleString('fa-IR')})`, amount: l.amount }));
+    if (sale?.shipping && sale.shippingFee > 0) lines.push({ label: 'هزینه ارسال', amount: sale.shippingFee });
+    return { lines, multiplier: 1, total: sale?.hasPricing ? sale.total : 0, hasPricing: !!sale?.hasPricing || !sale?.lines.length };
+  }, [isSale, sale, baseEstimate]);
 
   if (!subcategoryId) {
     return (
@@ -102,16 +112,23 @@ export default function GenericServiceForm() {
     const missing = fields.find(f => f.required && (numericValues[f.key] === null || numericValues[f.key] === undefined || numericValues[f.key] === ''));
     if (missing) { toast({ title: 'تکمیل فرم', description: `«${missing.label}» را وارد کنید`, variant: 'destructive' }); return; }
 
+    if (isSale && !sale?.lines.length) { toast({ title: 'تکمیل فرم', description: 'حداقل یک جنس با تعداد وارد کنید', variant: 'destructive' }); return; }
     setBusy(mode);
     try {
       const answers = fields.map(f => ({ key: f.key, label: f.label, unit: f.unit || '', value: numericValues[f.key] ?? null }))
         .filter(a => a.value !== null && a.value !== '' && a.value !== undefined);
+      if (isSale && sale) {
+        answers.push({ key: 'condition', label: 'نوع اجناس', unit: '', value: sale.condition === 'new' ? 'نو' : 'دست دوم' });
+        sale.lines.forEach((l, i) => answers.push({ key: `item_${i}`, label: l.label, unit: 'عدد', value: l.qty }));
+        answers.push({ key: 'shipping', label: 'نیاز به ارسال', unit: '', value: sale.shipping ? 'بله' : 'خیر' });
+      }
       const details = answers.map(a => `${a.label}: ${a.value === true ? 'بله' : a.value} ${a.unit}`.trim()).join('\n');
       const useEstimate = mode === 'order' && estimate.hasPricing && estimate.total > 0;
       const notes = {
         service_type: 'generic',
         is_generic_service_form: true,
         form_answers: answers,
+        ...(isSale && sale ? { scaffold_sale: sale } : {}),
         description: sanitizeHtml(description),
         service_details: sanitizeHtml(details + (description ? `\nتوضیحات: ${description}` : '')),
         estimated_price: useEstimate ? estimate.total : null,
@@ -175,6 +192,7 @@ export default function GenericServiceForm() {
             )}
           </CardHeader>
           <CardContent className="space-y-4">
+            {isSale && <ScaffoldSaleItems subcategoryId={subcategoryId} onChange={onSale} />}
             {fields.map(f => (
               <div key={f.key} className="space-y-1">
                 <Label>{f.label}{f.unit ? ` (${f.unit})` : ''}{f.required && <span className="text-destructive"> *</span>}</Label>
