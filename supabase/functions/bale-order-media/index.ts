@@ -54,17 +54,26 @@ Deno.serve(async (req) => {
     if (dup) return json({ skipped: "duplicate" });
 
     const { data: order } = await supabase
-      .from("projects_v3").select("code, customer_phone").eq("id", claimed.project_id).maybeSingle();
+      .from("projects_v3").select("code, customer_phone, address, detailed_address").eq("id", claimed.project_id).maybeSingle();
     if (!order?.customer_phone) return json({ skipped: "no phone" });
+
+    // آخرین توضیحات ثبت‌شده را دوباره بخوان
+    const { data: fresh } = await supabase
+      .from("project_media").select("description, media_date").eq("id", claimed.id).maybeSingle();
+    const description = (fresh?.description ?? claimed.description ?? "").toString().trim();
+    const address = [order.address, order.detailed_address]
+      .map((s: any) => (s || "").toString().trim()).filter(Boolean)
+      .filter((s: string, i: number, a: string[]) => a.indexOf(s) === i).join(" - ");
 
     const isVideo = String(claimed.file_type || "").startsWith("video");
     const { data: pub } = supabase.storage.from("project-media").getPublicUrl(claimed.file_path);
     const lines = [
       "خدمات ساختمانی و منزل اهرم",
       `${isVideo ? "فیلم" : "عکس"} جدید سفارش ${order.code || ""}`,
-      `تاریخ: ${toJalali(claimed.media_date || claimed.created_at)}`,
+      `تاریخ: ${toJalali(fresh?.media_date || claimed.media_date || claimed.created_at)}`,
     ];
-    if (claimed.description) lines.push(`توضیحات: ${claimed.description}`);
+    if (address) lines.push(`آدرس: ${address}`);
+    if (description) lines.push(`توضیحات: ${description}`);
     lines.push("ahrom.ir");
 
     const r = await fetch(`${url}/functions/v1/send-bale-message`, {
