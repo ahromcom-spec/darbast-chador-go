@@ -29,8 +29,7 @@ export async function syncLocationActiveStatusByOrderId(orderId: string) {
       .from('projects_v3')
       .select('id', { count: 'exact', head: true })
       .eq('hierarchy_project_id', hierarchyProjectId)
-      .neq('status', 'rejected')
-      .or('is_deep_archived.is.null,is_deep_archived.eq.false');
+      .or(`is_deep_archived.is.null,is_deep_archived.eq.false,deep_archived_at.gt.${new Date(Date.now() - 30 * 86400000).toISOString()}`);
 
     await supabase
       .from('locations')
