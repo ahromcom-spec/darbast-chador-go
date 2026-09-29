@@ -475,43 +475,22 @@ const handler = async (req: Request): Promise<Response> => {
         messenger?.enabled === true && (!isCeoNotification || messenger?.notify_ceo !== false);
 
       if (baleAllowed) {
+        // عکس و فیلم فقط هنگام افزوده شدن به سفارش (bale-order-media) ارسال می‌شود، نه با تغییر مرحله
         const media: Array<{ url: string; type: "photo" | "video" }> = [];
-        if (messenger?.send_media !== false && orderId) {
-          const seen = new Set<string>();
-          const pushRows = (rows: any[] | null) => {
-            for (const row of rows ?? []) {
-              const path = String(row?.file_path || "");
-              if (!path || seen.has(path)) continue;
-              seen.add(path);
-              const type = String(row?.file_type || "").startsWith("video") ? "video" : "photo";
-              const { data: pub } = supabase.storage.from("project-media").getPublicUrl(path);
-              if (pub?.publicUrl) media.push({ url: pub.publicUrl, type });
-            }
-          };
-
-          // اول رسانه‌های تأییدشده مدیرعامل، سپس رسانه‌های ثبت‌شده روی سفارش
-          const { data: approvedRows } = await supabase
-            .from("approved_media")
-            .select("file_path, file_type")
+        let alreadySent = false;
+        if (orderId) {
+          const { data: prev } = await supabase
+            .from("messenger_logs")
+            .select("id")
+            .eq("provider", "bale")
             .eq("order_id", orderId)
-            .eq("status", "approved")
-            .eq("is_visible", true)
-            .order("created_at", { ascending: false })
-            .limit(6);
-          pushRows(approvedRows as any[]);
-
-          if (media.length < 6) {
-            const { data: mediaRows } = await supabase
-              .from("project_media")
-              .select("file_path, file_type")
-              .eq("project_id", orderId)
-              .order("created_at", { ascending: false })
-              .limit(6 - media.length);
-            pushRows(mediaRows as any[]);
-          }
+            .eq("kind", "text")
+            .eq("status", "sent")
+            .eq("text", message)
+            .limit(1);
+          alreadySent = (prev?.length ?? 0) > 0;
         }
-
-
+        if (!alreadySent)
         await fetch(`${supabaseUrl}/functions/v1/send-bale-message`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${supabaseKey}` },
