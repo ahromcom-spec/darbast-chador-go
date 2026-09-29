@@ -23,6 +23,7 @@ interface MediaFile {
   file_size?: number | null;
   content_hash?: string | null;
   duration_seconds?: number | null;
+  description?: string | null;
 }
 
 /** تاریخ مؤثر هر رسانه: تاریخ تنظیم‌شده، در غیر این صورت تاریخ بارگذاری */
@@ -190,6 +191,74 @@ function MediaDateEditor({
   );
 }
 
+/** توضیحات هر عکس/فیلم با امکان افزودن و ویرایش */
+function MediaCaption({
+  value,
+  canEdit,
+  onSave,
+}: {
+  value?: string | null;
+  canEdit: boolean;
+  onSave: (text: string) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value || '');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => setDraft(value || ''), [value]);
+
+  if (editing) {
+    return (
+      <div className="p-2 space-y-1.5 border-t bg-background" onClick={(e) => e.stopPropagation()}>
+        <textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value.slice(0, 1000))}
+          rows={2}
+          autoFocus
+          placeholder="توضیحات این عکس/فیلم..."
+          className="w-full rounded-md border bg-background p-1.5 text-xs resize-y"
+        />
+        <div className="flex gap-1">
+          <Button
+            size="sm"
+            className="h-7 text-xs flex-1"
+            disabled={saving}
+            onClick={async () => {
+              setSaving(true);
+              try {
+                await onSave(draft.trim());
+                setEditing(false);
+              } finally {
+                setSaving(false);
+              }
+            }}
+          >
+            {saving ? 'در حال ذخیره...' : 'ذخیره'}
+          </Button>
+          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setDraft(value || ''); setEditing(false); }}>
+            انصراف
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!value && !canEdit) return null;
+
+  return (
+    <div className="p-2 border-t bg-muted/30 text-xs flex items-start gap-1" onClick={(e) => e.stopPropagation()}>
+      <p className={`flex-1 whitespace-pre-wrap break-words ${value ? 'text-foreground' : 'text-muted-foreground'}`}>
+        {value || 'بدون توضیحات'}
+      </p>
+      {canEdit && (
+        <Button size="sm" variant="ghost" className="h-6 px-1.5 text-xs shrink-0" onClick={() => setEditing(true)}>
+          {value ? 'ویرایش' : 'افزودن توضیح'}
+        </Button>
+      )}
+    </div>
+  );
+}
+
 interface OrderMediaSectionProps {
   orderId: string;
   canUpload?: boolean;
@@ -251,7 +320,7 @@ export function OrderMediaSection({
     try {
       const { data, error } = await supabase
         .from('project_media')
-        .select('id, file_path, file_type, mime_type, thumbnail_path, created_at, media_date, user_id, file_size, content_hash, duration_seconds')
+        .select('id, file_path, file_type, mime_type, thumbnail_path, created_at, media_date, user_id, file_size, content_hash, duration_seconds, description')
         .eq('project_id', orderId)
         .order('created_at', { ascending: false });
 
@@ -533,6 +602,18 @@ export function OrderMediaSection({
     onMediaChange?.();
   };
 
+  const canEditItem = (m: MediaFile) => allowDateEdit || (!!currentUserId && m.user_id === currentUserId);
+
+  const updateMediaDescription = async (id: string, text: string) => {
+    const { error } = await supabase.from('project_media').update({ description: text || null } as any).eq('id', id);
+    if (error) {
+      toast({ title: 'خطا', description: 'ذخیره توضیحات انجام نشد', variant: 'destructive' });
+      throw error;
+    }
+    setMediaFiles((prev) => prev.map((m) => (m.id === id ? { ...m, description: text || null } : m)));
+    toast({ title: '✓ توضیحات ذخیره شد' });
+  };
+
   const handleDeleteMedia = async (mediaId: string, mediaPath: string) => {
     if (!confirm('آیا از حذف این رسانه اطمینان دارید؟')) return;
 
@@ -778,7 +859,7 @@ export function OrderMediaSection({
                                   )}
                                 </Button>
                               )}
-                              {allowDateEdit && (
+                              {canEditItem(media) && (
                                 <MediaDateEditor
                                   compact
                                   value={effectiveDate(media)}
@@ -787,6 +868,12 @@ export function OrderMediaSection({
                                 />
                               )}
                             </div>
+
+                            <MediaCaption
+                              value={media.description}
+                              canEdit={canEditItem(media)}
+                              onSave={(t) => updateMediaDescription(media.id, t)}
+                            />
 
                             {showUploader && (
                               <div className="p-2 bg-muted/50 text-xs text-muted-foreground border-t flex items-center gap-1">
@@ -854,7 +941,7 @@ export function OrderMediaSection({
                                     )}
                                   </Button>
                                 )}
-                                {allowDateEdit && (
+                                {canEditItem(media) && (
                                   <MediaDateEditor
                                     compact
                                     value={effectiveDate(media)}
@@ -868,7 +955,7 @@ export function OrderMediaSection({
                                 <Button
                                   size="sm"
                                   variant="secondary"
-                                  className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleDownloadVideo(url, fileName);
@@ -878,6 +965,14 @@ export function OrderMediaSection({
                                   دانلود
                                 </Button>
                               )}
+
+                              <div className="rounded-b-lg border border-t-0 overflow-hidden">
+                                <MediaCaption
+                                  value={media.description}
+                                  canEdit={canEditItem(media)}
+                                  onSave={(t) => updateMediaDescription(media.id, t)}
+                                />
+                              </div>
 
                               {showUploader && (
                                 <div className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
