@@ -373,6 +373,32 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
   return createPortal(bubble, document.body);
 };
 
+/** نشانه‌های بارگذاری صفحه: چرخنده، اسکلت یا نوشته «در حال بارگذاری» */
+const hasLoadingIndicators = (): boolean => {
+  const body = document.body;
+  if (!body) return true;
+  if (
+    body.querySelector(
+      '.animate-spin, [class*="skeleton"], [class*="Skeleton"], [data-loading="true"]'
+    )
+  ) {
+    return true;
+  }
+  // نوشته «در حال بارگذاری» به‌عنوان تنها محتوای یک عنصر (بررسی سبک روی عناصر برگ)
+  const nodes = body.querySelectorAll<HTMLElement>('div, p, span');
+  let scanned = 0;
+  for (const el of nodes) {
+    if (el.children.length !== 0) continue;
+    scanned++;
+    if (scanned > 4000) break;
+    const t = el.textContent?.trim() ?? '';
+    if (t.length <= 40 && /در حال بارگذاری|بارگذاری\.\.\.|بارگذاری صفحه/.test(t)) {
+      return true;
+    }
+  }
+  return false;
+};
+
 /**
  * راهنماهای ویدیویی شناور: هر راهنما در مختصات دلخواهی که مدیر تعیین کرده روی صفحه قرار می‌گیرد
  * و مدیران می‌توانند همان‌جا آن را با کشیدن جابجا و اندازه‌اش را تنظیم کنند.
@@ -383,6 +409,8 @@ export const FloatingHelpVideos = () => {
   const { videos: exactVideos, loading: exactLoading } = useFloatingHelpVideos(routeWithQuery);
   const { videos: pathVideos, loading: pathLoading } = useFloatingHelpVideos(location.pathname);
   const [pagePainted, setPagePainted] = useState(false);
+  /** تا بارگذاری واقعی صفحه تمام نشده، آیکون نشان داده نمی‌شود */
+  const [pageReady, setPageReady] = useState(false);
 
   const { isCEO } = useCEORole();
   const { isAdmin } = useAdminRole();
@@ -402,6 +430,7 @@ export const FloatingHelpVideos = () => {
   // خود این بخش داخل Suspense قرار دارد، پس هنگام پنجره «در حال بارگذاری» اصلاً رندر نمی‌شود.
   useEffect(() => {
     setPagePainted(false);
+    setPageReady(false);
     let secondFrame = 0;
     const firstFrame = window.requestAnimationFrame(() => {
       secondFrame = window.requestAnimationFrame(() => setPagePainted(true));
@@ -412,7 +441,25 @@ export const FloatingHelpVideos = () => {
     };
   }, [routeWithQuery]);
 
-  if (exactLoading || pathLoading || !pagePainted || videos.length === 0) return null;
+  // پس از نقش‌بستن صفحه، تا زمانی که اسکلت/چرخنده بارگذاری در صفحه هست صبر می‌کنیم.
+  // برای اطمینان، حداکثر ۵ ثانیه بعد آیکون به هر حال نشان داده می‌شود.
+  useEffect(() => {
+    if (!pagePainted) return;
+    let forceTimer = 0;
+    const check = () => {
+      if (!hasLoadingIndicators()) setPageReady(true);
+    };
+    const earlyTimer = window.setTimeout(check, 120);
+    const interval = window.setInterval(check, 300);
+    forceTimer = window.setTimeout(() => setPageReady(true), 5000);
+    return () => {
+      window.clearTimeout(earlyTimer);
+      window.clearInterval(interval);
+      window.clearTimeout(forceTimer);
+    };
+  }, [pagePainted]);
+
+  if (exactLoading || pathLoading || !pagePainted || !pageReady || videos.length === 0) return null;
 
   return (
     <>
