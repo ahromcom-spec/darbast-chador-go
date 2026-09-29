@@ -3666,6 +3666,7 @@ export type Database = {
       }
       project_media: {
         Row: {
+          bale_sent_at: string | null
           content_hash: string | null
           created_at: string
           description: string | null
@@ -3682,6 +3683,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          bale_sent_at?: string | null
           content_hash?: string | null
           created_at?: string
           description?: string | null
@@ -3698,6 +3700,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          bale_sent_at?: string | null
           content_hash?: string | null
           created_at?: string
           description?: string | null

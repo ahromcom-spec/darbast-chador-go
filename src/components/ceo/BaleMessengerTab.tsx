@@ -403,6 +403,11 @@ export const BaleMessengerTab = () => {
                         ) : (
                           "—"
                         )}
+                        {l.text && (
+                          <p className="mt-1 max-w-[260px] whitespace-pre-line text-[11px] text-muted-foreground">
+                            {l.text}
+                          </p>
+                        )}
                       </TableCell>
                       <TableCell dir="ltr" className="text-xs">{l.order_code || "—"}</TableCell>
                       <TableCell>

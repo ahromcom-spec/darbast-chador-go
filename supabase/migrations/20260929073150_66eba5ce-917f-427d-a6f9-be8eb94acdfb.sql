@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.notify_bale_new_project_media() FROM PUBLIC, anon, authenticated;
