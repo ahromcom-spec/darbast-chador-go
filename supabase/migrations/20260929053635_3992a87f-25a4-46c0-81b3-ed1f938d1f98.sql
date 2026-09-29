@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.can_schedule_stage_changes(uuid) FROM PUBLIC, anon;
