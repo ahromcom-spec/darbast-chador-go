@@ -18,6 +18,7 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
+import { ScheduledStageChange } from '@/components/orders/ScheduledStageChange';
 import { formatPersianDateTimeFull, formatPersianDate } from '@/lib/dateUtils';
 import { setOrderScheduleSchema, sendNotificationSchema } from '@/lib/rpcValidation';
 import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
@@ -1771,6 +1772,18 @@ export default function ExecutiveOrders() {
                       ))}
                     </SelectContent>
                   </Select>
+                  <ScheduledStageChange
+                    orderId={order.id}
+                    orderCode={order.code}
+                    stages={executionStages
+                      .filter((stage) => !isNoMaterialsScaffold || !['awaiting_collection', 'in_collection', 'collected'].includes(stage.key))
+                      .map((stage) => ({
+                        key: stage.key,
+                        label: isNoMaterialsScaffold
+                          ? ({ pending_execution: 'در انتظار نصب یا فک', in_progress: 'در حال نصب یا فک', order_executed: 'نصب یا فک انجام شد' } as Record<string, string>)[stage.key] || stage.label
+                          : stage.label,
+                      }))}
+                  />
                 </div>
                 
                 {order.detailed_address && (
