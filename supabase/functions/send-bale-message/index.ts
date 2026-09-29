@@ -192,7 +192,7 @@ serve(async (req: Request): Promise<Response> => {
       const msg: Record<string, unknown> = {};
       if (message) msg.text = message.slice(0, 3000);
       if (fileId) msg.file_id = fileId;
-      const res = await fetch("https://safir.bale.ai/api/v3/send_message", {
+      const res = await safirFetch("https://safir.bale.ai/api/v3/send_message", {
         method: "POST",
         headers: { "api-access-key": safirKey, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -244,7 +244,7 @@ serve(async (req: Request): Promise<Response> => {
         const name = (url.split("?")[0].split("/").pop() || "file").slice(-80);
         const form = new FormData();
         form.append("file", new Blob([buf], { type: contentType }), name);
-        const upRes = await fetch("https://safir.bale.ai/api/v3/upload_file", {
+        const upRes = await safirFetch("https://safir.bale.ai/api/v3/upload_file", {
           method: "POST",
           headers: { "api-access-key": safirKey },
           body: form,
