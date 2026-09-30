@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.notify_site_assistant_question() FROM PUBLIC, anon, authenticated;
