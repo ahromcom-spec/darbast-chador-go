@@ -248,6 +248,7 @@ export function MobileProjectPanel({
   onViewVideo,
   hideFinancials = false,
   managerView = false,
+  dailyReportMode = false,
   onViewOrderDetails,
 }: MobileProjectPanelProps) {
   const navigate = useNavigate();
@@ -593,8 +594,8 @@ export function MobileProjectPanel({
       </div>
 
 
-      {/* دکمه افزودن خدمات جدید - بیرون از کادر سفارشات با ناحیه لمسی بزرگ */}
-      {project.location_id && (
+      {/* دکمه افزودن خدمات جدید - بیرون از کادر سفارشات با ناحیه لمسی بزرگ — در نمای گزارش روزانه نمایش داده نمی‌شود */}
+      {project.location_id && !dailyReportMode && (
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-gradient-to-r from-muted/30 to-muted/10">
           <div className="flex items-center gap-0">
             <div className="w-4 h-4 bg-red-500 rounded-full border-2 border-red-200 shadow-[0_0_8px_rgba(239,68,68,0.5)] flex-shrink-0" />
