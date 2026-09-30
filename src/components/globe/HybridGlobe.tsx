@@ -3412,7 +3412,8 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           </div>
         </Card>
 
-        {/* مکان‌نمای ثابت مرکز نقشه */}
+        {/* مکان‌نمای ثابت مرکز نقشه — فقط نقشه عمومی؛ در تب اجرایی نقشه تمیز می‌ماند */}
+        {!activeExecutionOnly && (
         <div className="pointer-events-none absolute left-1/2 top-1/2 z-[2200] -translate-x-1/2 -translate-y-full">
           <svg width="42" height="52" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg">
             <ellipse cx="20" cy="48" rx="7" ry="2" fill="rgba(0,0,0,0.25)" />
@@ -3425,9 +3426,10 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             <circle cx="20" cy="16" r="5.5" fill="white" />
           </svg>
         </div>
+        )}
 
-        {/* دکمه انتخاب پروژه فقط زمانی که مکان‌نما روی پروژه قرار گرفته */}
-        {snappedProject && (
+        {/* دکمه انتخاب پروژه فقط زمانی که مکان‌نما روی پروژه قرار گرفته — در تب اجرایی نمایش داده نمی‌شود */}
+        {!activeExecutionOnly && snappedProject && (
           <div className={`pointer-events-auto absolute ${activeExecutionOnly ? 'bottom-4' : 'bottom-[4.75rem]'} left-1/2 -translate-x-1/2 w-[90%] max-w-md z-[2200]`}>
             <Button
               className="w-full h-11 text-sm font-bold shadow-xl bg-green-600 hover:bg-green-700 text-white"
