@@ -633,7 +633,8 @@ export function MobileProjectPanel({
                     <h3 className="text-sm font-bold text-primary">
                       {group.name}
                     </h3>
-                    {/* دکمه سفارش جدید کنار نام نوع خدمات */}
+                    {/* دکمه سفارش جدید کنار نام نوع خدمات — در نمای گزارش روزانه نمایش داده نمی‌شود */}
+                    {!dailyReportMode && (
                     <Button
                       size="sm"
                       className="bg-emerald-500 hover:bg-emerald-600 text-white h-8 px-3 text-xs font-bold"
