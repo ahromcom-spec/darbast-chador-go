@@ -241,6 +241,7 @@ export default function ExecutiveOrders() {
   // Stage change confirmation
   const [stageChangeConfirmOpen, setStageChangeConfirmOpen] = useState(false);
   const [pendingStageChange, setPendingStageChange] = useState<{ orderId: string; newStage: string } | null>(null);
+  const [stageNoteText, setStageNoteText] = useState('');
   // Cash payment confirmation
   const [cashPaymentDialogOpen, setCashPaymentDialogOpen] = useState(false);
   // Collection request dialog
@@ -714,7 +715,7 @@ export default function ExecutiveOrders() {
   };
 
   // تغییر مرحله سفارش به هر مرحله دلخواه
-  const handleStageChange = async (orderId: string, newStage: string) => {
+  const handleStageChange = async (orderId: string, newStage: string, stageNote?: string) => {
     const stage = executionStages.find(s => s.key === newStage);
     if (!stage) return;
 
@@ -748,6 +749,12 @@ export default function ExecutiveOrders() {
         execution_stage_updated_at: new Date().toISOString(),
         status: stage.statusMapping
       };
+      const trimmedNote = (stageNote || '').trim();
+      if (trimmedNote) {
+        updateData.stage_note = trimmedNote;
+        updateData.stage_note_label = stage.label;
+        updateData.stage_note_at = new Date().toISOString();
+      }
 
       // دریافت اطلاعات کاربر جاری برای ثبت approved_by
       const { data: authData } = await supabase.auth.getUser();
@@ -2692,6 +2699,17 @@ export default function ExecutiveOrders() {
               )}
             </DialogDescription>
           </DialogHeader>
+          <div className="space-y-1.5">
+            <Label>توضیحات مرحله جدید (برای مدیر اجرایی)</Label>
+            <Textarea
+              value={stageNoteText}
+              onChange={(e) => setStageNoteText(e.target.value)}
+              placeholder="مثلاً: روز جمعه آقای موسوی گفتند حتماً داربست باز شود و قبل از آمدن تماس بگیرید."
+              rows={4}
+              maxLength={1500}
+            />
+            <p className="text-xs text-muted-foreground">این متن روی نقشه لوکیشن پروژه در گزارش روزانه نمایش داده می‌شود. خالی بگذارید اگر توضیحی ندارید.</p>
+          </div>
           <p className="text-sm text-muted-foreground">
             با تایید این عملیات، مشتری از تغییر مرحله سفارش مطلع خواهد شد.
           </p>
@@ -2701,6 +2719,7 @@ export default function ExecutiveOrders() {
               onClick={() => {
                 setStageChangeConfirmOpen(false);
                 setPendingStageChange(null);
+                setStageNoteText('');
               }}
             >
               انصراف
@@ -2708,10 +2727,11 @@ export default function ExecutiveOrders() {
             <Button 
               onClick={() => {
                 if (pendingStageChange) {
-                  handleStageChange(pendingStageChange.orderId, pendingStageChange.newStage);
+                  handleStageChange(pendingStageChange.orderId, pendingStageChange.newStage, stageNoteText);
                 }
                 setStageChangeConfirmOpen(false);
                 setPendingStageChange(null);
+                setStageNoteText('');
               }}
             >
               تایید تغییر مرحله
