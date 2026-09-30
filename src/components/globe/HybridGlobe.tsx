@@ -101,6 +101,9 @@ const isActiveExecutionOrder = (o: any, repairOrderIds?: Set<string>) => {
 };
 
 export default function HybridGlobe({ onClose, activeExecutionOnly = false, embedded = false, onViewOrderDetails }: HybridGlobeProps) {
+  // رفرش همیشه به‌روز؛ در تعمیرهای داخل هندلرهای نقشه از رفر استفاده می‌کنیم تا مقدار قدیمی نشود
+  const activeExecutionOnlyRef = useRef(activeExecutionOnly);
+  activeExecutionOnlyRef.current = activeExecutionOnly;
   
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
