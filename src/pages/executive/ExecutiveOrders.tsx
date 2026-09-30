@@ -2744,6 +2744,7 @@ export default function ExecutiveOrders() {
                 setStageChangeConfirmOpen(false);
                 setPendingStageChange(null);
                 setStageNoteText('');
+                setStageExecutionDate('');
               }}
             >
               انصراف
@@ -2751,11 +2752,12 @@ export default function ExecutiveOrders() {
             <Button 
               onClick={() => {
                 if (pendingStageChange) {
-                  handleStageChange(pendingStageChange.orderId, pendingStageChange.newStage, stageNoteText);
+                  handleStageChange(pendingStageChange.orderId, pendingStageChange.newStage, stageNoteText, stageExecutionDate || undefined);
                 }
                 setStageChangeConfirmOpen(false);
                 setPendingStageChange(null);
                 setStageNoteText('');
+                setStageExecutionDate('');
               }}
             >
               تایید تغییر مرحله
