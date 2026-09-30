@@ -1990,6 +1990,27 @@ export type Database = {
         }
         Relationships: []
       }
+      impersonation_sessions: {
+        Row: {
+          admin_user_id: string
+          created_at: string
+          session_id: string
+          target_user_id: string
+        }
+        Insert: {
+          admin_user_id: string
+          created_at?: string
+          session_id: string
+          target_user_id: string
+        }
+        Update: {
+          admin_user_id?: string
+          created_at?: string
+          session_id?: string
+          target_user_id?: string
+        }
+        Relationships: []
+      }
       internal_staff_profiles: {
         Row: {
           created_at: string | null
@@ -5682,6 +5703,8 @@ export type Database = {
       }
       site_notifications: {
         Row: {
+          actor_name: string | null
+          actor_source: string | null
           actor_user_id: string | null
           admin_note: string | null
           body: string | null
@@ -5690,6 +5713,8 @@ export type Database = {
           customer_phone: string | null
           event_type: string
           id: string
+          impersonator_name: string | null
+          impersonator_user_id: string | null
           is_dismissed: boolean
           is_important: boolean
           order_code: string | null
@@ -5700,6 +5725,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          actor_name?: string | null
+          actor_source?: string | null
           actor_user_id?: string | null
           admin_note?: string | null
           body?: string | null
@@ -5708,6 +5735,8 @@ export type Database = {
           customer_phone?: string | null
           event_type: string
           id?: string
+          impersonator_name?: string | null
+          impersonator_user_id?: string | null
           is_dismissed?: boolean
           is_important?: boolean
           order_code?: string | null
@@ -5718,6 +5747,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          actor_name?: string | null
+          actor_source?: string | null
           actor_user_id?: string | null
           admin_note?: string | null
           body?: string | null
@@ -5726,6 +5757,8 @@ export type Database = {
           customer_phone?: string | null
           event_type?: string
           id?: string
+          impersonator_name?: string | null
+          impersonator_user_id?: string | null
           is_dismissed?: boolean
           is_important?: boolean
           order_code?: string | null
