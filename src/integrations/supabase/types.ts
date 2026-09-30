@@ -7121,6 +7121,7 @@ export type Database = {
             }
             Returns: string
           }
+      log_auth_event: { Args: { _kind: string }; Returns: undefined }
       lookup_profile_by_phone: {
         Args: { _phone: string }
         Returns: {
