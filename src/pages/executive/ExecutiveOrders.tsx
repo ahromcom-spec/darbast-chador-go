@@ -242,6 +242,7 @@ export default function ExecutiveOrders() {
   const [stageChangeConfirmOpen, setStageChangeConfirmOpen] = useState(false);
   const [pendingStageChange, setPendingStageChange] = useState<{ orderId: string; newStage: string } | null>(null);
   const [stageNoteText, setStageNoteText] = useState('');
+  const [stageExecutionDate, setStageExecutionDate] = useState('');
   // Cash payment confirmation
   const [cashPaymentDialogOpen, setCashPaymentDialogOpen] = useState(false);
   // Collection request dialog
@@ -715,7 +716,7 @@ export default function ExecutiveOrders() {
   };
 
   // تغییر مرحله سفارش به هر مرحله دلخواه
-  const handleStageChange = async (orderId: string, newStage: string, stageNote?: string) => {
+  const handleStageChange = async (orderId: string, newStage: string, stageNote?: string, executionDateIso?: string) => {
     const stage = executionStages.find(s => s.key === newStage);
     if (!stage) return;
 
@@ -831,6 +832,11 @@ export default function ExecutiveOrders() {
           updateData.payment_amount = estimatedPrice;
           updateData.total_price = estimatedPrice;
         }
+      }
+
+      // تاریخ نصب یا فک دستی (خدمات داربست بدون اجناس)
+      if (executionDateIso && targetIdx > 0) {
+        updateData.execution_end_date = executionDateIso;
       }
 
       const { data: updatedRows, error } = await supabase
