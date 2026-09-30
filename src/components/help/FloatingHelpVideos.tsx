@@ -411,6 +411,16 @@ export const FloatingHelpVideos = () => {
   const [pagePainted, setPagePainted] = useState(false);
   /** تا بارگذاری واقعی صفحه تمام نشده، آیکون نشان داده نمی‌شود */
   const [pageReady, setPageReady] = useState(false);
+  /** صفحه‌ای مثل تب «لوکیشن اجرایی پروژه» می‌تواند راهنماهای شناور را موقتاً پنهان کند */
+  const [helpSuppressed, setHelpSuppressed] = useState(false);
+
+  useEffect(() => {
+    const onSuppress = (e: Event) => {
+      setHelpSuppressed(Boolean((e as CustomEvent).detail?.suppressed));
+    };
+    window.addEventListener(FLOATING_HELP_SUPPRESS_EVENT, onSuppress);
+    return () => window.removeEventListener(FLOATING_HELP_SUPPRESS_EVENT, onSuppress);
+  }, []);
 
   const { isCEO } = useCEORole();
   const { isAdmin } = useAdminRole();
