@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
+import { FLOATING_HELP_SUPPRESS_EVENT } from '@/lib/floatingHelpSuppression';
 import { Move, PlayCircle, Check, Minus, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -411,6 +412,16 @@ export const FloatingHelpVideos = () => {
   const [pagePainted, setPagePainted] = useState(false);
   /** تا بارگذاری واقعی صفحه تمام نشده، آیکون نشان داده نمی‌شود */
   const [pageReady, setPageReady] = useState(false);
+  /** صفحه‌ای مثل تب «لوکیشن اجرایی پروژه» می‌تواند راهنماهای شناور را موقتاً پنهان کند */
+  const [helpSuppressed, setHelpSuppressed] = useState(false);
+
+  useEffect(() => {
+    const onSuppress = (e: Event) => {
+      setHelpSuppressed(Boolean((e as CustomEvent).detail?.suppressed));
+    };
+    window.addEventListener(FLOATING_HELP_SUPPRESS_EVENT, onSuppress);
+    return () => window.removeEventListener(FLOATING_HELP_SUPPRESS_EVENT, onSuppress);
+  }, []);
 
   const { isCEO } = useCEORole();
   const { isAdmin } = useAdminRole();
@@ -459,7 +470,7 @@ export const FloatingHelpVideos = () => {
     };
   }, [pagePainted]);
 
-  if (exactLoading || pathLoading || !pagePainted || !pageReady || videos.length === 0) return null;
+  if (helpSuppressed || exactLoading || pathLoading || !pagePainted || !pageReady || videos.length === 0) return null;
 
   return (
     <>

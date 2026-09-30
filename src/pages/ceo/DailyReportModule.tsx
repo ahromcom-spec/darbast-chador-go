@@ -4,6 +4,7 @@ import { findDuplicateProjectMedia } from '@/lib/mediaFingerprint';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard, RotateCcw, AlertTriangle, Clock, Lock, Unlock, Printer, ZoomIn, ZoomOut, ChevronUp, ChevronDown, CalendarPlus } from 'lucide-react';
 import { openOrderSheet } from '@/lib/orderExecutionSheet';
+import { setFloatingHelpSuppressed } from '@/lib/floatingHelpSuppression';
 
 import { useDateFinalizationLock } from '@/hooks/useDateFinalizationLock';
 import { useDailyReportBulkDelete } from '@/hooks/useDailyReportBulkDelete';
@@ -738,6 +739,13 @@ export default function DailyReportModule() {
   const [activeTab, setActiveTab] = useState<string>(() => {
     return localStorage.getItem('dailyReportActiveTab') || 'new-report';
   });
+
+  // در تب «لوکیشن اجرایی پروژه» راهنمای ویدیویی شناور ماژول پنهان می‌شود تا نقشه تمیز و قابل کنترل باشد
+  useEffect(() => {
+    setFloatingHelpSuppressed(activeTab === 'execution-location');
+    return () => setFloatingHelpSuppressed(false);
+  }, [activeTab]);
+
 
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
   const [archivedReports, setArchivedReports] = useState<SavedReport[]>([]);
