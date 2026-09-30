@@ -2024,7 +2024,7 @@ export default function ExecutiveOrders() {
                   {/* دکمه تایید سفارش */}
                   {canManageInitialApproval && (
                     <Button
-                      onClick={() => handleStageChange(order.id, 'pending_execution')}
+                      onClick={() => { setPendingStageChange({ orderId: order.id, newStage: 'pending_execution' }); setStageChangeConfirmOpen(true); }}
                       size="sm"
                       disabled={!canApprove}
                       title={!canApprove ? 'ابتدا باید قیمت ثبت شود و مشتری آن را تایید کند' : 'تایید سفارش'}
@@ -2056,7 +2056,7 @@ export default function ExecutiveOrders() {
                   {/* دکمه شروع اجرا - برای pending_execution */}
                   {order.status === 'pending_execution' && (
                     <Button
-                      onClick={() => handleStageChange(order.id, 'in_progress')}
+                      onClick={() => { setPendingStageChange({ orderId: order.id, newStage: 'in_progress' }); setStageChangeConfirmOpen(true); }}
                       size="sm"
                       className="gap-2 bg-blue-600 hover:bg-blue-700"
                     >
@@ -2068,7 +2068,7 @@ export default function ExecutiveOrders() {
                   {/* دکمه اجرا شد - برای سفارش‌های در حال اجرا */}
                   {order.status === 'in_progress' && !order.execution_stage && (
                     <Button
-                      onClick={() => handleStageChange(order.id, 'order_executed')}
+                      onClick={() => { setPendingStageChange({ orderId: order.id, newStage: 'order_executed' }); setStageChangeConfirmOpen(true); }}
                       size="sm"
                       className="gap-2 bg-green-600 hover:bg-green-700"
                     >
@@ -2080,7 +2080,7 @@ export default function ExecutiveOrders() {
                   {/* دکمه در انتظار پرداخت - برای order_executed */}
                   {order.execution_stage === 'order_executed' && (
                     <Button
-                      onClick={() => handleStageChange(order.id, 'awaiting_payment')}
+                      onClick={() => { setPendingStageChange({ orderId: order.id, newStage: 'awaiting_payment' }); setStageChangeConfirmOpen(true); }}
                       size="sm"
                       className="gap-2 bg-amber-600 hover:bg-amber-700"
                     >
@@ -2121,7 +2121,7 @@ export default function ExecutiveOrders() {
                       
                       return (
                         <Button
-                          onClick={() => handleStageChange(order.id, 'awaiting_collection')}
+                          onClick={() => { setPendingStageChange({ orderId: order.id, newStage: 'awaiting_collection' }); setStageChangeConfirmOpen(true); }}
                           size="sm"
                           disabled={!canProceed}
                           title={!canProceed ? 'ابتدا باید تاریخ جمع‌آوری تعیین شود' : 'انتقال به مرحله در انتظار جمع‌آوری'}
@@ -2139,7 +2139,7 @@ export default function ExecutiveOrders() {
                   {/* دکمه در حال جمع‌آوری - برای awaiting_collection */}
                   {!isNoMaterialsScaffold && order.execution_stage === 'awaiting_collection' && (
                     <Button
-                      onClick={() => handleStageChange(order.id, 'in_collection')}
+                      onClick={() => { setPendingStageChange({ orderId: order.id, newStage: 'in_collection' }); setStageChangeConfirmOpen(true); }}
                       size="sm"
                       className="gap-2 bg-purple-600 hover:bg-purple-700"
                     >
@@ -2151,7 +2151,7 @@ export default function ExecutiveOrders() {
                   {/* دکمه جمع‌آوری شد - برای in_collection */}
                   {!isNoMaterialsScaffold && order.execution_stage === 'in_collection' && (
                     <Button
-                      onClick={() => handleStageChange(order.id, 'collected')}
+                      onClick={() => { setPendingStageChange({ orderId: order.id, newStage: 'collected' }); setStageChangeConfirmOpen(true); }}
                       size="sm"
                       className="gap-2 bg-teal-600 hover:bg-teal-700"
                     >
@@ -2163,7 +2163,7 @@ export default function ExecutiveOrders() {
                   {/* دکمه اتمام سفارش - برای collected */}
                   {!isNoMaterialsScaffold && order.execution_stage === 'collected' && (
                     <Button
-                      onClick={() => handleStageChange(order.id, 'closed')}
+                      onClick={() => { setPendingStageChange({ orderId: order.id, newStage: 'closed' }); setStageChangeConfirmOpen(true); }}
                       size="sm"
                       className="gap-2 bg-emerald-600 hover:bg-emerald-700"
                     >
@@ -2174,7 +2174,7 @@ export default function ExecutiveOrders() {
 
                   {isNoMaterialsScaffold && order.execution_stage === 'awaiting_payment' && (
                     <Button
-                      onClick={() => handleStageChange(order.id, 'closed')}
+                      onClick={() => { setPendingStageChange({ orderId: order.id, newStage: 'closed' }); setStageChangeConfirmOpen(true); }}
                       size="sm"
                       className="gap-2 bg-emerald-600 hover:bg-emerald-700"
                     >
