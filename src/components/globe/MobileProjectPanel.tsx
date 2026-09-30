@@ -882,10 +882,13 @@ export function MobileProjectPanel({
                         if (repairs.length === 0) return null;
                         return (
                           <div className="px-3 py-2.5 border-b border-border bg-amber-50/60 dark:bg-amber-950/20 space-y-2">
-                            <div className="flex items-center gap-2 text-xs font-bold text-amber-800 dark:text-amber-300">
-                              <Wrench className="w-3.5 h-3.5" />
-                              نیاز به تعمیر داربست ({repairs.length} درخواست)
-                            </div>
+                            {/* عنوان «نیاز به تعمیر داربست» در نمای گزارش روزانه نمایش داده نمی‌شود */}
+                            {!dailyReportMode && (
+                              <div className="flex items-center gap-2 text-xs font-bold text-amber-800 dark:text-amber-300">
+                                <Wrench className="w-3.5 h-3.5" />
+                                نیاز به تعمیر داربست ({repairs.length} درخواست)
+                              </div>
+                            )}
                             <div className="flex flex-wrap gap-1.5">
                               {repairs.map((r: any, idx: number) => (
                                 <span
