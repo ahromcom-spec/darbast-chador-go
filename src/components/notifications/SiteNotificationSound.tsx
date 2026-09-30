@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { loadPrefs, loadCustomSound, PREFS_EVENT } from '@/lib/siteNotifPrefs';
 
 const MANAGER_ROLES = [
   'ceo',
@@ -20,8 +21,28 @@ const MANAGER_ROLES = [
 export const SITE_NOTIF_SOUND_KEY = 'siteNotificationSoundEnabled';
 
 let ctx: AudioContext | null = null;
+let customUrl: string | null = null;
 
-const playChime = () => {
+const refreshCustom = async () => {
+  const blob = await loadCustomSound();
+  if (customUrl) URL.revokeObjectURL(customUrl);
+  customUrl = blob ? URL.createObjectURL(blob) : null;
+};
+void refreshCustom();
+if (typeof window !== 'undefined') window.addEventListener(PREFS_EVENT, () => void refreshCustom());
+
+export const playSiteNotifSound = () => {
+  const vol = loadPrefs().volume;
+  if (customUrl) {
+    const a = new Audio(customUrl);
+    a.volume = vol;
+    a.play().catch(() => playChime(vol));
+    return;
+  }
+  playChime(vol);
+};
+
+const playChime = (vol = 0.8) => {
   try {
     if (!ctx) ctx = new AudioContext();
     if (ctx.state === 'suspended') void ctx.resume();
@@ -36,7 +57,7 @@ const playChime = () => {
       osc.type = 'sine';
       osc.frequency.value = f;
       gain.gain.setValueAtTime(0.0001, now + t);
-      gain.gain.exponentialRampToValueAtTime(0.25, now + t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, 0.3 * vol), now + t + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.0001, now + t + 0.45);
       osc.connect(gain);
       gain.connect(ctx!.destination);
@@ -104,8 +125,18 @@ export default function SiteNotificationSound() {
         { event: 'INSERT', schema: 'public', table: 'site_notifications' },
         (payload) => {
           const row = payload.new as any;
+          const prefs = loadPrefs();
+          const src = row?.actor_source;
+          const isGuest = src === 'guest';
+          const isAdmin = src === 'admin' || src === 'impersonation';
+          const isStage = row?.event_type === 'order_stage_change';
+          if (isGuest && !prefs.guestNotify) return;
+          if (isAdmin && !prefs.adminNotify) return;
+          let soundAllowed = true;
+          if (isGuest) soundAllowed = prefs.guestSound;
+          else if (isAdmin) soundAllowed = isStage ? prefs.adminStageSound : prefs.adminSound;
           const soundOn = localStorage.getItem(SITE_NOTIF_SOUND_KEY) !== 'false';
-          if (soundOn) playChime();
+          if (soundOn && soundAllowed) playSiteNotifSound();
           toast(row?.title || 'اعلان جدید سایت', {
             description: row?.order_code ? `سفارش ${row.order_code}` : undefined,
             action: {
