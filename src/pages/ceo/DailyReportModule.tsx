@@ -740,6 +740,13 @@ export default function DailyReportModule() {
     return localStorage.getItem('dailyReportActiveTab') || 'new-report';
   });
 
+  // در تب «لوکیشن اجرایی پروژه» راهنمای ویدیویی شناور ماژول پنهان می‌شود تا نقشه تمیز و قابل کنترل باشد
+  useEffect(() => {
+    setFloatingHelpSuppressed(activeTab === 'execution-location');
+    return () => setFloatingHelpSuppressed(false);
+  }, [activeTab]);
+
+
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
   const [archivedReports, setArchivedReports] = useState<SavedReport[]>([]);
   const [loadingSavedReports, setLoadingSavedReports] = useState(false);
