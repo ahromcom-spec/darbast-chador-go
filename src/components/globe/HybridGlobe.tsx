@@ -1969,7 +1969,8 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
         const archivedBadgeHtml = orderCounts.total === 0
           ? ''
           : pendingBadgeHtml + [
-              orderCounts.active > 0
+              // واژه «فعال» روی مارکرهای تب لوکیشن اجرایی پروژه (گزارش روزانه) نمایش داده نمی‌شود
+              orderCounts.active > 0 && !activeExecutionOnly
                 ? statusChip('rgba(37,99,235,0.95)', `● فعال${orderCounts.archived > 0 ? ` (${orderCounts.active})` : ''}`)
                 : '',
               orderCounts.archived > 0
@@ -3700,6 +3701,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
       {mobileSelectedProject && (
         <MobileProjectPanel
           project={mobileSelectedProject}
+          dailyReportMode={activeExecutionOnly}
           allProjectsAtLocation={mobileSelectedLocationProjects}
           hideFinancials={activeExecutionOnly}
           managerView={activeExecutionOnly}
