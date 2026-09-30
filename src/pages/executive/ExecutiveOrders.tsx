@@ -1798,7 +1798,26 @@ export default function ExecutiveOrders() {
                       }))}
                   />
                 </div>
-                
+
+                {isNoMaterialsScaffold && ['order_executed', 'awaiting_payment', 'closed', 'completed', 'paid'].includes((order as any).execution_stage || order.status) && (
+                  <div className="bg-primary/5 border border-primary/20 p-3 rounded-lg space-y-1.5">
+                    <Label className="text-sm font-medium">تاریخ نصب یا فک</Label>
+                    <PersianDatePicker
+                      value={order.execution_end_date || ''}
+                      onChange={async (val: string) => {
+                        const { error } = await supabase.from('projects_v3').update({ execution_end_date: val || null }).eq('id', order.id);
+                        if (error) {
+                          toast({ title: 'خطا', description: 'ثبت تاریخ نصب یا فک انجام نشد', variant: 'destructive' });
+                        } else {
+                          toast({ title: 'ثبت شد', description: 'تاریخ نصب یا فک ذخیره شد' });
+                          fetchOrders();
+                        }
+                      }}
+                      timeMode="full"
+                    />
+                  </div>
+                )}
+
                 {order.detailed_address && (
                   <div className="text-xs text-muted-foreground">
                     <span className="font-medium">آدرس تفصیلی:</span> {order.detailed_address}
