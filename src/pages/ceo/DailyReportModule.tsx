@@ -4,6 +4,7 @@ import { findDuplicateProjectMedia } from '@/lib/mediaFingerprint';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard, RotateCcw, AlertTriangle, Clock, Lock, Unlock, Printer, ZoomIn, ZoomOut, ChevronUp, ChevronDown, CalendarPlus } from 'lucide-react';
 import { openOrderSheet } from '@/lib/orderExecutionSheet';
+import { setFloatingHelpSuppressed } from '@/lib/floatingHelpSuppression';
 
 import { useDateFinalizationLock } from '@/hooks/useDateFinalizationLock';
 import { useDailyReportBulkDelete } from '@/hooks/useDailyReportBulkDelete';
