@@ -96,6 +96,8 @@ interface MobileProjectPanelProps {
   hideFinancials?: boolean;
   /** نمای مدیریتی: جزئیات سفارش از مسیر مدیریت باز شود نه پنل مشتری */
   managerView?: boolean;
+  /** نمای تب لوکیشن اجرایی پروژه در ثبت گزارش روزانه: دکمه‌های سفارش جدید، افزودن خدمات جدید و نیاز به تعمیر نمایش داده نشوند */
+  dailyReportMode?: boolean;
   /** نمایش جزئیات سفارش در همان نمای گزارش روزانه، بدون خروج از نقشه */
   onViewOrderDetails?: (orderId: string) => void;
 }
