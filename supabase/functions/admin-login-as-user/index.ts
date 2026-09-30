@@ -169,6 +169,21 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Record the impersonation session so every action taken in it is
+    // attributed to the manager (not the customer) in the activity module.
+    try {
+      const payload = JSON.parse(atob(sessionData.session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      if (payload?.session_id) {
+        await supabaseAdmin.from('impersonation_sessions').upsert({
+          session_id: payload.session_id,
+          admin_user_id: user.id,
+          target_user_id,
+        });
+      }
+    } catch (e) {
+      console.error('Failed to record impersonation session', e);
+    }
+
     return new Response(
       JSON.stringify({
         session: {
