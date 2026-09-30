@@ -42,6 +42,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatPersianDateTime } from '@/lib/dateUtils';
 import { toast } from '@/hooks/use-toast';
 import { SITE_NOTIF_SOUND_KEY } from '@/components/notifications/SiteNotificationSound';
+import SiteNotifSoundSettings from '@/components/notifications/SiteNotifSoundSettings';
 import { cn } from '@/lib/utils';
 
 interface NotificationRow {
@@ -540,6 +541,7 @@ export default function SiteNotificationsModule() {
               {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
               {soundEnabled ? 'صدا روشن' : 'صدا خاموش'}
             </Button>
+            <SiteNotifSoundSettings />
             <Button variant="outline" size="sm" className="rounded-xl" onClick={load} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               بروزرسانی
