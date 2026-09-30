@@ -695,6 +695,7 @@ export default function SiteNotificationsModule() {
               onClick={() => {
                 setExcludedTypes(new Set());
                 setPersonFilter('');
+                setSourceFilter('all');
                 setFromDate('');
                 setToDate('');
                 setSearch('');
