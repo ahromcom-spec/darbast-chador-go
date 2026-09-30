@@ -59,7 +59,19 @@ interface NotificationRow {
   created_at: string;
   is_sms?: boolean;
   sms_status?: string | null;
+  actor_source?: string | null;
+  actor_name?: string | null;
+  impersonator_name?: string | null;
 }
+
+const SOURCE_META: Record<string, { label: string; cls: string }> = {
+  customer: { label: 'خود مشتری (از حساب/گوشی خودش)', cls: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700' },
+  guest: { label: 'میهمان', cls: 'border-slate-500/40 bg-slate-500/10 text-slate-700' },
+  admin: { label: 'مدیریت سایت', cls: 'border-blue-500/40 bg-blue-500/10 text-blue-700' },
+  impersonation: { label: 'مدیر داخل حساب مشتری', cls: 'border-red-500/50 bg-red-500/15 text-red-700' },
+  system: { label: 'سیستم / نامشخص', cls: 'border-border bg-muted text-muted-foreground' },
+};
+const sourceOf = (r: NotificationRow) => (r.is_sms ? 'system' : r.actor_source || 'system');
 
 const READ_KEY = 'siteNotificationsReadIds';
 
@@ -195,6 +207,7 @@ export default function SiteNotificationsModule() {
   // انواع اعلانی که مدیر تیکشان را برداشته (پیش‌فرض: هیچ‌کدام → همه نمایش داده می‌شوند)
   const [excludedTypes, setExcludedTypes] = useState<Set<string>>(new Set());
   const [personFilter, setPersonFilter] = useState('');
+  const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [readIds, setReadIds] = useState<Set<string>>(() => loadReadIds());
@@ -417,9 +430,10 @@ export default function SiteNotificationsModule() {
       if (tab === 'dismissed' && !r.is_dismissed) return false;
 
       if (excludedTypes.has(r.event_type)) return false;
+      if (sourceFilter !== 'all' && sourceOf(r) !== sourceFilter) return false;
 
       if (person) {
-        const hay = [r.customer_name, r.customer_phone].filter(Boolean).join(' ');
+        const hay = [r.customer_name, r.customer_phone, r.actor_name, r.impersonator_name].filter(Boolean).join(' ');
         if (!hay.includes(person)) return false;
       }
 
@@ -434,7 +448,13 @@ export default function SiteNotificationsModule() {
         .filter(Boolean)
         .some((v) => String(v).includes(q));
     });
-  }, [rows, search, tab, excludedTypes, personFilter, fromDate, toDate]);
+  }, [rows, search, tab, excludedTypes, personFilter, fromDate, toDate, sourceFilter]);
+
+  const sourceCounts = useMemo(() => {
+    const c: Record<string, number> = {};
+    rows.forEach((r) => { if (!r.is_dismissed) c[sourceOf(r)] = (c[sourceOf(r)] || 0) + 1; });
+    return c;
+  }, [rows]);
 
   const counts = useMemo(
     () => ({
@@ -447,7 +467,7 @@ export default function SiteNotificationsModule() {
   );
 
   const hasFilters =
-    !!search || !!personFilter || !!fromDate || !!toDate || excludedTypes.size > 0;
+    !!search || !!personFilter || !!fromDate || !!toDate || excludedTypes.size > 0 || sourceFilter !== 'all';
 
   const allEventKeys = Object.keys(EVENT_META);
   const activeTypeCount = allEventKeys.filter((k) => !excludedTypes.has(k)).length;
@@ -621,6 +641,26 @@ export default function SiteNotificationsModule() {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <User className="h-4 w-4" /> انجام‌دهنده اتفاق
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[['all', 'همه'], ...Object.entries(SOURCE_META).map(([k, v]) => [k, v.label])].map(([k, label]) => (
+                  <Button
+                    key={k}
+                    size="sm"
+                    variant={sourceFilter === k ? 'default' : 'outline'}
+                    className="h-8 rounded-xl text-xs"
+                    onClick={() => setSourceFilter(k)}
+                  >
+                    {label}
+                    {k !== 'all' && <span className="ms-1 opacity-70">{sourceCounts[k] || 0}</span>}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               <div className="relative">
                 <User className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -655,6 +695,7 @@ export default function SiteNotificationsModule() {
               onClick={() => {
                 setExcludedTypes(new Set());
                 setPersonFilter('');
+                setSourceFilter('all');
                 setFromDate('');
                 setToDate('');
                 setSearch('');
@@ -715,7 +756,9 @@ export default function SiteNotificationsModule() {
                         'group relative overflow-hidden rounded-2xl border shadow-sm transition-all duration-200',
                         'hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg',
                         row.is_important && 'border-yellow-500/60 ring-1 ring-yellow-500/25',
-                        unread && 'bg-primary/[0.035]'
+                        unread && 'bg-primary/[0.035]',
+                        sourceOf(row) === 'impersonation' && 'border-2 border-dashed border-red-500/70 bg-red-500/[0.04]',
+                        sourceOf(row) === 'admin' && 'border-blue-500/50'
                       )}
                     >
                       <span className={cn('absolute inset-y-0 right-0 w-1.5', meta.edge)} />
@@ -740,6 +783,11 @@ export default function SiteNotificationsModule() {
                               <div className="flex flex-wrap items-center gap-1.5">
                                 <Badge variant="outline" className={cn('gap-1 text-[10px]', meta.badge)}>
                                   {meta.label}
+                                </Badge>
+                                <Badge variant="outline" className={cn('text-[10px] font-bold', SOURCE_META[sourceOf(row)]?.cls)}>
+                                  {SOURCE_META[sourceOf(row)]?.label}
+                                  {sourceOf(row) === 'impersonation' && row.impersonator_name ? `: ${row.impersonator_name}` : ''}
+                                  {sourceOf(row) === 'admin' && row.actor_name ? `: ${row.actor_name}` : ''}
                                 </Badge>
                                 {row.order_code && (
                                   <Badge variant="secondary" className="font-mono text-[10px]">
