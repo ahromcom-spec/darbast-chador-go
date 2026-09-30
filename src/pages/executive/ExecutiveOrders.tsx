@@ -2705,6 +2705,24 @@ export default function ExecutiveOrders() {
               )}
             </DialogDescription>
           </DialogHeader>
+          {(() => {
+            const pendingOrder = orders.find(o => o.id === pendingStageChange?.orderId);
+            const needsInstallDate = !!pendingOrder
+              && isScaffoldingNoMaterials(pendingOrder as any)
+              && pendingStageChange?.newStage === 'order_executed';
+            if (!needsInstallDate) return null;
+            return (
+              <div className="space-y-1.5">
+                <Label>تاریخ نصب یا فک</Label>
+                <PersianDatePicker
+                  value={stageExecutionDate || pendingOrder?.execution_end_date || ''}
+                  onChange={setStageExecutionDate}
+                  timeMode="full"
+                />
+                <p className="text-xs text-muted-foreground">تاریخ و ساعت انجام نصب یا فک داربست فلزی را انتخاب کنید. این تاریخ در فاکتور و مراحل سفارش نمایش داده می‌شود.</p>
+              </div>
+            );
+          })()}
           <div className="space-y-1.5">
             <Label>توضیحات مرحله جدید (برای مدیر اجرایی)</Label>
             <Textarea
