@@ -1378,6 +1378,8 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
 
     // تابع نمایش مارکر افزودن پروژه
     const showAddProjectMarker = (e: L.LeafletMouseEvent) => {
+      // در تب «لوکیشن اجرایی پروژه» افزودن پروژه و انتخاب محل از روی نقشه لازم نیست
+      if (activeExecutionOnlyRef.current) return;
       setSelectedProject(null);
       setSelectedOrderForUpload(null);
       
