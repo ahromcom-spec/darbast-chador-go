@@ -682,6 +682,7 @@ export function MobileProjectPanel({
                       <Plus className="w-4 h-4 ml-1" />
                       سفارش جدید
                     </Button>
+                    )}
                     <span className="text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-full mr-auto">
                       {group.orders.length} سفارش
                     </span>
@@ -912,6 +913,8 @@ export function MobileProjectPanel({
                           <Eye className="w-4 h-4 ml-2" />
                           مشاهده جزئیات
                         </Button>
+                        {/* دکمه نیاز به تعمیر — در نمای گزارش روزانه نمایش داده نمی‌شود */}
+                        {!dailyReportMode && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -924,6 +927,7 @@ export function MobileProjectPanel({
                           <Wrench className="w-4 h-4 ml-2" />
                           {(repairsByOrder?.[order.id]?.length || 0) > 0 ? 'مدیریت تعمیرات' : 'نیاز به تعمیر'}
                         </Button>
+                        )}
                         {/* دکمه حذف فقط برای سفارش‌های در انتظار تایید */}
                         {order.status === 'pending' && (
                           <Button
