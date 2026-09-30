@@ -1,0 +1,1 @@
+ALTER TABLE public.projects_v3 ADD COLUMN IF NOT EXISTS stage_note text, ADD COLUMN IF NOT EXISTS stage_note_label text, ADD COLUMN IF NOT EXISTS stage_note_at timestamptz;

@@ -4103,6 +4103,9 @@ export type Database = {
           province_id: string
           rejection_reason: string | null
           rental_start_date: string | null
+          stage_note: string | null
+          stage_note_at: string | null
+          stage_note_label: string | null
           statement_id: string | null
           status: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
@@ -4165,6 +4168,9 @@ export type Database = {
           province_id: string
           rejection_reason?: string | null
           rental_start_date?: string | null
+          stage_note?: string | null
+          stage_note_at?: string | null
+          stage_note_label?: string | null
           statement_id?: string | null
           status?: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
@@ -4227,6 +4233,9 @@ export type Database = {
           province_id?: string
           rejection_reason?: string | null
           rental_start_date?: string | null
+          stage_note?: string | null
+          stage_note_at?: string | null
+          stage_note_label?: string | null
           statement_id?: string | null
           status?: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id?: string
@@ -6824,6 +6833,9 @@ export type Database = {
           province_id: string
           rejection_reason: string | null
           rental_start_date: string | null
+          stage_note: string | null
+          stage_note_at: string | null
+          stage_note_label: string | null
           statement_id: string | null
           status: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
@@ -6976,6 +6988,9 @@ export type Database = {
           province_id: string
           rejection_reason: string | null
           rental_start_date: string | null
+          stage_note: string | null
+          stage_note_at: string | null
+          stage_note_label: string | null
           statement_id: string | null
           status: Database["public"]["Enums"]["project_status_v3"] | null
           subcategory_id: string
