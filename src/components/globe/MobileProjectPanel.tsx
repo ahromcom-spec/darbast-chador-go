@@ -96,6 +96,8 @@ interface MobileProjectPanelProps {
   hideFinancials?: boolean;
   /** نمای مدیریتی: جزئیات سفارش از مسیر مدیریت باز شود نه پنل مشتری */
   managerView?: boolean;
+  /** نمای تب لوکیشن اجرایی پروژه در ثبت گزارش روزانه: دکمه‌های سفارش جدید، افزودن خدمات جدید و نیاز به تعمیر نمایش داده نشوند */
+  dailyReportMode?: boolean;
   /** نمایش جزئیات سفارش در همان نمای گزارش روزانه، بدون خروج از نقشه */
   onViewOrderDetails?: (orderId: string) => void;
 }
@@ -246,6 +248,7 @@ export function MobileProjectPanel({
   onViewVideo,
   hideFinancials = false,
   managerView = false,
+  dailyReportMode = false,
   onViewOrderDetails,
 }: MobileProjectPanelProps) {
   const navigate = useNavigate();
@@ -591,8 +594,8 @@ export function MobileProjectPanel({
       </div>
 
 
-      {/* دکمه افزودن خدمات جدید - بیرون از کادر سفارشات با ناحیه لمسی بزرگ */}
-      {project.location_id && (
+      {/* دکمه افزودن خدمات جدید - بیرون از کادر سفارشات با ناحیه لمسی بزرگ — در نمای گزارش روزانه نمایش داده نمی‌شود */}
+      {project.location_id && !dailyReportMode && (
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-gradient-to-r from-muted/30 to-muted/10">
           <div className="flex items-center gap-0">
             <div className="w-4 h-4 bg-red-500 rounded-full border-2 border-red-200 shadow-[0_0_8px_rgba(239,68,68,0.5)] flex-shrink-0" />
@@ -630,7 +633,8 @@ export function MobileProjectPanel({
                     <h3 className="text-sm font-bold text-primary">
                       {group.name}
                     </h3>
-                    {/* دکمه سفارش جدید کنار نام نوع خدمات */}
+                    {/* دکمه سفارش جدید کنار نام نوع خدمات — در نمای گزارش روزانه نمایش داده نمی‌شود */}
+                    {!dailyReportMode && (
                     <Button
                       size="sm"
                       className="bg-emerald-500 hover:bg-emerald-600 text-white h-8 px-3 text-xs font-bold"
@@ -678,6 +682,7 @@ export function MobileProjectPanel({
                       <Plus className="w-4 h-4 ml-1" />
                       سفارش جدید
                     </Button>
+                    )}
                     <span className="text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-full mr-auto">
                       {group.orders.length} سفارش
                     </span>
@@ -877,10 +882,13 @@ export function MobileProjectPanel({
                         if (repairs.length === 0) return null;
                         return (
                           <div className="px-3 py-2.5 border-b border-border bg-amber-50/60 dark:bg-amber-950/20 space-y-2">
-                            <div className="flex items-center gap-2 text-xs font-bold text-amber-800 dark:text-amber-300">
-                              <Wrench className="w-3.5 h-3.5" />
-                              نیاز به تعمیر داربست ({repairs.length} درخواست)
-                            </div>
+                            {/* عنوان «نیاز به تعمیر داربست» در نمای گزارش روزانه نمایش داده نمی‌شود */}
+                            {!dailyReportMode && (
+                              <div className="flex items-center gap-2 text-xs font-bold text-amber-800 dark:text-amber-300">
+                                <Wrench className="w-3.5 h-3.5" />
+                                نیاز به تعمیر داربست ({repairs.length} درخواست)
+                              </div>
+                            )}
                             <div className="flex flex-wrap gap-1.5">
                               {repairs.map((r: any, idx: number) => (
                                 <span
@@ -908,6 +916,8 @@ export function MobileProjectPanel({
                           <Eye className="w-4 h-4 ml-2" />
                           مشاهده جزئیات
                         </Button>
+                        {/* دکمه نیاز به تعمیر — در نمای گزارش روزانه نمایش داده نمی‌شود */}
+                        {!dailyReportMode && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -920,6 +930,7 @@ export function MobileProjectPanel({
                           <Wrench className="w-4 h-4 ml-2" />
                           {(repairsByOrder?.[order.id]?.length || 0) > 0 ? 'مدیریت تعمیرات' : 'نیاز به تعمیر'}
                         </Button>
+                        )}
                         {/* دکمه حذف فقط برای سفارش‌های در انتظار تایید */}
                         {order.status === 'pending' && (
                           <Button
