@@ -56,6 +56,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Report customer login activity only on genuine login or after >1h gap.
         // SIGNED_IN fires on tab focus / token refresh / page reload too, so we gate
         // with localStorage timestamp per user. Navigation between pages won't relog.
+        // Site-notifications login event: only when this browser switches to a new user
+        if (event === 'SIGNED_IN' && session?.user) {
+          try {
+            const k = 'ahrom:auth_logged_uid';
+            if (localStorage.getItem(k) !== session.user.id) {
+              localStorage.setItem(k, session.user.id);
+              setTimeout(() => {
+                supabase.rpc('log_auth_event' as any, { _kind: 'login' }).then(() => {}, () => {});
+              }, 0);
+            }
+          } catch {}
+        }
+        if (event === 'SIGNED_OUT') {
+          try { localStorage.removeItem('ahrom:auth_logged_uid'); } catch {}
+        }
         if (event === 'SIGNED_IN' && session?.user) {
           try {
             // While a manager is impersonating a customer, never log the session
@@ -208,6 +223,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = useCallback(async () => {
     try {
+      try { await supabase.rpc('log_auth_event' as any, { _kind: 'logout' }); } catch {}
+      try { localStorage.removeItem('ahrom:auth_logged_uid'); } catch {}
       const { error } = await supabase.auth.signOut();
       if (error && import.meta.env.DEV) {
         console.error('Logout error:', error);
