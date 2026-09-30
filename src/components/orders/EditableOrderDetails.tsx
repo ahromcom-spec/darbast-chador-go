@@ -2085,7 +2085,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
       {!hidePrice && (
         <OrderDiscountPanel
           orderId={order.id}
-          currentPrice={Number(order.payment_amount || order.total_price || 0)}
+          currentPrice={Number(order.total_price || order.payment_amount || 0)}
           priceBeforeDiscount={order.price_before_discount ?? null}
           discountAmount={order.discount_amount ?? 0}
           discountNote={order.discount_note ?? null}

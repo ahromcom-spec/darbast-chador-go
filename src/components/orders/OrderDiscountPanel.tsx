@@ -58,13 +58,14 @@ export const OrderDiscountPanel = ({
     setSaving(true);
     try {
       const newPrice = Math.max(0, basePrice - d);
+      // فقط مبلغ کل به‌روز می‌شود؛ payment_amount (مبلغ ماه اول) دست نمی‌خورد
+      // تا محاسبه خودکار تمدید/تعمیر خراب نشود. تخفیف روی مجموع کل اعمال می‌شود.
       const { error } = await supabase
         .from('projects_v3')
         .update({
           discount_amount: d,
           price_before_discount: d > 0 ? basePrice : null,
           discount_note: d > 0 ? (remove ? null : note || null) : null,
-          payment_amount: newPrice,
           total_price: newPrice,
         } as any)
         .eq('id', orderId);
