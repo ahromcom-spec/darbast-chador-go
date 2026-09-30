@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
+import { FLOATING_HELP_SUPPRESS_EVENT } from '@/lib/floatingHelpSuppression';
 import { Move, PlayCircle, Check, Minus, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -469,7 +470,7 @@ export const FloatingHelpVideos = () => {
     };
   }, [pagePainted]);
 
-  if (exactLoading || pathLoading || !pagePainted || !pageReady || videos.length === 0) return null;
+  if (helpSuppressed || exactLoading || pathLoading || !pagePainted || !pageReady || videos.length === 0) return null;
 
   return (
     <>
