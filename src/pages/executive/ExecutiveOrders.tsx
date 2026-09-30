@@ -242,6 +242,7 @@ export default function ExecutiveOrders() {
   const [stageChangeConfirmOpen, setStageChangeConfirmOpen] = useState(false);
   const [pendingStageChange, setPendingStageChange] = useState<{ orderId: string; newStage: string } | null>(null);
   const [stageNoteText, setStageNoteText] = useState('');
+  const [stageExecutionDate, setStageExecutionDate] = useState('');
   // Cash payment confirmation
   const [cashPaymentDialogOpen, setCashPaymentDialogOpen] = useState(false);
   // Collection request dialog
@@ -715,7 +716,7 @@ export default function ExecutiveOrders() {
   };
 
   // تغییر مرحله سفارش به هر مرحله دلخواه
-  const handleStageChange = async (orderId: string, newStage: string, stageNote?: string) => {
+  const handleStageChange = async (orderId: string, newStage: string, stageNote?: string, executionDateIso?: string) => {
     const stage = executionStages.find(s => s.key === newStage);
     if (!stage) return;
 
@@ -831,6 +832,11 @@ export default function ExecutiveOrders() {
           updateData.payment_amount = estimatedPrice;
           updateData.total_price = estimatedPrice;
         }
+      }
+
+      // تاریخ نصب یا فک دستی (خدمات داربست بدون اجناس)
+      if (executionDateIso && targetIdx > 0) {
+        updateData.execution_end_date = executionDateIso;
       }
 
       const { data: updatedRows, error } = await supabase
@@ -2699,6 +2705,24 @@ export default function ExecutiveOrders() {
               )}
             </DialogDescription>
           </DialogHeader>
+          {(() => {
+            const pendingOrder = orders.find(o => o.id === pendingStageChange?.orderId);
+            const needsInstallDate = !!pendingOrder
+              && isScaffoldingNoMaterials(pendingOrder as any)
+              && pendingStageChange?.newStage === 'order_executed';
+            if (!needsInstallDate) return null;
+            return (
+              <div className="space-y-1.5">
+                <Label>تاریخ نصب یا فک</Label>
+                <PersianDatePicker
+                  value={stageExecutionDate || pendingOrder?.execution_end_date || ''}
+                  onChange={setStageExecutionDate}
+                  timeMode="full"
+                />
+                <p className="text-xs text-muted-foreground">تاریخ و ساعت انجام نصب یا فک داربست فلزی را انتخاب کنید. این تاریخ در فاکتور و مراحل سفارش نمایش داده می‌شود.</p>
+              </div>
+            );
+          })()}
           <div className="space-y-1.5">
             <Label>توضیحات مرحله جدید (برای مدیر اجرایی)</Label>
             <Textarea
@@ -2720,6 +2744,7 @@ export default function ExecutiveOrders() {
                 setStageChangeConfirmOpen(false);
                 setPendingStageChange(null);
                 setStageNoteText('');
+                setStageExecutionDate('');
               }}
             >
               انصراف
@@ -2727,11 +2752,12 @@ export default function ExecutiveOrders() {
             <Button 
               onClick={() => {
                 if (pendingStageChange) {
-                  handleStageChange(pendingStageChange.orderId, pendingStageChange.newStage, stageNoteText);
+                  handleStageChange(pendingStageChange.orderId, pendingStageChange.newStage, stageNoteText, stageExecutionDate || undefined);
                 }
                 setStageChangeConfirmOpen(false);
                 setPendingStageChange(null);
                 setStageNoteText('');
+                setStageExecutionDate('');
               }}
             >
               تایید تغییر مرحله
