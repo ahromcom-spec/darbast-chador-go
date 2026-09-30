@@ -241,6 +241,7 @@ export default function ExecutiveOrders() {
   // Stage change confirmation
   const [stageChangeConfirmOpen, setStageChangeConfirmOpen] = useState(false);
   const [pendingStageChange, setPendingStageChange] = useState<{ orderId: string; newStage: string } | null>(null);
+  const [stageNoteText, setStageNoteText] = useState('');
   // Cash payment confirmation
   const [cashPaymentDialogOpen, setCashPaymentDialogOpen] = useState(false);
   // Collection request dialog
@@ -714,7 +715,7 @@ export default function ExecutiveOrders() {
   };
 
   // تغییر مرحله سفارش به هر مرحله دلخواه
-  const handleStageChange = async (orderId: string, newStage: string) => {
+  const handleStageChange = async (orderId: string, newStage: string, stageNote?: string) => {
     const stage = executionStages.find(s => s.key === newStage);
     if (!stage) return;
 
@@ -748,6 +749,12 @@ export default function ExecutiveOrders() {
         execution_stage_updated_at: new Date().toISOString(),
         status: stage.statusMapping
       };
+      const trimmedNote = (stageNote || '').trim();
+      if (trimmedNote) {
+        updateData.stage_note = trimmedNote;
+        updateData.stage_note_label = stage.label;
+        updateData.stage_note_at = new Date().toISOString();
+      }
 
       // دریافت اطلاعات کاربر جاری برای ثبت approved_by
       const { data: authData } = await supabase.auth.getUser();
@@ -2024,7 +2031,7 @@ export default function ExecutiveOrders() {
                   {/* دکمه تایید سفارش */}
                   {canManageInitialApproval && (
                     <Button
-                      onClick={() => handleStageChange(order.id, 'pending_execution')}
+                      onClick={() => { setPendingStageChange({ orderId: order.id, newStage: 'pending_execution' }); setStageChangeConfirmOpen(true); }}
                       size="sm"
                       disabled={!canApprove}
                       title={!canApprove ? 'ابتدا باید قیمت ثبت شود و مشتری آن را تایید کند' : 'تایید سفارش'}
@@ -2056,7 +2063,7 @@ export default function ExecutiveOrders() {
                   {/* دکمه شروع اجرا - برای pending_execution */}
                   {order.status === 'pending_execution' && (
                     <Button
-                      onClick={() => handleStageChange(order.id, 'in_progress')}
+                      onClick={() => { setPendingStageChange({ orderId: order.id, newStage: 'in_progress' }); setStageChangeConfirmOpen(true); }}
                       size="sm"
                       className="gap-2 bg-blue-600 hover:bg-blue-700"
                     >
@@ -2068,7 +2075,7 @@ export default function ExecutiveOrders() {
                   {/* دکمه اجرا شد - برای سفارش‌های در حال اجرا */}
                   {order.status === 'in_progress' && !order.execution_stage && (
                     <Button
-                      onClick={() => handleStageChange(order.id, 'order_executed')}
+                      onClick={() => { setPendingStageChange({ orderId: order.id, newStage: 'order_executed' }); setStageChangeConfirmOpen(true); }}
                       size="sm"
                       className="gap-2 bg-green-600 hover:bg-green-700"
                     >
@@ -2080,7 +2087,7 @@ export default function ExecutiveOrders() {
                   {/* دکمه در انتظار پرداخت - برای order_executed */}
                   {order.execution_stage === 'order_executed' && (
                     <Button
-                      onClick={() => handleStageChange(order.id, 'awaiting_payment')}
+                      onClick={() => { setPendingStageChange({ orderId: order.id, newStage: 'awaiting_payment' }); setStageChangeConfirmOpen(true); }}
                       size="sm"
                       className="gap-2 bg-amber-600 hover:bg-amber-700"
                     >
@@ -2121,7 +2128,7 @@ export default function ExecutiveOrders() {
                       
                       return (
                         <Button
-                          onClick={() => handleStageChange(order.id, 'awaiting_collection')}
+                          onClick={() => { setPendingStageChange({ orderId: order.id, newStage: 'awaiting_collection' }); setStageChangeConfirmOpen(true); }}
                           size="sm"
                           disabled={!canProceed}
                           title={!canProceed ? 'ابتدا باید تاریخ جمع‌آوری تعیین شود' : 'انتقال به مرحله در انتظار جمع‌آوری'}
@@ -2139,7 +2146,7 @@ export default function ExecutiveOrders() {
                   {/* دکمه در حال جمع‌آوری - برای awaiting_collection */}
                   {!isNoMaterialsScaffold && order.execution_stage === 'awaiting_collection' && (
                     <Button
-                      onClick={() => handleStageChange(order.id, 'in_collection')}
+                      onClick={() => { setPendingStageChange({ orderId: order.id, newStage: 'in_collection' }); setStageChangeConfirmOpen(true); }}
                       size="sm"
                       className="gap-2 bg-purple-600 hover:bg-purple-700"
                     >
@@ -2151,7 +2158,7 @@ export default function ExecutiveOrders() {
                   {/* دکمه جمع‌آوری شد - برای in_collection */}
                   {!isNoMaterialsScaffold && order.execution_stage === 'in_collection' && (
                     <Button
-                      onClick={() => handleStageChange(order.id, 'collected')}
+                      onClick={() => { setPendingStageChange({ orderId: order.id, newStage: 'collected' }); setStageChangeConfirmOpen(true); }}
                       size="sm"
                       className="gap-2 bg-teal-600 hover:bg-teal-700"
                     >
@@ -2163,7 +2170,7 @@ export default function ExecutiveOrders() {
                   {/* دکمه اتمام سفارش - برای collected */}
                   {!isNoMaterialsScaffold && order.execution_stage === 'collected' && (
                     <Button
-                      onClick={() => handleStageChange(order.id, 'closed')}
+                      onClick={() => { setPendingStageChange({ orderId: order.id, newStage: 'closed' }); setStageChangeConfirmOpen(true); }}
                       size="sm"
                       className="gap-2 bg-emerald-600 hover:bg-emerald-700"
                     >
@@ -2174,7 +2181,7 @@ export default function ExecutiveOrders() {
 
                   {isNoMaterialsScaffold && order.execution_stage === 'awaiting_payment' && (
                     <Button
-                      onClick={() => handleStageChange(order.id, 'closed')}
+                      onClick={() => { setPendingStageChange({ orderId: order.id, newStage: 'closed' }); setStageChangeConfirmOpen(true); }}
                       size="sm"
                       className="gap-2 bg-emerald-600 hover:bg-emerald-700"
                     >
@@ -2692,6 +2699,17 @@ export default function ExecutiveOrders() {
               )}
             </DialogDescription>
           </DialogHeader>
+          <div className="space-y-1.5">
+            <Label>توضیحات مرحله جدید (برای مدیر اجرایی)</Label>
+            <Textarea
+              value={stageNoteText}
+              onChange={(e) => setStageNoteText(e.target.value)}
+              placeholder="مثلاً: روز جمعه آقای موسوی گفتند حتماً داربست باز شود و قبل از آمدن تماس بگیرید."
+              rows={4}
+              maxLength={1500}
+            />
+            <p className="text-xs text-muted-foreground">این متن روی نقشه لوکیشن پروژه در گزارش روزانه نمایش داده می‌شود. خالی بگذارید اگر توضیحی ندارید.</p>
+          </div>
           <p className="text-sm text-muted-foreground">
             با تایید این عملیات، مشتری از تغییر مرحله سفارش مطلع خواهد شد.
           </p>
@@ -2701,6 +2719,7 @@ export default function ExecutiveOrders() {
               onClick={() => {
                 setStageChangeConfirmOpen(false);
                 setPendingStageChange(null);
+                setStageNoteText('');
               }}
             >
               انصراف
@@ -2708,10 +2727,11 @@ export default function ExecutiveOrders() {
             <Button 
               onClick={() => {
                 if (pendingStageChange) {
-                  handleStageChange(pendingStageChange.orderId, pendingStageChange.newStage);
+                  handleStageChange(pendingStageChange.orderId, pendingStageChange.newStage, stageNoteText);
                 }
                 setStageChangeConfirmOpen(false);
                 setPendingStageChange(null);
+                setStageNoteText('');
               }}
             >
               تایید تغییر مرحله

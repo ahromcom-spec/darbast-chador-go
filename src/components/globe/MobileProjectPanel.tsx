@@ -323,10 +323,10 @@ export function MobileProjectPanel({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('projects_v3')
-        .select('id, total_price, total_paid, notes, payment_confirmed_at, customer_id')
+        .select('id, total_price, total_paid, notes, payment_confirmed_at, customer_id, stage_note, stage_note_label, stage_note_at' as any)
         .in('id', orderIds);
       if (error) throw error;
-      const map: Record<string, { total_price: number; total_paid: number; notes: string | null; settled: boolean; customer_id: string | null }> = {};
+      const map: Record<string, { total_price: number; total_paid: number; notes: string | null; settled: boolean; customer_id: string | null; stage_note: string | null; stage_note_label: string | null; stage_note_at: string | null }> = {};
       (data || []).forEach((r: any) => {
         map[r.id] = {
           total_price: Number(r.total_price) || 0,
@@ -334,6 +334,9 @@ export function MobileProjectPanel({
           notes: r.notes || null,
           settled: !!r.payment_confirmed_at,
           customer_id: r.customer_id || null,
+          stage_note: r.stage_note || null,
+          stage_note_label: r.stage_note_label || null,
+          stage_note_at: r.stage_note_at || null,
         };
       });
       return map;
@@ -830,6 +833,17 @@ export function MobileProjectPanel({
                                 </div>
                               );
                             })()}
+                            {s.stage_note && (
+                              <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-2.5 py-2 text-xs leading-relaxed whitespace-pre-wrap text-amber-900 dark:text-amber-200">
+                                <div className="font-bold mb-0.5">
+                                  📌 توضیح مدیریت{s.stage_note_label ? ` — مرحله «${s.stage_note_label}»` : ''}
+                                  {s.stage_note_at && (
+                                    <span className="font-normal opacity-75 mr-1">({new Date(s.stage_note_at).toLocaleDateString('fa-IR')})</span>
+                                  )}
+                                </div>
+                                {s.stage_note}
+                              </div>
+                            )}
                             {!hideFinancials && (
                               <>
                                 <div className="grid grid-cols-3 gap-1.5 text-[11px]">
