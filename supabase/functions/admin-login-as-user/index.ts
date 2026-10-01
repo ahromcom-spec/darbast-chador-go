@@ -181,11 +181,38 @@ Deno.serve(async (req) => {
           session_id: payload.session_id,
           admin_user_id: user.id,
           target_user_id,
-        });
+        }, { onConflict: 'session_id' });
         if (impErr) console.error('impersonation_sessions upsert failed', impErr);
       }
     } catch (e) {
       console.error('Failed to record impersonation session', e);
+    }
+
+    // Log the tunnel entry itself in the notifications module so it is
+    // clearly distinguishable from the customer's own login.
+    try {
+      const { data: adminProfile } = await supabaseAdmin
+        .from('profiles').select('full_name, phone_number').eq('user_id', user.id).maybeSingle();
+      const { data: targetProfile } = await supabaseAdmin
+        .from('profiles').select('full_name, phone_number').eq('user_id', target_user_id).maybeSingle();
+      const adminName = adminProfile?.full_name || 'مدیر';
+      const targetName = targetProfile?.full_name || 'کاربر';
+      const { error: notifErr } = await supabaseAdmin.from('site_notifications').insert({
+        event_type: 'impersonation_login',
+        title: 'ورود مدیر به حساب کاربر',
+        body: `${adminName} از ماژول مدیریت وارد حساب ${targetName} شد`,
+        customer_name: targetName,
+        customer_phone: targetProfile?.phone_number || null,
+        actor_user_id: target_user_id,
+        actor_name: targetName,
+        actor_source: 'impersonation',
+        impersonator_user_id: user.id,
+        impersonator_name: adminName,
+        source_table: 'auth',
+      });
+      if (notifErr) console.error('impersonation login notification failed', notifErr);
+    } catch (e) {
+      console.error('Failed to log impersonation login notification', e);
     }
 
     return new Response(

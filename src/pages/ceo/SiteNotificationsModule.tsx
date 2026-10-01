@@ -29,6 +29,9 @@ import {
   User,
   Tags,
   Send,
+  LogOut,
+  UserCog,
+
 
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -166,6 +169,34 @@ const EVENT_META: Record<
     badge: 'bg-slate-500/10 text-slate-600 border-slate-500/30',
     edge: 'bg-slate-400',
     iconWrap: 'bg-slate-500/10 text-slate-600',
+  },
+  user_login: {
+    label: 'ورود کاربر به حساب',
+    icon: LogIn,
+    badge: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
+    edge: 'bg-emerald-500',
+    iconWrap: 'bg-emerald-500/10 text-emerald-600',
+  },
+  user_logout: {
+    label: 'خروج کاربر از حساب',
+    icon: LogOut,
+    badge: 'bg-slate-500/10 text-slate-600 border-slate-500/30',
+    edge: 'bg-slate-400',
+    iconWrap: 'bg-slate-500/10 text-slate-600',
+  },
+  impersonation_login: {
+    label: 'ورود مدیر به حساب کاربر',
+    icon: UserCog,
+    badge: 'bg-red-500/10 text-red-600 border-red-500/30',
+    edge: 'bg-red-500',
+    iconWrap: 'bg-red-500/10 text-red-600',
+  },
+  impersonation_logout: {
+    label: 'خروج مدیر از حساب کاربر',
+    icon: UserCog,
+    badge: 'bg-red-500/10 text-red-600 border-red-500/30',
+    edge: 'bg-red-500',
+    iconWrap: 'bg-red-500/10 text-red-600',
   },
   sms_sent: {
     label: 'پیامک ارسالی',
