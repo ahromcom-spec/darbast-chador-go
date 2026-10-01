@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
     }
 
     // Log this action in audit_log
-    await supabaseClient
+    await supabaseAdmin
       .from('audit_log')
       .insert({
         actor_user_id: user.id,
@@ -154,8 +154,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Exchange the token for a session using admin verifyOtp
-    const { data: sessionData, error: sessionError } = await supabaseAdmin.auth.verifyOtp({
+    // Exchange the token for a session using a SEPARATE throwaway client.
+    // verifyOtp stores the resulting user session on the client it is called on;
+    // if we used supabaseAdmin here, every later insert would run as the customer
+    // (not service_role) and be rejected by RLS.
+    const otpClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+    const { data: sessionData, error: sessionError } = await otpClient.auth.verifyOtp({
       token_hash: otpData.properties.hashed_token,
       type: 'magiclink',
     });
