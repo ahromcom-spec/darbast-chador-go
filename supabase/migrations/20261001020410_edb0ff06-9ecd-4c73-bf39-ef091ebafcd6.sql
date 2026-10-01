@@ -1,0 +1,1 @@
+GRANT ALL ON public.impersonation_sessions TO service_role; GRANT ALL ON public.site_notifications TO service_role;
