@@ -30,6 +30,7 @@ import { getOrCreateProjectSchema, createProjectV3Schema } from '@/lib/rpcValida
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { NewLocationForm } from '@/components/locations/NewLocationForm';
 import { useScaffoldingPricing } from '@/hooks/useScaffoldingPricing';
+import { useScaffoldingPricingConditions } from '@/hooks/useScaffoldingPricingConditions';
 import { useScaffoldingNoMaterialsPricing } from '@/hooks/useScaffoldingNoMaterialsPricing';
 import { useScaffoldingPricingRules } from '@/hooks/useScaffoldingPricingRules';
 import { applyPricingRules, serviceToRuleCategory, type RuleMetrics } from '@/lib/pricingRules';
@@ -243,6 +244,9 @@ export default function ComprehensiveScaffoldingForm({
   const { get: pricingGetNoMaterials } = useScaffoldingNoMaterialsPricing();
   const isNoMaterialsSubcategory = propSubcategoryCode === '20';
   const pricingGet = isNoMaterialsSubcategory ? pricingGetNoMaterials : pricingGetWithMaterials;
+  const { map: expertConditionsMap } = useScaffoldingPricingConditions(
+    isNoMaterialsSubcategory ? 'scaffolding_no_materials_pricing_config' : 'scaffolding_pricing_config'
+  );
   // شرط‌های ساختاریافته قیمت‌گذاری همان جدول (مؤثر مستقیم روی قیمت)
   const { rules: pricingRules } = useScaffoldingPricingRules(
     isNoMaterialsSubcategory ? 'scaffolding_no_materials_pricing_config' : 'scaffolding_pricing_config'
@@ -1210,6 +1214,14 @@ export default function ComprehensiveScaffoldingForm({
       });
     }
   };
+
+  const vehicleDistanceExpertThreshold = pricingGet('vehicle_distance_expert_threshold', 0);
+  const vehicleDistanceExpertMessage =
+    (expertConditionsMap['vehicle_distance_expert_message'] || '').trim() ||
+    'به علت فاصله بیش از حد خودرو تا محل اجرا، لطفاً از دکمه «درخواست قیمت‌گذاری کارشناسی» استفاده کنید تا سفارش شما کارشناسی شود.';
+  const vehicleDistanceTooFar =
+    !vehicleReachesSite && vehicleDistanceExpertThreshold > 0 &&
+    (conditions.vehicleDistance || 0) > vehicleDistanceExpertThreshold;
 
   const onSubmit = async () => {
     if (vehicleDistanceTooFar) {
