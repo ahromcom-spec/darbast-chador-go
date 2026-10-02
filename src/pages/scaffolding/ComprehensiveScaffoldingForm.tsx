@@ -30,6 +30,7 @@ import { getOrCreateProjectSchema, createProjectV3Schema } from '@/lib/rpcValida
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { NewLocationForm } from '@/components/locations/NewLocationForm';
 import { useScaffoldingPricing } from '@/hooks/useScaffoldingPricing';
+import { useScaffoldingPricingConditions } from '@/hooks/useScaffoldingPricingConditions';
 import { useScaffoldingNoMaterialsPricing } from '@/hooks/useScaffoldingNoMaterialsPricing';
 import { useScaffoldingPricingRules } from '@/hooks/useScaffoldingPricingRules';
 import { applyPricingRules, serviceToRuleCategory, type RuleMetrics } from '@/lib/pricingRules';
@@ -243,6 +244,9 @@ export default function ComprehensiveScaffoldingForm({
   const { get: pricingGetNoMaterials } = useScaffoldingNoMaterialsPricing();
   const isNoMaterialsSubcategory = propSubcategoryCode === '20';
   const pricingGet = isNoMaterialsSubcategory ? pricingGetNoMaterials : pricingGetWithMaterials;
+  const { map: expertConditionsMap } = useScaffoldingPricingConditions(
+    isNoMaterialsSubcategory ? 'scaffolding_no_materials_pricing_config' : 'scaffolding_pricing_config'
+  );
   // شرط‌های ساختاریافته قیمت‌گذاری همان جدول (مؤثر مستقیم روی قیمت)
   const { rules: pricingRules } = useScaffoldingPricingRules(
     isNoMaterialsSubcategory ? 'scaffolding_no_materials_pricing_config' : 'scaffolding_pricing_config'
@@ -804,18 +808,21 @@ export default function ComprehensiveScaffoldingForm({
       }
 
       if (!vehicleReachesSite && conditions.vehicleDistance) {
-        if (conditions.vehicleDistance <= 50) {
+        const b1 = P('vehicle_distance_bracket1_max', 50) || 50;
+        const b2 = Math.max(P('vehicle_distance_bracket2_max', 100) || 100, b1);
+        const d = conditions.vehicleDistance;
+        if (d <= b1) {
           const p = P('vehicle_distance_under_50_pct', 10);
           percentSum += p;
-          conditionBreakdown.push(`فاصله خودرو تا 50 متر: +${p}%`);
-        } else if (conditions.vehicleDistance <= 100) {
+          conditionBreakdown.push(`فاصله خودرو ${d} متر (تا ${b1} متر): +${p}%`);
+        } else if (d <= b2) {
           const p = P('vehicle_distance_50_to_100_pct', 15);
           percentSum += p;
-          conditionBreakdown.push(`فاصله خودرو 50-100 متر: +${p}%`);
+          conditionBreakdown.push(`فاصله خودرو ${d} متر (${b1} تا ${b2} متر): +${p}%`);
         } else {
           const p = P('vehicle_distance_over_100_pct', 25);
           percentSum += p;
-          conditionBreakdown.push(`فاصله خودرو بیش از 100 متر: +${p}%`);
+          conditionBreakdown.push(`فاصله خودرو ${d} متر (بیش از ${b2} متر): +${p}%`);
         }
       }
 
@@ -1208,7 +1215,19 @@ export default function ComprehensiveScaffoldingForm({
     }
   };
 
+  const vehicleDistanceExpertThreshold = pricingGet('vehicle_distance_expert_threshold', 0);
+  const vehicleDistanceExpertMessage =
+    (expertConditionsMap['vehicle_distance_expert_message'] || '').trim() ||
+    'به علت فاصله بیش از حد خودرو تا محل اجرا، لطفاً از دکمه «درخواست قیمت‌گذاری کارشناسی» استفاده کنید تا سفارش شما کارشناسی شود.';
+  const vehicleDistanceTooFar =
+    !vehicleReachesSite && vehicleDistanceExpertThreshold > 0 &&
+    (conditions.vehicleDistance || 0) > vehicleDistanceExpertThreshold;
+
   const onSubmit = async () => {
+    if (vehicleDistanceTooFar) {
+      toast({ title: 'نیاز به قیمت‌گذاری کارشناسی', description: vehicleDistanceExpertMessage, variant: 'destructive' });
+      return;
+    }
     if (!user) {
       // ذخیره مقادیر فعلی فرم تا پس از ورود/ثبت‌نام دوباره نمایش داده شوند
       savePendingOrder({
@@ -2744,6 +2763,11 @@ export default function ComprehensiveScaffoldingForm({
                   value={conditions.vehicleDistance ?? ''}
                   onChange={(e) => setConditions({ ...conditions, vehicleDistance: parseFloat(e.target.value) || null })}
                 />
+                {vehicleDistanceTooFar && (
+                  <div className="rounded-lg border-2 border-destructive bg-destructive/10 p-3 text-sm text-destructive font-semibold leading-7 whitespace-pre-line">
+                    {vehicleDistanceExpertMessage}
+                  </div>
+                )}
               </div>
             )}
           </div>

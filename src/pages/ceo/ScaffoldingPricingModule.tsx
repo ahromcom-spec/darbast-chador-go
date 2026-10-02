@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCEORole } from '@/hooks/useCEORole';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Save, RefreshCw, DollarSign, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -43,6 +44,27 @@ const CATEGORY_ORDER = [
   'rental_discount',
   'extra_month',
 ];
+
+export function ExpertMessageEditor({ value, onSave }: { value: string; onSave: (v: string) => Promise<void> }) {
+  const [text, setText] = useState(value);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => setText(value), [value]);
+  return (
+    <div className="p-3 rounded-lg border-2 border-dashed border-destructive/40 space-y-2">
+      <div className="font-medium text-sm">پیام به مشتری وقتی فاصله از «حد فاصله برای ارجاع به کارشناسی» بیشتر باشد</div>
+      <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={3}
+        placeholder="مثال: به علت فاصله بیش از حد، لطفاً درخواست قیمت‌گذاری کارشناسی ثبت کنید تا سفارش شما کارشناسی شود." />
+      <Button size="sm" disabled={busy || text === value} onClick={async () => {
+        setBusy(true);
+        try { await onSave(text); toast.success('پیام ذخیره شد'); }
+        catch (e: any) { toast.error('خطا: ' + (e?.message || '')); }
+        finally { setBusy(false); }
+      }}>
+        <Save className="w-4 h-4 ml-2" /> ذخیره پیام
+      </Button>
+    </div>
+  );
+}
 
 export default function ScaffoldingPricingModule() {
   const { isCEO, loading: roleLoading } = useCEORole();
@@ -237,6 +259,12 @@ export default function ScaffoldingPricingModule() {
                   </div>
                 );
               })}
+              {cat === 'vehicle_distance' && (
+                <ExpertMessageEditor
+                  value={conditionsMap['vehicle_distance_expert_message'] || ''}
+                  onSave={(v) => saveCondition('vehicle_distance_expert_message', v)}
+                />
+              )}
               <CategoryConditionsBox
                 category={cat}
                 categoryLabel={CATEGORY_LABELS[cat] || cat}
