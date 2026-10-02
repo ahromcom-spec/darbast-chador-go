@@ -804,18 +804,21 @@ export default function ComprehensiveScaffoldingForm({
       }
 
       if (!vehicleReachesSite && conditions.vehicleDistance) {
-        if (conditions.vehicleDistance <= 50) {
+        const b1 = P('vehicle_distance_bracket1_max', 50) || 50;
+        const b2 = Math.max(P('vehicle_distance_bracket2_max', 100) || 100, b1);
+        const d = conditions.vehicleDistance;
+        if (d <= b1) {
           const p = P('vehicle_distance_under_50_pct', 10);
           percentSum += p;
-          conditionBreakdown.push(`فاصله خودرو تا 50 متر: +${p}%`);
-        } else if (conditions.vehicleDistance <= 100) {
+          conditionBreakdown.push(`فاصله خودرو ${d} متر (تا ${b1} متر): +${p}%`);
+        } else if (d <= b2) {
           const p = P('vehicle_distance_50_to_100_pct', 15);
           percentSum += p;
-          conditionBreakdown.push(`فاصله خودرو 50-100 متر: +${p}%`);
+          conditionBreakdown.push(`فاصله خودرو ${d} متر (${b1} تا ${b2} متر): +${p}%`);
         } else {
           const p = P('vehicle_distance_over_100_pct', 25);
           percentSum += p;
-          conditionBreakdown.push(`فاصله خودرو بیش از 100 متر: +${p}%`);
+          conditionBreakdown.push(`فاصله خودرو ${d} متر (بیش از ${b2} متر): +${p}%`);
         }
       }
 
@@ -1209,6 +1212,10 @@ export default function ComprehensiveScaffoldingForm({
   };
 
   const onSubmit = async () => {
+    if (vehicleDistanceTooFar) {
+      toast({ title: 'نیاز به قیمت‌گذاری کارشناسی', description: vehicleDistanceExpertMessage, variant: 'destructive' });
+      return;
+    }
     if (!user) {
       // ذخیره مقادیر فعلی فرم تا پس از ورود/ثبت‌نام دوباره نمایش داده شوند
       savePendingOrder({
@@ -2744,6 +2751,11 @@ export default function ComprehensiveScaffoldingForm({
                   value={conditions.vehicleDistance ?? ''}
                   onChange={(e) => setConditions({ ...conditions, vehicleDistance: parseFloat(e.target.value) || null })}
                 />
+                {vehicleDistanceTooFar && (
+                  <div className="rounded-lg border-2 border-destructive bg-destructive/10 p-3 text-sm text-destructive font-semibold leading-7 whitespace-pre-line">
+                    {vehicleDistanceExpertMessage}
+                  </div>
+                )}
               </div>
             )}
           </div>
