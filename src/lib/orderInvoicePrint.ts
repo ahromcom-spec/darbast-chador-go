@@ -569,7 +569,26 @@ export function buildOrderInvoiceHtml(
       return '-';
     };
 
-    const totalArea = calculateTotalMeasurement();
+    // همه ابعاد سفارش (نه فقط ابعاد اول) — هر ابعاد با متراژ خودش
+    const allDimRows: any[] = Array.isArray(dimensions) ? dimensions : (dimensions ? [dimensions] : []);
+    const allDimsHasW = allDimRows.some((d: any) => Number(d?.width ?? d?.w) > 0);
+    const allDimsValid = allDimRows
+      .map((d: any) => ({ l: Number(d?.length ?? d?.l) || 0, w: Number(d?.width ?? d?.w) || 0, h: Number(d?.height ?? d?.h) || 0 }))
+      .filter((d) => d.l > 0 && d.h > 0);
+    const allDimsTotal = allDimsValid.reduce((s, d) => s + (allDimsHasW ? d.l * (d.w > 0 ? d.w : 1) * d.h : d.l * d.h), 0);
+    const allDimsUnit = allDimsHasW ? 'متر مکعب' : 'متر مربع';
+    const allDimsLines = (withIndex: boolean) => allDimsValid.map((d, i) => {
+      const v = allDimsHasW ? d.l * (d.w > 0 ? d.w : 1) * d.h : d.l * d.h;
+      const expr = allDimsHasW
+        ? `${d.l.toLocaleString('fa-IR')} × ${(d.w > 0 ? d.w : 1).toLocaleString('fa-IR')} × ${d.h.toLocaleString('fa-IR')}`
+        : `${d.l.toLocaleString('fa-IR')} × ${d.h.toLocaleString('fa-IR')}`;
+      const prefix = withIndex && allDimsValid.length > 1 ? `ابعاد ${(i + 1).toLocaleString('fa-IR')}: ` : '';
+      return `<div style="font-size:11.5px;color:#475569;">${prefix}${expr} = ${parseFloat(v.toFixed(2)).toLocaleString('fa-IR')}</div>`;
+    }).join('');
+
+    const totalArea = allDimsTotal > 0
+      ? parseFloat(allDimsTotal.toFixed(2)).toLocaleString('fa-IR')
+      : calculateTotalMeasurement();
     const invoiceImages = media.filter((item) => Boolean(mediaUrls[item.id]));
     
     // Determine if measurement is volume (cubic) or area (square)
@@ -912,18 +931,12 @@ export function buildOrderInvoiceHtml(
                   `;
                 }).join('');
               }
-              const L = getLength(), W = getWidth(), H = getHeight();
-              const lN = Number(L) || 0, wN = Number(W) || 0, hN = Number(H) || 0;
-              const productParts: string[] = [];
-              if (lN > 0) productParts.push(lN.toLocaleString('fa-IR'));
-              if (wN > 0) productParts.push(wN.toLocaleString('fa-IR'));
-              if (hN > 0) productParts.push(hN.toLocaleString('fa-IR'));
-              const product = productParts.length >= 2 ? productParts.join(' × ') : '';
-              const computed = (lN > 0 && hN > 0) ? (wN > 0 ? lN * wN * hN : lN * hN) : 0;
-              const areaCell = `${product ? `<div style="font-size:11.5px;color:#475569;">${product} = ${computed > 0 ? computed.toLocaleString('fa-IR') : '-'}</div>` : ''}${totalArea && totalArea !== '-' ? `<strong>${totalArea} ${getMeasurementUnit()}</strong>` : '-'}`;
-              const areaNumeric = computed > 0 ? computed : (Number(totalArea) || 0);
+              const areaCell = allDimsTotal > 0
+                ? `${allDimsLines(true)}${allDimsValid.length > 1 ? `<div style="font-size:11px;color:#334155;margin-top:2px;">متراژ کل:</div>` : ''}<strong>${totalArea} ${allDimsUnit}</strong>`
+                : (totalArea && totalArea !== '-' ? `<strong>${totalArea} ${getMeasurementUnit()}</strong>` : '-');
+              const areaNumeric = allDimsTotal > 0 ? allDimsTotal : (Number(totalArea) || 0);
               const unitPrice = (basePrice > 0 && areaNumeric >= 100) ? Math.round(basePrice / areaNumeric) : 0;
-              const unitLabel = getMeasurementUnit();
+              const unitLabel = allDimsTotal > 0 ? allDimsUnit : getMeasurementUnit();
               const priceCell = basePrice > 0
                 ? `<strong>${basePrice.toLocaleString('fa-IR')}</strong>${unitPrice > 0 ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">فی: ${unitPrice.toLocaleString('fa-IR')} تومان / ${unitLabel}</div>` : ''}`
                 : '-';
@@ -949,15 +962,8 @@ export function buildOrderInvoiceHtml(
               const baseDescText = description
                 ? escapeHtml(description)
                 : escapeHtml(`${scaffoldTypeName} - ${subtypeName}`);
-              const lN = Number(getLength()) || 0, wN = Number(getWidth()) || 0, hN = Number(getHeight()) || 0;
-              const dimParts: string[] = [];
-              if (lN > 0) dimParts.push(lN.toLocaleString('fa-IR'));
-              if (wN > 0) dimParts.push(wN.toLocaleString('fa-IR'));
-              if (hN > 0) dimParts.push(hN.toLocaleString('fa-IR'));
-              const dimProduct = dimParts.length >= 2 ? dimParts.join(' × ') : '';
-              const dimComputed = (lN > 0 && hN > 0) ? (wN > 0 ? lN * wN * hN : lN * hN) : 0;
-              const dimLine = dimProduct
-                ? `<div style="font-size:11px;color:#475569;margin-top:2px;">ابعاد: ${dimProduct}${dimComputed > 0 ? ` = ${dimComputed.toLocaleString('fa-IR')} ${getMeasurementUnit()}` : ''}</div>`
+              const dimLine = allDimsTotal > 0
+                ? `<div style="font-size:11px;color:#475569;margin-top:2px;">ابعاد:</div>${allDimsLines(true)}<div style="font-size:11px;color:#475569;">متراژ کل: ${totalArea} ${allDimsUnit}</div>`
                 : '';
               const renewalRows = renewals.map((renewal, idx) => {
                 const linkedPart = renewal.part_id ? partById.get(renewal.part_id) : undefined;
