@@ -935,7 +935,7 @@ export function buildOrderInvoiceHtml(
                 ? `${allDimsLines(true)}${allDimsValid.length > 1 ? `<div style="font-size:11px;color:#334155;margin-top:2px;">متراژ کل:</div>` : ''}<strong>${totalArea} ${allDimsUnit}</strong>`
                 : (totalArea && totalArea !== '-' ? `<strong>${totalArea} ${getMeasurementUnit()}</strong>` : '-');
               const areaNumeric = allDimsTotal > 0 ? allDimsTotal : (Number(totalArea) || 0);
-              const unitPrice = (basePrice > 0 && areaNumeric > 0) ? Math.round(basePrice / areaNumeric) : 0;
+              const unitPrice = (basePrice > 0 && areaNumeric >= 100) ? Math.round(basePrice / areaNumeric) : 0;
               const unitLabel = allDimsTotal > 0 ? allDimsUnit : getMeasurementUnit();
               const priceCell = basePrice > 0
                 ? `<strong>${basePrice.toLocaleString('fa-IR')}</strong>${unitPrice > 0 ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">فی: ${unitPrice.toLocaleString('fa-IR')} تومان / ${unitLabel}</div>` : ''}`
