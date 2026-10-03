@@ -2095,8 +2095,8 @@ export default function ComprehensiveScaffoldingForm({
         </Card>
       )}
 
-      {/* لیست داربست‌های افزوده‌شده و خلاصه قیمت چندتایی */}
-      {multiOrderMode && (savedScaffolds.length > 0 || !!editingScaffold) && (() => {
+      {/* لیست داربست‌های افزوده‌شده و خلاصه قیمت چندتایی — با فاصله بیش از حد، قیمت مخفی می‌ماند */}
+      {multiOrderMode && !vehicleDistanceTooFar && (savedScaffolds.length > 0 || !!editingScaffold) && (() => {
         const summary = computeMultiSummary();
         const describeDims = (sn: any): string => {
           if (!sn || !Array.isArray(sn.dimensions)) return '';
