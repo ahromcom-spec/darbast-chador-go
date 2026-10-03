@@ -30,6 +30,15 @@ const CATEGORY_LABELS: Record<string, string> = {
   extra_month: 'ضریب ماه‌های اضافی',
 };
 
+// آیتم‌های عددی فاصله خودرو حذف شدند — افزایش قیمت فقط با شرط‌های ساختاریافته اعمال می‌شود
+const HIDDEN_VEHICLE_DISTANCE_KEYS = new Set([
+  'vehicle_distance_bracket1_max',
+  'vehicle_distance_bracket2_max',
+  'vehicle_distance_under_50_pct',
+  'vehicle_distance_50_to_100_pct',
+  'vehicle_distance_over_100_pct',
+]);
+
 const CATEGORY_ORDER = [
   'facade',
   'formwork',
@@ -109,6 +118,7 @@ export default function ScaffoldingPricingModule() {
   const grouped = useMemo(() => {
     const m: Record<string, PricingItem[]> = {};
     items.forEach((it) => {
+      if (HIDDEN_VEHICLE_DISTANCE_KEYS.has(it.key)) return;
       (m[it.category] = m[it.category] || []).push(it);
     });
     return m;

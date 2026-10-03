@@ -679,7 +679,8 @@ export default function ComprehensiveScaffoldingForm({
     /** اعمال شرط‌های ساختاریافته این بخش روی قیمت و افزودن توضیح به ریز محاسبات */
     const applyRules = (value: number): number => {
       const cat = serviceToRuleCategory(activeService || scaffoldType);
-      const catRules = pricingRules.filter(r => r.category === cat);
+      // شرط‌های «فاصله خودرو تا محل اجرا» هم همیشه روی قیمت اعمال می‌شوند
+      const catRules = pricingRules.filter(r => r.category === cat || r.category === 'vehicle_distance');
       if (!catRules.length) return value;
       const res = applyPricingRules(catRules, ruleMetrics, value);
       if (res.applied) {
@@ -807,24 +808,7 @@ export default function ComprehensiveScaffoldingForm({
         }
       }
 
-      if (!vehicleReachesSite && conditions.vehicleDistance) {
-        const b1 = P('vehicle_distance_bracket1_max', 50) || 50;
-        const b2 = Math.max(P('vehicle_distance_bracket2_max', 100) || 100, b1);
-        const d = conditions.vehicleDistance;
-        if (d <= b1) {
-          const p = P('vehicle_distance_under_50_pct', 10);
-          percentSum += p;
-          conditionBreakdown.push(`فاصله خودرو ${d} متر (تا ${b1} متر): +${p}%`);
-        } else if (d <= b2) {
-          const p = P('vehicle_distance_50_to_100_pct', 15);
-          percentSum += p;
-          conditionBreakdown.push(`فاصله خودرو ${d} متر (${b1} تا ${b2} متر): +${p}%`);
-        } else {
-          const p = P('vehicle_distance_over_100_pct', 25);
-          percentSum += p;
-          conditionBreakdown.push(`فاصله خودرو ${d} متر (بیش از ${b2} متر): +${p}%`);
-        }
-      }
+      // افزایش قیمت فاصله خودرو فقط از طریق شرط‌های ساختاریافته ماژول قیمت‌گذاری اعمال می‌شود
 
       const multiplier = 1 + percentSum / 100;
       return { multiplier, conditionBreakdown, distancePct, distanceMin, distanceLabel };
@@ -2111,8 +2095,8 @@ export default function ComprehensiveScaffoldingForm({
         </Card>
       )}
 
-      {/* لیست داربست‌های افزوده‌شده و خلاصه قیمت چندتایی */}
-      {multiOrderMode && (savedScaffolds.length > 0 || !!editingScaffold) && (() => {
+      {/* لیست داربست‌های افزوده‌شده و خلاصه قیمت چندتایی — با فاصله بیش از حد، قیمت مخفی می‌ماند */}
+      {multiOrderMode && !vehicleDistanceTooFar && (savedScaffolds.length > 0 || !!editingScaffold) && (() => {
         const summary = computeMultiSummary();
         const describeDims = (sn: any): string => {
           if (!sn || !Array.isArray(sn.dimensions)) return '';
@@ -2810,8 +2794,8 @@ export default function ComprehensiveScaffoldingForm({
         </CardContent>
       </Card>
 
-            {/* Price Summary */}
-            {(calculateTotalArea() > 0 || 
+            {/* Price Summary — وقتی فاصله خودرو بیش از حد مجاز باشد قیمت به مشتری نشان داده نمی‌شود */}
+            {!vehicleDistanceTooFar && (calculateTotalArea() > 0 || 
               (isColumnScaffolding && columnHeight && dimensions[0]?.length && dimensions[0]?.width) ||
               (isPipeLengthScaffolding && parseFloat(dimensions[0]?.length || '0') > 0)
             ) && (
