@@ -85,6 +85,13 @@ export const ExpertPricingRequestDialog = ({
   const [dimensions, setDimensions] = useState<Dimension[]>([{ length: '', width: '', height: '' }]);
   const [unitCount, setUnitCount] = useState<string>('');
 
+  // شرایط اجرا: محل نصب، فاصله خودرو و مدت کرایه
+  const [onGround, setOnGround] = useState(true);
+  const [platformHeight, setPlatformHeight] = useState('');
+  const [vehicleReachesSite, setVehicleReachesSite] = useState(true);
+  const [vehicleDistance, setVehicleDistance] = useState('');
+  const [durationMonths, setDurationMonths] = useState('');
+
   // Multi-scaffold mode: each entry represents one separate scaffold at the same location
   type ScaffoldGroup = { label: string; dimensions: Dimension[]; unitCount: string; description: string };
   const [scaffoldGroups, setScaffoldGroups] = useState<ScaffoldGroup[]>([
