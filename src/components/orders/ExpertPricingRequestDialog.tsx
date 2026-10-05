@@ -391,6 +391,11 @@ export const ExpertPricingRequestDialog = ({
 
       setUnitCount('');
       setRequestedDate('');
+      setOnGround(true);
+      setPlatformHeight('');
+      setVehicleReachesSite(true);
+      setVehicleDistance('');
+      setDurationMonths('');
       setUploadedMedia([]);
       setProgress(0);
       setProgressStep('');
