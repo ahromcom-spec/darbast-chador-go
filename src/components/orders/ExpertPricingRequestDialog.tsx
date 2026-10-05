@@ -85,6 +85,13 @@ export const ExpertPricingRequestDialog = ({
   const [dimensions, setDimensions] = useState<Dimension[]>([{ length: '', width: '', height: '' }]);
   const [unitCount, setUnitCount] = useState<string>('');
 
+  // شرایط اجرا: محل نصب، فاصله خودرو و مدت کرایه
+  const [onGround, setOnGround] = useState(true);
+  const [platformHeight, setPlatformHeight] = useState('');
+  const [vehicleReachesSite, setVehicleReachesSite] = useState(true);
+  const [vehicleDistance, setVehicleDistance] = useState('');
+  const [durationMonths, setDurationMonths] = useState('');
+
   // Multi-scaffold mode: each entry represents one separate scaffold at the same location
   type ScaffoldGroup = { label: string; dimensions: Dimension[]; unitCount: string; description: string };
   const [scaffoldGroups, setScaffoldGroups] = useState<ScaffoldGroup[]>([
@@ -183,6 +190,11 @@ export const ExpertPricingRequestDialog = ({
           requested_date: requestedDate || null,
           service_type: serviceTypeName || 'داربست فلزی',
           is_multi_scaffold: !!multiOrderMode,
+          on_ground: onGround,
+          platform_height: !onGround && platformHeight ? parseLocalizedNumber(platformHeight) : null,
+          vehicle_reaches_site: vehicleReachesSite,
+          vehicle_distance: !vehicleReachesSite && vehicleDistance ? parseLocalizedNumber(vehicleDistance) : null,
+          duration_months: durationMonths ? parseInt(durationMonths) : null,
         };
         if (multiOrderMode) {
           // In multi mode, aggregate all scaffold dimensions into top-level so DB trigger
@@ -379,6 +391,11 @@ export const ExpertPricingRequestDialog = ({
 
       setUnitCount('');
       setRequestedDate('');
+      setOnGround(true);
+      setPlatformHeight('');
+      setVehicleReachesSite(true);
+      setVehicleDistance('');
+      setDurationMonths('');
       setUploadedMedia([]);
       setProgress(0);
       setProgressStep('');
@@ -789,6 +806,101 @@ export const ExpertPricingRequestDialog = ({
                   </p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* شرایط اجرا: محل نصب، فاصله خودرو و مدت کرایه */}
+          {!isRentalForm && (
+            <div className="space-y-4 p-3 border rounded-lg bg-muted/20">
+              <Label className="text-sm font-medium">شرایط اجرا</Label>
+
+              {/* محل نصب */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">محل نصب داربست</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant={onGround ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setOnGround(true)}
+                  >
+                    روی زمین
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={!onGround ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setOnGround(false)}
+                  >
+                    روی سکو/پشت‌بام
+                  </Button>
+                </div>
+                {!onGround && (
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">ارتفاع پشت‌بام یا سکو از روی زمین (متر)</Label>
+                    <Input
+                      inputMode="decimal"
+                      value={platformHeight}
+                      onChange={(e) => setPlatformHeight(e.target.value)}
+                      placeholder="مثلاً: 4"
+                      className="text-center"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* فاصله خودرو */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">دسترسی وسیله نقلیه حمل داربست تا پای کار</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant={vehicleReachesSite ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setVehicleReachesSite(true)}
+                  >
+                    خودرو تا پای کار می‌رسد
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={!vehicleReachesSite ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setVehicleReachesSite(false)}
+                  >
+                    خودرو نمی‌رسد
+                  </Button>
+                </div>
+                {!vehicleReachesSite && (
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">فاصله وسیله نقلیه تا پای کار (متر)</Label>
+                    <Input
+                      inputMode="decimal"
+                      value={vehicleDistance}
+                      onChange={(e) => setVehicleDistance(e.target.value)}
+                      placeholder="مثلاً: 50"
+                      className="text-center"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* مدت کرایه */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">مدت کرایه (ماه)</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['1', '2', '3'].map((m) => (
+                    <Button
+                      key={m}
+                      type="button"
+                      variant={durationMonths === m ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setDurationMonths(m)}
+                    >
+                      {m === '1' ? 'یک ماه' : m === '2' ? 'دو ماه' : 'سه ماه'}
+                    </Button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
