@@ -190,6 +190,11 @@ export const ExpertPricingRequestDialog = ({
           requested_date: requestedDate || null,
           service_type: serviceTypeName || 'داربست فلزی',
           is_multi_scaffold: !!multiOrderMode,
+          on_ground: onGround,
+          platform_height: !onGround && platformHeight ? parseLocalizedNumber(platformHeight) : null,
+          vehicle_reaches_site: vehicleReachesSite,
+          vehicle_distance: !vehicleReachesSite && vehicleDistance ? parseLocalizedNumber(vehicleDistance) : null,
+          duration_months: durationMonths ? parseInt(durationMonths) : null,
         };
         if (multiOrderMode) {
           // In multi mode, aggregate all scaffold dimensions into top-level so DB trigger
