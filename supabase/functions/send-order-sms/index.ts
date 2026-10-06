@@ -84,6 +84,7 @@ const STAGE_LABELS: Record<string, string> = {
   in_collection: "در حال جمع‌آوری",
   collected: "جمع‌آوری شد",
   completed: "به اتمام رسید",
+  rental_started: "شروع کرایه",
   contractor_pending_request: "در انتظار پذیرش شما",
 };
 
@@ -105,6 +106,7 @@ const SMS_TEMPLATES: Record<string, string> = {
   contractor_pending_request: APPROVED_TEMPLATE,
   collected: APPROVED_TEMPLATE,
   completed: APPROVED_TEMPLATE,
+  rental_started: "📋 سفارش جدید: کد {code} - {serviceType} - آدرس: {address} - مشتری: {customerName} - تاریخ شروع کرایه: {rentalStartDate} - تاریخ: {dateTime}",
   // پیامک‌های مخصوص مدیرعامل
   ceo_new_order: APPROVED_TEMPLATE,
   ceo_payment: APPROVED_TEMPLATE,
@@ -124,6 +126,9 @@ interface SmsRequest {
   description?: string; // شرح فعالیت سفارش
   resendMessage?: string; // ارسال مجدد متن پیامک قبلی (بدون قالب) با تاریخ جدید
   bypassWindow?: boolean; // نادیده گرفتن بازه زمانی (برای ارسال‌های زمان‌بندی‌شده)
+  paidAmount?: number; // مبلغ همین پرداخت
+  totalPaid?: number; // مجموع پرداخت‌شده تا کنون
+  remainingAmount?: number; // مانده سفارش
   retryCount?: number; // شمارش تلاش‌های خودکار مجدد در صورت ناموفق بودن
 }
 
@@ -139,7 +144,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { phone, orderCode, orderId, status, serviceType, address, dateTime, amount, customerName, description, resendMessage, bypassWindow, retryCount }: SmsRequest = await req.json();
+    const { phone, orderCode, orderId, status, serviceType, address, dateTime, amount, customerName, description, resendMessage, bypassWindow, retryCount, paidAmount, totalPaid, remainingAmount }: SmsRequest = await req.json();
     const isResend = typeof resendMessage === "string" && resendMessage.trim().length > 0;
     const attemptNo = Number(retryCount ?? 0);
 
@@ -282,7 +287,7 @@ const handler = async (req: Request): Promise<Response> => {
               order_code: orderCode,
               order_id: orderId ?? null,
               status_key: status,
-              payload: { serviceType, address, amount, customerName, description, resendMessage },
+              payload: { serviceType, address, amount, customerName, description, resendMessage, paidAmount, totalPaid, remainingAmount },
               send_after: sendAfter,
             });
 
@@ -388,8 +393,43 @@ const handler = async (req: Request): Promise<Response> => {
     // فرمت مبلغ
     const formattedAmount = amount ? amount.toLocaleString('fa-IR') : "تعیین نشده";
     
+    // === متغیرهای تاریخ و مبالغ پرداخت از روی سفارش ===
+    const fmtDate = (v?: string | null) => {
+      if (!v) return "ثبت نشده";
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? "ثبت نشده" : toJalali(d);
+    };
+    const fmtMoney = (n?: number | null) =>
+      typeof n === "number" && Number.isFinite(n) ? `${Math.max(0, n).toLocaleString("fa-IR")} تومان` : "ثبت نشده";
+    let rentalStartDate = "ثبت نشده", collectionDate = "ثبت نشده", completionDate = "ثبت نشده", paymentDate = "ثبت نشده";
+    let resolvedTotalPaid = totalPaid, resolvedRemaining = remainingAmount, resolvedPaidAmount = paidAmount;
+    if (orderId) {
+      try {
+        const [{ data: ord }, { data: col }, { data: pay }] = await Promise.all([
+          supabase.from("projects_v3").select("rental_start_date, executive_completion_date, customer_completion_date, closed_at, total_price, total_paid").eq("id", orderId).maybeSingle(),
+          supabase.from("collection_requests").select("requested_date, confirmed_date").eq("order_id", orderId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+          supabase.from("order_payments").select("amount, payment_date, created_at").eq("order_id", orderId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+        ]);
+        rentalStartDate = fmtDate((ord as any)?.rental_start_date);
+        collectionDate = fmtDate((col as any)?.confirmed_date || (col as any)?.requested_date);
+        completionDate = fmtDate((ord as any)?.executive_completion_date || (ord as any)?.customer_completion_date || (ord as any)?.closed_at);
+        paymentDate = fmtDate((pay as any)?.payment_date || (pay as any)?.created_at);
+        if (resolvedPaidAmount === undefined && (pay as any)?.amount != null) resolvedPaidAmount = Number((pay as any).amount);
+        if (resolvedTotalPaid === undefined && (ord as any)?.total_paid != null) resolvedTotalPaid = Number((ord as any).total_paid);
+        if (resolvedRemaining === undefined && (ord as any)?.total_price != null && resolvedTotalPaid !== undefined) {
+          resolvedRemaining = Number((ord as any).total_price) - resolvedTotalPaid;
+        }
+      } catch (e) {
+        console.warn("[send-order-sms] Could not resolve date/payment variables:", e);
+      }
+    }
+    if (status === "paid" && paymentDate === "ثبت نشده") paymentDate = toJalali(new Date());
+
     // برچسب مرحله سفارش را داخل نام خدمت می‌گنجانیم تا قالب تایید شده پارس‌گرین حفظ شود
-    const stageLabel = STAGE_LABELS[status];
+    let stageLabel = STAGE_LABELS[status];
+    if ((status === "paid" || status === "ceo_payment") && typeof resolvedRemaining === "number" && resolvedRemaining > 0) {
+      stageLabel = "پرداخت بخشی از مبلغ";
+    }
     const baseService = serviceType || "خدمات";
     const decoratedService = stageLabel ? `${baseService} (${stageLabel})` : baseService;
 
@@ -422,6 +462,13 @@ const handler = async (req: Request): Promise<Response> => {
       .replaceAll("{orderLink}", orderLink)
       .replaceAll("{paymentLink}", paymentLink)
       .replaceAll("{customerName}", customerName || "مشتری")
+      .replaceAll("{rentalStartDate}", rentalStartDate)
+      .replaceAll("{collectionDate}", collectionDate)
+      .replaceAll("{completionDate}", completionDate)
+      .replaceAll("{paymentDate}", paymentDate)
+      .replaceAll("{paidAmount}", fmtMoney(resolvedPaidAmount))
+      .replaceAll("{totalPaid}", fmtMoney(resolvedTotalPaid))
+      .replaceAll("{remainingAmount}", fmtMoney(resolvedRemaining))
       .replaceAll("{description}", (description || "").toString().trim() || "ثبت نشده");
 
     // ارسال مجدد: تاریخ و ساعت داخل متن با تاریخ جدید جایگزین شود
