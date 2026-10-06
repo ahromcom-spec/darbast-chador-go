@@ -254,6 +254,12 @@ export default function ExecutiveStageOrderExecuted() {
 
       if (error) throw error;
 
+      if (date) {
+        sendOrderSms('', orderCode, 'rental_started', { orderId })
+          .catch(err => console.error('SMS notification error:', err));
+      }
+
+
       toast({
         title: date ? '✓ تاریخ شروع کرایه ثبت شد' : '✓ تاریخ شروع کرایه پاک شد',
         description: date 
