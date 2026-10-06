@@ -263,10 +263,12 @@ export function MultiPaymentDialog({
           });
         }
       }
+      const smsRemaining = Math.max(0, (totalPrice || 0) - newTotalPaid);
+      const paySmsDetails = { orderId, serviceType: serviceType || 'خدمات', address: address || 'ثبت نشده', amount, paidAmount: amount, totalPaid: newTotalPaid, remainingAmount: smsRemaining };
       if (customerPhone) {
-        sendOrderSms(customerPhone, orderCode, 'paid', { orderId, serviceType: serviceType || 'خدمات', address: address || 'ثبت نشده', amount });
+        sendOrderSms(customerPhone, orderCode, 'paid', paySmsDetails);
       }
-      sendCeoNotificationSms(orderCode, 'paid', { orderId, serviceType: serviceType || 'خدمات', address: address || 'ثبت نشده', amount, customerName });
+      sendCeoNotificationSms(orderCode, 'paid', { ...paySmsDetails, customerName });
       notifyCEOPayment({ orderCode, orderId, amount, customerName, customerPhone, method: 'manual' }).catch(() => {});
 
       toast({ title: '✓ پرداخت ثبت شد', description: `مبلغ ${amount.toLocaleString('fa-IR')} تومان با موفقیت ثبت شد` });

@@ -16,7 +16,8 @@ type SmsStatus =
   | 'awaiting_collection' // در انتظار جمع‌آوری
   | 'in_collection'  // در حال جمع‌آوری
   | 'collected'      // جمع‌آوری شد
-  | 'completed';     // تکمیل شد
+  | 'completed'      // تکمیل شد
+  | 'rental_started'; // تاریخ شروع کرایه ثبت شد
 
 interface OrderSmsDetails {
   orderId?: string;       // شناسه سفارش برای لینک
@@ -26,6 +27,9 @@ interface OrderSmsDetails {
   amount?: number;        // مبلغ سفارش
   customerName?: string;  // نام مشتری (برای پیامک به مدیرعامل)
   description?: string;   // شرح فعالیت سفارش
+  paidAmount?: number;    // مبلغ همین پرداخت
+  totalPaid?: number;     // مجموع پرداخت‌ها
+  remainingAmount?: number; // مانده
 }
 
 const normalizeIranPhone = (input?: string | null) => {
@@ -235,6 +239,9 @@ export const sendOrderSms = async (
           amount: smsDetails.amount,
           customerName: smsDetails.customerName,
           description: smsDetails.description,
+          paidAmount: smsDetails.paidAmount,
+          totalPaid: smsDetails.totalPaid,
+          remainingAmount: smsDetails.remainingAmount,
         },
         send_after: sendAfter.toISOString(),
         created_by: userRes?.user?.id ?? null,
@@ -264,7 +271,10 @@ export const sendOrderSms = async (
         dateTime: smsDetails.dateTime,
         amount: smsDetails.amount,
         customerName: smsDetails.customerName,
-        description: smsDetails.description
+        description: smsDetails.description,
+        paidAmount: smsDetails.paidAmount,
+        totalPaid: smsDetails.totalPaid,
+        remainingAmount: smsDetails.remainingAmount,
       }
     });
 
@@ -353,7 +363,10 @@ export const sendCeoNotificationSms = async (
         dateTime: ceoDetails.dateTime,
         amount: ceoDetails.amount,
         customerName: ceoDetails.customerName,
-        description: ceoDetails.description
+        description: ceoDetails.description,
+        paidAmount: ceoDetails.paidAmount,
+        totalPaid: ceoDetails.totalPaid,
+        remainingAmount: ceoDetails.remainingAmount,
       }
     });
 
