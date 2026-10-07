@@ -401,16 +401,17 @@ const handler = async (req: Request): Promise<Response> => {
     };
     const fmtMoney = (n?: number | null) =>
       typeof n === "number" && Number.isFinite(n) ? `${Math.max(0, n).toLocaleString("fa-IR")} تومان` : "ثبت نشده";
-    let rentalStartDate = "ثبت نشده", collectionDate = "ثبت نشده", completionDate = "ثبت نشده", paymentDate = "ثبت نشده";
+    let rentalStartDate = "ثبت نشده", collectionDate = "ثبت نشده", completionDate = "ثبت نشده", paymentDate = "ثبت نشده", executionDate = "ثبت نشده";
     let resolvedTotalPaid = totalPaid, resolvedRemaining = remainingAmount, resolvedPaidAmount = paidAmount;
     if (orderId) {
       try {
         const [{ data: ord }, { data: col }, { data: pay }] = await Promise.all([
-          supabase.from("projects_v3").select("rental_start_date, executive_completion_date, customer_completion_date, closed_at, total_price, total_paid").eq("id", orderId).maybeSingle(),
+          supabase.from("projects_v3").select("rental_start_date, execution_end_date, executive_completion_date, customer_completion_date, closed_at, total_price, total_paid").eq("id", orderId).maybeSingle(),
           supabase.from("collection_requests").select("requested_date, confirmed_date").eq("order_id", orderId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
           supabase.from("order_payments").select("amount, payment_date, created_at").eq("order_id", orderId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
         ]);
         rentalStartDate = fmtDate((ord as any)?.rental_start_date);
+        executionDate = fmtDate((ord as any)?.execution_end_date);
         collectionDate = fmtDate((col as any)?.confirmed_date || (col as any)?.requested_date);
         completionDate = fmtDate((ord as any)?.executive_completion_date || (ord as any)?.customer_completion_date || (ord as any)?.closed_at);
         paymentDate = fmtDate((pay as any)?.payment_date || (pay as any)?.created_at);
@@ -463,6 +464,7 @@ const handler = async (req: Request): Promise<Response> => {
       .replaceAll("{paymentLink}", paymentLink)
       .replaceAll("{customerName}", customerName || "مشتری")
       .replaceAll("{rentalStartDate}", rentalStartDate)
+      .replaceAll("{executionDate}", executionDate)
       .replaceAll("{collectionDate}", collectionDate)
       .replaceAll("{completionDate}", completionDate)
       .replaceAll("{paymentDate}", paymentDate)
