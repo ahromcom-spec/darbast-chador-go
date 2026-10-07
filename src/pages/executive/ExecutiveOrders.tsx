@@ -2732,19 +2732,22 @@ export default function ExecutiveOrders() {
           </DialogHeader>
           {(() => {
             const pendingOrder = orders.find(o => o.id === pendingStageChange?.orderId);
-            const needsInstallDate = !!pendingOrder
-              && isScaffoldingNoMaterials(pendingOrder as any)
-              && pendingStageChange?.newStage === 'order_executed';
-            if (!needsInstallDate) return null;
+            const isNoMaterials = !!pendingOrder && isScaffoldingNoMaterials(pendingOrder as any);
+            const needsExecutionDate = pendingStageChange?.newStage === 'order_executed';
+            if (!needsExecutionDate) return null;
             return (
               <div className="space-y-1.5">
-                <Label>تاریخ نصب یا فک</Label>
+                <Label>{isNoMaterials ? 'تاریخ نصب یا فک' : 'تاریخ اجرای سفارش'} <span className="text-destructive">*</span></Label>
                 <PersianDatePicker
                   value={stageExecutionDate || pendingOrder?.execution_end_date || ''}
                   onChange={setStageExecutionDate}
                   timeMode="full"
                 />
-                <p className="text-xs text-muted-foreground">تاریخ و ساعت انجام نصب یا فک داربست فلزی را انتخاب کنید. این تاریخ در فاکتور و مراحل سفارش نمایش داده می‌شود.</p>
+                <p className="text-xs text-muted-foreground">
+                  {isNoMaterials
+                    ? 'تاریخ و ساعت انجام نصب یا فک داربست فلزی را انتخاب کنید. این تاریخ در فاکتور و مراحل سفارش نمایش داده می‌شود.'
+                    : 'تاریخ و ساعت اجرای سفارش را انتخاب کنید. این تاریخ در پیامک اطلاع‌رسانی به مشتری ارسال می‌شود و بدون انتخاب آن تأیید مرحله ممکن نیست.'}
+                </p>
               </div>
             );
           })()}
