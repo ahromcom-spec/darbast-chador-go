@@ -2777,19 +2777,28 @@ export default function ExecutiveOrders() {
             >
               انصراف
             </Button>
-            <Button 
-              onClick={() => {
-                if (pendingStageChange) {
-                  handleStageChange(pendingStageChange.orderId, pendingStageChange.newStage, stageNoteText, stageExecutionDate || undefined);
-                }
-                setStageChangeConfirmOpen(false);
-                setPendingStageChange(null);
-                setStageNoteText('');
-                setStageExecutionDate('');
-              }}
-            >
-              تایید تغییر مرحله
-            </Button>
+            {(() => {
+              const pendingOrder = orders.find(o => o.id === pendingStageChange?.orderId);
+              const needsExecutionDate = pendingStageChange?.newStage === 'order_executed';
+              const effectiveDate = stageExecutionDate || pendingOrder?.execution_end_date || '';
+              const dateMissing = needsExecutionDate && !effectiveDate;
+              return (
+                <Button
+                  disabled={dateMissing}
+                  onClick={() => {
+                    if (pendingStageChange) {
+                      handleStageChange(pendingStageChange.orderId, pendingStageChange.newStage, stageNoteText, effectiveDate || undefined);
+                    }
+                    setStageChangeConfirmOpen(false);
+                    setPendingStageChange(null);
+                    setStageNoteText('');
+                    setStageExecutionDate('');
+                  }}
+                >
+                  تایید تغییر مرحله
+                </Button>
+              );
+            })()}
           </DialogFooter>
         </DialogContent>
       </Dialog>
