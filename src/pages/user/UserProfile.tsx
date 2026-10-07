@@ -13,6 +13,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { PageHeader } from '@/components/common/PageHeader';
 import { UnifiedProfileCard } from '@/components/profile/UnifiedProfileCard';
+import { SiteSettingsButton } from '@/components/profile/SiteSettingsButton';
 import { StaffRegistrationButton } from '@/components/staff/StaffRegistrationButton';
 import { StaffRequestDialog } from '@/components/staff/StaffRequestDialog';
 import { StatusBadge } from '@/components/common/StatusBadge';
@@ -249,6 +250,10 @@ const fetchOrders = async () => {
           description="مدیریت اطلاعات شخصی و سفارشات"
           showBackButton={true}
         />
+        <div className="flex justify-end -mt-3">
+          <SiteSettingsButton />
+        </div>
+
 
         {/* Incoming Transfer Requests */}
         <IncomingTransferRequests />

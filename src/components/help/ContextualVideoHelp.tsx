@@ -112,8 +112,9 @@ export const ContextualVideoHelp = ({
 }: ContextualVideoHelpProps) => {
   const { video, loading } = useHelpVideo(contextKey);
   const [open, setOpen] = useState(false);
+  const helpEnabled = useHelpVideosEnabled();
 
-  if (loading || !video) return null;
+  if (!helpEnabled || loading || !video) return null;
 
   if (variant === 'inline') {
     return (
