@@ -414,7 +414,6 @@ export const FloatingHelpVideos = () => {
   const [pageReady, setPageReady] = useState(false);
   /** صفحه‌ای مثل تب «لوکیشن اجرایی پروژه» می‌تواند راهنماهای شناور را موقتاً پنهان کند */
   const [helpSuppressed, setHelpSuppressed] = useState(false);
-  const helpEnabled = useHelpVideosEnabled();
 
   useEffect(() => {
     const onSuppress = (e: Event) => {
@@ -471,7 +470,7 @@ export const FloatingHelpVideos = () => {
     };
   }, [pagePainted]);
 
-  if (!helpEnabled || helpSuppressed || exactLoading || pathLoading || !pagePainted || !pageReady || videos.length === 0) return null;
+  if (helpSuppressed || exactLoading || pathLoading || !pagePainted || !pageReady || videos.length === 0) return null;
 
   return (
     <>
