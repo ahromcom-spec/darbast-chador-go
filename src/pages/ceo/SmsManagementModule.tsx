@@ -75,6 +75,7 @@ const PLACEHOLDERS: { token: string; label: string }[] = [
   { token: "{description}", label: "شرح فعالیت سفارش" },
   { token: "{paymentLink}", label: "لینک پرداخت سفارش" },
   { token: "{rentalStartDate}", label: "تاریخ شروع کرایه" },
+  { token: "{executionDate}", label: "تاریخ اجرای سفارش" },
   { token: "{collectionDate}", label: "تاریخ درخواست جمع‌آوری" },
   { token: "{completionDate}", label: "تاریخ اتمام سفارش" },
   { token: "{paymentDate}", label: "تاریخ پرداخت" },
