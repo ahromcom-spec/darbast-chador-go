@@ -3414,7 +3414,21 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
 
         {/* مکان‌نمای ثابت مرکز نقشه — فقط نقشه عمومی؛ در تب اجرایی نقشه تمیز می‌ماند */}
         {!activeExecutionOnly && (
-        <div className="pointer-events-none absolute left-1/2 top-1/2 z-[2200] -translate-x-1/2 -translate-y-full">
+        <Button
+          variant="ghost"
+          disabled={!centerPin}
+          aria-label="تایید محل"
+          className="pointer-events-auto absolute left-1/2 top-1/2 z-[2200] -translate-x-1/2 -translate-y-full h-[52px] w-[42px] p-0 overflow-visible hover:bg-transparent"
+          onClick={() => {
+            if (!centerPin) return;
+            navigate('/user/new-location', {
+              state: { lat: centerPin.lat, lng: centerPin.lng, fromMap: true },
+            });
+          }}
+        >
+          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 whitespace-nowrap rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-md">
+            تایید محل
+          </span>
           <svg width="42" height="52" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg">
             <ellipse cx="20" cy="48" rx="7" ry="2" fill="rgba(0,0,0,0.25)" />
             <path
@@ -3425,7 +3439,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             />
             <circle cx="20" cy="16" r="5.5" fill="white" />
           </svg>
-        </div>
+        </Button>
         )}
 
         {/* دکمه انتخاب پروژه فقط زمانی که مکان‌نما روی پروژه قرار گرفته — در تب اجرایی نمایش داده نمی‌شود */}
@@ -3447,27 +3461,6 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
               <MapPin className="h-4 w-4 ml-1.5" />
               {`انتخاب پروژه: ${snappedProject.title || 'پروژه من'}`}
             </Button>
-          </div>
-        )}
-
-        {/* نقشه عمومی (کره زمین): دکمه افزودن پروژه در موقعیت مرکز نقشه */}
-        {!activeExecutionOnly && !snappedProject && (
-          <div className="pointer-events-auto absolute bottom-[4.75rem] left-1/2 -translate-x-1/2 w-[90%] max-w-md z-[2200]">
-            <Button
-              className="w-full h-11 text-sm font-bold shadow-xl"
-              onClick={() => {
-                if (!centerPin) return;
-                navigate('/user/new-location', {
-                  state: { lat: centerPin.lat, lng: centerPin.lng, fromMap: true },
-                });
-              }}
-            >
-              <MapPin className="h-4 w-4 ml-1.5" />
-              افزودن پروژه در این موقعیت
-            </Button>
-            <p className="mt-1 text-center text-[10px] text-muted-foreground bg-background/70 backdrop-blur-sm rounded px-2 py-0.5">
-              نقشه را جابجا کنید تا مکان‌نما روی محل پروژه قرار بگیرد (تا ۳ متری، پروژه خودکار انتخاب می‌شود)
-            </p>
           </div>
         )}
 
