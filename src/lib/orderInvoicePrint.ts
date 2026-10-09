@@ -476,7 +476,19 @@ export function buildOrderInvoiceHtml(
   };
   const partById = new Map(orderParts.map((p) => [p.id, p]));
   const parsedNotes = order.notes && typeof order.notes === 'object' ? order.notes : parseOrderNotes(order.notes);
-    const dimensions = parsedNotes?.dimensions;
+    // ارقام فارسی/عربی ابعاد به عدد انگلیسی تبدیل می‌شوند تا متراژ همیشه در فاکتور بیاید
+    const normDigit = (v: any) => {
+      if (typeof v !== 'string') return v;
+      const s = v.replace(/[۰-۹]/g, (c) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c)))
+        .replace(/[٠-٩]/g, (c) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(c)))
+        .replace(/[٫,]/g, '.').trim();
+      return s;
+    };
+    const normDim = (d: any) => d && typeof d === 'object'
+      ? Object.fromEntries(Object.entries(d).map(([k, v]) => [k, normDigit(v)]))
+      : d;
+    const rawDimensions = parsedNotes?.dimensions;
+    const dimensions = Array.isArray(rawDimensions) ? rawDimensions.map(normDim) : normDim(rawDimensions);
     const scaffoldingType = parsedNotes?.service_type || parsedNotes?.scaffoldingType || parsedNotes?.scaffold_type;
     const ceilingSubtype = parsedNotes?.ceilingSubtype || parsedNotes?.ceiling_subtype;
     const description = parsedNotes?.description || parsedNotes?.installationDescription || parsedNotes?.additional_notes || parsedNotes?.locationPurpose;
