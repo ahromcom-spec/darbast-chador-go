@@ -45,6 +45,7 @@ import { MyProjectsTab } from '@/components/profile/MyProjectsTab';
 import { UserModulesTab } from '@/components/profile/UserModulesTab';
 import { lazy } from 'react';
 import { ContextualVideoHelp } from '@/components/help/ContextualVideoHelp';
+import { SiteSettingsButton } from '@/components/profile/SiteSettingsButton';
 
 const SalesCustomers = lazy(() => import('@/pages/sales/SalesCustomers'));
 
@@ -249,6 +250,10 @@ const fetchOrders = async () => {
           description="مدیریت اطلاعات شخصی و سفارشات"
           showBackButton={true}
         />
+        <div className="flex justify-end -mt-4">
+          <SiteSettingsButton />
+        </div>
+
 
         {/* Incoming Transfer Requests */}
         <IncomingTransferRequests />
