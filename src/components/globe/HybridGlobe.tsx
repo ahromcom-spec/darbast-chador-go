@@ -1713,12 +1713,46 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
       const groupArchived = group.every(p => isArchivedProject(p));
       const clusterDotColor = groupArchived ? '#94a3b8' : '#ef4444';
       const clusterDotShadow = groupArchived ? 'rgba(148,163,184,0.5)' : 'rgba(239, 68, 68, 0.5)';
+      // تعداد کل سفارش‌های داخل این نقطه (همه پروژه‌های هم‌موقعیت)
+      const groupOrderTotal = group.reduce((sum, p) => sum + (p.orders?.length || 0), 0);
+      const isClusterExpanded = expandedClusters.has(clusterKey);
 
-      // برای همه موقعیت‌ها (چه تکی چه چندتایی) نقطه مرکزی قرمز اضافه کنیم
-      // ایجاد نقطه مرکزی قرمز کوچک
+      // نقطه مرکزی: در خوشه‌های چندتایی، عدد سفارش‌ها داخل دایره با فونت بزرگ نوشته می‌شود
       const clusterIcon = L.divIcon({
         className: 'cluster-marker-icon',
-        html: `
+        html: count > 1 ? `
+          <div style="
+            position: relative;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          ">
+            <div style="
+              width: 32px;
+              height: 32px;
+              border-radius: 50%;
+              background: ${clusterDotColor};
+              border: 2px solid white;
+              box-shadow: 0 3px 10px ${clusterDotShadow};
+              cursor: pointer;
+              transition: all 0.2s ease;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: #fff;
+              font-family: Vazirmatn, sans-serif;
+              font-size: 18px;
+              font-weight: 800;
+              line-height: 1;
+              text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+            "
+            onmouseover="this.style.transform='scale(1.12)'"
+            onmouseout="this.style.transform='scale(1)'"
+            >${groupOrderTotal}</div>
+          </div>
+        ` : `
           <div style="
             position: relative;
             width: 20px;
@@ -1743,9 +1777,9 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             </div>
           </div>
         `,
-        iconSize: [20, 20],
-        iconAnchor: [10, 10],
-        popupAnchor: [0, -10],
+        iconSize: count > 1 ? [36, 36] : [20, 20],
+        iconAnchor: count > 1 ? [18, 18] : [10, 10],
+        popupAnchor: count > 1 ? [0, -18] : [0, -10],
       });
       
       const centerMarker = L.marker([centerLat, centerLng], { 
@@ -1948,6 +1982,34 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
 
         const projectArchived = isArchivedProject(project);
         const orderCounts = getProjectOrderCounts(project);
+        // عدد بزرگ روی مارکر: تعداد سفارش‌های داخل این مارکر
+        // در حالت جمع‌شده مارکر نماینده همه پروژه‌های آن نقطه است
+        const markerOrderCount = count > 1 && !isClusterExpanded ? groupOrderTotal : orderCounts.total;
+        const orderCountBadgeHtml = `
+          <div style="
+            position:absolute;
+            bottom:2px;
+            left:50%;
+            transform:translateX(-50%);
+            min-width:26px;
+            height:26px;
+            padding:0 6px;
+            border-radius:13px;
+            background:${projectArchived ? 'rgba(100,116,139,0.97)' : 'rgba(37,99,235,0.97)'};
+            border:2px solid #fff;
+            box-shadow:0 2px 8px rgba(0,0,0,0.45);
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            color:#fff;
+            font-family:Vazirmatn, sans-serif;
+            font-size:17px;
+            font-weight:800;
+            line-height:1;
+            text-shadow:0 1px 2px rgba(0,0,0,0.5);
+            z-index:6;
+            pointer-events:none;
+          ">${markerOrderCount}</div>`;
         const labelGradient = projectArchived
           ? 'linear-gradient(135deg, rgba(100,116,139,0.95) 0%, rgba(71,85,105,0.95) 100%)'
           : 'linear-gradient(135deg, rgba(59,130,246,0.95) 0%, rgba(37,99,235,0.95) 100%)';
