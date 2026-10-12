@@ -2097,9 +2097,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
                   onended="this.currentTime=0;this.play().catch(()=>{});"
                   style="width:100%;height:100%;object-fit:cover;pointer-events:none;">
                 </video>
-                <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));height:18px;display:flex;align-items:center;justify-content:center;">
-                  <span style="color:#fff;font-size:10px;font-weight:bold;">${totalOrderImages}</span>
-                </div>
+                ${orderCountBadgeHtml}
               </div>
             </div>`;
           iconToUse = L.divIcon({
@@ -2121,9 +2119,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
               ${addressLabelHtml}
               <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid ${projectArchived ? '#94a3b8' : '#fff'};background:#f0f0f0;position:relative;${projectArchived ? 'filter:grayscale(0.45) saturate(0.7);' : ''}">
                 <img src="${url1}" alt="تصویر پروژه" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
-                <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.7));height:18px;display:flex;align-items:center;justify-content:center;">
-                  <span style="color:#fff;font-size:10px;font-weight:bold;">${totalOrderImages}</span>
-                </div>
+                ${orderCountBadgeHtml}
               </div>
             </div>`;
           iconToUse = L.divIcon({
@@ -2145,6 +2141,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
                 <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(217,119,6,0.8));height:16px;display:flex;align-items:center;justify-content:center;">
                   <span style="color:#fff;font-size:9px;font-weight:bold;">بدون عکس</span>
                 </div>
+                ${orderCountBadgeHtml}
               </div>
             </div>`;
           iconToUse = L.divIcon({
