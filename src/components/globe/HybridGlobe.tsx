@@ -2534,8 +2534,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           <div class="mobile-popup-inner" style="font-family: Vazirmatn, sans-serif; direction: rtl; text-align: right; min-width: 260px;${count > 1 ? 'border:3px solid #667eea;border-radius:10px;' : ''}">
             ${locationHeader}
             <strong style="font-size: 15px; color: #1f2937;">${locationTitle}</strong>
-            <span style="font-size: 13px; color: #6b7280; margin-top: 6px; display: block;">${project.locations?.address_line || ''}</span>
-            <div class="neshan-plaque-line" data-lat="${project.locations?.lat}" data-lng="${project.locations?.lng}" style="font-size: 12px; color: #0ea5e9; margin-top: 4px; display: block; font-weight: 600;">در حال دریافت پلاک…</div>
+            <span style="font-size: 13px; color: #6b7280; margin-top: 6px; display: block;">محل پروژه</span>
             
             ${ordersHTML}
           </div>
@@ -2635,36 +2634,6 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             if (isMinimized && isFullscreen) applyFullscreen(false);
           });
 
-          // واکشی پلاک از نشان و درج در کادر
-          const plaqueEl = popupElement.querySelector('.neshan-plaque-line') as HTMLElement | null;
-          if (plaqueEl) {
-            const lat = parseFloat(plaqueEl.dataset.lat || '');
-            const lng = parseFloat(plaqueEl.dataset.lng || '');
-            if (Number.isFinite(lat) && Number.isFinite(lng)) {
-              import('@/lib/neshan').then(({ neshanReverseGeocode }) => {
-                neshanReverseGeocode(lat, lng).then((res) => {
-                  if (!res) { plaqueEl.style.display = 'none'; return; }
-                  const parts: string[] = [];
-                  if (res.neighbourhood) parts.push(`محله: ${res.neighbourhood}`);
-                  if (res.route_name) parts.push(`${res.route_type || 'خیابان'}: ${res.route_name}`);
-                  if (res.house_number) {
-                    const suffix = res.house_number_source === 'nearby'
-                      ? ` نزدیک‌ترین پلاک${res.plaque_distance_m ? ` در حدود ${res.plaque_distance_m} متر` : ''}`
-                      : 'پلاک';
-                    parts.push(`${suffix}: ${res.house_number}`);
-                  } else {
-                    parts.push('پلاک ثبت‌شده‌ای برای این نقطه پیدا نشد');
-                  }
-                  plaqueEl.innerHTML = parts.length
-                    ? `📍 ${parts.join(' • ')}`
-                    : (res.formatted_address ? `📍 ${res.formatted_address}` : '');
-                  if (!plaqueEl.innerHTML) plaqueEl.style.display = 'none';
-                }).catch(() => { plaqueEl.style.display = 'none'; });
-              });
-            } else {
-              plaqueEl.style.display = 'none';
-            }
-          }
 
           
           // هندلر برای سفارشات (کلیک + گالری)

@@ -120,7 +120,7 @@ export default function MapboxGlobe({ onClose }: MapboxGlobeProps) {
         marker.bindPopup(
           `<div style="padding:8px;font-family:Vazir,sans-serif;direction:rtl;min-width:200px;">
              <h3 style="font-weight:bold;margin:0 0 6px 0;font-size:15px;">${project.title || 'پروژه'}</h3>
-             <p style="font-size:12px;color:#666;line-height:1.5;margin:0;">${project.locations?.address_line || ''}</p>
+             <p style="font-size:12px;color:#666;line-height:1.5;margin:0;">محل پروژه</p>
            </div>`,
         );
 
