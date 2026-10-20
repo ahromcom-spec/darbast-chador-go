@@ -3446,8 +3446,14 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           type="button"
           disabled={!centerPin}
           aria-label="تایید محل"
-          className="pointer-events-auto absolute left-1/2 top-1/2 z-[2200] -translate-x-1/2 -translate-y-full h-[52px] w-[42px] p-0 overflow-visible cursor-pointer bg-transparent border-0 disabled:opacity-60"
-          onClick={() => {
+          className="pointer-events-auto absolute left-1/2 top-1/2 z-[2300] -translate-x-1/2 -translate-y-full flex flex-col items-center gap-1 p-0 cursor-pointer select-none bg-transparent border-0 disabled:opacity-60 touch-manipulation"
+          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          onDoubleClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
             if (!centerPin) return;
             try {
               sessionStorage.setItem('pendingMapPin', JSON.stringify({ lat: centerPin.lat, lng: centerPin.lng, t: Date.now() }));
@@ -3457,10 +3463,10 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             });
           }}
         >
-          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-md">
+          <span className="block whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-bold leading-none text-primary-foreground shadow-md hover:bg-primary/90">
             تایید محل
           </span>
-          <svg width="42" height="52" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg className="block pointer-events-none" width="42" height="52" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg">
             <ellipse cx="20" cy="48" rx="7" ry="2" fill="rgba(0,0,0,0.25)" />
             <path
               d="M20 2C12 2 6 8 6 16C6 25 20 42 20 42C20 42 34 25 34 16C34 8 28 2 20 2Z"
