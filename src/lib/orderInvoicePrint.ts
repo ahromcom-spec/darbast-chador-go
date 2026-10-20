@@ -1268,7 +1268,7 @@ export function buildOrderInvoiceDocument(order: InvoiceOrderLike, extras: Invoi
 <html dir="rtl" lang="fa"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(`فاکتور سفارش ${order.code}`)}</title>
-<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
 ${getInvoiceStyles()}
 </head><body>${buildOrderInvoiceHtml(order, extras, hidePrice)}</body></html>`;
 }

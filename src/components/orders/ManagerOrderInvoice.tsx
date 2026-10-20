@@ -301,7 +301,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
       <head>
         <meta charset="UTF-8">
         <title>فاکتور سفارش ${order.code}</title>
-        <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
         ${getInvoiceStyles()}
       </head>
       <body>
@@ -312,9 +312,9 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
     
     printWindow.document.close();
     
-    setTimeout(() => {
-      printWindow.print();
-    }, 1000);
+    const fonts = (printWindow.document as any).fonts;
+    if (fonts?.ready) fonts.ready.then(() => setTimeout(() => printWindow.print(), 300));
+    else setTimeout(() => printWindow.print(), 1200);
   };
 
   // Render the invoice HTML to a single A4 page PDF (scales to fit)
