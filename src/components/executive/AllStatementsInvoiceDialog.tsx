@@ -338,7 +338,7 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
       <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
       ${styles}</head><body>${html}</body></html>`);
     w.document.close();
-    setTimeout(() => w.print(), 800);
+    (w.document as any).fonts?.ready ? (w.document as any).fonts.ready.then(() => setTimeout(() => w.print(), 300)) : setTimeout(() => w.print(), 1200);
   };
 
   const handleDownloadPDF = async () => {
