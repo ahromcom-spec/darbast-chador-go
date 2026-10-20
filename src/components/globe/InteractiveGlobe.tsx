@@ -55,7 +55,7 @@ function ProjectMarkers({ projects, selectedLocationId }: { projects: ProjectMar
               }`}>
                 {isHighlighted && '⭐ '}
                 {hasMultiple && <div className="font-bold text-amber-500 mb-1">📍 {project.count} پروژه</div>}
-                <div className="text-foreground">{project.address}</div>
+                <div className="text-foreground">محل پروژه</div>
                 {hasMultiple && (
                   <div className="mt-1 pt-1 border-t border-border/50 space-y-0.5">
                     {project.projects.map((p, i) => (

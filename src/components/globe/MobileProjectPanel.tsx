@@ -420,17 +420,11 @@ export function MobileProjectPanel({
       };
     })
     .filter(Boolean) as ServiceTypeGroup[];
-  const fullAddress = [
-    project.locations?.address_line?.trim(),
-    project.locations?.districts?.name?.trim(),
-    project.locations?.provinces?.name?.trim(),
-  ].filter(Boolean).join('، ');
-
+  // عنوان کادر: فقط عنوان کوتاه محل (بدون آدرس کامل)
   const locationDisplayTitle =
-    fullAddress ||
     project.locations?.title?.trim() ||
     project.title?.trim() ||
-    'موقعیت';
+    'محل پروژه';
 
 
   const startPanelResize = (direction: ResizeDirection) => (event: React.PointerEvent<HTMLDivElement>) => {
