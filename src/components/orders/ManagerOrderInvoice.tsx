@@ -117,6 +117,15 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
   const [isDownloading, setIsDownloading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [zoom, setZoom] = useState(1);
+  const [logoReady, setLogoReady] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const img = new Image();
+    img.onload = () => setLogoReady(true);
+    img.onerror = () => setLogoReady(true);
+    img.src = '/ahrom-logo.png';
+    if (img.complete && img.naturalWidth > 0) setLogoReady(true);
+  }, [open]);
   const printRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -312,9 +321,13 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
     
     printWindow.document.close();
     
-    const fonts = (printWindow.document as any).fonts;
-    if (fonts?.ready) fonts.ready.then(() => setTimeout(() => printWindow.print(), 300));
-    else setTimeout(() => printWindow.print(), 1200);
+    const doc = printWindow.document;
+    const imgs = Array.from(doc.images);
+    const imgsReady = Promise.all(imgs.map((img) => img.complete && img.naturalWidth > 0
+      ? Promise.resolve()
+      : new Promise<void>((res) => { img.onload = () => res(); img.onerror = () => res(); setTimeout(res, 15000); })));
+    const fonts = (doc as any).fonts;
+    Promise.all([imgsReady, fonts?.ready || Promise.resolve()]).then(() => setTimeout(() => printWindow.print(), 300));
   };
 
   // Render the invoice HTML to a single A4 page PDF (scales to fit)
@@ -492,9 +505,9 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
                 <Download className="h-4 w-4 ml-1" />
                 {isLoading ? 'در حال بارگذاری...' : isDownloading ? 'در حال دانلود...' : 'دانلود PDF'}
               </Button>
-              <Button onClick={handlePrint} size="sm" disabled={isLoading}>
+              <Button onClick={handlePrint} size="sm" disabled={isLoading || !logoReady}>
                 <Printer className="h-4 w-4 ml-1" />
-                {isLoading ? 'در حال بارگذاری...' : 'پرینت'}
+                {isLoading || !logoReady ? 'در حال بارگذاری...' : 'پرینت'}
               </Button>
             </div>
           </DialogTitle>
