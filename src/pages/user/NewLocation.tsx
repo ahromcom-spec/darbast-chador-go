@@ -37,6 +37,7 @@ export default function NewLocation() {
   console.log('🗺️ NewLocation - Initial coordinates:', { initialLat, initialLng, editInitialData, state: location.state });
 
   const handleSuccess = async (locationId: string, distanceFromCenter?: number) => {
+    try { sessionStorage.removeItem('pendingMapPin'); } catch {}
     // If coming from globe map, go back to home (which shows the globe)
     if (location.state?.fromGlobeMap) {
       navigate('/', { replace: true });
