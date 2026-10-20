@@ -3449,6 +3449,9 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           className="pointer-events-auto absolute left-1/2 top-1/2 z-[2200] -translate-x-1/2 -translate-y-full h-[52px] w-[42px] p-0 overflow-visible cursor-pointer bg-transparent border-0 disabled:opacity-60"
           onClick={() => {
             if (!centerPin) return;
+            try {
+              sessionStorage.setItem('pendingMapPin', JSON.stringify({ lat: centerPin.lat, lng: centerPin.lng, t: Date.now() }));
+            } catch {}
             navigate('/user/new-location', {
               state: { lat: centerPin.lat, lng: centerPin.lng, fromMap: true },
             });
