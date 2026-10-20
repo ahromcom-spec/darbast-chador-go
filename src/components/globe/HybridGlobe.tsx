@@ -3442,11 +3442,11 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
 
         {/* مکان‌نمای ثابت مرکز نقشه — فقط نقشه عمومی؛ در تب اجرایی نقشه تمیز می‌ماند */}
         {!activeExecutionOnly && (
-        <Button
-          variant="ghost"
+        <button
+          type="button"
           disabled={!centerPin}
           aria-label="تایید محل"
-          className="pointer-events-auto absolute left-1/2 top-1/2 z-[2200] -translate-x-1/2 -translate-y-full h-[52px] w-[42px] p-0 overflow-visible hover:bg-transparent"
+          className="pointer-events-auto absolute left-1/2 top-1/2 z-[2200] -translate-x-1/2 -translate-y-full h-[52px] w-[42px] p-0 overflow-visible cursor-pointer bg-transparent border-0 disabled:opacity-60"
           onClick={() => {
             if (!centerPin) return;
             navigate('/user/new-location', {
@@ -3454,7 +3454,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             });
           }}
         >
-          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 whitespace-nowrap rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-md">
+          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-md">
             تایید محل
           </span>
           <svg width="42" height="52" viewBox="0 0 40 50" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -3467,7 +3467,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             />
             <circle cx="20" cy="16" r="5.5" fill="white" />
           </svg>
-        </Button>
+        </button>
         )}
 
         {/* دکمه انتخاب پروژه فقط زمانی که مکان‌نما روی پروژه قرار گرفته — در تب اجرایی نمایش داده نمی‌شود */}
