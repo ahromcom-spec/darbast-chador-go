@@ -18,8 +18,6 @@ interface StaticLocationMapProps {
 export default function StaticLocationMap({
   lat,
   lng,
-  address,
-  detailedAddress,
   showNavigationButton = true
 }: StaticLocationMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -143,18 +141,13 @@ export default function StaticLocationMap({
       // Add marker
       const marker = L.marker([validLat, validLng], { icon: customIcon }).addTo(map);
 
-      // Add popup with address
-      if (address) {
-        // فقط اگر detailedAddress متفاوت از address باشد نمایش داده شود
-        const showDetailedAddress = detailedAddress && detailedAddress.trim() !== address.trim();
-        const popupContent = `
-          <div style="padding: 8px; min-width: 260px; max-width: 320px; direction: rtl; text-align: right; font-family: Vazir, sans-serif;">
-            <p style="font-weight: 600; margin: 0 0 4px 0; font-size: 11px; line-height: 1.7; color: hsl(var(--foreground)); white-space: normal; word-break: normal; overflow-wrap: break-word;">${address}</p>
-            ${showDetailedAddress ? `<p style="font-size: 10px; line-height: 1.6; margin: 0; color: hsl(var(--muted-foreground)); white-space: normal; word-break: normal; overflow-wrap: break-word;">${detailedAddress}</p>` : ''}
-          </div>
-        `;
-        marker.bindPopup(popupContent).openPopup();
-      }
+      // کادر روی نشانگر: فقط «محل پروژه» — آدرس کامل روی نقشه نمایش داده نمی‌شود
+      const popupContent = `
+        <div style="padding: 8px; min-width: 140px; direction: rtl; text-align: center; font-family: Vazir, sans-serif;">
+          <p style="font-weight: 600; margin: 0; font-size: 12px; color: hsl(var(--foreground));">محل پروژه</p>
+        </div>
+      `;
+      marker.bindPopup(popupContent).openPopup();
 
       // invalidateSize پس از mount کامل برای حل مشکل خطوط افقی - چندین بار
       const invalidateSizeMultiple = () => {
@@ -195,7 +188,7 @@ export default function StaticLocationMap({
     } catch (error) {
       console.error('Error initializing map:', error);
     }
-  }, [lat, lng, address, detailedAddress]);
+  }, [lat, lng]);
 
   return (
     <div className="relative w-full h-full">
