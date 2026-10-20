@@ -312,9 +312,9 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
     
     printWindow.document.close();
     
-    setTimeout(() => {
-      printWindow.print();
-    }, 1000);
+    const fonts = (printWindow.document as any).fonts;
+    if (fonts?.ready) fonts.ready.then(() => setTimeout(() => printWindow.print(), 300));
+    else setTimeout(() => printWindow.print(), 1200);
   };
 
   // Render the invoice HTML to a single A4 page PDF (scales to fit)
