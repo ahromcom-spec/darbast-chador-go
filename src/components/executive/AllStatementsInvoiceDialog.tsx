@@ -335,7 +335,7 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
     const w = window.open('', '_blank');
     if (!w) return;
     w.document.write(`<!DOCTYPE html><html dir="rtl" lang="fa"><head><meta charset="UTF-8"><title>صورتحساب کل ${props.customerName || ''}</title>
-      <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+      <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
       ${styles}</head><body>${html}</body></html>`);
     w.document.close();
     setTimeout(() => w.print(), 800);

@@ -301,7 +301,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
       <head>
         <meta charset="UTF-8">
         <title>فاکتور سفارش ${order.code}</title>
-        <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
         ${getInvoiceStyles()}
       </head>
       <body>
