@@ -20,17 +20,24 @@ export default function NewLocation() {
   const editInitialData = location.state?.initialData || location.state?.locationData;
   
   // Get initial lat/lng if coming from map or edit mode - ensure they are numbers
+  // محل تاییدشده روی نقشه (پس از ورود به حساب هم حفظ می‌شود)
+  let pendingPin: { lat: number; lng: number } | null = null;
+  try {
+    const raw = JSON.parse(sessionStorage.getItem('pendingMapPin') || 'null');
+    if (raw && Date.now() - (raw.t || 0) < 60 * 60 * 1000) pendingPin = raw;
+  } catch {}
   const initialLat = editInitialData?.lat 
     ? Number(editInitialData.lat) 
-    : (location.state?.lat ? Number(location.state.lat) : undefined);
+    : (location.state?.lat ? Number(location.state.lat) : (!isEditMode && pendingPin ? Number(pendingPin.lat) : undefined));
   const initialLng = editInitialData?.lng 
     ? Number(editInitialData.lng) 
-    : (location.state?.lng ? Number(location.state.lng) : undefined);
+    : (location.state?.lng ? Number(location.state.lng) : (!isEditMode && pendingPin ? Number(pendingPin.lng) : undefined));
 
   console.log('🗺️ NewLocation - Mode:', isEditMode ? 'Edit' : 'Create');
   console.log('🗺️ NewLocation - Initial coordinates:', { initialLat, initialLng, editInitialData, state: location.state });
 
   const handleSuccess = async (locationId: string, distanceFromCenter?: number) => {
+    try { sessionStorage.removeItem('pendingMapPin'); } catch {}
     // If coming from globe map, go back to home (which shows the globe)
     if (location.state?.fromGlobeMap) {
       navigate('/', { replace: true });
