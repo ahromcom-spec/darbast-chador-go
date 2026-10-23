@@ -876,6 +876,7 @@ export default function ComprehensiveScaffoldingForm({
       if (area <= 100) {
         basePrice = P('formwork_fixed_under_100', 3200000);
       } else if (area <= 200) {
+        basePrice = P('formwork_fixed_100_to_200', 4200000);
       } else {
         const basePricePerMeter = P('formwork_per_meter_over_200', 20000);
         const { multiplier, conditionBreakdown, distancePct, distanceMin, distanceLabel } = getConditionsMultiplier();
@@ -903,6 +904,7 @@ export default function ComprehensiveScaffoldingForm({
       if (area <= 100) {
         basePrice = P('ceiling_beam_fixed_under_100', 7500000);
       } else if (area <= 200) {
+        basePrice = P('ceiling_beam_fixed_100_to_200', 12000000);
       } else {
         const basePricePerMeter = P('ceiling_beam_per_meter_over_200', 45000);
         const { multiplier, conditionBreakdown, distancePct, distanceMin, distanceLabel } = getConditionsMultiplier();
@@ -930,6 +932,7 @@ export default function ComprehensiveScaffoldingForm({
       if (area <= 100) {
         basePrice = P('ceiling_slab_fixed_under_100', 8000000);
       } else if (area <= 200) {
+        basePrice = P('ceiling_slab_fixed_100_to_200', 20000000);
       } else {
         const basePricePerMeter = P('ceiling_slab_per_meter_over_200', 70000);
         const { multiplier, conditionBreakdown, distancePct, distanceMin, distanceLabel } = getConditionsMultiplier();
