@@ -3442,11 +3442,13 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
 
         {/* مکان‌نمای ثابت مرکز نقشه — فقط نقشه عمومی؛ در تب اجرایی نقشه تمیز می‌ماند */}
         {!activeExecutionOnly && (
-        <button
+        <div className="pointer-events-none absolute left-1/2 top-1/2 z-[2300] -translate-x-1/2 -translate-y-full">
+        <Button
           type="button"
+          variant="ghost"
           disabled={!centerPin}
           aria-label="تایید محل"
-          className="pointer-events-auto absolute left-1/2 top-1/2 z-[2300] -translate-x-1/2 -translate-y-full flex flex-col items-center gap-1 p-0 cursor-pointer select-none bg-transparent border-0 disabled:opacity-60 touch-manipulation"
+          className="pointer-events-auto flex h-auto flex-col items-center gap-1 p-0 cursor-pointer select-none bg-transparent hover:bg-transparent border-0 disabled:opacity-60 touch-manipulation !transform-none [&_svg]:!w-[42px] [&_svg]:!h-[52px]"
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
@@ -3454,12 +3456,14 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (!centerPin) return;
+            const center = mapRef.current?.getCenter();
+            const selectedPin = center ? { lat: center.lat, lng: center.lng } : centerPin;
+            if (!selectedPin) return;
             try {
-              sessionStorage.setItem('pendingMapPin', JSON.stringify({ lat: centerPin.lat, lng: centerPin.lng, t: Date.now() }));
+              sessionStorage.setItem('pendingMapPin', JSON.stringify({ ...selectedPin, t: Date.now() }));
             } catch {}
             navigate('/user/new-location', {
-              state: { lat: centerPin.lat, lng: centerPin.lng, fromMap: true },
+              state: { ...selectedPin, fromMap: true },
             });
           }}
         >
@@ -3476,7 +3480,8 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             />
             <circle cx="20" cy="16" r="5.5" fill="white" />
           </svg>
-        </button>
+        </Button>
+        </div>
         )}
 
         {/* دکمه انتخاب پروژه فقط زمانی که مکان‌نما روی پروژه قرار گرفته — در تب اجرایی نمایش داده نمی‌شود */}
