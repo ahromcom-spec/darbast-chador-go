@@ -1,3 +1,4 @@
+import { toIranDateString } from '@/lib/dateUtils';
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -536,7 +537,7 @@ export function StatementPaymentsHistoryDialog({
       const appliedPaymentDate = isCheque
         ? new Date(editChequeDue).toISOString()
         : (editDate ? new Date(editDate).toISOString() : new Date().toISOString());
-      const appliedReportDate = appliedPaymentDate.substring(0, 10);
+      const appliedReportDate = toIranDateString(appliedPaymentDate) || appliedPaymentDate.substring(0, 10);
       const paymentMethod = isCheque ? 'cheque' : (editCardId ? 'card_transfer' : 'cash');
       const newGroupId = g.isLegacy
         ? ((crypto as any).randomUUID ? (crypto as any).randomUUID() : `grp-${Date.now()}`)
