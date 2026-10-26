@@ -174,3 +174,13 @@ export function formatIranTime(date: Date | string | null | undefined): string {
     return '-';
   }
 }
+
+/**
+ * Tehran calendar date (YYYY-MM-DD) of an instant — use for report_date columns
+ * so late-night payments (e.g. 03:00 Tehran) don't land on the previous UTC day.
+ */
+export function toIranDateString(date: Date | string | null | undefined): string | null {
+  const d = toIranTime(date);
+  if (!d) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}

@@ -1,3 +1,4 @@
+import { toIranDateString } from '@/lib/dateUtils';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -291,7 +292,7 @@ export function StatementManualPaymentDialog({
             reference_type: isCheque ? 'cheque_pending' : 'statement_payment',
             reference_id: groupId || insertedPaymentIds[0],
             created_by: user.id,
-            report_date: effectiveDate || null,
+            report_date: effectiveDate ? toIranDateString(effectiveDate) : null,
             created_at: effectiveDate || new Date().toISOString(),
           } as any).select('id').single();
           createdTransactionId = txIns?.id || null;
