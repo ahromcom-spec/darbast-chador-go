@@ -1908,6 +1908,8 @@ export default function OrderDetail() {
           </Collapsible>
 
           {/* Timeline - independent from order details */}
+          <OrderDailyLogs orderId={order.id} />
+
           <OrderTimeline
             orderStatus={order.status === 'paid' && remainingAmountForPayment > 0 ? 'awaiting_payment' : order.status}
             createdAt={order.created_at}
@@ -2748,9 +2750,6 @@ export default function OrderDetail() {
               </Collapsible>
             </>
           )}
-
-          {/* گزارش‌های روزانه */}
-          <OrderDailyLogs orderId={order.id} />
 
           {/* Status Messages */}
           {order.status === 'pending' && (

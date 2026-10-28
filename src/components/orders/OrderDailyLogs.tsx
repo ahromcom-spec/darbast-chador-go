@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Calendar, FileText, Users, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { formatPersianDate } from '@/lib/dateUtils';
 
@@ -15,8 +15,6 @@ interface DailyLog {
   activity_description: string | null;
   team_name: string | null;
   notes: string | null;
-  created_at: string;
-  created_by: string;
 }
 
 interface OrderDailyLogsProps {
@@ -24,76 +22,58 @@ interface OrderDailyLogsProps {
 }
 
 export function OrderDailyLogs({ orderId }: OrderDailyLogsProps) {
-  const [logs, setLogs] = useState<DailyLog[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isExpanded, setIsExpanded] = useState(true);
+  const { data: logs = [], isLoading: loading, error, refetch } = useQuery<DailyLog[]>({
+    queryKey: ['order-report-activity', orderId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_order_report_activity', { p_order_id: orderId });
+      if (error) throw error;
+      return data || [];
+    },
+    refetchInterval: 30_000,
+  });
 
   useEffect(() => {
-    fetchLogs();
-  }, [orderId]);
-
-  const fetchLogs = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('order_daily_logs')
-        .select('*')
-        .eq('order_id', orderId)
-        .order('report_date', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching daily logs:', error);
-        return;
-      }
-
-      setLogs(data || []);
-    } catch (err) {
-      console.error('Error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const channel = supabase.channel(`order-report-activity-${orderId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_report_orders', filter: `order_id=eq.${orderId}` }, () => { void refetch(); })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [orderId, refetch]);
 
   if (loading) {
     return (
-      <Card className="border-amber-200 bg-amber-50/50">
-        <CardContent className="py-8 flex justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-amber-600" />
-        </CardContent>
-      </Card>
+      <section className="py-6 flex justify-center" aria-label="شرح فعالیت‌های سفارش">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </section>
     );
   }
+
+  if (error) return <section className="py-4 space-y-2"><p className="text-sm text-destructive">گزارش‌های سفارش بارگذاری نشد.</p><Button variant="outline" onClick={() => { void refetch(); }}>تلاش مجدد</Button></section>;
 
   if (logs.length === 0) {
     return null; // اگر گزارشی نیست نمایش نده
   }
 
   return (
-    <Card className="border-amber-200 bg-gradient-to-br from-amber-50/80 to-orange-50/50">
+    <section className="border-t border-border py-4" aria-label="شرح فعالیت‌های سفارش" dir="rtl">
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
-          <CardHeader className="cursor-pointer hover:bg-amber-100/50 transition-colors">
-            <CardTitle className="flex items-center justify-between text-amber-800">
-              <div className="flex items-center gap-2">
+          <Button variant="ghost" className="w-full h-auto justify-between gap-3 py-3 text-foreground">
+              <span className="flex items-center gap-2 min-w-0">
                 <FileText className="h-5 w-5" />
-                <span>گزارش‌های روزانه ({logs.length})</span>
-              </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <span className="whitespace-normal text-right">شرح فعالیت‌ها و پیام‌های گزارش ({logs.length.toLocaleString('fa-IR')})</span>
+              </span>
                 {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </Button>
-            </CardTitle>
-          </CardHeader>
+          </Button>
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <CardContent className="space-y-4">
-            {logs.map((log, index) => (
-              <div key={log.id}>
-                {index > 0 && <Separator className="my-4" />}
-                <div className="space-y-3 p-3 bg-white/60 rounded-lg border border-amber-100">
+          <div className="space-y-4 pt-3">
+            {logs.map((log) => (
+                <article key={log.id} className="space-y-3 p-3 bg-muted/30 rounded-lg border border-border">
                   {/* تاریخ */}
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="bg-amber-100 text-amber-800 gap-1">
+                    <Badge variant="secondary" className="gap-1">
                       <Calendar className="h-3 w-3" />
                       {formatPersianDate(log.report_date)}
                     </Badge>
@@ -102,8 +82,8 @@ export function OrderDailyLogs({ orderId }: OrderDailyLogsProps) {
                   {/* شرح فعالیت */}
                   {log.activity_description && (
                     <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground font-medium">شرح فعالیت و ابعاد:</p>
-                      <p className="text-sm bg-amber-50 p-2 rounded border border-amber-100">
+                      <p className="text-xs text-muted-foreground font-medium">شرح فعالیت:</p>
+                      <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
                         {log.activity_description}
                       </p>
                     </div>
@@ -112,7 +92,7 @@ export function OrderDailyLogs({ orderId }: OrderDailyLogsProps) {
                   {/* اکیپ */}
                   {log.team_name && (
                     <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-amber-600" />
+                      <Users className="h-4 w-4 text-primary" />
                       <span className="text-xs text-muted-foreground">اکیپ:</span>
                       <span className="text-sm font-medium">{log.team_name}</span>
                     </div>
@@ -122,17 +102,16 @@ export function OrderDailyLogs({ orderId }: OrderDailyLogsProps) {
                   {log.notes && (
                     <div className="space-y-1">
                       <p className="text-xs text-muted-foreground font-medium">توضیحات:</p>
-                      <p className="text-sm text-muted-foreground bg-gray-50 p-2 rounded">
+                      <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
                         {log.notes}
                       </p>
                     </div>
                   )}
-                </div>
-              </div>
+                </article>
             ))}
-          </CardContent>
+          </div>
         </CollapsibleContent>
       </Collapsible>
-    </Card>
+    </section>
   );
 }
