@@ -123,9 +123,9 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
       const [repairRes, renewalsRes, approvalsRes, collectionRes] = await Promise.all([
         supabase
           .from('repair_requests')
-          .select('id, final_cost, status, created_at, description')
+          .select('id, final_cost, estimated_cost, status, created_at, description')
           .or(`billing_order_id.eq.${order.id},and(billing_order_id.is.null,order_id.eq.${order.id})`)
-          .in('status', ['approved', 'completed'])
+          .in('status', ['approved', 'awaiting_repair', 'repaired', 'completed', 'paid'])
           .order('created_at', { ascending: true }),
         supabase
           .from('order_renewals')
@@ -148,9 +148,9 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
       ]);
 
       if (repairRes.data) {
-        const totalRepairCost = repairRes.data.reduce((sum: number, r: any) => sum + (r.final_cost || 0), 0);
+        const totalRepairCost = repairRes.data.reduce((sum: number, r: any) => sum + Number(r.final_cost ?? r.estimated_cost ?? 0), 0);
         setApprovedRepairCost(totalRepairCost);
-        setApprovedRepairs((repairRes.data as any[]).filter((r: any) => (r.final_cost || 0) > 0));
+        setApprovedRepairs((repairRes.data as any[]).map(r => ({ ...r, final_cost: r.final_cost ?? r.estimated_cost ?? 0 })).filter(r => r.final_cost > 0));
       }
 
       if (renewalsRes.data) {
