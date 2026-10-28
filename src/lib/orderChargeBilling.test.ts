@@ -1,5 +1,8 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, test } from 'node:test';
+import assert from 'node:assert/strict';
 import { billingOwner, transferPreview } from './orderChargeBilling';
+
+const expect = (actual: unknown) => ({ toBe: (expected: unknown) => assert.equal(actual, expected) });
 
 describe('independent renewal and repair billing', () => {
   test('three subsequent months transfer together without charging the base twice', () => {
