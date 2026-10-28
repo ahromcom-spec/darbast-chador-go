@@ -271,7 +271,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
         const myOrders: OrderRow[] = (orders || [])
           .filter((o: any) => o.statement_id === s.id)
           .map((o: any) => {
-            const total = Number(o.total_price) || Number(o.payment_amount) || 0;
+            const total = Number(o.total_price ?? o.payment_amount ?? 0);
             const paid = Math.min(Number(o.total_paid ?? 0), total > 0 ? total : Number.MAX_SAFE_INTEGER);
             return {
               id: o.id,
