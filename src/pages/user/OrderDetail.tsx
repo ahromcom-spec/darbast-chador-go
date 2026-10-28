@@ -1333,7 +1333,7 @@ export default function OrderDetail() {
           <Collapsible open={isLocationSectionExpanded} onOpenChange={setIsLocationSectionExpanded}>
             <Card>
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="w-full h-auto justify-between gap-3 p-6 text-foreground">
+                <CardHeader className="cursor-pointer hover:bg-muted/40 transition-colors rounded-t-lg">
                   <div className="flex items-center justify-between gap-3">
                     <CardTitle className="flex items-center gap-2 text-base">
                       <MapPin className="h-5 w-5 text-primary" />
@@ -1369,8 +1369,8 @@ export default function OrderDetail() {
           <Collapsible open={isDetailsSectionExpanded} onOpenChange={setIsDetailsSectionExpanded}>
             <Card>
               <CollapsibleTrigger asChild>
-                <CardHeader className="cursor-pointer hover:bg-muted/40 transition-colors rounded-t-lg">
-                  <div className="flex items-center justify-between gap-3">
+                <Button variant="ghost" className="w-full h-auto justify-between gap-3 p-6 text-foreground">
+                  <div className="flex w-full items-center justify-between gap-3">
                     <CardTitle className="flex items-center gap-2 text-base">
                       <ClipboardList className="h-5 w-5 text-primary" />
                       جزئیات سفارش
