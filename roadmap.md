@@ -4,4 +4,4 @@
 - [x] Implement management selection and independent invoice/payment accounting without duplicate charges.
 - [x] Verify repeated separation, original settled invoice preservation and independent payments.
 - [x] Show order-specific daily activity and report notes below order details for management and customers.
-- [ ] Verify historical report visibility and order-scoped access.
+- [x] Verify historical report visibility and order-scoped access.
