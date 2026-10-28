@@ -7112,6 +7112,17 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_order_report_activity: {
+        Args: { p_order_id: string }
+        Returns: {
+          activity_description: string
+          id: string
+          notes: string
+          order_id: string
+          report_date: string
+          team_name: string
+        }[]
+      }
       get_orders_with_customer_info: {
         Args: never
         Returns: {

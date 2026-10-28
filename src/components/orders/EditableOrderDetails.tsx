@@ -22,6 +22,7 @@ import { parseOrderNotes } from './OrderDetailsView';
 import { parseLocalizedNumber } from '@/lib/numberParsing';
 import CallHistory from '@/components/calls/CallHistory';
 import OrderChat from './OrderChat';
+import { OrderDailyLogs } from './OrderDailyLogs';
 import { RepairRequestDialog } from './RepairRequestDialog';
 import { CollectionRequestDialog } from './CollectionRequestDialog';
 import { ManagerRenewalDialog } from './ManagerRenewalDialog';
@@ -2168,6 +2169,8 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
       )}
 
       <Separator />
+
+      <OrderDailyLogs orderId={order.id} />
 
       {/* مراحل پیشرفت سفارش */}
       <OrderTimeline
