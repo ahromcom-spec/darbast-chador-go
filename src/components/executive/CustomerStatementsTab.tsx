@@ -20,6 +20,7 @@ import { StatementChequesDialog } from '@/components/executive/StatementChequesD
 import { StatementDiscountDialog } from '@/components/executive/StatementDiscountDialog';
 import { AllStatementsInvoiceDialog } from '@/components/executive/AllStatementsInvoiceDialog';
 import { TransferOrderStatementDialog } from '@/components/executive/TransferOrderStatementDialog';
+import { SeparateOrderChargesDialog } from '@/components/orders/SeparateOrderChargesDialog';
 import { extractOrderDescription } from '@/lib/orderDescription';
 
 interface OrderRow {
@@ -957,6 +958,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                                 مشاهده
                                               </Button>
                                               <ManagerOrderInvoice order={o.raw} />
+                                              <SeparateOrderChargesDialog orderId={o.id} orderCode={o.code} onSuccess={load} />
                                               <Button
                                                 size="sm"
                                                 variant="outline"
