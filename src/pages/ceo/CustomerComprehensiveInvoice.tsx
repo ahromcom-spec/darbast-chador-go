@@ -186,7 +186,7 @@ export default function CustomerComprehensiveInvoice() {
       const { data: orders, error: ordersError } = await supabase
         .from('projects_v3')
         .select(`
-          id, customer_id, code, address, payment_amount, total_paid, 
+          id, customer_id, code, address, payment_amount, total_price, total_paid, 
           created_at, status, notes,
           subcategory:subcategories(name, service_type:service_types_v3(name))
         `)
@@ -237,7 +237,7 @@ export default function CustomerComprehensiveInvoice() {
 
         if (customerOrders.length === 0) return;
 
-        const totalAmount = customerOrders.reduce((sum, o) => sum + (o.payment_amount || 0), 0);
+        const totalAmount = customerOrders.reduce((sum, o) => sum + (o.total_price ?? o.payment_amount ?? 0), 0);
         const totalPaid = customerOrders.reduce((sum, o) => sum + (o.total_paid || 0), 0);
 
         customerDataList.push({
@@ -258,9 +258,9 @@ export default function CustomerComprehensiveInvoice() {
               service_type_name: subcategoryData?.service_type?.name || '-',
               subcategory_name: subcategoryData?.name || '-',
               status: o.status,
-              payment_amount: o.payment_amount || 0,
+              payment_amount: o.total_price ?? o.payment_amount ?? 0,
               total_paid: o.total_paid || 0,
-              remaining: Math.max(0, (o.payment_amount || 0) - (o.total_paid || 0)),
+              remaining: Math.max(0, (o.total_price ?? o.payment_amount ?? 0) - (o.total_paid || 0)),
               created_at: o.created_at,
               notes: o.notes
             };

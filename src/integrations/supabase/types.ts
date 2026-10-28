@@ -2711,6 +2711,54 @@ export type Database = {
           },
         ]
       }
+      order_charge_transfers: {
+        Row: {
+          actor_id: string
+          amount: number
+          created_at: string
+          id: string
+          renewal_ids: string[]
+          repair_ids: string[]
+          source_order_id: string
+          target_order_id: string
+        }
+        Insert: {
+          actor_id: string
+          amount: number
+          created_at?: string
+          id: string
+          renewal_ids?: string[]
+          repair_ids?: string[]
+          source_order_id: string
+          target_order_id: string
+        }
+        Update: {
+          actor_id?: string
+          amount?: number
+          created_at?: string
+          id?: string
+          renewal_ids?: string[]
+          repair_ids?: string[]
+          source_order_id?: string
+          target_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_charge_transfers_source_order_id_fkey"
+            columns: ["source_order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_charge_transfers_target_order_id_fkey"
+            columns: ["target_order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_collaborators: {
         Row: {
           can_manage_order: boolean
@@ -3055,6 +3103,7 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          billing_order_id: string | null
           created_at: string
           customer_id: string
           id: string
@@ -3074,6 +3123,7 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          billing_order_id?: string | null
           created_at?: string
           customer_id: string
           id?: string
@@ -3093,6 +3143,7 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          billing_order_id?: string | null
           created_at?: string
           customer_id?: string
           id?: string
@@ -3110,6 +3161,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "order_renewals_billing_order_id_fkey"
+            columns: ["billing_order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "order_renewals_customer_id_fkey"
             columns: ["customer_id"]
@@ -4059,6 +4117,8 @@ export type Database = {
           approved_by: string | null
           archived_at: string | null
           archived_by: string | null
+          billing_base_amount: number | null
+          billing_only: boolean
           closed_at: string | null
           code: string
           contractor_id: string | null
@@ -4122,6 +4182,8 @@ export type Database = {
           approved_by?: string | null
           archived_at?: string | null
           archived_by?: string | null
+          billing_base_amount?: number | null
+          billing_only?: boolean
           closed_at?: string | null
           code: string
           contractor_id?: string | null
@@ -4187,6 +4249,8 @@ export type Database = {
           approved_by?: string | null
           archived_at?: string | null
           archived_by?: string | null
+          billing_base_amount?: number | null
+          billing_only?: boolean
           closed_at?: string | null
           code?: string
           contractor_id?: string | null
@@ -4667,6 +4731,7 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          billing_order_id: string | null
           completed_at: string | null
           created_at: string
           customer_id: string
@@ -4685,6 +4750,7 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          billing_order_id?: string | null
           completed_at?: string | null
           created_at?: string
           customer_id: string
@@ -4703,6 +4769,7 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          billing_order_id?: string | null
           completed_at?: string | null
           created_at?: string
           customer_id?: string
@@ -4719,6 +4786,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "repair_requests_billing_order_id_fkey"
+            columns: ["billing_order_id"]
+            isOneToOne: false
+            referencedRelation: "projects_v3"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "repair_requests_customer_id_fkey"
             columns: ["customer_id"]
@@ -6789,6 +6863,8 @@ export type Database = {
           approved_by: string | null
           archived_at: string | null
           archived_by: string | null
+          billing_base_amount: number | null
+          billing_only: boolean
           closed_at: string | null
           code: string
           contractor_id: string | null
@@ -6944,6 +7020,8 @@ export type Database = {
           approved_by: string | null
           archived_at: string | null
           archived_by: string | null
+          billing_base_amount: number | null
+          billing_only: boolean
           closed_at: string | null
           code: string
           contractor_id: string | null
@@ -7295,6 +7373,16 @@ export type Database = {
           p_description?: string
           p_from_card_id: string
           p_to_card_id: string
+        }
+        Returns: Json
+      }
+      transfer_order_charges: {
+        Args: {
+          _renewal_ids: string[]
+          _repair_ids: string[]
+          _request_id: string
+          _source_order_id: string
+          _target_order_id?: string
         }
         Returns: Json
       }

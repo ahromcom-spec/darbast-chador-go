@@ -77,6 +77,7 @@ export interface InvoiceOrderLike {
   payment_amount?: number | null;
   total_price?: number | null;
   total_paid?: number | null;
+  billing_only?: boolean;
   status?: string;
   customer_completion_date?: string | null;
   province_id?: string;
@@ -106,7 +107,7 @@ export interface InvoiceExtras {
     rental_end_date: string | null;
     status: string;
   }>;
-  freshFinancials: { payment_amount: number | null; total_price: number | null; total_paid: number | null } | null;
+  freshFinancials: { payment_amount: number | null; total_price: number | null; total_paid: number | null; billing_only?: boolean } | null;
   collectionRequestDate: string | null;
   collectionConfirmedDate: string | null;
   customerCode: string;
@@ -476,6 +477,7 @@ export function buildOrderInvoiceHtml(
   };
   const partById = new Map(orderParts.map((p) => [p.id, p]));
   const parsedNotes = order.notes && typeof order.notes === 'object' ? order.notes : parseOrderNotes(order.notes);
+  const billingOnly = Boolean(order.billing_only || freshFinancials?.billing_only || parsedNotes?.billing_only);
     // ارقام فارسی/عربی ابعاد به عدد انگلیسی تبدیل می‌شوند تا متراژ همیشه در فاکتور بیاید
     const normDigit = (v: any) => {
       if (typeof v !== 'string') return v;
@@ -501,7 +503,7 @@ export function buildOrderInvoiceHtml(
     const dueDate = parsedNotes?.dueDateTime || parsedNotes?.due_date || parsedNotes?.dueDate;
     const conditions = parsedNotes?.conditions || parsedNotes?.serviceConditions;
     
-    const basePrice =
+    const basePrice = billingOnly ? 0 :
       freshFinancials?.payment_amount !== null && freshFinancials?.payment_amount !== undefined
         ? Number(freshFinancials.payment_amount)
         : order.payment_amount !== null && order.payment_amount !== undefined
@@ -516,7 +518,7 @@ export function buildOrderInvoiceHtml(
     const computedTotal = basePrice + renewalTotal + repairTotal;
 
     const totalFromDb = Number(freshFinancials?.total_price ?? order.total_price ?? 0);
-    const grandTotal = Math.max(totalFromDb, computedTotal);
+    const grandTotal = freshFinancials?.total_price != null || order.total_price != null ? totalFromDb : computedTotal;
 
     const paidTotal = Number(freshFinancials?.total_paid ?? order.total_paid ?? parsedNotes?.total_paid ?? 0);
 
@@ -817,6 +819,7 @@ export function buildOrderInvoiceHtml(
           <tbody>
             ${(() => {
               // قسمت‌های سفارش: هر قسمت یک ردیف جدا در فاکتور
+              if (billingOnly) return '';
               if (orderParts.length > 0) {
                 return orderParts.map((p, i) => {
                   const dims = Array.isArray(p.dimensions) ? p.dimensions : [];
@@ -966,7 +969,7 @@ export function buildOrderInvoiceHtml(
             })()}
 
             ${(() => {
-              const baseCount = orderParts.length > 0
+              const baseCount = billingOnly ? 0 : orderParts.length > 0
                 ? orderParts.length
                 : Array.isArray(parsedNotes?.multi_scaffolds) && parsedNotes.multi_scaffolds.length > 0
                   ? parsedNotes.multi_scaffolds.length
@@ -1078,6 +1081,7 @@ export function buildOrderInvoiceHtml(
           <tbody>
             ${(() => {
               const expertScaffolds = (parsedNotes?.is_multi_scaffold && Array.isArray(parsedNotes?.scaffolds)) ? parsedNotes.scaffolds : [];
+              if (billingOnly) return '';
               if (expertScaffolds.length > 0) {
                 return expertScaffolds.map((sc: any, i: number) => {
                   const dims = Array.isArray(sc?.dimensions) ? sc.dimensions : [];
@@ -1164,7 +1168,7 @@ export function buildOrderInvoiceHtml(
               `;
             })()}
             ${(() => {
-              const baseCount = Array.isArray(parsedNotes?.multi_scaffolds) && parsedNotes.multi_scaffolds.length > 0
+              const baseCount = billingOnly ? 0 : Array.isArray(parsedNotes?.multi_scaffolds) && parsedNotes.multi_scaffolds.length > 0
                 ? parsedNotes.multi_scaffolds.length
                 : 1;
               const baseDescText = description
@@ -1279,9 +1283,9 @@ export async function fetchInvoiceExtras(order: InvoiceOrderLike): Promise<Invoi
   const [prov, sub, repairs, renewals, fin, collection, pays, profile] = await Promise.all([
     order.province_id ? supabase.from('provinces').select('name').eq('id', order.province_id).maybeSingle() : Promise.resolve({ data: null } as any),
     order.subcategory_id ? supabase.from('subcategories').select('name, code').eq('id', order.subcategory_id).maybeSingle() : Promise.resolve({ data: null } as any),
-    supabase.from('repair_requests').select('id, description, estimated_cost, final_cost, status, created_at').eq('order_id', order.id).order('created_at', { ascending: true }),
-    supabase.from('order_renewals').select('id, renewal_number, status, renewal_price, new_start_date, new_end_date, manager_notes, part_id').eq('order_id', order.id).eq('status', 'approved').order('renewal_number', { ascending: true }),
-    supabase.from('projects_v3').select('payment_amount, total_price, total_paid').eq('id', order.id).maybeSingle(),
+    supabase.from('repair_requests').select('id, description, estimated_cost, final_cost, status, created_at').or(`billing_order_id.eq.${order.id},and(billing_order_id.is.null,order_id.eq.${order.id})`).order('created_at', { ascending: true }),
+    supabase.from('order_renewals').select('id, renewal_number, status, renewal_price, new_start_date, new_end_date, manager_notes, part_id').or(`billing_order_id.eq.${order.id},and(billing_order_id.is.null,order_id.eq.${order.id})`).eq('status', 'approved').order('renewal_number', { ascending: true }),
+    supabase.from('projects_v3').select('payment_amount, total_price, total_paid, billing_only').eq('id', order.id).maybeSingle(),
     supabase.from('collection_requests').select('requested_date, confirmed_date, completed_at, status').eq('order_id', order.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('order_payments').select('id, amount, payment_method, receipt_number, notes, payment_date, created_at').eq('order_id', order.id).order('payment_date', { ascending: true }),
     order.customer_phone ? supabase.from('profiles').select('customer_code').eq('phone_number', order.customer_phone).maybeSingle() : Promise.resolve({ data: null } as any),

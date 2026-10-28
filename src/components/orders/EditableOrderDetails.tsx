@@ -25,6 +25,7 @@ import OrderChat from './OrderChat';
 import { RepairRequestDialog } from './RepairRequestDialog';
 import { CollectionRequestDialog } from './CollectionRequestDialog';
 import { ManagerRenewalDialog } from './ManagerRenewalDialog';
+import { SeparateOrderChargesDialog } from './SeparateOrderChargesDialog';
 import StaticLocationMap from '@/components/locations/StaticLocationMap';
 import { OrderCollaboratorsList } from './OrderCollaboratorsList';
 import { OrderTimeline } from './OrderTimeline';
@@ -123,13 +124,13 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         supabase
           .from('repair_requests')
           .select('id, final_cost, status, created_at, description')
-          .eq('order_id', order.id)
+          .or(`billing_order_id.eq.${order.id},and(billing_order_id.is.null,order_id.eq.${order.id})`)
           .in('status', ['approved', 'completed'])
           .order('created_at', { ascending: true }),
         supabase
           .from('order_renewals')
           .select('renewal_price, renewal_number, new_start_date, new_end_date, status, manager_notes')
-          .eq('order_id', order.id)
+          .or(`billing_order_id.eq.${order.id},and(billing_order_id.is.null,order_id.eq.${order.id})`)
           .eq('status', 'approved')
           .order('renewal_number', { ascending: true }),
         supabase
@@ -290,7 +291,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   const basePriceNumber = parseLocalizedNumber(paymentAmount);
   const totalFromDb = Number(order.total_price ?? 0);
   const totalFromParts = Number(basePriceNumber || 0) + Number(approvedRenewalCost || 0) + Number(approvedRepairCost || 0);
-  const displayTotalOrderAmount = Math.max(totalFromDb, totalFromParts);
+  const displayTotalOrderAmount = order.total_price != null ? totalFromDb : totalFromParts;
   const displayAddOnsAmount = Math.max(0, displayTotalOrderAmount - Number(basePriceNumber || 0));
 
   // Check if this is a rental expert pricing order (has item_type in notes)
@@ -1358,6 +1359,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
       {/* Edit Toggle Button & Print */}
       <div className="flex justify-end gap-2 flex-wrap">
         <ManagerOrderInvoice order={order} hidePrice={hidePrice} />
+        {!hidePrice && <SeparateOrderChargesDialog orderId={order.id} orderCode={order.code} onSuccess={onUpdate} />}
 
         <InvoiceEmployerOverrideDialog
           orderId={order.id}

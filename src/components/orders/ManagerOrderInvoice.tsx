@@ -215,7 +215,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
       const { data: repairData } = await supabase
         .from('repair_requests')
         .select('id, description, estimated_cost, final_cost, status, created_at')
-        .eq('order_id', order.id)
+        .or(`billing_order_id.eq.${order.id},and(billing_order_id.is.null,order_id.eq.${order.id})`)
         .order('created_at', { ascending: true });
       
       if (repairData) setRepairRequests((repairData as any[]).filter(isBillableRepair));
@@ -224,7 +224,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
       const { data: renewalData } = await supabase
         .from('order_renewals')
         .select('id, renewal_number, status, renewal_price, new_start_date, new_end_date, manager_notes, part_id')
-        .eq('order_id', order.id)
+        .or(`billing_order_id.eq.${order.id},and(billing_order_id.is.null,order_id.eq.${order.id})`)
         .eq('status', 'approved')
         .order('renewal_number', { ascending: true });
 
@@ -241,7 +241,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
       // Fetch latest financial snapshot (avoid stale values in printed invoice)
       const { data: financialData } = await supabase
         .from('projects_v3')
-        .select('payment_amount, total_price, total_paid')
+        .select('payment_amount, total_price, total_paid, billing_only')
         .eq('id', order.id)
         .maybeSingle();
 
