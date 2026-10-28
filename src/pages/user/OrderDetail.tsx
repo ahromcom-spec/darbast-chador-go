@@ -247,7 +247,7 @@ export default function OrderDetail() {
   const [approvedCollectionDate, setApprovedCollectionDate] = useState<string | null>(null);
   const [isPriceDetailsExpanded, setIsPriceDetailsExpanded] = useState(false);
   const [isLocationSectionExpanded, setIsLocationSectionExpanded] = useState(false);
-  const [isDetailsSectionExpanded, setIsDetailsSectionExpanded] = useState(false);
+  const [isDetailsSectionExpanded, setIsDetailsSectionExpanded] = useState(true);
   const [isRequestsSectionExpanded, setIsRequestsSectionExpanded] = useState(false);
   const [isConfirmingPrice, setIsConfirmingPrice] = useState(false);
   const [showAdvancePayment, setShowAdvancePayment] = useState(false);
@@ -1333,7 +1333,7 @@ export default function OrderDetail() {
           <Collapsible open={isLocationSectionExpanded} onOpenChange={setIsLocationSectionExpanded}>
             <Card>
               <CollapsibleTrigger asChild>
-                <CardHeader className="cursor-pointer hover:bg-muted/40 transition-colors rounded-t-lg">
+                <Button variant="ghost" className="w-full h-auto justify-between gap-3 p-6 text-foreground">
                   <div className="flex items-center justify-between gap-3">
                     <CardTitle className="flex items-center gap-2 text-base">
                       <MapPin className="h-5 w-5 text-primary" />
@@ -1377,7 +1377,7 @@ export default function OrderDetail() {
                     </CardTitle>
                     <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isDetailsSectionExpanded ? "rotate-180" : ""}`} />
                   </div>
-                </CardHeader>
+                </Button>
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <CardContent className="space-y-6">
