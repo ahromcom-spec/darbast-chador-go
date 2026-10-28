@@ -22,6 +22,13 @@
       "when": 1793209973617,
       "tag": "0002_preserve_zero_bill_balance",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793213941558,
+      "tag": "0003_order_report_activity_visibility",
+      "breakpoints": true
     }
   ]
 }
