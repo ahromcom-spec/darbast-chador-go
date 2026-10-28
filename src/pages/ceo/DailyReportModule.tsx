@@ -56,6 +56,7 @@ import { MediaGallery, MediaItem } from '@/components/media/MediaGallery';
 import StaticLocationMap from '@/components/locations/StaticLocationMap';
 import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
 import { OrderRowMediaUpload } from '@/components/daily-report/OrderRowMediaUpload';
+import { DailyReportSearch } from '@/components/daily-report/DailyReportSearch';
 import HybridGlobe from '@/components/globe/HybridGlobe';
 
 const TIME_HOURS = Array.from({ length: 24 }, (_, hour) => String(hour).padStart(2, '0'));
@@ -5069,6 +5070,11 @@ export default function DailyReportModule() {
           {/* New Report Tab */}
           <TabsContent value="new-report" className="space-y-6 mt-6">
             {/* Date Picker with Navigation */}
+            <DailyReportSearch
+              moduleKey={activeModuleKey}
+              isAggregated={isAggregated}
+              onSelectDate={(d) => setReportDate(d)}
+            />
             <div className="flex flex-col items-end gap-3">
               {/* ردیف اول - تاریخ و لیبل */}
               <div className="flex items-center gap-2 sm:gap-3">
