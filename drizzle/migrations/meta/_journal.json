@@ -15,6 +15,13 @@
       "when": 1793209779735,
       "tag": "0001_guard_billing_assignments",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793209973617,
+      "tag": "0002_preserve_zero_bill_balance",
+      "breakpoints": true
     }
   ]
 }
