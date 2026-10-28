@@ -136,6 +136,7 @@ const OrderDetailsContent = ({ order, getStatusBadge, onUpdate, hidePrice = fals
 interface Order {
   id: string;
   code: string;
+  billing_only?: boolean;
   status: string;
   address: string;
   detailed_address: string | null;
@@ -350,6 +351,7 @@ export default function ExecutiveOrders() {
         .select(`
           id,
           code,
+          billing_only,
           status,
           address,
           detailed_address,
@@ -385,6 +387,7 @@ export default function ExecutiveOrders() {
         // فقط سفارشات غیر بایگانی را نمایش بده
         .or('is_archived.is.null,is_archived.eq.false')
         .or('is_deep_archived.is.null,is_deep_archived.eq.false')
+        .eq('billing_only', false)
         .order('code', { ascending: false });
 
       if (error) throw error;

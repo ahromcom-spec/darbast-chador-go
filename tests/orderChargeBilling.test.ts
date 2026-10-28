@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { billingOwner, transferPreview } from './orderChargeBilling';
+import { billingOwner, transferPreview } from '../src/lib/orderChargeBilling';
 
 const expect = (actual: unknown) => ({ toBe: (expected: unknown) => assert.equal(actual, expected) });
 

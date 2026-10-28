@@ -713,7 +713,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
 
     const totalPaidValue = Number((order as any).total_paid || 0);
     // مبلغ کل = قیمت پایه + تعمیرات + تمدیدها
-    const totalOrderAmount = Number(baseOrderAmount) + Number(approvedRepairCost || 0) + Number(approvedRenewalCost || 0);
+    const totalOrderAmount = order.total_price ?? (Number(baseOrderAmount) + Number(approvedRepairCost || 0) + Number(approvedRenewalCost || 0));
     const remainingValue = Math.max(0, totalOrderAmount - totalPaidValue);
 
     return (
@@ -829,6 +829,18 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         </div>
       </div>
     );
+  }
+
+  if (parsedNotes?.billing_only) {
+    return <div className="space-y-4">
+      <p className="font-semibold">صورتحساب مستقل تمدید و تعمیرات — سفارش مادر {parsedNotes.billing_source_code || '—'}</p>
+      <p className="text-sm whitespace-pre-wrap">{parsedNotes.description || order.address}</p>
+      <div className="flex flex-wrap gap-2"><ManagerOrderInvoice order={order} hidePrice={hidePrice} /><SeparateOrderChargesDialog orderId={order.id} orderCode={order.code} onSuccess={onUpdate} /></div>
+      <div className="divide-y border rounded-md">{approvedRenewals.map((r, i) => <div key={i} className="p-3 flex justify-between gap-3"><span>تمدید ماه {new Intl.NumberFormat('fa-IR').format(r.renewal_number + 1)}</span><span>{Number(r.renewal_price || 0).toLocaleString('fa-IR')} تومان</span></div>)}{approvedRepairs.map(r => <div key={r.id} className="p-3 flex justify-between gap-3"><span className="break-words">تعمیر — {r.description}</span><span className="whitespace-nowrap">{Number(r.final_cost || 0).toLocaleString('fa-IR')} تومان</span></div>)}</div>
+      <p>مبلغ کل: {Number(order.total_price || 0).toLocaleString('fa-IR')} تومان</p>
+      <p>پرداخت شده: {Number(order.total_paid || 0).toLocaleString('fa-IR')} تومان</p>
+      <InvoiceEmployerOverrideDialog orderId={order.id} currentCustomerName={order.customer_name} currentCustomerPhone={order.customer_phone} notes={order.notes} onUpdate={onUpdate} />
+    </div>;
   }
 
   return (
