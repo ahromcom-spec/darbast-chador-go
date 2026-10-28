@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1793209225131,
+      "tag": "0000_independent_renewal_repair_billing",
+      "breakpoints": true
+    }
+  ]
+}
