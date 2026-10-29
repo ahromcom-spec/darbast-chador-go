@@ -1,5 +1,5 @@
 # Roadmap
-- [ ] Compact printed statement dates and widen activity descriptions; verify A4 layout for single and combined statements.
+- [x] Compact printed statement dates and widen activity descriptions; single and combined A4 tables verified with sample data, no cell overflow, and print windows open correctly.
 
 - [x] Preserve uncapped statement receipts and refresh financial totals automatically; 12 tests pass and statement 6 data confirms 50,000,000 paid with 2,320,000 remaining.
 - [ ] Verify statement financial updates through the management UI — blocked because the current account is redirected away from the management page.
