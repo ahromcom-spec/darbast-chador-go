@@ -60,7 +60,7 @@ export function MediaUploader({
   maxImages = 10,
   maxVideos = 10,
   maxImageSize = 10,
-  maxVideoSize = 50,
+  maxVideoSize = 500,
   maxVideoDuration = 600, // 10 minutes
   disableAutoUpload = false,
 }: MediaUploaderProps) {

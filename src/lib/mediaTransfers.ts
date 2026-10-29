@@ -115,6 +115,27 @@ interface UploadOptions {
   onProgress?: (percentage: number, loaded: number, total: number) => void;
 }
 
+const ALLOWED_VIDEO_TYPES = new Set([
+  'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm', 'video/3gpp',
+  'video/3gpp2', 'video/x-matroska', 'video/ogg', 'video/mpeg',
+]);
+
+/**
+ * نوع فایل را به یکی از انواع پذیرفته‌شده توسط فضای ذخیره تبدیل می‌کند؛
+ * فیلم‌های بدون نوع یا با نوع ناشناخته (مثل video/x-m4v) به‌عنوان mp4 ذخیره می‌شوند
+ * تا آپلود به خاطر نوع فایل رد نشود.
+ */
+export const normalizeMediaContentType = (file: File, explicit?: string): string | undefined => {
+  const type = (explicit || file.type || '').toLowerCase();
+  const isVideoName = /\.(mp4|mov|m4v|avi|mkv|webm|3gp|3g2|mpeg|mpg|ogv)$/i.test(file.name);
+  if (type.startsWith('video/') || (!type && isVideoName)) {
+    if (ALLOWED_VIDEO_TYPES.has(type)) return type;
+    if (/\.mov$/i.test(file.name)) return 'video/quicktime';
+    return 'video/mp4';
+  }
+  return type || undefined;
+};
+
 /** فایل‌های بزرگ‌تر از این حجم با آپلود قابل ادامه (resumable) فرستاده می‌شوند */
 const RESUMABLE_THRESHOLD = 8 * 1024 * 1024;
 
@@ -146,13 +167,24 @@ const uploadResumable = async ({
       removeFingerprintOnSuccess: true,
       uploadDataDuringCreation: true,
       headers: {
-        authorization: `Bearer ${session.access_token}`,
         'x-upsert': upsert ? 'true' : 'false',
+      },
+      // توکن ورود در آپلودهای طولانی تازه می‌شود تا وسط کار قطع نشود
+      onBeforeRequest: async (req) => {
+        const { data } = await supabase.auth.getSession();
+        // فقط یک‌بار تنظیم می‌شود؛ تنظیم دوباره هدر در XHR مقدار را دوتایی می‌کند
+        const token = data.session?.access_token || session.access_token;
+        req.setHeader('authorization', `Bearer ${token}`);
+      },
+      onShouldRetry: (err) => {
+        const status = (err as any)?.originalResponse?.getStatus?.() ?? 0;
+        // خطاهای قطعی (حجم یا نوع فایل غیرمجاز) تکرار نمی‌شوند
+        return !(status === 413 || status === 415 || status === 400);
       },
       metadata: {
         bucketName: bucket,
         objectName: path,
-        contentType: contentType || file.type || 'video/mp4',
+        contentType: normalizeMediaContentType(file, contentType) || 'video/mp4',
         cacheControl: '3600',
       },
       onProgress: (loaded, total) => {
@@ -247,9 +279,8 @@ const uploadSingleRequest = ({
       xhr.open('POST', `${baseUrl}/storage/v1/object/${bucket}/${path}`);
       xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
       if (upsert) xhr.setRequestHeader('x-upsert', 'true');
-      if (contentType || file.type) {
-        xhr.setRequestHeader('Content-Type', contentType || file.type);
-      }
+      const ct = normalizeMediaContentType(file, contentType);
+      if (ct) xhr.setRequestHeader('Content-Type', ct);
       xhr.send(file);
     });
   });
