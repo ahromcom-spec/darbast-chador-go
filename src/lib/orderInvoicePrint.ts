@@ -458,6 +458,7 @@ export function buildOrderInvoiceHtml(
   extras: InvoiceExtras,
   hidePrice = false,
 ): string {
+  order = { ...order, ...resolveOrderCustomerIdentity(order, extras.customerIdentity) };
   const {
     media,
     mediaUrls,
