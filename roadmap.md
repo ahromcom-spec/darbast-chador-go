@@ -1,5 +1,5 @@
 # Roadmap
-- [ ] Convert new order videos to SD 480p and first 60 seconds before saving, show notice and verify output.
+- [x] Convert new order videos to SD 480p and first 60 seconds before saving; show notice across order/report upload controls. Two policy tests pass; authenticated MediaUploader selection, processing, upload and download verified with a 65-second file producing 852×480, 60-second MP4. Existing order linkage not exercised; bundled headless Chromium lacks H264 playback support.
 - [x] Isolate order/statement printing in the disposable tab, release the preview modal and restore app focus; 3 lifecycle tests and two simulated browser print returns pass with working clicks.
 - [ ] Verify native Windows/Edge printing on a real order — unavailable in the headless browser; current account has no orders, so browser verification used the actual statement component with sample data and simulated print/image events.
 - [x] Show the order-count number fully on map markers: marker enlarged to 68px, counter reduced and moved outside the clipped photo frame at the bottom corner; rendered close-up and clipping checks confirm the whole number is visible.
