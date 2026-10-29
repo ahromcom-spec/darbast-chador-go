@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.delete_empty_closed_statement(uuid) TO authenticated, service_role;
