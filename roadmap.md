@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Allow deleting only closed statements without orders from the statements list and verify safeguards.
+
 - [x] Show and verify inherited customer name, code and contact details in separated orders and invoices.
 
 - [x] Make separated renewal/repair orders accessible as independent orders with inherited specifications and correct rental dates.
