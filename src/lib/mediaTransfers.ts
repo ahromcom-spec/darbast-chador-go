@@ -167,14 +167,14 @@ const uploadResumable = async ({
       removeFingerprintOnSuccess: true,
       uploadDataDuringCreation: true,
       headers: {
-        authorization: `Bearer ${session.access_token}`,
         'x-upsert': upsert ? 'true' : 'false',
       },
       // توکن ورود در آپلودهای طولانی تازه می‌شود تا وسط کار قطع نشود
       onBeforeRequest: async (req) => {
         const { data } = await supabase.auth.getSession();
-        const token = data.session?.access_token;
-        if (token) req.setHeader('authorization', `Bearer ${token}`);
+        // فقط یک‌بار تنظیم می‌شود؛ تنظیم دوباره هدر در XHR مقدار را دوتایی می‌کند
+        const token = data.session?.access_token || session.access_token;
+        req.setHeader('authorization', `Bearer ${token}`);
       },
       onShouldRetry: (err) => {
         const status = (err as any)?.originalResponse?.getStatus?.() ?? 0;
