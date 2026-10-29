@@ -41,9 +41,6 @@ export function openPrintWindow(html: string, onStarted?: () => void): Window | 
   const script = popup.document.createElement('script');
   script.textContent = `
     (async function () {
-      if (document.readyState !== 'complete') {
-        await new Promise(resolve => window.addEventListener('load', resolve, { once: true }));
-      }
       await Promise.all(Array.from(document.images).map(image => {
         if (image.complete) return Promise.resolve();
         return new Promise(resolve => {
