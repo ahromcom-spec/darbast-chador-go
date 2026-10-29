@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { fetchBillingCharges } from '@/lib/orderChargeBilling';
+import { describeRowPeriod, type RowPeriod } from '@/lib/statementRowPeriod';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Printer, Download, FileText } from 'lucide-react';
@@ -68,6 +70,31 @@ export const StatementInvoiceDialog = (props: Props) => {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
+
+  const [periods, setPeriods] = useState<Record<string, RowPeriod>>({});
+  const orderKey = props.orders.map(o => `${o.id}:${o.total}`).join(',');
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    Promise.all(props.orders.map(async o => {
+      try {
+        const charges = await fetchBillingCharges(o.id);
+        const extras = charges.reduce((s, c) => s + c.amount, 0);
+        const raw = o.raw || {};
+        const period = describeRowPeriod(charges, {
+          hasBaseMonth: Number(o.total) - extras > 0,
+          rentalStart: raw.rental_start_date ?? null,
+          rentalEnd: raw.rental_end_date ?? null,
+        });
+        return [o.id, period] as const;
+      } catch {
+        return [o.id, { label: '', start: null, end: null }] as const;
+      }
+    })).then(entries => { if (!cancelled) setPeriods(Object.fromEntries(entries)); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, orderKey]);
 
   const totals = calculateStatementTotals(props.orders);
   const totalAmount = totals.total;
@@ -190,6 +217,8 @@ export const StatementInvoiceDialog = (props: Props) => {
             <th>کد فاکتور</th>
             <th class="nowrap">تاریخ</th>
             <th>شرح</th>
+            <th class="nowrap">تاریخ شروع</th>
+            <th class="nowrap">تاریخ پایان</th>
             <th>وضعیت</th>
             <th class="nowrap">مبلغ کل (تومان)</th>
             <th class="nowrap">پرداختی (تومان)</th>
@@ -202,7 +231,9 @@ export const StatementInvoiceDialog = (props: Props) => {
               <td>${fmt(i + 1)}</td>
               <td class="nowrap" style="font-family: monospace;">${escapeHtml(o.code)}</td>
               <td class="nowrap">${formatPersianDate(o.created_at)}</td>
-              <td style="text-align:right;">${escapeHtml(o.description || o.subcategory_name || '-')}</td>
+              <td style="text-align:right;">${periods[o.id]?.label ? `<div style="font-weight:bold;color:#1e3a5f;">${escapeHtml(periods[o.id].label)}</div>` : ''}${escapeHtml(o.description || o.subcategory_name || '-')}</td>
+              <td class="nowrap">${periods[o.id]?.start ? formatPersianDate(periods[o.id].start!) : '-'}</td>
+              <td class="nowrap">${periods[o.id]?.end ? formatPersianDate(periods[o.id].end!) : '-'}</td>
               <td>${escapeHtml(statusLabels[o.status] || o.status)}</td>
               <td class="nowrap">${fmt(o.total)}</td>
               <td class="nowrap">${fmt(o.paid)}</td>
@@ -210,21 +241,21 @@ export const StatementInvoiceDialog = (props: Props) => {
             </tr>
           `).join('')}
           <tr class="${discount > 0 ? 'sub-row' : 'total-row'}">
-            <td colspan="5" style="text-align:left; padding-left:15px;">جمع کل صورتحساب:</td>
+            <td colspan="7" style="text-align:left; padding-left:15px;">جمع کل صورتحساب:</td>
             <td class="nowrap">${fmt(totalAmount)}</td>
             <td class="nowrap">${fmt(totalPaid)}</td>
             <td class="nowrap">${fmt(Math.max(totalAmount - totalPaid, 0))}</td>
           </tr>
           ${discount > 0 ? `
           <tr class="discount-row">
-            <td colspan="7" style="text-align:left; padding-left:15px;">تخفیف صورتحساب${props.discountNote ? ` (${escapeHtml(props.discountNote)})` : ''}:</td>
+            <td colspan="9" style="text-align:left; padding-left:15px;">تخفیف صورتحساب${props.discountNote ? ` (${escapeHtml(props.discountNote)})` : ''}:</td>
             <td class="nowrap">− ${fmt(discount)}</td>
           </tr>
           <tr class="total-row">
-            <td colspan="7" style="text-align:left; padding-left:15px;">مانده قابل پرداخت پس از تخفیف:</td>
+            <td colspan="9" style="text-align:left; padding-left:15px;">مانده قابل پرداخت پس از تخفیف:</td>
             <td class="nowrap">${fmt(totalRemaining)}</td>
           </tr>` : ''}
-          ${totalPaid + discount > totalAmount ? `<tr class="discount-row"><td colspan="7">بستانکاری مشتری:</td><td class="nowrap">${fmt(totalPaid + discount - totalAmount)}</td></tr>` : ''}
+          ${totalPaid + discount > totalAmount ? `<tr class="discount-row"><td colspan="9">بستانکاری مشتری:</td><td class="nowrap">${fmt(totalPaid + discount - totalAmount)}</td></tr>` : ''}
         </tbody>
       </table>
 
