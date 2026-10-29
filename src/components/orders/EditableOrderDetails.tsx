@@ -1045,6 +1045,19 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                       )}
                     </div>
 
+                    {liveArea > 0 && (
+                      <UnitPriceInput
+                        keyId={`e-${i}`}
+                        area={liveArea}
+                        unit={liveUnit}
+                        total={scaffoldPrices[i]}
+                        onTotal={(t) => {
+                          const next = [...scaffoldPrices];
+                          next[i] = t;
+                          setScaffoldPrices(next);
+                        }}
+                      />
+                    )}
                     <div>
                       <Label className="text-xs text-muted-foreground mb-1 block">قیمت کل این آیتم (تومان)</Label>
                       <Input
@@ -1712,6 +1725,15 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                       )}
                     </div>
 
+                    {!hidePrice && isEditing && Number(liveArea) > 0 && (
+                      <UnitPriceInput
+                        keyId={`m-${i}`}
+                        area={Number(liveArea)}
+                        unit={liveUnit}
+                        total={ed.finalPrice}
+                        onTotal={(t) => updateEd({ finalPrice: t })}
+                      />
+                    )}
                     {!hidePrice && (
                       <div>
                         <Label className="text-xs text-muted-foreground mb-1 block">قیمت کل این آیتم (تومان)</Label>
