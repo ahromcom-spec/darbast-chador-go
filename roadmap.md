@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Preserve actual statement payments when orders change and refresh financial totals automatically; verify statement 6's 50,000,000 payment.
+
 - [x] Add confirmed deletion of empty closed statements with server-side order and financial-history safeguards; eligibility tests pass.
 - [ ] Verify deletion through the management UI — blocked because the current preview account has no management role.
 
