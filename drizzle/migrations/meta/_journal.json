@@ -50,6 +50,13 @@
       "when": 1793261492556,
       "tag": "0006_delete_empty_closed_statement",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793261874718,
+      "tag": "0007_statement_financial_realtime",
+      "breakpoints": true
     }
   ]
 }
