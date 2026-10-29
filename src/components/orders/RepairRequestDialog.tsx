@@ -330,10 +330,10 @@ export function RepairRequestDialog({
             .from('repair_request_media')
             .insert({
               repair_request_id: request.id,
-              file_path: filePath,
+              file_path: preparedPath,
               file_type: fileType,
-              file_size: file.size,
-              mime_type: file.type,
+              file_size: prepared.size,
+              mime_type: prepared.type,
               user_id: user.id,
             });
 
@@ -799,6 +799,7 @@ export function RepairRequestDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto z-[9999]">
+        <p className="text-xs text-muted-foreground" role="note">{ORDER_VIDEO_NOTICE}</p>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Wrench className="h-5 w-5 text-primary" />

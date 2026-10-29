@@ -359,9 +359,7 @@ export const OrderDraftCard = ({ draft }: Props) => {
         </label>
       </div>
 
-      {showMap && (
-        <p className="text-xs text-muted-foreground" role="note">{ORDER_VIDEO_NOTICE}</p>
-      )}
+      <p className="text-xs text-muted-foreground" role="note">{ORDER_VIDEO_NOTICE}</p>
       {showMap && (
         <div className="rounded-lg border border-orange-200 overflow-hidden bg-white/80">
           <div className="px-3 py-2 text-xs text-muted-foreground">روی نقشه دقیقاً محل پروژه را لمس کنید.</div>
