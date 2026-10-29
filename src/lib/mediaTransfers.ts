@@ -116,7 +116,7 @@ interface UploadOptions {
 }
 
 /** فایل‌های بزرگ‌تر از این حجم با آپلود قابل ادامه (resumable) فرستاده می‌شوند */
-const RESUMABLE_THRESHOLD = 40 * 1024 * 1024;
+const RESUMABLE_THRESHOLD = 8 * 1024 * 1024;
 
 /** آپلود قابل ادامه برای فایل‌های حجیم (چانک ۶ مگابایتی) */
 const uploadResumable = async ({

@@ -1,3 +1,4 @@
+import { uploadToStorageWithProgress } from '@/lib/mediaTransfers';
 import { useState, useId, useRef, useCallback, useEffect } from 'react';
 import { Upload, X, Image as ImageIcon, Film, FileWarning, Loader2, Link as LinkIcon, XCircle, ZoomIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -198,89 +199,49 @@ export function MediaUploader({
         const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}_${safeName}`;
         const storagePath = `${user.id}/${fileName}`;
 
-        console.log('در حال آپلود فایل با XHR:', { fileName, storagePath, fileSize: media.file.size, fileType: media.file.type });
-
-        const xhr = new XMLHttpRequest();
-        
-        // Save XHR reference for cancellation
-        setFilePartial(media.id, { status: 'uploading', uploadProgress: 0, xhr });
-
-        // Real progress tracking
-        xhr.upload.addEventListener('progress', (event) => {
-          if (event.lengthComputable) {
-            const percentage = Math.round((event.loaded / event.total) * 100);
-            setFilePartial(media.id, { uploadProgress: percentage });
-          }
-        });
-
-        xhr.addEventListener('load', async () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            console.log('آپلود موفق');
-            
-            const { data: publicData } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(storagePath);
-            
-            // If projectId is provided, save record to project_media table
-            if (projectId) {
-              const { error: dbError } = await supabase
-                .from('project_media')
-                .insert({
-                  project_id: projectId,
-                  user_id: user.id,
-                  file_path: storagePath,
-                  file_type: media.type,
-                  file_size: media.file.size,
-                  mime_type: media.file.type,
-                });
-              
-              if (dbError) {
-                console.error('خطا در ذخیره اطلاعات مدیا:', dbError);
-              }
-            }
-            
-            setFilePartial(media.id, { 
-              status: 'done', 
-              storagePath, 
-              remoteUrl: publicData.publicUrl, 
-              uploadProgress: 100,
-              xhr: undefined 
-            });
-            
-            toast({ title: 'موفق', description: 'فایل با موفقیت آپلود شد' });
-          } else {
-            console.error('خطای آپلود:', xhr.status, xhr.statusText);
-            setFilePartial(media.id, { status: 'error', uploadProgress: 0, xhr: undefined });
-            
-            let errorMessage = 'خطا در آپلود فایل';
-            if (xhr.status === 413) {
-              errorMessage = 'حجم فایل بیش از حد مجاز است';
-            } else if (xhr.status === 401 || xhr.status === 403) {
-              errorMessage = 'شما اجازه آپلود فایل را ندارید';
-            }
-            
-            toast({ title: 'خطا در آپلود', description: errorMessage, variant: 'destructive' });
-          }
-          resolve();
-        });
-
-        xhr.addEventListener('error', () => {
-          console.error('خطای شبکه در آپلود');
+        setFilePartial(media.id, { status: 'uploading', uploadProgress: 0 });
+        try {
+          // آپلود چندتکه قابل ادامه با تلاش مجدد خودکار برای فایل‌های بزرگ
+          await uploadToStorageWithProgress({
+            bucket: MEDIA_BUCKET,
+            path: storagePath,
+            file: media.file,
+            label: media.file.name,
+            contentType: media.file.type || undefined,
+            onProgress: (pct) => setFilePartial(media.id, { uploadProgress: pct }),
+          });
+        } catch (upErr: any) {
           setFilePartial(media.id, { status: 'error', uploadProgress: 0, xhr: undefined });
-          toast({ title: 'خطای شبکه', description: 'مشکلی در اتصال به سرور پیش آمد', variant: 'destructive' });
+          const m = String(upErr?.message || '');
+          toast({
+            title: 'خطا در آپلود',
+            description: m.includes('413') ? 'حجم فایل بیش از حد مجاز است' : 'اتصال قطع شد؛ دوباره تلاش کنید',
+            variant: 'destructive',
+          });
           resolve();
+          return;
+        }
+        const { data: publicData } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(storagePath);
+        if (projectId) {
+          const { error: dbError } = await supabase.from('project_media').insert({
+            project_id: projectId,
+            user_id: user.id,
+            file_path: storagePath,
+            file_type: media.type,
+            file_size: media.file.size,
+            mime_type: media.file.type,
+          });
+          if (dbError) console.error('خطا در ذخیره اطلاعات مدیا:', dbError);
+        }
+        setFilePartial(media.id, {
+          status: 'done',
+          storagePath,
+          remoteUrl: publicData.publicUrl,
+          uploadProgress: 100,
+          xhr: undefined,
         });
-
-        xhr.addEventListener('abort', () => {
-          console.log('آپلود لغو شد');
-          setFilePartial(media.id, { status: 'cancelled', uploadProgress: 0, xhr: undefined });
-          resolve();
-        });
-
-        // Use Supabase storage upload endpoint directly
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        xhr.open('POST', `${supabaseUrl}/storage/v1/object/${MEDIA_BUCKET}/${storagePath}`);
-        xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
-        xhr.setRequestHeader('x-upsert', 'true');
-        xhr.send(media.file);
+        toast({ title: 'موفق', description: 'فایل با موفقیت آپلود شد' });
+        resolve();
 
       } catch (e: any) {
         console.error('خطای غیرمنتظره در آپلود:', e);
@@ -398,10 +359,14 @@ export function MediaUploader({
 
       // Start uploads (sequential to avoid rate spikes) - only if auto upload is enabled
       if (!disableAutoUpload) {
-        for (const m of newMedia) {
-          toast({ title: 'در حال آپلود', description: `${m.type === 'video' ? 'ویدیو' : 'عکس'} شما در حال آپلود است...` });
-          await uploadToStorage(m);
-        }
+        // آپلود هم‌زمان (حداکثر ۳ فایل) به جای ترتیبی
+        toast({ title: 'در حال آپلود', description: 'فایل‌های شما در حال آپلود است...' });
+        const queue = [...newMedia];
+        await Promise.all(
+          Array.from({ length: Math.min(3, queue.length) }, async () => {
+            while (queue.length) await uploadToStorage(queue.shift()!);
+          })
+        );
       } else {
         // Mark files as ready (no upload)
         for (const m of newMedia) {
