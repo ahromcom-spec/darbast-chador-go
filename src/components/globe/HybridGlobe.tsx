@@ -184,7 +184,6 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
       const { data: ordersData, error } = await supabase
         .from('projects_v3')
         .select('id, code, status, execution_stage, address, created_at, approved_at, hierarchy_project_id, subcategory_id, location_lat, location_lng, is_archived, is_deep_archived')
-        .eq('billing_only', false)
         .order('created_at', { ascending: false })
         .limit(3000);
 
@@ -889,7 +888,6 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
 
       // فقط سفارش‌هایی که به پروژه‌های فعلی روی نقشه تعلق دارند
       const v3OrdersFiltered = v3OrdersAll.filter(o => {
-        if (o.billing_only) return false;
         if (!o.hierarchy_project_id || !projectIds.includes(o.hierarchy_project_id) || o.status === 'rejected') return false;
         if (!activeExecutionOnly) {
           if (mapOrderFilter === 'active' && isArchivedOrder(o)) return false;
