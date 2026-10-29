@@ -151,6 +151,8 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
   // مکان‌نمای ثابت مرکز نقشه + چسبیدن به مرکر پروژه‌های نزدیک (تا ۳ متر)
   const [centerPin, setCenterPin] = useState<{ lat: number; lng: number } | null>(null);
   const [snappedProject, setSnappedProject] = useState<ProjectWithMedia | null>(null);
+  // وقتی مرکز نقشه روی مارکر پروژه‌ای است، نشانگر «تایید محل» پنهان می‌شود تا روی پروژه نیفتد
+  const [pinOverProject, setPinOverProject] = useState(false);
 
 
   const isMobile = useIsMobile();
@@ -1988,9 +1990,8 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
         const orderCountBadgeHtml = `
           <div style="
             position:absolute;
-            bottom:2px;
-            left:50%;
-            transform:translateX(-50%);
+            bottom:-10px;
+            left:-10px;
             min-width:26px;
             height:26px;
             padding:0 6px;
@@ -3300,11 +3301,16 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
 
       let nearest: ProjectWithMedia | null = null;
       let nearestDist = Infinity;
+      let overlap = false;
+      const cp = map.latLngToContainerPoint(c);
       projectsWithMedia.forEach((p) => {
         const lat = p.locations?.lat;
         const lng = p.locations?.lng;
         if (!Number.isFinite(lat as number) || !Number.isFinite(lng as number)) return;
-        const d = map.distance(c, L.latLng(lat as number, lng as number));
+        const ll = L.latLng(lat as number, lng as number);
+        const pp = map.latLngToContainerPoint(ll);
+        if (Math.abs(pp.x - cp.x) < 70 && cp.y - pp.y > -30 && cp.y - pp.y < 130) overlap = true;
+        const d = map.distance(c, ll);
         if (d < nearestDist) {
           nearestDist = d;
           nearest = p;
@@ -3312,6 +3318,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
       });
 
       setSnappedProject(nearestDist <= SNAP_METERS ? nearest : null);
+      setPinOverProject(overlap);
     };
 
     update();
@@ -3441,7 +3448,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
         </Card>
 
         {/* مکان‌نمای ثابت مرکز نقشه — فقط نقشه عمومی؛ در تب اجرایی نقشه تمیز می‌ماند */}
-        {!activeExecutionOnly && (
+        {!activeExecutionOnly && !pinOverProject && (
         <div className="pointer-events-none absolute left-1/2 top-1/2 z-[2300] -translate-x-1/2 -translate-y-full">
         <Button
           type="button"
