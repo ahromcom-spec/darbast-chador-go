@@ -1987,15 +1987,16 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
         // عدد بزرگ روی مارکر: تعداد سفارش‌های داخل این مارکر
         // در حالت جمع‌شده مارکر نماینده همه پروژه‌های آن نقطه است
         const markerOrderCount = count > 1 && !isClusterExpanded ? groupOrderTotal : orderCounts.total;
+        // شمارنده سفارش‌ها: بیرون از کادر تصویر قرار می‌گیرد تا هرگز بریده نشود
         const orderCountBadgeHtml = `
           <div style="
             position:absolute;
-            bottom:-10px;
-            left:-10px;
-            min-width:26px;
-            height:26px;
-            padding:0 6px;
-            border-radius:13px;
+            bottom:-7px;
+            left:-7px;
+            min-width:22px;
+            height:22px;
+            padding:0 5px;
+            border-radius:11px;
             background:${projectArchived ? 'rgba(100,116,139,0.97)' : 'rgba(37,99,235,0.97)'};
             border:2px solid #fff;
             box-shadow:0 2px 8px rgba(0,0,0,0.45);
@@ -2004,13 +2005,14 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             justify-content:center;
             color:#fff;
             font-family:Vazirmatn, sans-serif;
-            font-size:17px;
+            font-size:14px;
             font-weight:800;
             line-height:1;
             text-shadow:0 1px 2px rgba(0,0,0,0.5);
             z-index:6;
             pointer-events:none;
           ">${markerOrderCount}</div>`;
+
         const labelGradient = projectArchived
           ? 'linear-gradient(135deg, rgba(100,116,139,0.95) 0%, rgba(71,85,105,0.95) 100%)'
           : 'linear-gradient(135deg, rgba(59,130,246,0.95) 0%, rgba(37,99,235,0.95) 100%)';
