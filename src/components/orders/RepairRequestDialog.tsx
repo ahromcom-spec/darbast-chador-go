@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { prepareOrderVideo } from '@/lib/orderVideoProcessor';
+import { ORDER_VIDEO_NOTICE } from '@/lib/orderVideoPolicy';
+import { uploadToStorageWithProgress } from '@/lib/mediaTransfers';
 import {
   Dialog,
   DialogContent,
@@ -307,9 +310,11 @@ export function RepairRequestDialog({
           const filePath = `${user.id}/repair-requests/${request.id}/${fileName}`;
           const fileType = file.type.startsWith('image/') ? 'image' : 'video';
 
-          const { error: uploadError } = await supabase.storage
-            .from('project-media')
-            .upload(filePath, file);
+          const prepared = fileType === 'video' ? await prepareOrderVideo(file) : file;
+          const preparedPath = fileType === 'video' ? filePath.replace(/\.[^/.]+$/, '.mp4') : filePath;
+          const { error: uploadError } = await uploadToStorageWithProgress({ bucket: 'project-media', path: preparedPath, file: prepared })
+            .then(() => ({ error: null }))
+            .catch((error: Error) => ({ error }));
 
           if (uploadError) {
             console.error('Upload error:', uploadError);
@@ -381,17 +386,14 @@ export function RepairRequestDialog({
       if (!user) throw new Error('User not authenticated');
 
       for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+        let file = files[i];
+        if (!file.type.startsWith('image/')) file = await prepareOrderVideo(file);
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
         const filePath = `${user.id}/repair-requests/${existingRequest.id}/${fileName}`;
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
 
-        const { error: uploadError } = await supabase.storage
-          .from('project-media')
-          .upload(filePath, file);
-
-        if (uploadError) throw uploadError;
+        await uploadToStorageWithProgress({ bucket: 'project-media', path: filePath, file });
 
         const { error: dbError } = await supabase
           .from('repair_request_media')

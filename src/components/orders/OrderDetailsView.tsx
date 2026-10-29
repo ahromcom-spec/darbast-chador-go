@@ -12,6 +12,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useImageModeration } from '@/hooks/useImageModeration';
 import { buildMediaFingerprint, findDuplicateProjectMedia, mediaDedupeKey } from '@/lib/mediaFingerprint';
+import { prepareOrderVideo } from '@/lib/orderVideoProcessor';
+import { ORDER_VIDEO_NOTICE } from '@/lib/orderVideoPolicy';
+import { uploadToStorageWithProgress } from '@/lib/mediaTransfers';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -148,7 +151,15 @@ export const OrderMediaGallery = ({ orderId, allowEdit = true }: OrderMediaGalle
 
     setUploading(true);
     
-    for (const file of Array.from(files)) {
+    for (let file of Array.from(files)) {
+      if (type === 'video') {
+        try {
+          file = await prepareOrderVideo(file);
+        } catch (error) {
+          toast({ title: 'فیلم ذخیره نشد', description: error instanceof Error ? error.message : 'تبدیل فیلم انجام نشد', variant: 'destructive' });
+          continue;
+        }
+      }
       // Validate size
       const maxSize = type === 'image' ? 10 * 1024 * 1024 : 50 * 1024 * 1024; // 10MB for images, 50MB for videos
       if (file.size > maxSize) {
@@ -190,15 +201,7 @@ export const OrderMediaGallery = ({ orderId, allowEdit = true }: OrderMediaGalle
         }
 
         // Upload to storage
-        const { error: uploadError } = await supabase.storage
-          .from('project-media')
-          .upload(fileName, file);
-
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-          toast({ title: 'خطا در آپلود', description: uploadError.message, variant: 'destructive' });
-          continue;
-        }
+        await uploadToStorageWithProgress({ bucket: 'project-media', path: fileName, file });
 
         // Save to database
         const { error: dbError } = await supabase.from('project_media').insert({
@@ -344,6 +347,7 @@ export const OrderMediaGallery = ({ orderId, allowEdit = true }: OrderMediaGalle
       </div>
 
       {/* Empty state */}
+      {allowEdit && <p className="text-xs text-muted-foreground" role="note">{ORDER_VIDEO_NOTICE}</p>}
       {media.length === 0 ? (
         <div className="text-center text-muted-foreground text-sm p-6 bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
           <ImageIcon className="h-10 w-10 mx-auto mb-3 opacity-40" />
