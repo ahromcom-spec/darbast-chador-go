@@ -83,6 +83,7 @@ export interface InvoiceOrderLike {
   province_id?: string;
   subcategory_id?: string;
   rental_start_date?: string | null;
+  rental_end_date?: string | null;
   execution_end_date?: string | null;
   execution_stage_updated_at?: string | null;
 }
@@ -499,7 +500,7 @@ export function buildOrderInvoiceHtml(
     const invoiceStartDate = isNoMaterialsScaffold ? installDate : order.rental_start_date;
     const invoiceEndDate = isNoMaterialsScaffold
       ? (order.execution_end_date || order.execution_stage_updated_at)
-      : (order.rental_start_date ? new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString() : null);
+      : (order.rental_end_date || parsedNotes?.rental_end_date || (order.rental_start_date ? new Date(new Date(order.rental_start_date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString() : null));
     const dueDate = parsedNotes?.dueDateTime || parsedNotes?.due_date || parsedNotes?.dueDate;
     const conditions = parsedNotes?.conditions || parsedNotes?.serviceConditions;
     
@@ -772,6 +773,12 @@ export function buildOrderInvoiceHtml(
             <td class="value-cell" style="white-space:nowrap;">${collectionRequestDate ? formatPersianDateTime(collectionRequestDate) : '-'}</td>
             <td class="label-cell" style="white-space:nowrap;">تاریخ جمع‌آوری شده:</td>
             <td class="value-cell" style="white-space:nowrap;">${collectionConfirmedDate ? formatPersianDate(collectionConfirmedDate) : '-'}</td>
+          </tr>
+          <tr>
+            <td class="label-cell">تاریخ پایان کرایه:</td>
+            <td class="value-cell">${invoiceEndDate ? formatPersianDate(invoiceEndDate) : '-'}</td>
+            <td class="label-cell">تاریخ جمع‌آوری ثبت‌شده:</td>
+            <td class="value-cell" colspan="3">${order.customer_completion_date ? formatPersianDate(order.customer_completion_date) : '-'}</td>
           </tr>
           <tr>
             <td class="label-cell">مدت قرارداد:</td>

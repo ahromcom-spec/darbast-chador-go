@@ -85,6 +85,8 @@ interface EditableOrderDetailsProps {
     transferred_from_user_id?: string | null;
     transferred_from_phone?: string | null;
     rental_start_date?: string | null;
+    rental_end_date?: string | null;
+    billing_only?: boolean;
     total_price?: number | null;
     total_paid?: number | null;
     discount_amount?: number | null;
@@ -115,6 +117,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
   const { toast } = useToast();
   
   const parsedNotes = typeof order.notes === 'object' ? order.notes : parseOrderNotes(order.notes);
+  const isSeparatedOrder = Boolean(order.billing_only || parsedNotes?.billing_only);
   const isNoMaterialsScaffold = isScaffoldingNoMaterials(order, parsedNotes);
 
   // Fetch approved/completed repair costs, renewals, approvals, and collection date
@@ -252,7 +255,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
     customBasis !== savedCustomPricing.basis || customUnitPrice !== savedCustomPricing.unitPrice;
 
   // Check if this is an expert pricing request
-  const isExpertPricingRequest = parsedNotes?.is_expert_pricing_request === true;
+  const isExpertPricingRequest = !isSeparatedOrder && parsedNotes?.is_expert_pricing_request === true;
 
 
   // Calculate total measure (m² or m³) from dimensions for expert pricing
@@ -832,20 +835,17 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
     );
   }
 
-  if (parsedNotes?.billing_only) {
-    return <div className="space-y-4">
-      <p className="font-semibold">صورتحساب مستقل تمدید و تعمیرات — سفارش مادر {parsedNotes.billing_source_code || '—'}</p>
-      <p className="text-sm whitespace-pre-wrap">{parsedNotes.description || order.address}</p>
-      <div className="flex flex-wrap gap-2"><ManagerOrderInvoice order={order} hidePrice={hidePrice} /><SeparateOrderChargesDialog orderId={order.id} orderCode={order.code} onSuccess={onUpdate} /></div>
-      <div className="divide-y border rounded-md">{approvedRenewals.map((r, i) => <div key={i} className="p-3 flex justify-between gap-3"><span>تمدید ماه {new Intl.NumberFormat('fa-IR').format(r.renewal_number + 1)}</span><span>{Number(r.renewal_price || 0).toLocaleString('fa-IR')} تومان</span></div>)}{approvedRepairs.map(r => <div key={r.id} className="p-3 flex justify-between gap-3"><span className="break-words">تعمیر — {r.description}</span><span className="whitespace-nowrap">{Number(r.final_cost || 0).toLocaleString('fa-IR')} تومان</span></div>)}</div>
-      <p>مبلغ کل: {Number(order.total_price || 0).toLocaleString('fa-IR')} تومان</p>
-      <p>پرداخت شده: {Number(order.total_paid || 0).toLocaleString('fa-IR')} تومان</p>
-      <InvoiceEmployerOverrideDialog orderId={order.id} currentCustomerName={order.customer_name} currentCustomerPhone={order.customer_phone} notes={order.notes} onUpdate={onUpdate} />
-    </div>;
-  }
-
   return (
     <div className="space-y-4">
+      {isSeparatedOrder && <section className="space-y-3 border-b pb-4">
+        <p className="font-semibold">سفارش مستقل تمدید و تعمیرات — سفارش مادر {parsedNotes?.billing_source_code || '—'}</p>
+        <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+          <div><dt className="text-muted-foreground">شروع کرایه</dt><dd>{order.rental_start_date ? formatPersianDate(order.rental_start_date) : '—'}</dd></div>
+          <div><dt className="text-muted-foreground">پایان کرایه</dt><dd>{order.rental_end_date || parsedNotes?.rental_end_date ? formatPersianDate(order.rental_end_date || parsedNotes.rental_end_date) : '—'}</dd></div>
+          <div><dt className="text-muted-foreground">تاریخ جمع‌آوری</dt><dd>{order.customer_completion_date || approvedCollectionDate ? formatPersianDate(order.customer_completion_date || approvedCollectionDate || '') : '—'}</dd></div>
+        </dl>
+        {!hidePrice && <><div className="divide-y">{approvedRenewals.map((r, i) => <div key={i} className="py-2 flex justify-between gap-3"><span>تمدید ماه {new Intl.NumberFormat('fa-IR').format(r.renewal_number + 1)}</span><span>{Number(r.renewal_price || 0).toLocaleString('fa-IR')} تومان</span></div>)}{approvedRepairs.map(r => <div key={r.id} className="py-2 flex justify-between gap-3"><span>تعمیر — {r.description}</span><span>{Number(r.final_cost || 0).toLocaleString('fa-IR')} تومان</span></div>)}</div><p>مبلغ کل: {Number(order.total_price ?? 0).toLocaleString('fa-IR')} تومان</p><p>پرداخت شده: {Number(order.total_paid ?? 0).toLocaleString('fa-IR')} تومان</p></>}
+      </section>}
       {/* Expert Pricing Request Badge with Price Input - shown only if hidePrice is false */}
       {isExpertPricingRequest && !hidePrice && (
         <div className="bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-700 rounded-xl p-4 space-y-4">
@@ -2108,7 +2108,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
         />
       )}
 
-      {!isExpertPricingRequest && !isCustomService && !hidePrice && (
+      {!isSeparatedOrder && !isExpertPricingRequest && !isCustomService && !hidePrice && (
 
 
         <div className="p-4 rounded-lg border bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
@@ -2241,8 +2241,8 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
             variant="outline" 
             className="gap-2"
             onClick={() => setCollectionDialogOpen(true)}
-            disabled={!order.rental_start_date || !order.customer_completion_date}
-            title={!order.rental_start_date ? 'ابتدا تاریخ شروع کرایه را ثبت کنید' : !order.customer_completion_date ? 'ابتدا تاریخ جمع‌آوری را ثبت کنید' : ''}
+            disabled={!order.rental_start_date || (!isSeparatedOrder && !order.customer_completion_date)}
+            title={!order.rental_start_date ? 'ابتدا تاریخ شروع کرایه را ثبت کنید' : !isSeparatedOrder && !order.customer_completion_date ? 'ابتدا تاریخ جمع‌آوری را ثبت کنید' : ''}
           >
             <Calendar className="h-4 w-4" />
             درخواست جمع‌آوری
@@ -2277,6 +2277,8 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
       {/* Collection Request Dialog */}
       <CollectionRequestDialog
         open={collectionDialogOpen}
+        isManager={true}
+        onSaved={onUpdate}
         onOpenChange={setCollectionDialogOpen}
         orderId={order.id}
         orderCode={order.code}

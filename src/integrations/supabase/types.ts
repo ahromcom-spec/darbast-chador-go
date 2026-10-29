@@ -4162,6 +4162,7 @@ export type Database = {
           price_before_discount: number | null
           province_id: string
           rejection_reason: string | null
+          rental_end_date: string | null
           rental_start_date: string | null
           stage_note: string | null
           stage_note_at: string | null
@@ -4229,6 +4230,7 @@ export type Database = {
           price_before_discount?: number | null
           province_id: string
           rejection_reason?: string | null
+          rental_end_date?: string | null
           rental_start_date?: string | null
           stage_note?: string | null
           stage_note_at?: string | null
@@ -4296,6 +4298,7 @@ export type Database = {
           price_before_discount?: number | null
           province_id?: string
           rejection_reason?: string | null
+          rental_end_date?: string | null
           rental_start_date?: string | null
           stage_note?: string | null
           stage_note_at?: string | null
@@ -6908,6 +6911,7 @@ export type Database = {
           price_before_discount: number | null
           province_id: string
           rejection_reason: string | null
+          rental_end_date: string | null
           rental_start_date: string | null
           stage_note: string | null
           stage_note_at: string | null
@@ -7065,6 +7069,7 @@ export type Database = {
           price_before_discount: number | null
           province_id: string
           rejection_reason: string | null
+          rental_end_date: string | null
           rental_start_date: string | null
           stage_note: string | null
           stage_note_at: string | null
@@ -7374,6 +7379,10 @@ export type Database = {
           }
       submit_contractor_edit: {
         Args: { _contractor_id: string; _edits: Json }
+        Returns: undefined
+      }
+      sync_separated_order_period: {
+        Args: { _order_id: string }
         Returns: undefined
       }
       transfer_between_bank_cards: {

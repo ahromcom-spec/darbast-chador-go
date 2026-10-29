@@ -376,6 +376,7 @@ export default function ExecutiveOrders() {
           location_confirmed_by_customer,
           location_confirmed_at,
           rental_start_date,
+          rental_end_date,
           subcategories (
             name,
             code,
@@ -387,7 +388,6 @@ export default function ExecutiveOrders() {
         // فقط سفارشات غیر بایگانی را نمایش بده
         .or('is_archived.is.null,is_archived.eq.false')
         .or('is_deep_archived.is.null,is_deep_archived.eq.false')
-        .eq('billing_only', false)
         .order('code', { ascending: false });
 
       if (error) throw error;
@@ -457,6 +457,8 @@ export default function ExecutiveOrders() {
           return {
             id: order.id,
             code: order.code,
+            billing_only: order.billing_only,
+            rental_end_date: order.rental_end_date,
             status: order.status,
             address: order.address,
             detailed_address: order.detailed_address,
