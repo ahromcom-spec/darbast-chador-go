@@ -1,4 +1,6 @@
 # Roadmap
+- [x] Show the order-count number fully on map markers: marker enlarged to 68px, counter reduced and moved outside the clipped photo frame at the bottom corner; rendered close-up and clipping checks confirm the whole number is visible.
+
 - [x] Compact printed statement dates and widen activity descriptions; single and combined A4 tables verified with sample data, no cell overflow, and print windows open correctly.
 
 - [x] Preserve uncapped statement receipts and refresh financial totals automatically; 12 tests pass and statement 6 data confirms 50,000,000 paid with 2,320,000 remaining.

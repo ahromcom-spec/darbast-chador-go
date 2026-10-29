@@ -1987,15 +1987,17 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
         // عدد بزرگ روی مارکر: تعداد سفارش‌های داخل این مارکر
         // در حالت جمع‌شده مارکر نماینده همه پروژه‌های آن نقطه است
         const markerOrderCount = count > 1 && !isClusterExpanded ? groupOrderTotal : orderCounts.total;
+        // شمارنده سفارش‌ها: بیرون از کادر تصویر قرار می‌گیرد تا هرگز بریده نشود
         const orderCountBadgeHtml = `
           <div style="
             position:absolute;
-            bottom:-10px;
-            left:-10px;
-            min-width:26px;
-            height:26px;
+            bottom:-8px;
+            left:-8px;
+            min-width:24px;
+            height:24px;
             padding:0 6px;
-            border-radius:13px;
+            border-radius:12px;
+
             background:${projectArchived ? 'rgba(100,116,139,0.97)' : 'rgba(37,99,235,0.97)'};
             border:2px solid #fff;
             box-shadow:0 2px 8px rgba(0,0,0,0.45);
@@ -2004,13 +2006,14 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             justify-content:center;
             color:#fff;
             font-family:Vazirmatn, sans-serif;
-            font-size:17px;
+            font-size:14px;
             font-weight:800;
             line-height:1;
             text-shadow:0 1px 2px rgba(0,0,0,0.5);
             z-index:6;
             pointer-events:none;
           ">${markerOrderCount}</div>`;
+
         const labelGradient = projectArchived
           ? 'linear-gradient(135deg, rgba(100,116,139,0.95) 0%, rgba(71,85,105,0.95) 100%)'
           : 'linear-gradient(135deg, rgba(59,130,246,0.95) 0%, rgba(37,99,235,0.95) 100%)';
@@ -2092,22 +2095,23 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           const html = `
             <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
               ${addressLabelHtml}
-              <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid #fff;background:#000;position:relative;">
+              <div style="width:68px;height:68px;border-radius:9px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid #fff;background:#000;position:relative;">
                 <video src="${videoUrl}" autoplay muted playsinline preload="auto"
                   ontimeupdate="if(this.currentTime>=6){this.currentTime=0;this.play().catch(()=>{});}"
                   onended="this.currentTime=0;this.play().catch(()=>{});"
                   style="width:100%;height:100%;object-fit:cover;pointer-events:none;">
                 </video>
-                ${orderCountBadgeHtml}
               </div>
+              ${orderCountBadgeHtml}
             </div>`;
           iconToUse = L.divIcon({
             html,
             className: 'project-thumb-icon',
-            iconSize: [56, 80],
-            iconAnchor: [28, 80],
-            popupAnchor: [0, -80],
+            iconSize: [68, 92],
+            iconAnchor: [34, 92],
+            popupAnchor: [0, -92],
           });
+
         } else if (firstOrderImage) {
           const url1 = supabase.storage
             .from('project-media')
@@ -2118,18 +2122,19 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           const html = `
             <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
               ${addressLabelHtml}
-              <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid ${projectArchived ? '#94a3b8' : '#fff'};background:#f0f0f0;position:relative;${projectArchived ? 'filter:grayscale(0.45) saturate(0.7);' : ''}">
+              <div style="width:68px;height:68px;border-radius:9px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid ${projectArchived ? '#94a3b8' : '#fff'};background:#f0f0f0;position:relative;${projectArchived ? 'filter:grayscale(0.45) saturate(0.7);' : ''}">
                 <img src="${url1}" alt="تصویر پروژه" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
-                ${orderCountBadgeHtml}
               </div>
+              ${orderCountBadgeHtml}
             </div>`;
           iconToUse = L.divIcon({
             html,
             className: 'project-thumb-icon',
-            iconSize: [56, 80],
-            iconAnchor: [28, 80],
-            popupAnchor: [0, -80],
+            iconSize: [68, 92],
+            iconAnchor: [34, 92],
+            popupAnchor: [0, -92],
           });
+
         } else {
           // استفاده از لوگوی اهرم به عنوان تصویر پیش‌فرض برای پروژه‌های بدون عکس
           console.debug('[HybridGlobe] No image found for project, using default logo:', project.id);
@@ -2137,21 +2142,22 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           const defaultLogoHtml = `
             <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
               ${addressLabelHtml}
-              <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid #d97706;background:linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);position:relative;display:flex;align-items:center;justify-content:center;">
-                <img src="/ahrom-logo.png" alt="لوگوی اهرم" loading="lazy" style="width:44px;height:44px;object-fit:contain" onerror="this.style.display='none'"/>
-                <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(217,119,6,0.8));height:16px;display:flex;align-items:center;justify-content:center;">
-                  <span style="color:#fff;font-size:9px;font-weight:bold;">بدون عکس</span>
+              <div style="width:68px;height:68px;border-radius:9px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid #d97706;background:linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);position:relative;display:flex;align-items:center;justify-content:center;">
+                <img src="/ahrom-logo.png" alt="لوگوی اهرم" loading="lazy" style="width:52px;height:52px;object-fit:contain" onerror="this.style.display='none'"/>
+                <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(217,119,6,0.8));height:18px;display:flex;align-items:center;justify-content:center;">
+                  <span style="color:#fff;font-size:10px;font-weight:bold;">بدون عکس</span>
                 </div>
-                ${orderCountBadgeHtml}
               </div>
+              ${orderCountBadgeHtml}
             </div>`;
           iconToUse = L.divIcon({
             html: defaultLogoHtml,
             className: 'project-thumb-icon project-no-image',
-            iconSize: [56, 80],
-            iconAnchor: [28, 80],
-            popupAnchor: [0, -80],
+            iconSize: [68, 92],
+            iconAnchor: [34, 92],
+            popupAnchor: [0, -92],
           });
+
         }
 
         const marker = L.marker([lat, lng], { 
