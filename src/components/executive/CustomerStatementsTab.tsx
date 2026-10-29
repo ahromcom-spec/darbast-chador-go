@@ -9,7 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ChevronDown, ChevronUp, FileText, Lock, Unlock, Search, User, Phone, Banknote, History, ArrowRightLeft, FileCheck, Eye, Archive, ArchiveRestore, BadgePercent } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileText, Lock, Unlock, Search, User, Phone, Banknote, History, ArrowRightLeft, FileCheck, Eye, Archive, ArchiveRestore, BadgePercent, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ManagerOrderInvoice from '@/components/orders/ManagerOrderInvoice';
 import { StatementInvoiceDialog } from '@/components/executive/StatementInvoiceDialog';
@@ -22,6 +22,7 @@ import { AllStatementsInvoiceDialog } from '@/components/executive/AllStatements
 import { TransferOrderStatementDialog } from '@/components/executive/TransferOrderStatementDialog';
 import { SeparateOrderChargesDialog } from '@/components/orders/SeparateOrderChargesDialog';
 import { extractOrderDescription } from '@/lib/orderDescription';
+import { canDeleteStatement } from '@/lib/statementDeletion';
 
 interface OrderRow {
   id: string;
@@ -71,6 +72,7 @@ interface Statement {
   addresses: string[];
   serviceTypes: string[];
   orders: OrderRow[];
+  linked_order_count: number;
 }
 
 interface CustomerGroup {
@@ -128,6 +130,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
   const [expandedStatements, setExpandedStatements] = useState<Set<string>>(new Set());
   const [closing, setClosing] = useState<Statement | null>(null);
   const [reopening, setReopening] = useState<Statement | null>(null);
+  const [deleting, setDeleting] = useState<Statement | null>(null);
   const [busy, setBusy] = useState(false);
   const [payingStmt, setPayingStmt] = useState<{ statement: Statement; customer: CustomerGroup } | null>(null);
   const [historyStmt, setHistoryStmt] = useState<{ statement: Statement; customer: CustomerGroup } | null>(null);
@@ -237,7 +240,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
         .select('*, subcategories(name)')
         .in('customer_id', customerIds)
         // سفارشات بایگانی شده/بایگانی عمیق هم در صورتحساب مشتری نمایش داده می‌شوند
-        .neq('status', 'rejected');
+        ;
       if (e2) throw e2;
 
       // group statements by customer
@@ -269,7 +272,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
 
         }
         const myOrders: OrderRow[] = (orders || [])
-          .filter((o: any) => o.statement_id === s.id)
+          .filter((o: any) => o.statement_id === s.id && o.status !== 'rejected')
           .map((o: any) => {
             const total = Number(o.total_price ?? o.payment_amount ?? 0);
             const paid = Math.min(Number(o.total_paid ?? 0), total > 0 ? total : Number.MAX_SAFE_INTEGER);
@@ -292,7 +295,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
         const total_paid = myOrders.reduce((a, o) => a + o.paid, 0);
         // مجموع واقعی واریزی کارفرما (بدون سقف مبلغ سفارش) برای نمایش اضافه‌پرداخت
         const total_paid_actual = (orders || [])
-          .filter((o: any) => o.statement_id === s.id)
+          .filter((o: any) => o.statement_id === s.id && o.status !== 'rejected')
           .reduce((a: number, o: any) => a + (Number(o.total_paid) || 0), 0);
 
 
@@ -353,6 +356,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
           addresses,
           serviceTypes,
           orders: myOrders,
+          linked_order_count: (orders || []).filter(o => o.statement_id === s.id).length,
           is_manual: !!s.is_manual,
         } as Statement & { is_manual: boolean });
       }
@@ -477,6 +481,22 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
     } catch (err: any) {
       console.error(err);
       toast({ title: 'خطا', description: err.message || 'بازگشایی صورتحساب با خطا مواجه شد', variant: 'destructive' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleting || !canDeleteStatement(deleting.status, deleting.linked_order_count)) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.rpc('delete_empty_closed_statement', { _statement_id: deleting.id });
+      if (error) throw error;
+      toast({ title: 'انجام شد', description: `صورتحساب شماره ${deleting.statement_number} حذف شد` });
+      setDeleting(null);
+      await load();
+    } catch (err: any) {
+      toast({ title: 'حذف انجام نشد', description: err.message || 'حذف صورتحساب با خطا مواجه شد', variant: 'destructive' });
     } finally {
       setBusy(false);
     }
@@ -829,6 +849,19 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                         بازگشایی صورتحساب
                                       </Button>
                                     )}
+                                    {canDeleteStatement(s.status, s.linked_order_count) && (
+                                      <Button
+                                        size="icon"
+                                        variant="destructive"
+                                        className="h-8 w-8"
+                                        title="حذف صورتحساب خالی"
+                                        aria-label={`حذف صورتحساب خالی شماره ${s.statement_number}`}
+                                        disabled={busy}
+                                        onClick={(e) => { e.stopPropagation(); setDeleting(s); }}
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    )}
                                     {!s.is_archived && !s.is_deep_archived && (
                                       <Button
                                         size="sm"
@@ -1051,6 +1084,23 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
         </AlertDialogContent>
       </AlertDialog>
 
+
+      <AlertDialog open={!!deleting} onOpenChange={(open) => { if (!open && !busy) setDeleting(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف صورتحساب خالی</AlertDialogTitle>
+            <AlertDialogDescription>
+              صورتحساب بسته شماره {deleting && new Intl.NumberFormat('fa-IR').format(deleting.statement_number)} که هیچ سفارشی ندارد حذف شود؟ این اقدام قابل بازگردانی نیست. صورتحساب دارای چک یا سابقه درخواست پرداخت حذف نمی‌شود.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>انصراف</AlertDialogCancel>
+            <Button variant="destructive" onClick={handleDelete} disabled={busy}>
+              {busy ? 'در حال حذف...' : 'تایید و حذف'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {payingStmt && (
         <StatementManualPaymentDialog
