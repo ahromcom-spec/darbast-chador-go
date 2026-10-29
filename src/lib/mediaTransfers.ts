@@ -272,7 +272,6 @@ const uploadSingleRequest = ({
 
       xhr.addEventListener('error', () => {
         tracker.fail('خطای شبکه');
-        // fallthrough
         reject(new Error('خطای شبکه در آپلود'));
       });
 

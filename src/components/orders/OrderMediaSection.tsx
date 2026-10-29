@@ -367,30 +367,33 @@ export function OrderMediaSection({
     setMediaUrls(urls);
   };
 
-  // آپلود با XMLHttpRequest برای progress واقعی
+  // آپلود با پیشرفت واقعی؛ فایل‌های بزرگ تکه‌تکه و قابل ادامه با تلاش مجدد خودکار
+  const lastUploadErrorRef = useRef<string>('');
   const uploadFileWithProgress = async (
     file: File,
     filePath: string,
-    accessToken: string,
+    _accessToken: string,
     onProgress: (loaded: number, total: number) => void
   ): Promise<boolean> => {
-    return new Promise((resolve) => {
-      const xhr = new XMLHttpRequest();
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-
-      xhr.upload.addEventListener('progress', (event) => {
-        if (event.lengthComputable) onProgress(event.loaded, event.total);
+    try {
+      await uploadToStorageWithProgress({
+        bucket: 'project-media',
+        path: filePath,
+        file,
+        label: file.name,
+        onProgress: (_pct, loaded, total) => onProgress(loaded, total),
       });
-
-      xhr.addEventListener('load', () => resolve(xhr.status >= 200 && xhr.status < 300));
-      xhr.addEventListener('error', () => resolve(false));
-      xhr.addEventListener('abort', () => resolve(false));
-
-      xhr.open('POST', `${supabaseUrl}/storage/v1/object/project-media/${filePath}`);
-      xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
-      xhr.setRequestHeader('x-upsert', 'true');
-      xhr.send(file);
-    });
+      return true;
+    } catch (err: any) {
+      const m = String(err?.message || '');
+      console.error('Order media upload failed:', file.name, m);
+      lastUploadErrorRef.current = /413|too large|exceed/i.test(m)
+        ? 'حجم فایل بیش از حد مجاز است'
+        : /415|mime|type/i.test(m)
+          ? 'نوع فایل پشتیبانی نمی‌شود'
+          : 'اتصال اینترنت قطع شد؛ لطفاً دوباره تلاش کنید';
+      return false;
+    }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -467,6 +470,14 @@ export function OrderMediaSection({
 
       if (duplicateCount > 0) {
         toast({ title: 'تکراری', description: `${duplicateCount} عکس تکراری بود و ثبت نشد` });
+      }
+      const failedImages = fileArray.length - successCount - duplicateCount;
+      if (failedImages > 0) {
+        toast({
+          title: 'عکس ذخیره نشد',
+          description: `${failedImages} عکس ذخیره نشد: ${lastUploadErrorRef.current || 'خطا در آپلود'}`,
+          variant: 'destructive',
+        });
       }
 
       setImageUploadProgress(100);
@@ -565,6 +576,14 @@ export function OrderMediaSection({
 
       if (duplicateCount > 0) {
         toast({ title: 'تکراری', description: `${duplicateCount} فیلم تکراری بود و ثبت نشد` });
+      }
+      const failedVideos = fileArray.length - successCount - duplicateCount;
+      if (failedVideos > 0) {
+        toast({
+          title: 'فیلم ذخیره نشد',
+          description: `${failedVideos} فیلم ذخیره نشد: ${lastUploadErrorRef.current || 'خطا در آپلود'}`,
+          variant: 'destructive',
+        });
       }
 
       setVideoUploadProgress(100);
