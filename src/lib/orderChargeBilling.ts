@@ -8,6 +8,7 @@ export type BillingCharge = {
   amount: number;
   start: string | null;
   end: string | null;
+  monthNumber?: number;
 };
 
 export const billingOwner = (row: { order_id: string; billing_order_id?: string | null }) => row.billing_order_id ?? row.order_id;
@@ -31,7 +32,7 @@ export async function fetchBilledExtras(orderId: string) {
 export async function fetchBillingCharges(orderId: string): Promise<BillingCharge[]> {
   const { renewals, repairs } = await fetchBilledExtras(orderId);
   return [
-    ...renewals.map(r => ({ id: r.id, kind: 'renewal' as const, title: `تمدید ماه ${new Intl.NumberFormat('fa-IR').format(r.renewal_number + 1)}${r.manager_notes ? ` — ${r.manager_notes}` : ''}`, amount: Number(r.renewal_price || 0), start: r.new_start_date, end: r.new_end_date })),
+    ...renewals.map(r => ({ id: r.id, kind: 'renewal' as const, title: `تمدید ماه ${new Intl.NumberFormat('fa-IR').format(r.renewal_number + 1)}${r.manager_notes ? ` — ${r.manager_notes}` : ''}`, amount: Number(r.renewal_price || 0), start: r.new_start_date, end: r.new_end_date, monthNumber: r.renewal_number + 1 })),
     ...repairs.map(r => ({ id: r.id, kind: 'repair' as const, title: `تعمیر${r.description ? ` — ${r.description}` : ''}`, amount: repairCost(r), start: r.created_at, end: null })),
   ];
 }
