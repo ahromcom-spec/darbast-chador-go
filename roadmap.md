@@ -1,5 +1,6 @@
 # Roadmap
-- [ ] Prevent the app from becoming unresponsive after order/statement printing; verify popup cleanup and dialog release after printing and cancellation.
+- [x] Isolate order/statement printing in the disposable tab, release the preview modal and restore app focus; 3 lifecycle tests and two simulated browser print returns pass with working clicks.
+- [ ] Verify native Windows/Edge printing on a real order — unavailable in the headless browser; current account has no orders, so browser verification used the actual statement component with sample data and simulated print/image events.
 - [x] Show the order-count number fully on map markers: marker enlarged to 68px, counter reduced and moved outside the clipped photo frame at the bottom corner; rendered close-up and clipping checks confirm the whole number is visible.
 
 - [x] Compact printed statement dates and widen activity descriptions; single and combined A4 tables verified with sample data, no cell overflow, and print windows open correctly.
