@@ -29,6 +29,13 @@
       "when": 1793213941558,
       "tag": "0003_order_report_activity_visibility",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793256224531,
+      "tag": "0004_full_separated_order_rental_period",
+      "breakpoints": true
     }
   ]
 }
