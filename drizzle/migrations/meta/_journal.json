@@ -57,6 +57,13 @@
       "when": 1793261874718,
       "tag": "0007_statement_financial_realtime",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793262593991,
+      "tag": "0008_grant_delete_empty_statement",
+      "breakpoints": true
     }
   ]
 }
