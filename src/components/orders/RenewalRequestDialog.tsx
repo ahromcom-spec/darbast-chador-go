@@ -87,7 +87,7 @@ export function RenewalRequestDialog({
       const { data, error } = await supabase
         .from('order_renewals')
         .select('*')
-        .eq('order_id', orderId)
+        .or(`order_id.eq.${orderId},billing_order_id.eq.${orderId}`)
         .order('renewal_number', { ascending: true });
 
       if (error) throw error;
