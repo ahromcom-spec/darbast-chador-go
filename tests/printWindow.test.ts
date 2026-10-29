@@ -14,10 +14,11 @@ function setup() {
     document: {
       write: () => {}, close: () => {},
       createElement: () => ({ textContent: '' }),
+      head: { prepend: () => {} },
       body: { appendChild: (element: { textContent: string }) => { script = element.textContent; } },
     },
   });
-  Object.assign(app, { open: () => popup, focus: () => { focused++; } });
+  Object.assign(app, { open: () => popup, focus: () => { focused++; }, location: { href: 'http://localhost:8080/' } });
   Object.defineProperty(globalThis, 'window', { configurable: true, value: app });
   return { app, popup, closed: () => closed, focused: () => focused, script: () => script };
 }

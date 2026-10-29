@@ -26,6 +26,10 @@ export function openPrintWindow(html: string, onStarted?: () => void): Window | 
   };
 
   popup.document.write(html);
+  // about:blank must resolve logos against the app, not the blank document.
+  const base = popup.document.createElement('base');
+  base.href = window.location.href;
+  popup.document.head.prepend(base);
   popup.document.close();
   popup.addEventListener('beforeprint', onBeforePrint);
   popup.addEventListener('afterprint', cleanup);
