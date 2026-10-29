@@ -113,6 +113,7 @@ export default defineConfig(({ mode }) => ({
     chunkSizeWarningLimit: 900,
   },
   optimizeDeps: {
+    exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
     include: ['react', 'react-dom', 'react-router-dom'],
   },
 }));

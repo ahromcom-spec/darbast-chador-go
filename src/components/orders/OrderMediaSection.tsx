@@ -11,6 +11,8 @@ import { formatPersianDate, getIranToday } from '@/lib/dateUtils';
 import { compressImages } from '@/lib/imageOptimizer';
 import { uploadToStorageWithProgress, normalizeMediaContentType } from '@/lib/mediaTransfers';
 import { buildMediaFingerprint, findDuplicateProjectMedia, mediaDedupeKey } from '@/lib/mediaFingerprint';
+import { prepareOrderVideo } from '@/lib/orderVideoProcessor';
+import { ORDER_VIDEO_NOTICE } from '@/lib/orderVideoPolicy';
 
 interface MediaFile {
   id: string;
@@ -289,6 +291,7 @@ export function OrderMediaSection({
   const [uploadingVideos, setUploadingVideos] = useState(false);
   const [imageUploadProgress, setImageUploadProgress] = useState(0);
   const [videoUploadProgress, setVideoUploadProgress] = useState(0);
+  const [videoStage, setVideoStage] = useState('');
   const [deletingMediaId, setDeletingMediaId] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
@@ -521,14 +524,23 @@ export function OrderMediaSection({
 
       const user = session.user;
       const fileArray = Array.from(files);
-      const totalSize = fileArray.reduce((sum, f) => sum + f.size, 0);
       const progressMap: Record<number, number> = {};
 
-      const CONCURRENT_UPLOADS = 2;
+      const CONCURRENT_UPLOADS = 1;
       let successCount = 0;
       let duplicateCount = 0;
 
       const uploadVideo = async (file: File, index: number): Promise<boolean> => {
+        try {
+          file = await prepareOrderVideo(file, (stage, percent) => {
+            setVideoStage(stage);
+            setVideoUploadProgress((index + percent / 100 * 0.7) / fileArray.length * 100);
+          });
+        } catch (error) {
+          lastUploadErrorRef.current = error instanceof Error ? error.message : 'تبدیل فیلم انجام نشد';
+          return false;
+        }
+        setVideoStage('در حال ذخیرهٔ فیلم آماده‌شده...');
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}_${index}.${fileExt}`;
         const filePath = `${user.id}/${fileName}`;
@@ -550,8 +562,7 @@ export function OrderMediaSection({
 
         const success = await uploadFileWithProgress(file, filePath, session.access_token, (loaded) => {
           progressMap[index] = loaded;
-          const totalLoaded = Object.values(progressMap).reduce((a, b) => a + b, 0);
-          setVideoUploadProgress(Math.min((totalLoaded / totalSize) * 100, 99));
+          setVideoUploadProgress(Math.min((index + 0.7 + loaded / file.size * 0.3) / fileArray.length * 100, 99));
         });
 
         if (success) {
@@ -740,6 +751,8 @@ export function OrderMediaSection({
             )}
           </div>
 
+          {canUpload && <p className="text-xs text-muted-foreground" role="note">{ORDER_VIDEO_NOTICE}</p>}
+
           {/* انتخاب تاریخ رسانه‌های جدید */}
           {canUpload && (
             <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 p-2">
@@ -772,7 +785,7 @@ export function OrderMediaSection({
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {uploadingImages ? 'در حال آپلود عکس...' : 'در حال آپلود فیلم...'}
+                  {uploadingImages ? 'در حال آپلود عکس...' : videoStage || 'در حال آماده‌سازی فیلم...'}
                 </span>
                 <span className="font-medium text-primary">
                   {Math.round(uploadingImages ? imageUploadProgress : videoUploadProgress)}%

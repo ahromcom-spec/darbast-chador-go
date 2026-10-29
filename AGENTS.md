@@ -1,4 +1,5 @@
 # Architecture Decisions
+- Prepare new order videos with `prepareOrderVideo` before upload, fingerprinting and metadata creation; serialized FFmpeg workers keep memory bounded and failures never upload unprocessed originals.
 - Use `openPrintWindow` for order and statement printing: run native print in the disposable tab, release the preview dialog on print start, and close/focus back on print completion so app interaction is not stranded.
 - Share compact date markup and column-layout CSS through `statementPrintLayout` across statement preview, print and PDF to keep presentation consistent without changing billing.
 

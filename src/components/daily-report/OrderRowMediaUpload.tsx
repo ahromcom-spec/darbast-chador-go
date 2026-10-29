@@ -7,6 +7,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { buildMediaFingerprint, findDuplicateProjectMedia } from '@/lib/mediaFingerprint';
 import { uploadToStorageWithProgress } from '@/lib/mediaTransfers';
+import { prepareOrderVideo } from '@/lib/orderVideoProcessor';
+import { ORDER_VIDEO_NOTICE } from '@/lib/orderVideoPolicy';
 
 const MEDIA_BUCKET = 'project-media';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -48,6 +50,7 @@ export function OrderRowMediaUpload({
   const [lastOrderVideo, setLastOrderVideo] = useState<(MediaItem & { createdAt?: string }) | null>(null);
   const [showLastVideo, setShowLastVideo] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [videoStage, setVideoStage] = useState('');
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, fileName: '' });
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -295,8 +298,17 @@ export function OrderRowMediaUpload({
 
     try {
       for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+        let file = files[i];
         setUploadProgress({ current: i + 1, total: totalFiles, fileName: file.name });
+        if (type === 'video') {
+          try {
+            file = await prepareOrderVideo(file, (stage, percent) => setVideoStage(`${stage} ${percent}%`));
+            setVideoStage('در حال ذخیرهٔ فیلم...');
+          } catch (error) {
+            toast({ title: 'فیلم ذخیره نشد', description: error instanceof Error ? error.message : 'تبدیل فیلم انجام نشد', variant: 'destructive' });
+            continue;
+          }
+        }
         const maxSize = type === 'image' ? 10 * 1024 * 1024 : 50 * 1024 * 1024;
         if (file.size > maxSize) {
           toast({
@@ -382,6 +394,7 @@ export function OrderRowMediaUpload({
       toast({ title: 'خطا', variant: 'destructive' });
     } finally {
       setUploading(false);
+      setVideoStage('');
       setUploadProgress({ current: 0, total: 0, fileName: '' });
       e.target.value = '';
     }
@@ -465,7 +478,7 @@ export function OrderRowMediaUpload({
           </label>
           <label
             className={`inline-flex items-center justify-center h-8 w-8 rounded-md text-purple-600 hover:bg-purple-50 cursor-pointer ${uploading ? 'pointer-events-none opacity-50' : ''}`}
-            title="افزودن فیلم"
+            title={ORDER_VIDEO_NOTICE}
           >
             <Film className="h-4 w-4" />
             <input
@@ -480,6 +493,8 @@ export function OrderRowMediaUpload({
         </div>
       )}
 
+      {!readOnly && <span className="text-[10px] text-muted-foreground text-center max-w-[160px]" role="note">فقط دقیقهٔ اول فیلم · SD / 480p</span>}
+
       {/* Upload progress indicator */}
       {uploading && uploadProgress.total > 0 && (
         <div className="w-full max-w-[120px] flex flex-col items-center gap-0.5">
@@ -490,7 +505,7 @@ export function OrderRowMediaUpload({
             />
           </div>
           <span className="text-[9px] text-muted-foreground whitespace-nowrap">
-            {uploadProgress.current} / {uploadProgress.total} در حال آپلود...
+            {videoStage || `${uploadProgress.current} / ${uploadProgress.total} در حال آپلود...`}
           </span>
         </div>
       )}
