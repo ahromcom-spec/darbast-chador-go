@@ -129,6 +129,7 @@ interface Order {
   district_id?: string;
   customer_name?: string;
   customer_phone?: string;
+  customer_code?: string;
   transferred_from_user_id?: string;
   transferred_from_phone?: string;
   subcategory?: {
@@ -545,6 +546,13 @@ export default function OrderDetail() {
 
       // Build enriched order
       let enrichedOrder: any = { ...orderData };
+      const { data: identities } = await supabase.rpc('get_order_customer_identity', { p_order_id: orderData.id });
+      const customerIdentity = identities?.[0];
+      if (customerIdentity) {
+        enrichedOrder.customer_name = customerIdentity.customer_name || orderData.customer_name;
+        enrichedOrder.customer_phone = customerIdentity.customer_phone || orderData.customer_phone;
+        enrichedOrder.customer_code = customerIdentity.customer_code;
+      }
       
       if (subcategoryRes.data) {
         enrichedOrder.subcategory = {
@@ -1170,6 +1178,7 @@ export default function OrderDetail() {
                 <div className="rounded-2xl border border-border bg-card/60 p-4 space-y-3">
                   <h3 className="font-semibold">اطلاعات تماس مشتری</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {order.customer_code && <div className="p-3 bg-muted/40 rounded-lg"><span className="text-xs text-muted-foreground block mb-1">کد مشتری</span><span className="font-medium text-sm" dir="ltr">{order.customer_code}</span></div>}
                     {(order.customer_name || parsedNotes?.customerName) && (
                       <div className="p-3 bg-muted/40 rounded-lg">
                         <span className="text-xs text-muted-foreground block mb-1">نام</span>
