@@ -782,7 +782,7 @@ export function buildOrderInvoiceHtml(
           </tr>
           <tr>
             <td class="label-cell">مدت قرارداد:</td>
-            <td class="value-cell">${conditions?.totalMonths || '۱'} ماه</td>
+            <td class="value-cell">${billingOnly && renewals.length ? renewals.length.toLocaleString('fa-IR') : conditions?.totalMonths || '۱'} ماه</td>
             <td class="label-cell">پیوست:</td>
             <td class="value-cell" colspan="3">${invoiceImages.length > 0 ? `دارد (${invoiceImages.length} تصویر)` : 'ندارد'}</td>
           </tr>`}
