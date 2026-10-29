@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +23,7 @@ import { TransferOrderStatementDialog } from '@/components/executive/TransferOrd
 import { SeparateOrderChargesDialog } from '@/components/orders/SeparateOrderChargesDialog';
 import { extractOrderDescription } from '@/lib/orderDescription';
 import { canDeleteStatement } from '@/lib/statementDeletion';
+import { calculateStatementTotals } from '@/lib/statementTotals';
 
 interface OrderRow {
   id: string;
@@ -143,6 +144,10 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
     { scope: 'statement'; statement: Statement; customer: CustomerGroup } | { scope: 'global'; customer: CustomerGroup } | null
   >(null);
   const [archiveView, setArchiveView] = useState<'active' | 'archived' | 'deep'>('active');
+  const loadingRef = useRef(false);
+  const reloadRef = useRef(false);
+  const loadedRef = useRef(false);
+  const mountedRef = useRef(true);
 
 
   /**
@@ -167,8 +172,13 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
 
 
   const load = async () => {
+    if (loadingRef.current) {
+      reloadRef.current = true;
+      return;
+    }
+    loadingRef.current = true;
     try {
-      setLoading(true);
+      if (!loadedRef.current) setLoading(true);
 
       const { data: stmts, error: e1 } = await supabase
         .from('customer_statements' as any)
@@ -275,7 +285,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
           .filter((o: any) => o.statement_id === s.id && o.status !== 'rejected')
           .map((o: any) => {
             const total = Number(o.total_price ?? o.payment_amount ?? 0);
-            const paid = Math.min(Number(o.total_paid ?? 0), total > 0 ? total : Number.MAX_SAFE_INTEGER);
+            const paid = Number(o.total_paid ?? 0);
             return {
               id: o.id,
               code: o.code,
@@ -291,12 +301,14 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
           })
           .sort((a, b) => a.created_at.localeCompare(b.created_at));
 
-        const total_amount = myOrders.reduce((a, o) => a + o.total, 0);
-        const total_paid = myOrders.reduce((a, o) => a + o.paid, 0);
-        // مجموع واقعی واریزی کارفرما (بدون سقف مبلغ سفارش) برای نمایش اضافه‌پرداخت
-        const total_paid_actual = (orders || [])
-          .filter((o: any) => o.statement_id === s.id && o.status !== 'rejected')
-          .reduce((a: number, o: any) => a + (Number(o.total_paid) || 0), 0);
+        // Rejected rows do not add costs, but existing receipts must remain visible.
+        const financialOrders = (orders || [])
+          .filter((o: any) => o.statement_id === s.id)
+          .map((o: any) => ({ total: o.status === 'rejected' ? 0 : Number(o.total_price ?? o.payment_amount ?? 0), paid: Number(o.total_paid ?? 0) }));
+        const totals = calculateStatementTotals(financialOrders, Number(s.discount_amount) || 0);
+        const total_amount = totals.total;
+        const total_paid = totals.paid;
+        const total_paid_actual = totals.paid;
 
 
         // Helper: join address + detailed_address without duplicating when one contains the other
@@ -328,7 +340,9 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
 
         const serviceTypes = Array.from(svcSet);
 
-        byCustomer.get(s.customer_id)!.statements.push({
+        const customerGroup = byCustomer.get(s.customer_id);
+        if (!customerGroup) continue;
+        customerGroup.statements.push({
           id: s.id,
           statement_number: s.statement_number,
           status: s.status,
@@ -336,8 +350,8 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
           total_amount,
           total_paid,
           total_paid_actual,
-          overpaid: Math.max(total_paid_actual - total_amount, 0),
-          total_remaining: Math.max(total_amount - total_paid - (Number(s.discount_amount) || 0), 0),
+          overpaid: totals.credit,
+          total_remaining: totals.remaining,
           cheque_total: chequeByStatement.get(s.id)?.total || 0,
           cheque_cleared: chequeByStatement.get(s.id)?.cleared || 0,
           cheque_pending: chequeByStatement.get(s.id)?.pending || 0,
@@ -363,7 +377,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
 
       const result: CustomerGroup[] = Array.from(byCustomer.values()).map(g => {
         // Hide empty auto-created statements; keep only statements with orders or those manually created by a manager.
-        const visible = g.statements.filter(s => s.orders.length > 0 || (s as any).is_manual === true);
+        const visible = g.statements.filter(s => s.orders.length > 0 || s.total_paid_actual > 0 || s.cheque_total > 0 || (s as any).is_manual === true);
         const total_amount = visible.reduce((a, s) => a + s.total_amount, 0);
         const total_paid_actual = visible.reduce((a, s) => a + (s.total_paid_actual || 0), 0);
         const cheque_total = visible.reduce((a, s) => a + (s.cheque_total || 0), 0);
@@ -373,24 +387,54 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
         const discount_statements = visible.reduce((a, s) => a + (s.discount_amount || 0), 0);
         const discount_total = discount_statements + (g.global_discount || 0);
         // مانده کل: جمع مانده صورتحساب‌ها (تخفیف هر صورتحساب لحاظ شده) منهای تخفیف کلی مشتری
-        const total_remaining = Math.max(visible.reduce((a, s) => a + s.total_remaining, 0) - (g.global_discount || 0), 0);
-        return { ...g, statements: visible, total_amount, total_remaining, total_paid_actual, cheque_total, cheque_cleared, cheque_pending, cheque_bounced, discount_statements, discount_total, overpaid: Math.max(total_paid_actual - total_amount, 0) };
+        const total_remaining = Math.max(total_amount - total_paid_actual - discount_total, 0);
+        return { ...g, statements: visible, total_amount, total_remaining, total_paid_actual, cheque_total, cheque_cleared, cheque_pending, cheque_bounced, discount_statements, discount_total, overpaid: Math.max(total_paid_actual + discount_total - total_amount, 0) };
 
 
       }).filter(g => g.statements.length > 0);
 
       result.sort((a, b) => b.total_remaining - a.total_remaining);
-      setGroups(result);
+      if (mountedRef.current) setGroups(result);
+      loadedRef.current = true;
     } catch (err) {
       console.error(err);
       toast({ title: 'خطا', description: 'بارگذاری صورتحساب‌ها با خطا مواجه شد', variant: 'destructive' });
     } finally {
-      setLoading(false);
+      loadingRef.current = false;
+      if (mountedRef.current) setLoading(false);
+      if (reloadRef.current && mountedRef.current) {
+        reloadRef.current = false;
+        void load();
+      }
     }
   };
 
   useEffect(() => {
-    load();
+    mountedRef.current = true;
+    void load();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const refresh = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => { void load(); }, 400);
+    };
+    const channel = supabase.channel(`statement-financials-${crypto.randomUUID()}`);
+    for (const table of ['projects_v3', 'customer_statements', 'order_payments', 'payment_submissions', 'cheques', 'customer_global_discounts']) {
+      channel.on('postgres_changes', { event: '*', schema: 'public', table }, refresh);
+    }
+    channel.subscribe();
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    // Reconcile after reconnects and while realtime is temporarily unavailable.
+    const interval = setInterval(onVisible, 15000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      mountedRef.current = false;
+      if (timer) clearTimeout(timer);
+      clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onVisible);
+      void supabase.removeChannel(channel);
+    };
   }, []);
 
   const filtered = useMemo(() => {
@@ -408,15 +452,15 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
       .map(g => {
         const total_amount = g.statements.reduce((a, s) => a + s.total_amount, 0);
         // تخفیف هر صورتحساب داخل total_remaining همان صورتحساب لحاظ شده؛ تخفیف کلی مشتری هم کسر می‌شود
-        const total_remaining = Math.max(g.statements.reduce((a, s) => a + s.total_remaining, 0) - (g.global_discount || 0), 0);
         const discount_statements = g.statements.reduce((a, s) => a + (s.discount_amount || 0), 0);
         const discount_total = discount_statements + (g.global_discount || 0);
         const total_paid_actual = g.statements.reduce((a, s) => a + (s.total_paid_actual || 0), 0);
+        const total_remaining = Math.max(total_amount - total_paid_actual - discount_total, 0);
         const cheque_total = g.statements.reduce((a, s) => a + (s.cheque_total || 0), 0);
         const cheque_cleared = g.statements.reduce((a, s) => a + (s.cheque_cleared || 0), 0);
         const cheque_pending = g.statements.reduce((a, s) => a + (s.cheque_pending || 0), 0);
         const cheque_bounced = g.statements.reduce((a, s) => a + (s.cheque_bounced || 0), 0);
-        return { ...g, total_amount, total_remaining, discount_statements, discount_total, total_paid_actual, cheque_total, cheque_cleared, cheque_pending, cheque_bounced, overpaid: Math.max(total_paid_actual - total_amount, 0) };
+        return { ...g, total_amount, total_remaining, discount_statements, discount_total, total_paid_actual, cheque_total, cheque_cleared, cheque_pending, cheque_bounced, overpaid: Math.max(total_paid_actual + discount_total - total_amount, 0) };
       });
 
     const q = search.trim().toLowerCase();
@@ -659,6 +703,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                             globalDiscountNote={g.global_discount_note}
                             statements={g.statements.map(s => ({
                               statement_number: s.statement_number,
+                              total_paid: s.total_paid_actual,
                               status: s.status,
                               addresses: s.addresses,
                               serviceTypes: s.serviceTypes,
@@ -779,6 +824,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                         detailedAddress={s.detailed_address}
                                         addresses={s.addresses}
                                         orders={s.orders}
+                                        totalPaid={s.total_paid_actual}
                                         discountAmount={s.discount_amount}
                                         discountNote={s.discount_note}
                                       />
@@ -1012,7 +1058,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                         <TableCell colSpan={4} className="text-right font-bold">جمع صورتحساب</TableCell>
                                         <TableCell className="font-bold">{formatPrice(s.total_amount)}</TableCell>
                                         <TableCell className="font-bold text-green-600">{formatPrice(s.total_paid)}</TableCell>
-                                        <TableCell className="font-bold text-red-600">{formatPrice(s.total_remaining + s.discount_amount)}</TableCell>
+                                        <TableCell className="font-bold text-red-600">{formatPrice(Math.max(s.total_amount - s.total_paid, 0))}</TableCell>
                                         <TableCell colSpan={2} />
                                       </TableRow>
                                       {s.discount_amount > 0 && (

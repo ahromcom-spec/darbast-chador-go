@@ -45,6 +45,7 @@ export interface AllStatementsOrder {
 
 export interface AllStatementsItem {
   statement_number: number;
+  total_paid?: number;
   status: 'open' | 'closed';
   addresses: string[];
   serviceTypes: string[];
@@ -72,7 +73,7 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
   const [busy, setBusy] = useState(false);
 
   const totalAmount = props.statements.reduce((a, s) => a + s.orders.reduce((x, o) => x + o.total, 0), 0);
-  const totalPaid = props.statements.reduce((a, s) => a + s.orders.reduce((x, o) => x + o.paid, 0), 0);
+  const totalPaid = props.statements.reduce((a, s) => a + (s.total_paid ?? s.orders.reduce((x, o) => x + o.paid, 0)), 0);
   const statementDiscounts = props.statements.reduce((a, s) => a + (s.discount_amount || 0), 0);
   const totalDiscount = statementDiscounts + (props.globalDiscount || 0);
   const totalRemaining = Math.max(totalAmount - totalPaid - totalDiscount, 0);
@@ -128,7 +129,7 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
 
   const statementBlocks = props.statements.map(s => {
     const sTotal = s.orders.reduce((a, o) => a + o.total, 0);
-    const sPaid = s.orders.reduce((a, o) => a + o.paid, 0);
+    const sPaid = s.total_paid ?? s.orders.reduce((a, o) => a + o.paid, 0);
     const sRemaining = Math.max(sTotal - sPaid - (s.discount_amount || 0), 0);
     return `
       <div class="stmt-title">
@@ -177,6 +178,7 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
             <td colspan="7" style="text-align:left; padding-left:15px;">مانده صورتحساب شماره ${fmt(s.statement_number)} پس از تخفیف:</td>
             <td class="nowrap">${fmt(sRemaining)}</td>
           </tr>` : ''}
+          ${sPaid + s.discount_amount > sTotal ? `<tr class="discount-row"><td colspan="7">بستانکاری مشتری:</td><td class="nowrap">${fmt(sPaid + s.discount_amount - sTotal)}</td></tr>` : ''}
         </tbody>
       </table>
     `;

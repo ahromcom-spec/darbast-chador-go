@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Printer, Download, FileText } from 'lucide-react';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { useToast } from '@/hooks/use-toast';
+import { calculateStatementTotals } from '@/lib/statementTotals';
 
 function escapeHtml(value: unknown): string {
   if (value === null || value === undefined) return '';
@@ -57,6 +58,7 @@ interface Props {
   detailedAddress: string | null;
   addresses?: string[];
   orders: StatementInvoiceOrder[];
+  totalPaid?: number;
   /** تخفیف ثبت‌شده روی این صورتحساب */
   discountAmount?: number;
   discountNote?: string | null;
@@ -67,8 +69,9 @@ export const StatementInvoiceDialog = (props: Props) => {
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
 
-  const totalAmount = props.orders.reduce((a, o) => a + o.total, 0);
-  const totalPaid = props.orders.reduce((a, o) => a + o.paid, 0);
+  const totals = calculateStatementTotals(props.orders);
+  const totalAmount = totals.total;
+  const totalPaid = props.totalPaid ?? totals.paid;
   const discount = Math.max(0, Number(props.discountAmount) || 0);
   const totalRemaining = Math.max(totalAmount - totalPaid - discount, 0);
 
@@ -221,6 +224,7 @@ export const StatementInvoiceDialog = (props: Props) => {
             <td colspan="7" style="text-align:left; padding-left:15px;">مانده قابل پرداخت پس از تخفیف:</td>
             <td class="nowrap">${fmt(totalRemaining)}</td>
           </tr>` : ''}
+          ${totalPaid + discount > totalAmount ? `<tr class="discount-row"><td colspan="7">بستانکاری مشتری:</td><td class="nowrap">${fmt(totalPaid + discount - totalAmount)}</td></tr>` : ''}
         </tbody>
       </table>
 
