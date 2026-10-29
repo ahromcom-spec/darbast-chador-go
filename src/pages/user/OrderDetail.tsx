@@ -835,7 +835,7 @@ export default function OrderDetail() {
   const MAX_IMAGES = 6;
   const MAX_VIDEOS = 6;
   const MAX_IMAGE_SIZE_MB = 10;
-  const MAX_VIDEO_SIZE_MB = 50;
+  const MAX_VIDEO_SIZE_MB = 500;
   const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
   const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024;
 

@@ -124,7 +124,6 @@ export function useFileUpload({ bucket, onComplete }: UseFileUploadOptions) {
       const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
 
-      const tracker = startTransfer('upload', file.name, file.size);
 
       try {
         // آپلود با پیشرفت واقعی؛ فیلم‌های بزرگ تکه‌تکه و قابل ادامه
