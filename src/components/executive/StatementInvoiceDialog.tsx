@@ -7,6 +7,7 @@ import { Printer, Download, FileText } from 'lucide-react';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { useToast } from '@/hooks/use-toast';
 import { calculateStatementTotals } from '@/lib/statementTotals';
+import { compactStatementDate, statementPrintLayout } from '@/lib/statementPrintLayout';
 
 function escapeHtml(value: unknown): string {
   if (value === null || value === undefined) return '';
@@ -139,6 +140,7 @@ export const StatementInvoiceDialog = (props: Props) => {
       .signature-label { font-size: 13px; font-weight: bold; margin-bottom: 28px; color: #1e3a5f; }
       .signature-line { border-top: 1px solid #1e3a5f; width: 130px; margin: 0 auto; }
       .print-date { text-align: center; font-size: 11px; color: #64748b; margin-top: 8px; padding-top: 6px; border-top: 1px dashed #d1d5db; }
+      ${statementPrintLayout}
       @media print {
         html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .no-print { display: none !important; }
@@ -211,29 +213,34 @@ export const StatementInvoiceDialog = (props: Props) => {
       </table>
 
       <table class="orders-table">
+        <colgroup>
+          <col style="width:3%"/><col style="width:8%"/><col style="width:6%"/>
+          <col style="width:30%"/><col style="width:6%"/><col style="width:6%"/>
+          <col style="width:8%"/><col style="width:11%"/><col style="width:11%"/><col style="width:11%"/>
+        </colgroup>
         <thead>
           <tr>
             <th>ردیف</th>
             <th>کد فاکتور</th>
             <th class="nowrap">تاریخ</th>
-            <th>شرح</th>
-            <th class="nowrap">تاریخ شروع</th>
-            <th class="nowrap">تاریخ پایان</th>
+            <th>شرح فعالیت</th>
+            <th class="date-heading">تاریخ<br/>شروع</th>
+            <th class="date-heading">تاریخ<br/>پایان</th>
             <th>وضعیت</th>
-            <th class="nowrap">مبلغ کل (تومان)</th>
-            <th class="nowrap">پرداختی (تومان)</th>
-            <th class="nowrap">مانده (تومان)</th>
+            <th class="amount-heading">مبلغ کل<small>(تومان)</small></th>
+            <th class="amount-heading">پرداختی<small>(تومان)</small></th>
+            <th class="amount-heading">مانده<small>(تومان)</small></th>
           </tr>
         </thead>
         <tbody>
           ${props.orders.map((o, i) => `
             <tr>
               <td>${fmt(i + 1)}</td>
-              <td class="nowrap" style="font-family: monospace;">${escapeHtml(o.code)}</td>
-              <td class="nowrap">${formatPersianDate(o.created_at)}</td>
-              <td style="text-align:right;">${periods[o.id]?.label ? `<div style="font-weight:bold;color:#1e3a5f;">${escapeHtml(periods[o.id].label)}</div>` : ''}${escapeHtml(o.description || o.subcategory_name || '-')}</td>
-              <td class="nowrap">${periods[o.id]?.start ? formatPersianDate(periods[o.id].start!) : '-'}</td>
-              <td class="nowrap">${periods[o.id]?.end ? formatPersianDate(periods[o.id].end!) : '-'}</td>
+              <td class="nowrap code-cell">${escapeHtml(o.code)}</td>
+              <td>${compactStatementDate(o.created_at)}</td>
+              <td class="description-cell">${periods[o.id]?.label ? `<div style="font-weight:bold;color:#1e3a5f;">${escapeHtml(periods[o.id].label)}</div>` : ''}${escapeHtml(o.description || o.subcategory_name || '-')}</td>
+              <td>${compactStatementDate(periods[o.id]?.start)}</td>
+              <td>${compactStatementDate(periods[o.id]?.end)}</td>
               <td>${escapeHtml(statusLabels[o.status] || o.status)}</td>
               <td class="nowrap">${fmt(o.total)}</td>
               <td class="nowrap">${fmt(o.paid)}</td>

@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Printer, Download, FileStack } from 'lucide-react';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { useToast } from '@/hooks/use-toast';
+import { compactStatementDate, statementPrintLayout } from '@/lib/statementPrintLayout';
 
 function escapeHtml(value: unknown): string {
   if (value === null || value === undefined) return '';
@@ -120,6 +121,7 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
       .signature-label { font-size: 13px; font-weight: bold; margin-bottom: 28px; color: #1e3a5f; }
       .signature-line { border-top: 1px solid #1e3a5f; width: 130px; margin: 0 auto; }
       .print-date { text-align: center; font-size: 11px; color: #64748b; margin-top: 8px; padding-top: 6px; border-top: 1px dashed #d1d5db; }
+      ${statementPrintLayout}
       @media print {
         html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .no-print { display: none !important; }
@@ -138,12 +140,16 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
         ${s.addresses.length ? `<div style="font-weight:normal; font-size:11.5px; color:#475569; margin-top:3px;">${s.addresses.map(a => '📍 ' + escapeHtml(a)).join('<br/>')}</div>` : ''}
       </div>
       <table class="orders-table">
+        <colgroup>
+          <col style="width:3%"/><col style="width:9%"/><col style="width:7%"/><col style="width:40%"/>
+          <col style="width:8%"/><col style="width:11%"/><col style="width:11%"/><col style="width:11%"/>
+        </colgroup>
         <thead>
           <tr>
             <th>ردیف</th>
             <th>کد فاکتور</th>
             <th class="nowrap">تاریخ</th>
-            <th>شرح</th>
+            <th>شرح فعالیت</th>
             <th>وضعیت</th>
             <th class="nowrap">مبلغ کل</th>
             <th class="nowrap">پرداختی</th>
@@ -154,9 +160,9 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
           ${s.orders.map((o, i) => `
             <tr>
               <td>${fmt(i + 1)}</td>
-              <td class="nowrap" style="font-family: monospace;">${escapeHtml(o.code)}</td>
-              <td class="nowrap">${formatPersianDate(o.created_at)}</td>
-              <td style="text-align:right;">${escapeHtml(o.description || o.subcategory_name || '-')}</td>
+              <td class="nowrap code-cell">${escapeHtml(o.code)}</td>
+              <td>${compactStatementDate(o.created_at)}</td>
+              <td class="description-cell">${escapeHtml(o.description || o.subcategory_name || '-')}</td>
               <td>${escapeHtml(statusLabels[o.status] || o.status)}</td>
               <td class="nowrap">${fmt(o.total)}</td>
               <td class="nowrap">${fmt(o.paid)}</td>
