@@ -18,6 +18,7 @@ const ALLOWED_ROLES = [
   "executive_manager",
   "scaffold_executive_manager",
   "rental_executive_manager",
+  "executive_manager_scaffold_execution_with_materials",
 ];
 
 const json = (body: unknown, status = 200) =>
@@ -116,8 +117,39 @@ Deno.serve(async (req) => {
 
     // ---------- ثبت سفارش برای مشتری ----------
     if (action === "create") {
-      const targetUserId = body.user_id as string;
-      const subcategoryId = body.subcategory_id as string;
+      let targetUserId = body.user_id as string;
+      let subcategoryId = body.subcategory_id as string;
+      // ثبت سفارش جدید از روی سفارش موجود (همان مشتری، نوع خدمت و آدرس)
+      if (body.source_order_id) {
+        const { data: src } = await admin
+          .from("projects_v3")
+          .select("customer_id, subcategory_id, hierarchy_project_id, address, detailed_address, province_id, district_id, location_lat, location_lng")
+          .eq("id", body.source_order_id)
+          .maybeSingle();
+        if (!src) return json({ error: "source_order_not_found" }, 400);
+        const { data: cust } = await admin.from("customers").select("user_id").eq("id", src.customer_id).maybeSingle();
+        if (!cust?.user_id) return json({ error: "customer_not_found" }, 400);
+        targetUserId = cust.user_id;
+        subcategoryId = subcategoryId || src.subcategory_id;
+        let srcLocationId: string | null = null;
+        if (src.hierarchy_project_id) {
+          const { data: hp } = await admin.from("projects_hierarchy").select("location_id").eq("id", src.hierarchy_project_id).maybeSingle();
+          srcLocationId = hp?.location_id || null;
+        }
+        if (srcLocationId) {
+          body.location_id = srcLocationId;
+        } else {
+          body.location_id = null;
+          body.new_location = {
+            title: src.detailed_address || null,
+            address_line: src.address,
+            province_id: src.province_id,
+            district_id: src.district_id,
+            lat: src.location_lat,
+            lng: src.location_lng,
+          };
+        }
+      }
       if (!targetUserId || !subcategoryId) return json({ error: "missing_fields" }, 400);
 
       const { data: sub } = await admin
