@@ -8,6 +8,7 @@ import { formatPersianDate } from '@/lib/dateUtils';
 import { useToast } from '@/hooks/use-toast';
 import { calculateStatementTotals } from '@/lib/statementTotals';
 import { compactStatementDate, statementPrintLayout } from '@/lib/statementPrintLayout';
+import { openPrintWindow } from '@/lib/printWindow';
 
 function escapeHtml(value: unknown): string {
   if (value === null || value === undefined) return '';
@@ -326,13 +327,10 @@ export const StatementInvoiceDialog = (props: Props) => {
   `;
 
   const handlePrint = () => {
-    const w = window.open('', '_blank');
-    if (!w) return;
-    w.document.write(`<!DOCTYPE html><html dir="rtl" lang="fa"><head><meta charset="UTF-8"><title>صورتحساب شماره ${props.statementNumber}</title>
+    const w = openPrintWindow(`<!DOCTYPE html><html dir="rtl" lang="fa"><head><meta charset="UTF-8"><title>صورتحساب شماره ${props.statementNumber}</title>
       <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
-      ${styles}</head><body>${html}</body></html>`);
-    w.document.close();
-    (w.document as any).fonts?.ready ? (w.document as any).fonts.ready.then(() => setTimeout(() => w.print(), 300)) : setTimeout(() => w.print(), 1200);
+      ${styles}</head><body>${html}</body></html>`, () => setOpen(false));
+    if (!w) toast({ title: 'پنجره چاپ باز نشد', description: 'اجازه باز شدن پنجره چاپ را در مرورگر فعال کنید.', variant: 'destructive' });
   };
 
   const handleDownloadPDF = async () => {

@@ -8,6 +8,7 @@ import { Printer, X, Download, Share2 } from 'lucide-react';
 import { formatPersianDate, formatPersianDateTime } from '@/lib/dateUtils';
 import { parseOrderNotes } from './OrderDetailsView';
 import { useToast } from '@/hooks/use-toast';
+import { openPrintWindow } from '@/lib/printWindow';
 
 // Escape user-controlled values before they are interpolated into raw HTML
 // strings (which are later rendered via dangerouslySetInnerHTML / innerHTML /
@@ -311,10 +312,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
   }, hidePrice);
 
   const handlePrint = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    printWindow.document.write(`
+    const printWindow = openPrintWindow(`
       <!DOCTYPE html>
       <html dir="rtl" lang="fa">
       <head>
@@ -327,17 +325,8 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
         ${getInvoiceHTML()}
       </body>
       </html>
-    `);
-    
-    printWindow.document.close();
-    
-    const doc = printWindow.document;
-    const imgs = Array.from(doc.images);
-    const imgsReady = Promise.all(imgs.map((img) => img.complete && img.naturalWidth > 0
-      ? Promise.resolve()
-      : new Promise<void>((res) => { img.onload = () => res(); img.onerror = () => res(); setTimeout(res, 15000); })));
-    const fonts = (doc as any).fonts;
-    Promise.all([imgsReady, fonts?.ready || Promise.resolve()]).then(() => setTimeout(() => printWindow.print(), 300));
+    `, () => setOpen(false));
+    if (!printWindow) toast({ title: 'پنجره چاپ باز نشد', description: 'اجازه باز شدن پنجره چاپ را در مرورگر فعال کنید.', variant: 'destructive' });
   };
 
   // Render the invoice HTML to a single A4 page PDF (scales to fit)
