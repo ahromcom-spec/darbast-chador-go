@@ -2121,18 +2121,19 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           const html = `
             <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
               ${addressLabelHtml}
-              <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid ${projectArchived ? '#94a3b8' : '#fff'};background:#f0f0f0;position:relative;${projectArchived ? 'filter:grayscale(0.45) saturate(0.7);' : ''}">
+              <div style="width:68px;height:68px;border-radius:9px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid ${projectArchived ? '#94a3b8' : '#fff'};background:#f0f0f0;position:relative;${projectArchived ? 'filter:grayscale(0.45) saturate(0.7);' : ''}">
                 <img src="${url1}" alt="تصویر پروژه" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
-                ${orderCountBadgeHtml}
               </div>
+              ${orderCountBadgeHtml}
             </div>`;
           iconToUse = L.divIcon({
             html,
             className: 'project-thumb-icon',
-            iconSize: [56, 80],
-            iconAnchor: [28, 80],
-            popupAnchor: [0, -80],
+            iconSize: [68, 92],
+            iconAnchor: [34, 92],
+            popupAnchor: [0, -92],
           });
+
         } else {
           // استفاده از لوگوی اهرم به عنوان تصویر پیش‌فرض برای پروژه‌های بدون عکس
           console.debug('[HybridGlobe] No image found for project, using default logo:', project.id);
