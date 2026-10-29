@@ -43,6 +43,13 @@
       "when": 1793258536557,
       "tag": "0005_order_customer_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793261492556,
+      "tag": "0006_delete_empty_closed_statement",
+      "breakpoints": true
     }
   ]
 }

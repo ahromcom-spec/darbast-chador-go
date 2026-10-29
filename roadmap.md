@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Add confirmed deletion of empty closed statements with server-side order and financial-history safeguards; eligibility tests pass.
+- [ ] Verify deletion through the management UI — blocked because the current preview account has no management role.
+
 - [x] Show and verify inherited customer name, code and contact details in separated orders and invoices.
 
 - [x] Make separated renewal/repair orders accessible as independent orders with inherited specifications and correct rental dates.
