@@ -1991,12 +1991,13 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
         const orderCountBadgeHtml = `
           <div style="
             position:absolute;
-            bottom:-7px;
-            left:-7px;
-            min-width:22px;
-            height:22px;
-            padding:0 5px;
-            border-radius:11px;
+            bottom:-8px;
+            left:-8px;
+            min-width:24px;
+            height:24px;
+            padding:0 6px;
+            border-radius:12px;
+
             background:${projectArchived ? 'rgba(100,116,139,0.97)' : 'rgba(37,99,235,0.97)'};
             border:2px solid #fff;
             box-shadow:0 2px 8px rgba(0,0,0,0.45);
