@@ -2,6 +2,7 @@
 // Extracted from ManagerOrderInvoice so the documents archive can generate
 // exactly the same printable invoice (tables + full details) for each order.
 import { isBillableRepair } from '@/lib/repairBilling';
+import { resolveOrderCustomerIdentity, type OrderCustomerIdentity } from '@/lib/orderCustomerIdentity';
 import { supabase } from '@/integrations/supabase/client';
 import { formatPersianDate, formatPersianDateTime } from '@/lib/dateUtils';
 import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
@@ -70,6 +71,7 @@ export interface InvoiceOrderLike {
   code: string;
   customer_name?: string;
   customer_phone?: string;
+  customer_code?: string;
   address?: string;
   detailed_address?: string | null;
   created_at?: string;
@@ -89,6 +91,7 @@ export interface InvoiceOrderLike {
 }
 
 export interface InvoiceExtras {
+  customerIdentity?: OrderCustomerIdentity;
   media: Array<{ id: string; file_path: string; file_type?: string | null; mime_type?: string | null }>;
   mediaUrls: Record<string, string>;
   provinceName: string;
@@ -455,6 +458,7 @@ export function buildOrderInvoiceHtml(
   extras: InvoiceExtras,
   hidePrice = false,
 ): string {
+  order = { ...order, ...resolveOrderCustomerIdentity(order, extras.customerIdentity) };
   const {
     media,
     mediaUrls,
@@ -1287,6 +1291,8 @@ ${getInvoiceStyles()}
 /** Fetch every related record needed to print one order invoice. */
 export async function fetchInvoiceExtras(order: InvoiceOrderLike): Promise<InvoiceExtras> {
   const extras = emptyInvoiceExtras();
+  const { data: identityData } = await supabase.rpc('get_order_customer_identity', { p_order_id: order.id });
+  extras.customerIdentity = resolveOrderCustomerIdentity(order, identityData?.[0]);
   const [prov, sub, repairs, renewals, fin, collection, pays, profile] = await Promise.all([
     order.province_id ? supabase.from('provinces').select('name').eq('id', order.province_id).maybeSingle() : Promise.resolve({ data: null } as any),
     order.subcategory_id ? supabase.from('subcategories').select('name, code').eq('id', order.subcategory_id).maybeSingle() : Promise.resolve({ data: null } as any),
@@ -1309,6 +1315,6 @@ export async function fetchInvoiceExtras(order: InvoiceOrderLike): Promise<Invoi
   extras.collectionConfirmedDate = c?.confirmed_date || null;
 
   extras.payments = ((pays as any)?.data || []) as any;
-  extras.customerCode = (profile as any)?.data?.customer_code || '';
+  extras.customerCode = extras.customerIdentity.customer_code || (profile as any)?.data?.customer_code || '';
   return extras;
 }

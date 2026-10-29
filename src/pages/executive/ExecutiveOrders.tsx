@@ -149,6 +149,7 @@ interface Order {
   created_at: string;
   customer_name: string;
   customer_phone: string;
+  customer_code?: string;
   hierarchy_project_id?: string | null;
   location_lat?: number | null;
   location_lng?: number | null;
@@ -363,6 +364,8 @@ export default function ExecutiveOrders() {
           executive_completion_date,
           created_at,
           customer_id,
+          customer_name,
+          customer_phone,
           hierarchy_project_id,
           notes,
           payment_amount,
@@ -395,8 +398,12 @@ export default function ExecutiveOrders() {
       // 2) Enrich each order with customer profile safely
       const ordersWithCustomer = await Promise.all(
         (data || []).map(async (order: any) => {
-          let customerName = 'نامشخص';
-          let customerPhone = '';
+          let customerName = order.customer_name || 'نامشخص';
+          let customerPhone = order.customer_phone || '';
+          const { data: identities } = await supabase.rpc('get_order_customer_identity', { p_order_id: order.id });
+          const identity = identities?.[0];
+          customerName = identity?.customer_name || customerName;
+          customerPhone = identity?.customer_phone || customerPhone;
 
           if (order.customer_id) {
             const { data: customerData } = await supabase
@@ -413,8 +420,8 @@ export default function ExecutiveOrders() {
                 .eq('user_id', userId)
                 .maybeSingle();
 
-              customerName = profileData?.full_name || 'نامشخص';
-              customerPhone = profileData?.phone_number || '';
+              customerName = profileData?.full_name || customerName;
+              customerPhone = profileData?.phone_number || customerPhone;
             }
           }
 
@@ -471,6 +478,7 @@ export default function ExecutiveOrders() {
             created_at: order.created_at,
             customer_name: customerName,
             customer_phone: customerPhone,
+            customer_code: identity?.customer_code || '',
             hierarchy_project_id: order.hierarchy_project_id,
             location_lat: projectLat,
             location_lng: projectLng,

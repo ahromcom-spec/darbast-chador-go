@@ -1,4 +1,5 @@
 import { isBillableRepair } from '@/lib/repairBilling';
+import { resolveOrderCustomerIdentity, type OrderCustomerIdentity } from '@/lib/orderCustomerIdentity';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,7 @@ interface ManagerOrderInvoiceProps {
     code: string;
     customer_name?: string;
     customer_phone?: string;
+    customer_code?: string;
     address?: string;
     detailed_address?: string | null;
     created_at?: string;
@@ -114,6 +116,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
   const [collectionRequestDate, setCollectionRequestDate] = useState<string | null>(null);
   const [collectionConfirmedDate, setCollectionConfirmedDate] = useState<string | null>(null);
   const [customerCode, setCustomerCode] = useState<string>('');
+  const [customerIdentity, setCustomerIdentity] = useState<OrderCustomerIdentity | null>(null);
   const [payments, setPayments] = useState<Array<{ id: string; amount: number; payment_method: string | null; receipt_number: string | null; notes: string | null; payment_date: string | null; created_at: string }>>([]);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -149,6 +152,12 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
       setCollectionRequestDate(null);
       setCollectionConfirmedDate(null);
       setPayments([]);
+      setCustomerIdentity(null);
+      setCustomerCode(order.customer_code || '');
+      const { data: identityData } = await supabase.rpc('get_order_customer_identity', { p_order_id: order.id });
+      const identity = resolveOrderCustomerIdentity(order, identityData?.[0]);
+      setCustomerIdentity(identity);
+      setCustomerCode(identity.customer_code);
 
       // Fetch media
       const { data: mediaData } = await supabase
@@ -271,11 +280,11 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
       if (paymentsData) setPayments(paymentsData as any);
 
       // Fetch customer code
-      if (order.customer_phone) {
+      if (!identity.customer_code && identity.customer_phone) {
         const { data: profileData } = await supabase
           .from('profiles')
           .select('customer_code')
-          .eq('phone_number', order.customer_phone)
+          .eq('phone_number', identity.customer_phone)
           .maybeSingle();
         if (profileData?.customer_code) setCustomerCode(profileData.customer_code);
       }
@@ -285,7 +294,7 @@ export const ManagerOrderInvoice = ({ order, hidePrice = false, className }: Man
     fetchData();
   }, [open, order.id, order.province_id, order.subcategory_id, order.customer_completion_date]);
 
-  const getInvoiceHTML = () => buildOrderInvoiceHtml(order as any, {
+  const getInvoiceHTML = () => buildOrderInvoiceHtml({ ...order, ...resolveOrderCustomerIdentity(order, customerIdentity) } as any, {
     media,
     mediaUrls,
     provinceName,

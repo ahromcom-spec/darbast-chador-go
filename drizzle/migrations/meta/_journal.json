@@ -36,6 +36,13 @@
       "when": 1793256224531,
       "tag": "0004_full_separated_order_rental_period",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793258536557,
+      "tag": "0005_order_customer_identity",
+      "breakpoints": true
     }
   ]
 }

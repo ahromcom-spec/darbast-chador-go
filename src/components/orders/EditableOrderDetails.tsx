@@ -63,6 +63,7 @@ interface EditableOrderDetailsProps {
     status?: string;
     customer_name?: string;
     customer_phone?: string;
+    customer_code?: string;
     customer_id?: string;
     address?: string;
     detailed_address?: string | null;
@@ -1415,6 +1416,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
       </div>
 
       {/* Customer Info */}
+      {order.customer_code && <div><Label className="text-xs text-muted-foreground">کد مشتری</Label><p className="font-medium" dir="ltr">{order.customer_code}</p></div>}
       <div className="grid grid-cols-2 gap-4">
         <div className="flex items-start gap-2">
           <User className="h-4 w-4 mt-0.5 text-muted-foreground" />

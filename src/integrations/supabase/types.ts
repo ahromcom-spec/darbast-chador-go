@@ -7111,6 +7111,14 @@ export type Database = {
         }
         Returns: string
       }
+      get_order_customer_identity: {
+        Args: { p_order_id: string }
+        Returns: {
+          customer_code: string
+          customer_name: string
+          customer_phone: string
+        }[]
+      }
       get_order_notification_recipients: {
         Args: { _order_id: string }
         Returns: {
