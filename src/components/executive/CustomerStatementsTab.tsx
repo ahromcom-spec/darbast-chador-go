@@ -283,7 +283,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
               created_at: o.created_at,
               subcategory_name: o.subcategories?.name || null,
               description: extractOrderDescription(o.notes),
-              raw: { ...o, customer_name: meta.full_name, customer_phone: meta.phone_number },
+              raw: { ...o, customer_name: meta.full_name || o.customer_name, customer_phone: meta.phone_number || o.customer_phone, customer_code: meta.customer_code },
             };
           })
           .sort((a, b) => a.created_at.localeCompare(b.created_at));
