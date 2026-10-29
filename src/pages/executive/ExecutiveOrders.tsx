@@ -39,6 +39,8 @@ import { RentalStartDatePicker } from '@/components/orders/RentalStartDatePicker
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 import ProjectV3AssignmentsInfo from '@/components/orders/ProjectV3AssignmentsInfo';
 import { OrderPartsManager } from '@/components/orders/OrderPartsManager';
+import { AddOrderFromExistingDialog } from '@/components/orders/AddOrderFromExistingDialog';
+import { PlusCircle } from 'lucide-react';
 import { Layers } from 'lucide-react';
 import { isScaffoldingNoMaterials } from '@/lib/scaffoldingSubtype';
 
@@ -207,6 +209,7 @@ export default function ExecutiveOrders() {
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [collaboratorDialogOpen, setCollaboratorDialogOpen] = useState(false);
   const [partsDialogOpen, setPartsDialogOpen] = useState(false);
+  const [addOrderSource, setAddOrderSource] = useState<any>(null);
   // Archive states
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [bulkArchiveDialogOpen, setBulkArchiveDialogOpen] = useState(false);
@@ -1759,6 +1762,15 @@ export default function ExecutiveOrders() {
                     <Layers className="h-4 w-4" />
                     قسمت‌های سفارش
                   </Button>
+
+                  <Button
+                    size="sm"
+                    onClick={() => setAddOrderSource(order)}
+                    className="gap-2"
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                    افزودن سفارش جدید
+                  </Button>
                 </div>
 
                 <Separator className="my-2" />
@@ -2902,6 +2914,12 @@ export default function ExecutiveOrders() {
         </DialogContent>
       </Dialog>
       </div>
+    <AddOrderFromExistingDialog
+        open={!!addOrderSource}
+        onOpenChange={(v) => !v && setAddOrderSource(null)}
+        order={addOrderSource}
+        onCreated={() => fetchOrders()}
+      />
     </div>
   );
 }
