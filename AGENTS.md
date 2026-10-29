@@ -1,5 +1,7 @@
 # Architecture Decisions
 
+- Compute statement financial summaries with `statementTotals` using uncapped receipts; refresh through scoped RLS realtime subscriptions plus visible-page reconciliation so cost changes retain credit and never truncate payments.
+
 - Detect «اجرای داربست بدون اجناس» only through `isScaffoldingNoMaterials`; this keeps invoice and workflow branching consistent across legacy and current orders.
 - Renewal/repair operational ownership stays in `order_id`; financial ownership uses `COALESCE(billing_order_id, order_id)` through `orderChargeBilling`, so separation never breaks dates, media or part links.
 - Create charge-separated orders only through the manager-authorized atomic `transfer_order_charges` RPC; expose full order and collection UI, keep zero base price and suppress duplicate initial-installation automation. Synchronize their rental period from financially owned approved renewals.
