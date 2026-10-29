@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Show and verify inherited customer name, code and contact details in separated orders and invoices.
+- [x] Show and verify inherited customer name, code and contact details in separated orders and invoices.
 
 - [x] Make separated renewal/repair orders accessible as independent orders with inherited specifications and correct rental dates.
 - [x] Enable collection requests and show collection dates and invoice date rows for separated orders.
