@@ -2340,3 +2340,32 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
 };
 
 export default EditableOrderDetails;
+
+function UnitPriceInput({ keyId, area, unit, total, onTotal }: {
+  keyId: string; area: number; unit: string; total?: string; onTotal: (t: string) => void;
+}) {
+  const derived = total && area > 0 ? String(Math.round(Number(total) / area)) : '';
+  const [unitPrice, setUnitPrice] = useState<string>(derived);
+  const [touched, setTouched] = useState(false);
+  const shown = touched ? unitPrice : derived;
+  return (
+    <div data-unit-price={keyId}>
+      <Label className="text-xs text-muted-foreground mb-1 block">فی (قیمت هر {unit || 'متر'}) — تومان</Label>
+      <Input
+        type="text"
+        inputMode="numeric"
+        value={shown ? Number(shown).toLocaleString('fa-IR') : ''}
+        onChange={(e) => {
+          const raw = e.target.value
+            .replace(/[^\d۰-۹]/g, '')
+            .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+          setTouched(true);
+          setUnitPrice(raw);
+          onTotal(raw ? String(Math.round(Number(raw) * area)) : '');
+        }}
+        placeholder="فی را وارد کنید تا قیمت کل محاسبه شود"
+        dir="ltr"
+      />
+    </div>
+  );
+}
