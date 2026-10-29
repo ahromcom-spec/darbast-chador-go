@@ -2081,10 +2081,10 @@ export default function OrderDetail() {
                       {/* نمایش تفکیک قیمت‌ها: پایه + تمدید + تعمیر */}
                       {(approvedRenewalCost > 0 || approvedRepairCost > 0) && (
                         <div className="space-y-2 pt-2 border-t border-emerald-200 dark:border-emerald-800">
-                          <div className="flex items-center justify-between p-2 bg-background/50 rounded-lg">
+                          {!isSeparatedOrder && <div className="flex items-center justify-between p-2 bg-background/50 rounded-lg">
                             <span className="text-sm text-muted-foreground">کرایه ماه اول:</span>
                             <span className="font-medium">{basePrice.toLocaleString('fa-IR')} تومان</span>
-                          </div>
+                          </div>}
                           {approvedRenewals.length > 0 && approvedRenewals.map((renewal: any) => (
                             <div key={renewal.renewal_number} className="space-y-1">
                               <div className="flex items-center justify-between p-2 bg-primary/10 rounded-lg">
