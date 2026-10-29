@@ -49,6 +49,10 @@ export function openPrintWindow(html: string, onStarted?: () => void): Window | 
         return new Promise(resolve => {
           image.addEventListener('load', resolve, { once: true });
           image.addEventListener('error', resolve, { once: true });
+          // Restart images parsed before the popup acquired its base URL.
+          const source = image.src;
+          image.removeAttribute('src');
+          image.src = source;
         });
       }));
       if (document.fonts) await document.fonts.ready;
