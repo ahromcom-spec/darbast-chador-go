@@ -115,6 +115,8 @@ interface Order {
   total_paid?: number;
   total_price?: number;
   rental_start_date?: string;
+  rental_end_date?: string | null;
+  billing_only?: boolean;
   customer_completion_date?: string;
   executive_completion_date?: string;
   location_lat?: number;
@@ -1029,7 +1031,8 @@ export default function OrderDetail() {
   };
 
   // Check if this is an expert pricing request
-  const isExpertPricingRequest = parsedNotes?.is_expert_pricing_request === true;
+  const isSeparatedOrder = Boolean(order?.billing_only || parsedNotes?.billing_only);
+  const isExpertPricingRequest = !isSeparatedOrder && parsedNotes?.is_expert_pricing_request === true;
   const managerHasSetPrice = parsedNotes?.price_set_by_manager === true && (order?.payment_amount || parsedNotes?.manager_set_price);
   const customerHasConfirmedPrice = parsedNotes?.customer_price_confirmed === true;
 
@@ -1047,8 +1050,8 @@ export default function OrderDetail() {
     return null;
   }
 
-  const basePriceForPayment = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || parsedNotes?.manager_set_price || 0;
-  const grandTotalForPayment = basePriceForPayment + approvedRepairCost + approvedRenewalCost;
+  const basePriceForPayment = isSeparatedOrder ? 0 : order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || parsedNotes?.manager_set_price || 0;
+  const grandTotalForPayment = order.total_price ?? (basePriceForPayment + approvedRepairCost + approvedRenewalCost);
   const rawPaidForPayment = totalPaid || order.total_paid || 0;
   const paidAmountForPayment = Math.min(Math.max(0, rawPaidForPayment), Math.max(0, grandTotalForPayment));
   const remainingAmountForPayment = Math.max(0, Math.max(0, grandTotalForPayment) - paidAmountForPayment);
@@ -1108,7 +1111,8 @@ export default function OrderDetail() {
               customer_completion_date: order.customer_completion_date,
               province_id: order.province_id,
               subcategory_id: order.subcategory_id,
-              rental_start_date: order.rental_start_date
+              rental_start_date: order.rental_start_date,
+              rental_end_date: order.rental_end_date
             }}
           />
           )}
@@ -1116,6 +1120,7 @@ export default function OrderDetail() {
 
 
         <div className="space-y-6">
+          {isSeparatedOrder && <p className="font-semibold border-b pb-3">سفارش مستقل تمدید و تعمیرات — سفارش مادر {parsedNotes?.billing_source_code || '—'}</p>}
           {/* Order Header */}
           <Card>
             <CardHeader>
@@ -1997,11 +2002,11 @@ export default function OrderDetail() {
                           </span>
                         </div>
                       )}
-                      {parsedNotes?.rental_end_date && (
+                      {(order.rental_end_date || parsedNotes?.rental_end_date) && (
                         <div className="p-4 bg-white dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
                           <span className="text-xs text-blue-600 dark:text-blue-400 block mb-1">تاریخ پایان اجاره</span>
                           <span className="font-bold text-base text-foreground">
-                            {formatPersianDate(parsedNotes.rental_end_date)}
+                            {formatPersianDate(order.rental_end_date || parsedNotes.rental_end_date)}
                           </span>
                         </div>
                       )}
@@ -2011,8 +2016,8 @@ export default function OrderDetail() {
 
                 {/* بلوک ۳: قیمت و جدول زمان‌بندی */}
                 {canViewFinancials && ((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || approvedRepairCost > 0 || approvedRenewalCost > 0 || (isExpertPricingRequest && customerHasConfirmedPrice)) && (() => {
-                  const basePrice = order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || parsedNotes?.manager_set_price || 0;
-                  const grandTotal = basePrice + approvedRepairCost + approvedRenewalCost;
+                  const basePrice = isSeparatedOrder ? 0 : order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || parsedNotes?.manager_set_price || 0;
+                  const grandTotal = order.total_price ?? (basePrice + approvedRepairCost + approvedRenewalCost);
                   const rawPaidAmount = totalPaid || order.total_paid || 0;
                   const paidAmount = Math.min(Math.max(0, rawPaidAmount), Math.max(0, grandTotal));
                   const remainingAmount = Math.max(0, Math.max(0, grandTotal) - paidAmount);
@@ -3045,6 +3050,7 @@ export default function OrderDetail() {
           {/* Collection Request Dialog */}
           <CollectionRequestDialog
             open={showCollectionDialog}
+            onSaved={() => { void fetchOrderDetails(); }}
             onOpenChange={setShowCollectionDialog}
             orderId={order.id}
             orderCode={order.code}

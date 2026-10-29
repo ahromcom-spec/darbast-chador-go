@@ -42,6 +42,7 @@ interface ManagerOrderInvoiceProps {
     province_id?: string;
     subcategory_id?: string;
     rental_start_date?: string | null;
+    rental_end_date?: string | null;
     execution_end_date?: string | null;
     execution_stage_updated_at?: string | null;
   };
