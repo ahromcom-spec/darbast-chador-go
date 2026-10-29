@@ -25,11 +25,12 @@ export function openPrintWindow(html: string, onStarted?: () => void): Window | 
     onStarted?.();
   };
 
-  popup.document.write(html);
-  // about:blank must resolve logos against the app, not the blank document.
-  const base = popup.document.createElement('base');
-  base.href = window.location.href;
-  popup.document.head.prepend(base);
+  // Resolve image URLs before parsing; about:blank has no reliable base URL.
+  const printableHtml = html.replace(/\bsrc="([^"]+)"/g, (attribute, source: string) => {
+    try { return `src="${new URL(source, window.location.href).href.replace(/"/g, '&quot;')}"`; }
+    catch { return attribute; }
+  });
+  popup.document.write(printableHtml);
   popup.document.close();
   popup.addEventListener('beforeprint', onBeforePrint);
   popup.addEventListener('afterprint', cleanup);
@@ -46,10 +47,6 @@ export function openPrintWindow(html: string, onStarted?: () => void): Window | 
         return new Promise(resolve => {
           image.addEventListener('load', resolve, { once: true });
           image.addEventListener('error', resolve, { once: true });
-          // Restart images parsed before the popup acquired its base URL.
-          const source = image.src;
-          image.removeAttribute('src');
-          image.src = source;
         });
       }));
       if (document.fonts) await document.fonts.ready;
