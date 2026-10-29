@@ -1,4 +1,5 @@
 # Architecture Decisions
+- Use `openPrintWindow` for order and statement printing: run native print in the disposable tab, release the preview dialog on print start, and close/focus back on print completion so app interaction is not stranded.
 - Share compact date markup and column-layout CSS through `statementPrintLayout` across statement preview, print and PDF to keep presentation consistent without changing billing.
 
 - Compute statement financial summaries with `statementTotals` using uncapped receipts; refresh through scoped RLS realtime subscriptions plus visible-page reconciliation so cost changes retain credit and never truncate payments.
