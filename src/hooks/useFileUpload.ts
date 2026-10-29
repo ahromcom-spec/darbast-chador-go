@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { compressImages } from '@/lib/imageOptimizer';
 import { normalizeMediaContentType, uploadToStorageWithProgress } from '@/lib/mediaTransfers';
+import { prepareOrderVideo } from '@/lib/orderVideoProcessor';
 
 
 interface UploadProgress {
@@ -119,7 +120,19 @@ export function useFileUpload({ bucket, onComplete }: UseFileUploadOptions) {
         break;
       }
 
-      const file = fileArray[i];
+      let file = fileArray[i];
+      if (fileType === 'video') {
+        try {
+          file = await prepareOrderVideo(file, (_stage, percent) => {
+            setProgress({ loaded: 0, total: 0, percentage: Math.round((i + percent / 100 * 0.7) / fileArray.length * 100) });
+          });
+        } catch (error) {
+          errorCount++;
+          toast({ title: 'فیلم ذخیره نشد', description: error instanceof Error ? error.message : 'تبدیل فیلم انجام نشد', variant: 'destructive' });
+          continue;
+        }
+        if (cancelledRef.current) break;
+      }
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
@@ -137,7 +150,9 @@ export function useFileUpload({ bucket, onComplete }: UseFileUploadOptions) {
             setProgress({
               loaded: totalProgress,
               total: totalSize,
-              percentage: Math.min(Math.round((totalProgress / totalSize) * 100), 99),
+              percentage: fileType === 'video'
+                ? Math.min(Math.round((i + 0.7 + loaded / file.size * 0.3) / fileArray.length * 100), 99)
+                : Math.min(Math.round((totalProgress / totalSize) * 100), 99),
             });
           },
         })

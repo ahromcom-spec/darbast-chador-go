@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { prepareOrderVideo } from '@/lib/orderVideoProcessor';
+import { ORDER_VIDEO_NOTICE } from '@/lib/orderVideoPolicy';
+import { uploadToStorageWithProgress } from '@/lib/mediaTransfers';
 import {
   Dialog,
   DialogContent,
@@ -307,9 +310,11 @@ export function RepairRequestDialog({
           const filePath = `${user.id}/repair-requests/${request.id}/${fileName}`;
           const fileType = file.type.startsWith('image/') ? 'image' : 'video';
 
-          const { error: uploadError } = await supabase.storage
-            .from('project-media')
-            .upload(filePath, file);
+          const prepared = fileType === 'video' ? await prepareOrderVideo(file) : file;
+          const preparedPath = fileType === 'video' ? filePath.replace(/\.[^/.]+$/, '.mp4') : filePath;
+          const { error: uploadError } = await uploadToStorageWithProgress({ bucket: 'project-media', path: preparedPath, file: prepared })
+            .then(() => ({ error: null }))
+            .catch((error: Error) => ({ error }));
 
           if (uploadError) {
             console.error('Upload error:', uploadError);
@@ -325,10 +330,10 @@ export function RepairRequestDialog({
             .from('repair_request_media')
             .insert({
               repair_request_id: request.id,
-              file_path: filePath,
+              file_path: preparedPath,
               file_type: fileType,
-              file_size: file.size,
-              mime_type: file.type,
+              file_size: prepared.size,
+              mime_type: prepared.type,
               user_id: user.id,
             });
 
@@ -381,17 +386,14 @@ export function RepairRequestDialog({
       if (!user) throw new Error('User not authenticated');
 
       for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+        let file = files[i];
+        if (!file.type.startsWith('image/')) file = await prepareOrderVideo(file);
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
         const filePath = `${user.id}/repair-requests/${existingRequest.id}/${fileName}`;
         const fileType = file.type.startsWith('image/') ? 'image' : 'video';
 
-        const { error: uploadError } = await supabase.storage
-          .from('project-media')
-          .upload(filePath, file);
-
-        if (uploadError) throw uploadError;
+        await uploadToStorageWithProgress({ bucket: 'project-media', path: filePath, file });
 
         const { error: dbError } = await supabase
           .from('repair_request_media')
@@ -797,6 +799,7 @@ export function RepairRequestDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto z-[9999]">
+        <p className="text-xs text-muted-foreground" role="note">{ORDER_VIDEO_NOTICE}</p>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Wrench className="h-5 w-5 text-primary" />

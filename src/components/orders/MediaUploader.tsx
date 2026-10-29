@@ -9,6 +9,8 @@ import { CentralizedVideoPlayer } from '@/components/media/CentralizedVideoPlaye
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { compressImage } from '@/lib/imageOptimizer';
+import { prepareOrderVideo } from '@/lib/orderVideoProcessor';
+import { ORDER_VIDEO_NOTICE } from '@/lib/orderVideoPolicy';
 
 
 // NOTE: فایل‌های سفارش در bucket 'project-media' ذخیره می‌شوند
@@ -67,6 +69,8 @@ export function MediaUploader({
   const { toast } = useToast();
   const [files, setFiles] = useState<MediaFile[]>([]);
   const [previewMedia, setPreviewMedia] = useState<MediaFile | null>(null);
+  const [preparingVideo, setPreparingVideo] = useState(false);
+  const [preparationStage, setPreparationStage] = useState('');
   
   // Unique IDs for file inputs to prevent conflicts when multiple uploaders exist
   const uniqueId = useId();
@@ -79,10 +83,10 @@ export function MediaUploader({
   useEffect(() => {
     if (onUploadStatusChange) {
       const uploadingFiles = files.filter(f => f.status === 'uploading' || f.status === 'pending');
-      const isUploading = uploadingFiles.length > 0;
+      const isUploading = uploadingFiles.length > 0 || preparingVideo;
       onUploadStatusChange(isUploading, uploadingFiles.length);
     }
-  }, [files, onUploadStatusChange]);
+  }, [files, onUploadStatusChange, preparingVideo]);
 
   // Notify parent about completed uploads
   // Track previous value to avoid duplicate notifications with same data
@@ -93,7 +97,7 @@ export function MediaUploader({
     if (onMediaUploaded) {
       const completedFiles = files.filter(f => f.status === 'done' && f.storagePath);
       const mediaInfo: UploadedMediaInfo[] = completedFiles.map(f => ({
-        storagePath: f.storagePath!,
+        storagePath: f.storagePath || '',
         fileType: f.type,
         fileSize: f.file.size,
         mimeType: f.file.type || (f.type === 'video' ? 'video/mp4' : 'image/jpeg')
@@ -296,8 +300,8 @@ export function MediaUploader({
   };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
-    const selectedFiles = event.target.files;
-    if (!selectedFiles) return;
+    const selectedFiles = Array.from(event.target.files || []);
+    if (!selectedFiles.length) return;
 
     const currentImages = files.filter(f => f.type === 'image').length;
     const currentVideos = files.filter(f => f.type === 'video').length;
@@ -326,6 +330,17 @@ export function MediaUploader({
       const isValid = type === 'image' ? validateImage(file) : validateVideo(file);
       if (!isValid) continue;
 
+      if (type === 'video') {
+        setPreparingVideo(true);
+        try {
+          file = await prepareOrderVideo(file, (stage, percent) => setPreparationStage(`${stage} ${percent}%`));
+        } catch (error) {
+          toast({ title: 'فیلم ذخیره نشد', description: error instanceof Error ? error.message : 'تبدیل فیلم انجام نشد', variant: 'destructive' });
+          continue;
+        } finally {
+          setPreparingVideo(false);
+        }
+      }
 
       const preview = URL.createObjectURL(file);
       const mediaItem: MediaFile = {
@@ -364,7 +379,10 @@ export function MediaUploader({
         const queue = [...newMedia];
         await Promise.all(
           Array.from({ length: Math.min(3, queue.length) }, async () => {
-            while (queue.length) await uploadToStorage(queue.shift()!);
+            while (queue.length) {
+              const next = queue.shift();
+              if (next) await uploadToStorage(next);
+            }
           })
         );
       } else {
@@ -403,7 +421,7 @@ export function MediaUploader({
           تصاویر و ویدیوهای پروژه
         </CardTitle>
         <CardDescription className="text-slate-700 dark:text-slate-300">
-          حداکثر {maxImages} عکس (هر کدام {maxImageSize}MB) و {maxVideos} ویدیو (هر کدام {maxVideoSize}MB و {Math.round(maxVideoDuration / 60)} دقیقه)
+          حداکثر {maxImages} عکس (هر کدام {maxImageSize}MB) و {maxVideos} ویدیو (فایل ورودی تا {maxVideoSize}MB)
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -518,18 +536,21 @@ export function MediaUploader({
               ویدیوها ({videoCount}/{maxVideos})
             </Label>
             {videoCount < maxVideos && (
-              <Button type="button" variant="outline" size="sm" onClick={() => videoInputRef.current?.click()}>
+              <Button type="button" variant="outline" size="sm" disabled={preparingVideo} onClick={() => videoInputRef.current?.click()}>
                 <Upload className="w-4 h-4 mr-2" />
                 افزودن ویدیو
               </Button>
             )}
           </div>
+          <p className="text-xs text-muted-foreground" role="note">{ORDER_VIDEO_NOTICE}</p>
+          {preparingVideo && <p className="text-sm text-primary" role="status">{preparationStage}</p>}
           <input
             ref={videoInputRef}
             id={videoInputId}
             type="file"
             accept="video/mp4,video/webm,video/mov,video/avi,video/quicktime,video/*"
             multiple
+            disabled={preparingVideo}
             className="hidden"
             onChange={(e) => handleFileSelect(e, 'video')}
           />

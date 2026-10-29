@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { calculateTotalFromDimensions } from '@/lib/dimensionCalculations';
 import { findDuplicateProjectMedia } from '@/lib/mediaFingerprint';
+import { prepareOrderVideo } from '@/lib/orderVideoProcessor';
+import { ORDER_VIDEO_NOTICE } from '@/lib/orderVideoPolicy';
+import { uploadToStorageWithProgress } from '@/lib/mediaTransfers';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Calendar, Plus, Trash2, Save, Loader2, User, Package, History, FileText, Eye, Check, ExternalLink, Calculator, Settings, CheckSquare, Square, Archive, ArchiveRestore, Upload, Image as ImageIcon, Film, X, Play, Building, MapPin, Hash, CreditCard, RotateCcw, AlertTriangle, Clock, Lock, Unlock, Printer, ZoomIn, ZoomOut, ChevronUp, ChevronDown, CalendarPlus } from 'lucide-react';
 import { openOrderSheet } from '@/lib/orderExecutionSheet';
@@ -4819,7 +4822,11 @@ export default function DailyReportModule() {
         return;
       }
 
-      const file = event.target.files[0];
+      let file = event.target.files[0];
+      if (type === 'video') {
+        toast.info('در حال آماده‌سازی دقیقهٔ اول فیلم با کیفیت ۴۸۰...');
+        file = await prepareOrderVideo(file);
+      }
       const maxSize = type === 'image' ? 10 * 1024 * 1024 : 50 * 1024 * 1024;
       
       if (file.size > maxSize) {
@@ -4831,11 +4838,7 @@ export default function DailyReportModule() {
       const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
       const storagePath = `${auth.user.id}/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('project-media')
-        .upload(storagePath, file, { contentType: file.type });
-
-      if (uploadError) throw uploadError;
+      await uploadToStorageWithProgress({ bucket: 'project-media', path: storagePath, file, contentType: file.type });
 
       // Save to database
       const { error: dbError } = await supabase
@@ -4869,7 +4872,7 @@ export default function DailyReportModule() {
       toast.success('فایل با موفقیت آپلود شد');
     } catch (error) {
       console.error('Error uploading media:', error);
-      toast.error('خطا در آپلود فایل');
+      toast.error(error instanceof Error ? error.message : 'خطا در آپلود فایل');
     } finally {
       setUploadingMedia(false);
       event.target.value = '';
@@ -7108,6 +7111,7 @@ export default function DailyReportModule() {
 
                     {/* Media Section */}
                     <div className="p-4 border rounded-xl space-y-4 bg-purple-50/50 dark:bg-purple-900/10">
+                      <p className="text-xs text-muted-foreground" role="note">{ORDER_VIDEO_NOTICE}</p>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <ImageIcon className="h-4 w-4 text-purple-600" />

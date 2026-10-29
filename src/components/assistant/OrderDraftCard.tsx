@@ -11,6 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import { useServiceTypesWithSubcategories } from '@/hooks/useServiceTypesWithSubcategories';
 import { supabase } from '@/integrations/supabase/client';
+import { prepareOrderVideo } from '@/lib/orderVideoProcessor';
+import { ORDER_VIDEO_NOTICE } from '@/lib/orderVideoPolicy';
+import { uploadToStorageWithProgress } from '@/lib/mediaTransfers';
 import { getNeshanTileUrl, NESHAN_ATTRIBUTION } from '@/lib/neshan';
 import { notifyManagers } from '@/lib/notifications';
 import { sendOrderSms, sendCeoNotificationSms, buildOrderSmsAddress } from '@/lib/orderSms';
@@ -167,15 +170,12 @@ export const OrderDraftCard = ({ draft }: Props) => {
   const uploadMedia = async (): Promise<string[]> => {
     if (!user || mediaFiles.length === 0) return [];
     const paths: string[] = [];
-    for (const file of mediaFiles) {
+    for (let file of mediaFiles) {
+      if (file.type.startsWith('video/')) file = await prepareOrderVideo(file);
       const ext = file.name.split('.').pop() || 'bin';
       const path = `${user.id}/assistant/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await supabase.storage.from('project-media').upload(path, file, {
-        cacheControl: '3600',
-        upsert: false,
-        contentType: file.type,
-      });
-      if (!error) paths.push(path);
+      await uploadToStorageWithProgress({ bucket: 'project-media', path, file, upsert: false, contentType: file.type });
+      paths.push(path);
     }
     return paths;
   };
@@ -359,6 +359,7 @@ export const OrderDraftCard = ({ draft }: Props) => {
         </label>
       </div>
 
+      <p className="text-xs text-muted-foreground" role="note">{ORDER_VIDEO_NOTICE}</p>
       {showMap && (
         <div className="rounded-lg border border-orange-200 overflow-hidden bg-white/80">
           <div className="px-3 py-2 text-xs text-muted-foreground">روی نقشه دقیقاً محل پروژه را لمس کنید.</div>
