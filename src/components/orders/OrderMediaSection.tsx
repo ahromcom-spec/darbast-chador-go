@@ -9,6 +9,7 @@ import { Upload, Film, Clock, X, Download, AlertCircle, RefreshCw, Calendar, Ima
 import { useToast } from '@/hooks/use-toast';
 import { formatPersianDate, getIranToday } from '@/lib/dateUtils';
 import { compressImages } from '@/lib/imageOptimizer';
+import { uploadToStorageWithProgress, normalizeMediaContentType } from '@/lib/mediaTransfers';
 import { buildMediaFingerprint, findDuplicateProjectMedia, mediaDedupeKey } from '@/lib/mediaFingerprint';
 
 interface MediaFile {
@@ -458,6 +459,8 @@ export function OrderMediaSection({
             media_date: mediaDate,
           });
           if (!dbError) return true;
+          console.error('Order media record failed:', dbError);
+          lastUploadErrorRef.current = 'فایل آپلود شد ولی ثبت آن در سفارش انجام نشد';
         }
         return false;
       };
@@ -557,13 +560,15 @@ export function OrderMediaSection({
             file_path: filePath,
             file_type: 'video',
             file_size: file.size,
-            mime_type: file.type,
+            mime_type: normalizeMediaContentType(file) || 'video/mp4',
             user_id: user.id,
             content_hash: fp.contentHash,
             duration_seconds: fp.durationSeconds,
             media_date: mediaDate,
           });
           if (!dbError) return true;
+          console.error('Order media record failed:', dbError);
+          lastUploadErrorRef.current = 'فایل آپلود شد ولی ثبت آن در سفارش انجام نشد';
         }
         return false;
       };

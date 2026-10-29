@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { compressImages } from '@/lib/imageOptimizer';
-import { startTransfer } from '@/lib/mediaTransfers';
+import { normalizeMediaContentType, uploadToStorageWithProgress } from '@/lib/mediaTransfers';
 
 
 interface UploadProgress {
@@ -127,61 +127,31 @@ export function useFileUpload({ bucket, onComplete }: UseFileUploadOptions) {
       const tracker = startTransfer('upload', file.name, file.size);
 
       try {
-        // آپلود با پیشرفت واقعی
-        const result = await new Promise<UploadResult>((resolve) => {
-          supabase.auth.getSession().then(({ data: { session } }) => {
-            if (!session) {
-              resolve({ success: false, error: 'Not authenticated' });
-              return;
-            }
-
-            const xhr = new XMLHttpRequest();
-            
-            xhr.upload.addEventListener('progress', (event) => {
-              if (event.lengthComputable) {
-                const currentFileProgress = event.loaded;
-                const totalProgress = uploadedSize + currentFileProgress;
-                const percentage = Math.round((totalProgress / totalSize) * 100);
-                setProgress({
-                  loaded: totalProgress,
-                  total: totalSize,
-                  percentage: Math.min(percentage, 99) // تا 99% نگه دار تا کامل شود
-                });
-                tracker.update(event.loaded, event.total);
-              }
+        // آپلود با پیشرفت واقعی؛ فیلم‌های بزرگ تکه‌تکه و قابل ادامه
+        const result: UploadResult = await uploadToStorageWithProgress({
+          bucket,
+          path: filePath,
+          file,
+          label: file.name,
+          onProgress: (_pct, loaded) => {
+            const totalProgress = uploadedSize + loaded;
+            setProgress({
+              loaded: totalProgress,
+              total: totalSize,
+              percentage: Math.min(Math.round((totalProgress / totalSize) * 100), 99),
             });
-
-            xhr.addEventListener('load', () => {
-              if (xhr.status >= 200 && xhr.status < 300) {
-                resolve({ success: true, filePath });
-              } else {
-                let detail = '';
-                try {
-                  const body = JSON.parse(xhr.responseText || '{}');
-                  detail = body?.message || body?.error || xhr.responseText || '';
-                } catch {
-                  detail = xhr.responseText || '';
-                }
-                console.error('Storage upload failed:', xhr.status, detail);
-                resolve({ success: false, error: `${xhr.status}: ${detail || 'Upload failed'}` });
-              }
-            });
-
-            xhr.addEventListener('error', () => {
-              resolve({ success: false, error: 'خطای شبکه' });
-            });
-
-            xhr.addEventListener('abort', () => {
-              resolve({ success: false, error: 'آپلود لغو شد' });
-            });
-
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-            xhr.open('POST', `${supabaseUrl}/storage/v1/object/${bucket}/${filePath}`);
-            xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
-            xhr.setRequestHeader('x-upsert', 'true');
-            xhr.send(file);
+          },
+        })
+          .then(() => ({ success: true, filePath }))
+          .catch((e: any) => {
+            const m = String(e?.message || '');
+            return {
+              success: false,
+              error: /413|too large|exceed/i.test(m)
+                ? 'حجم فایل بیش از حد مجاز است'
+                : 'اتصال اینترنت قطع شد؛ لطفاً دوباره تلاش کنید',
+            };
           });
-        });
 
         if (result.success) {
           // ثبت در دیتابیس
@@ -192,19 +162,17 @@ export function useFileUpload({ bucket, onComplete }: UseFileUploadOptions) {
               file_path: filePath,
               file_type: fileType,
               file_size: file.size,
-              mime_type: file.type,
+              mime_type: normalizeMediaContentType(file) || file.type,
               user_id: userId
             });
 
           if (dbError) throw dbError;
-          tracker.finish();
           successCount++;
         } else {
           throw new Error(result.error);
         }
       } catch (err: any) {
         console.error('Error uploading file:', file.name, err);
-        tracker.fail(err?.message);
         errorCount++;
         // نمایش پیام خطای واقعی برای فایل اول
         if (errorCount === 1) {
