@@ -2094,22 +2094,23 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           const html = `
             <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
               ${addressLabelHtml}
-              <div style="width:56px;height:56px;border-radius:8px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid #fff;background:#000;position:relative;">
+              <div style="width:68px;height:68px;border-radius:9px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.35);border:2px solid #fff;background:#000;position:relative;">
                 <video src="${videoUrl}" autoplay muted playsinline preload="auto"
                   ontimeupdate="if(this.currentTime>=6){this.currentTime=0;this.play().catch(()=>{});}"
                   onended="this.currentTime=0;this.play().catch(()=>{});"
                   style="width:100%;height:100%;object-fit:cover;pointer-events:none;">
                 </video>
-                ${orderCountBadgeHtml}
               </div>
+              ${orderCountBadgeHtml}
             </div>`;
           iconToUse = L.divIcon({
             html,
             className: 'project-thumb-icon',
-            iconSize: [56, 80],
-            iconAnchor: [28, 80],
-            popupAnchor: [0, -80],
+            iconSize: [68, 92],
+            iconAnchor: [34, 92],
+            popupAnchor: [0, -92],
           });
+
         } else if (firstOrderImage) {
           const url1 = supabase.storage
             .from('project-media')
