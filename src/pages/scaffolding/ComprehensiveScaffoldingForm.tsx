@@ -282,7 +282,8 @@ export default function ComprehensiveScaffoldingForm({
   const [installationDateTime, setInstallationDateTime] = useState<string>('');
   
   // State برای ثبت سفارش برای دیگری
-  const [recipientData, setRecipientData] = useState<RecipientData | null>(null);
+  // از مدیریت کلی سفارشات: مشتری سفارش مادر به‌عنوان گیرنده از پیش انتخاب می‌شود
+  const [recipientData, setRecipientData] = useState<RecipientData | null>(navState?.presetRecipient || null);
   
   // State برای override قیمت توسط مدیر
   const [manualPriceOverride, setManualPriceOverride] = useState<string>('');
@@ -2050,6 +2051,11 @@ export default function ComprehensiveScaffoldingForm({
         </Card>
       )}
 
+      {navState?.fromManager && recipientData && (
+        <div className="rounded-lg border-2 border-primary/40 bg-primary/10 p-3 text-sm text-center font-medium">
+          ثبت سفارش از مدیریت برای مشتری: {recipientData.fullName || '—'} ({recipientData.phoneNumber}) — سفارش و درخواست قیمت‌گذاری کارشناسی به حساب این مشتری منتقل می‌شود.
+        </div>
+      )}
       {/* کارت یکپارچه: گزینه‌های جانبی سفارش (ثبت برای دیگری، قیمت‌گذاری کارشناس، چند داربست همزمان) */}
       {!editOrderId && (selectedLocationId || initialLocationId) && subcategoryId && selectedProvinceId && (
         <Card className="shadow-xl bg-card/95 backdrop-blur-md border-2 border-primary/30">
