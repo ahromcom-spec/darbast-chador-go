@@ -282,7 +282,8 @@ export default function ComprehensiveScaffoldingForm({
   const [installationDateTime, setInstallationDateTime] = useState<string>('');
   
   // State برای ثبت سفارش برای دیگری
-  const [recipientData, setRecipientData] = useState<RecipientData | null>(null);
+  // از مدیریت کلی سفارشات: مشتری سفارش مادر به‌عنوان گیرنده از پیش انتخاب می‌شود
+  const [recipientData, setRecipientData] = useState<RecipientData | null>(navState?.presetRecipient || null);
   
   // State برای override قیمت توسط مدیر
   const [manualPriceOverride, setManualPriceOverride] = useState<string>('');
