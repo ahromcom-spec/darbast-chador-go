@@ -414,7 +414,23 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between flex-wrap gap-2">
             <span>پیش‌نمایش صورتحساب کل — {props.customerName || ''}</span>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap items-center">
+              <div className="flex items-center gap-1 border rounded-md px-1">
+                <Button onClick={() => changeZoom(-0.1)} variant="ghost" size="sm" disabled={zoom <= 0.4} title="کوچک‌نمایی">
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => setZoom(1)}
+                  className="text-xs min-w-[3rem] text-center"
+                  title="بازگشت به اندازه واقعی"
+                >
+                  {Math.round(zoom * 100)}٪
+                </button>
+                <Button onClick={() => changeZoom(0.1)} variant="ghost" size="sm" disabled={zoom >= 1.5} title="بزرگ‌نمایی">
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+              </div>
               <Button onClick={handleDownloadPDF} variant="outline" size="sm" disabled={busy}>
                 <Download className="h-4 w-4 ml-1" />
                 {busy ? 'در حال دانلود...' : 'دانلود PDF'}
