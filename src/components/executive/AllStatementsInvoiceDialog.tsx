@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Printer, Download, FileStack } from 'lucide-react';
+import { Printer, Download, FileStack, ZoomIn, ZoomOut } from 'lucide-react';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { useToast } from '@/hooks/use-toast';
 import { compactStatementDate, statementPrintLayout } from '@/lib/statementPrintLayout';
@@ -398,6 +398,10 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
     }
   };
 
+  const [zoom, setZoom] = useState(1);
+  const changeZoom = (delta: number) =>
+    setZoom(z => Math.min(1.5, Math.max(0.4, Math.round((z + delta) * 10) / 10)));
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -410,7 +414,23 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between flex-wrap gap-2">
             <span>پیش‌نمایش صورتحساب کل — {props.customerName || ''}</span>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap items-center">
+              <div className="flex items-center gap-1 border rounded-md px-1">
+                <Button onClick={() => changeZoom(-0.1)} variant="ghost" size="sm" disabled={zoom <= 0.4} title="کوچک‌نمایی">
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => setZoom(1)}
+                  className="text-xs min-w-[3rem] text-center"
+                  title="بازگشت به اندازه واقعی"
+                >
+                  {Math.round(zoom * 100)}٪
+                </button>
+                <Button onClick={() => changeZoom(0.1)} variant="ghost" size="sm" disabled={zoom >= 1.5} title="بزرگ‌نمایی">
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+              </div>
               <Button onClick={handleDownloadPDF} variant="outline" size="sm" disabled={busy}>
                 <Download className="h-4 w-4 ml-1" />
                 {busy ? 'در حال دانلود...' : 'دانلود PDF'}
@@ -424,7 +444,7 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
         </DialogHeader>
         <div className="bg-white rounded-lg border" dir="rtl"
           dangerouslySetInnerHTML={{ __html: `${styles}${html}` }}
-          style={{ fontFamily: 'Vazirmatn, Tahoma, sans-serif' }} />
+          style={{ fontFamily: 'Vazirmatn, Tahoma, sans-serif', zoom }} />
       </DialogContent>
     </Dialog>
   );
