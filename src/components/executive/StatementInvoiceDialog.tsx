@@ -422,7 +422,7 @@ export const StatementInvoiceDialog = (props: Props) => {
         </DialogHeader>
         <div className="bg-white rounded-lg border" dir="rtl"
           dangerouslySetInnerHTML={{ __html: `${styles}${html}` }}
-          style={{ fontFamily: 'Vazirmatn, Tahoma, sans-serif' }} />
+          style={{ fontFamily: 'Vazirmatn, Tahoma, sans-serif', zoom }} />
       </DialogContent>
     </Dialog>
   );
