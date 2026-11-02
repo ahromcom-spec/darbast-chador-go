@@ -1,5 +1,6 @@
 # Roadmap
-- [ ] Align statement employer display with the employer configured in order invoice details; preserve ownership and financial accounting.
+- [x] Align single and combined statement employer display with order invoice settings; preserve ownership and financial accounting. Nine tests pass; dialog rendering verified with order 1000502 recorded employer data.
+- [ ] Verify employer update end-to-end from management order details to statements — current requesting account redirects away from management; direct dialog rendering verified instead.
 - [x] Convert new order videos to SD 480p and first 60 seconds before saving; show notice across order/report upload controls. Two policy tests pass; authenticated MediaUploader selection, processing, upload and download verified with a 65-second file producing 852×480, 60-second MP4. Existing order linkage not exercised; bundled headless Chromium lacks H264 playback support.
 - [x] Isolate order/statement printing in the disposable tab, release the preview modal and restore app focus; 3 lifecycle tests and two simulated browser print returns pass with working clicks.
 - [ ] Verify native Windows/Edge printing on a real order — unavailable in the headless browser; current account has no orders, so browser verification used the actual statement component with sample data and simulated print/image events.
