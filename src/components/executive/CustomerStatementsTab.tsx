@@ -723,6 +723,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
                                 created_at: o.created_at,
                                 subcategory_name: o.subcategory_name,
                                 description: o.description,
+                                raw: o.raw,
                               })),
                             }))}
                           />
