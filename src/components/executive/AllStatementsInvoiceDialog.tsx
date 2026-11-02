@@ -398,6 +398,10 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
     }
   };
 
+  const [zoom, setZoom] = useState(1);
+  const changeZoom = (delta: number) =>
+    setZoom(z => Math.min(1.5, Math.max(0.4, Math.round((z + delta) * 10) / 10)));
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
