@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Printer, Download, FileStack } from 'lucide-react';
+import { Printer, Download, FileStack, ZoomIn, ZoomOut } from 'lucide-react';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { useToast } from '@/hooks/use-toast';
 import { compactStatementDate, statementPrintLayout } from '@/lib/statementPrintLayout';
