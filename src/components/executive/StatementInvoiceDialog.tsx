@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { calculateStatementTotals } from '@/lib/statementTotals';
 import { compactStatementDate, statementPrintLayout } from '@/lib/statementPrintLayout';
 import { openPrintWindow } from '@/lib/printWindow';
+import { orderStatementEmployer, statementEmployers } from '@/lib/statementEmployer';
 
 function escapeHtml(value: unknown): string {
   if (value === null || value === undefined) return '';
@@ -99,6 +100,7 @@ export const StatementInvoiceDialog = (props: Props) => {
   }, [open, orderKey]);
 
   const totals = calculateStatementTotals(props.orders);
+  const employer = statementEmployers(props.orders, props.customerName, props.customerPhone);
   const totalAmount = totals.total;
   const totalPaid = props.totalPaid ?? totals.paid;
   const discount = Math.max(0, Number(props.discountAmount) || 0);
@@ -170,11 +172,12 @@ export const StatementInvoiceDialog = (props: Props) => {
           <td class="label-cell" colspan="4" style="text-align:center; font-size:14px;">🧑‍💼 اطلاعات مشتری و خدمات</td>
         </tr>
         <tr>
-          <td class="label-cell">نام مشتری:</td>
-          <td class="value-cell">${escapeHtml(props.customerName) || '-'}</td>
+          <td class="label-cell">نام کارفرما:</td>
+          <td class="value-cell">${escapeHtml(employer.name) || '-'}</td>
           <td class="label-cell">شماره تماس:</td>
-          <td class="value-cell">${escapeHtml(props.customerPhone) || '-'}</td>
+          <td class="value-cell">${escapeHtml(employer.phone) || '-'}</td>
         </tr>
+        ${employer.overridden ? `<tr><td class="label-cell">هماهنگ‌کننده:</td><td class="value-cell">${escapeHtml(props.customerName) || '-'}</td><td class="label-cell">شماره هماهنگ‌کننده:</td><td class="value-cell">${escapeHtml(props.customerPhone) || '-'}</td></tr>` : ''}
         <tr>
           <td class="label-cell">کد مشتری:</td>
           <td class="value-cell" colspan="3" style="font-family: monospace; font-weight: bold; color: #1e3a5f;">${escapeHtml(props.customerCode) || '-'}</td>
@@ -239,7 +242,7 @@ export const StatementInvoiceDialog = (props: Props) => {
               <td>${fmt(i + 1)}</td>
               <td class="nowrap code-cell">${escapeHtml(o.code)}</td>
               <td>${compactStatementDate(o.created_at)}</td>
-              <td class="description-cell">${periods[o.id]?.label ? `<div style="font-weight:bold;color:#1e3a5f;">${escapeHtml(periods[o.id].label)}</div>` : ''}${escapeHtml(o.description || o.subcategory_name || '-')}</td>
+              <td class="description-cell">${employer.multiple ? `<div><strong>کارفرما: ${escapeHtml(orderStatementEmployer(o, props.customerName, props.customerPhone).name)}</strong></div>` : ''}${periods[o.id]?.label ? `<div style="font-weight:bold;color:#1e3a5f;">${escapeHtml(periods[o.id].label)}</div>` : ''}${escapeHtml(o.description || o.subcategory_name || '-')}</td>
               <td>${compactStatementDate(periods[o.id]?.start)}</td>
               <td>${compactStatementDate(periods[o.id]?.end)}</td>
               <td>${escapeHtml(statusLabels[o.status] || o.status)}</td>

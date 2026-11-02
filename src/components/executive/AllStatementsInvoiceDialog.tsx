@@ -6,6 +6,7 @@ import { formatPersianDate } from '@/lib/dateUtils';
 import { useToast } from '@/hooks/use-toast';
 import { compactStatementDate, statementPrintLayout } from '@/lib/statementPrintLayout';
 import { openPrintWindow } from '@/lib/printWindow';
+import { orderStatementEmployer, statementEmployers } from '@/lib/statementEmployer';
 
 function escapeHtml(value: unknown): string {
   if (value === null || value === undefined) return '';
@@ -43,6 +44,7 @@ export interface AllStatementsOrder {
   created_at: string;
   subcategory_name: string | null;
   description?: string | null;
+  raw?: { notes?: unknown };
 }
 
 export interface AllStatementsItem {
@@ -84,6 +86,7 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
   const chequePending = props.statements.reduce((a, s) => a + (s.cheque_pending || 0), 0);
   const chequeBounced = props.statements.reduce((a, s) => a + (s.cheque_bounced || 0), 0);
   const ordersCount = props.statements.reduce((a, s) => a + s.orders.length, 0);
+  const employer = statementEmployers(props.statements.flatMap(s => s.orders), props.customerName, props.customerPhone);
 
   const styles = `
     <style>
@@ -134,9 +137,11 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
     const sTotal = s.orders.reduce((a, o) => a + o.total, 0);
     const sPaid = s.total_paid ?? s.orders.reduce((a, o) => a + o.paid, 0);
     const sRemaining = Math.max(sTotal - sPaid - (s.discount_amount || 0), 0);
+    const statementEmployer = statementEmployers(s.orders, props.customerName, props.customerPhone);
     return `
       <div class="stmt-title">
         📄 صورتحساب شماره ${fmt(s.statement_number)} — ${s.status === 'open' ? '🟢 باز' : '🔒 بسته شده'}
+        <div>کارفرما: ${escapeHtml(statementEmployer.name) || '-'}</div>
         ${s.serviceTypes.length ? ` — ${s.serviceTypes.map(t => escapeHtml(t)).join(' / ')}` : ''}
         ${s.addresses.length ? `<div style="font-weight:normal; font-size:11.5px; color:#475569; margin-top:3px;">${s.addresses.map(a => '📍 ' + escapeHtml(a)).join('<br/>')}</div>` : ''}
       </div>
@@ -163,7 +168,7 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
               <td>${fmt(i + 1)}</td>
               <td class="nowrap code-cell">${escapeHtml(o.code)}</td>
               <td>${compactStatementDate(o.created_at)}</td>
-              <td class="description-cell">${escapeHtml(o.description || o.subcategory_name || '-')}</td>
+              <td class="description-cell">${statementEmployer.multiple ? `<div><strong>کارفرما: ${escapeHtml(orderStatementEmployer(o, props.customerName, props.customerPhone).name)}</strong></div>` : ''}${escapeHtml(o.description || o.subcategory_name || '-')}</td>
               <td>${escapeHtml(statusLabels[o.status] || o.status)}</td>
               <td class="nowrap">${fmt(o.total)}</td>
               <td class="nowrap">${fmt(o.paid)}</td>
@@ -212,11 +217,12 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
           <td class="label-cell" colspan="4" style="text-align:center; font-size:14px;">🧑‍💼 اطلاعات مشتری</td>
         </tr>
         <tr>
-          <td class="label-cell">نام مشتری:</td>
-          <td class="value-cell">${escapeHtml(props.customerName) || '-'}</td>
+          <td class="label-cell">نام کارفرما:</td>
+          <td class="value-cell">${escapeHtml(employer.name) || '-'}</td>
           <td class="label-cell">شماره تماس:</td>
-          <td class="value-cell">${escapeHtml(props.customerPhone) || '-'}</td>
+          <td class="value-cell">${escapeHtml(employer.phone) || '-'}</td>
         </tr>
+        ${employer.overridden ? `<tr><td class="label-cell">هماهنگ‌کننده:</td><td class="value-cell">${escapeHtml(props.customerName) || '-'}</td><td class="label-cell">شماره هماهنگ‌کننده:</td><td class="value-cell">${escapeHtml(props.customerPhone) || '-'}</td></tr>` : ''}
         <tr>
           <td class="label-cell">کد مشتری:</td>
           <td class="value-cell" style="font-family: monospace; font-weight: bold; color:#1e3a5f;">${escapeHtml(props.customerCode) || '-'}</td>
