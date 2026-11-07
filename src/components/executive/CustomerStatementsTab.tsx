@@ -23,7 +23,7 @@ import { TransferOrderStatementDialog } from '@/components/executive/TransferOrd
 import { SeparateOrderChargesDialog } from '@/components/orders/SeparateOrderChargesDialog';
 import { extractOrderDescription } from '@/lib/orderDescription';
 import { canDeleteStatement } from '@/lib/statementDeletion';
-import { calculateStatementTotals } from '@/lib/statementTotals';
+import { calculateStatementTotals, orderStatementCost } from '@/lib/statementTotals';
 
 interface OrderRow {
   id: string;
@@ -284,7 +284,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
         const myOrders: OrderRow[] = (orders || [])
           .filter((o: any) => o.statement_id === s.id && o.status !== 'rejected')
           .map((o: any) => {
-            const total = Number(o.total_price ?? o.payment_amount ?? 0);
+            const total = orderStatementCost(o);
             const paid = Number(o.total_paid ?? 0);
             return {
               id: o.id,
@@ -304,7 +304,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
         // Rejected rows do not add costs, but existing receipts must remain visible.
         const financialOrders = (orders || [])
           .filter((o: any) => o.statement_id === s.id)
-          .map((o: any) => ({ total: o.status === 'rejected' ? 0 : Number(o.total_price ?? o.payment_amount ?? 0), paid: Number(o.total_paid ?? 0) }));
+          .map((o: any) => ({ total: o.status === 'rejected' ? 0 : orderStatementCost(o), paid: Number(o.total_paid ?? 0) }));
         const totals = calculateStatementTotals(financialOrders, Number(s.discount_amount) || 0);
         const total_amount = totals.total;
         const total_paid = totals.paid;

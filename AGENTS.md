@@ -4,6 +4,7 @@
 - Use `openPrintWindow` for order and statement printing: run native print in the disposable tab, release the preview dialog on print start, and close/focus back on print completion so app interaction is not stranded.
 - Share compact date markup and column-layout CSS through `statementPrintLayout` across statement preview, print and PDF to keep presentation consistent without changing billing.
 
+- Read each order's statement cost only through `orderStatementCost` (total_price, else payment_amount unless billing-only/discounted); a DB trigger fills a zero total_price from payment_amount so legacy-priced orders never vanish from statements.
 - Compute statement financial summaries with `statementTotals` using uncapped receipts; refresh through scoped RLS realtime subscriptions plus visible-page reconciliation so cost changes retain credit and never truncate payments.
 
 - Detect «اجرای داربست بدون اجناس» only through `isScaffoldingNoMaterials`; this keeps invoice and workflow branching consistent across legacy and current orders.

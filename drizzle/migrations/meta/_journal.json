@@ -64,6 +64,13 @@
       "when": 1793262593991,
       "tag": "0008_grant_delete_empty_statement",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794078470466,
+      "tag": "0009_restore_order_totals_from_payment_amount",
+      "breakpoints": true
     }
   ]
 }

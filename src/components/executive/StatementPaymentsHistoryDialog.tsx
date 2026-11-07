@@ -1,6 +1,7 @@
 import { toIranDateString } from '@/lib/dateUtils';
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { orderStatementCost } from '@/lib/statementTotals';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -265,11 +266,11 @@ export function StatementPaymentsHistoryDialog({
     const o = orderById.get(orderId);
     const { data: cur } = await supabase
       .from('projects_v3')
-      .select('total_price, payment_amount, payment_confirmed_at, payment_confirmed_by')
+      .select('total_price, payment_amount, billing_only, discount_amount, payment_confirmed_at, payment_confirmed_by')
       .eq('id', orderId)
       .maybeSingle();
     if (!cur) return;
-    const total = Number((cur as any).total_price ?? (cur as any).payment_amount ?? o?.total ?? 0);
+    const total = orderStatementCost(cur as any) || Number(o?.total ?? 0);
     const { data: pays } = await supabase
       .from('order_payments')
       .select('amount')
@@ -506,11 +507,11 @@ export function StatementPaymentsHistoryDialog({
 
       const { data: fresh } = await supabase
         .from('projects_v3')
-        .select('id, code, total_price, payment_amount, total_paid, created_at')
+        .select('id, code, total_price, payment_amount, billing_only, discount_amount, total_paid, created_at')
         .in('id', orderIds);
       const sortKeyById = new Map(orders.map(o => [o.id, o.sortKey || o.created_at]));
       const list = (fresh || []).map((o: any) => {
-        const total = Number(o.total_price ?? o.payment_amount ?? 0);
+        const total = orderStatementCost(o);
         const paid = Number(o.total_paid ?? 0);
         return { id: o.id, code: o.code, total, paid, remaining: Math.max(total - paid, 0), created_at: o.created_at, sortKey: sortKeyById.get(o.id) || o.created_at };
       }).sort((a, b) => (a.sortKey || '').localeCompare(b.sortKey || ''));

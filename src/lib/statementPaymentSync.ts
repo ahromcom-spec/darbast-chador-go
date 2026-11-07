@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { orderStatementCost } from '@/lib/statementTotals';
 
 /**
  * Two-way sync between bank card transactions and statement payment allocations.
@@ -43,11 +44,11 @@ function groupIdOf(tx: StatementTxLike): string | null {
 export async function resyncOrderPaidState(orderId: string, actorId?: string | null) {
   const { data: cur } = await supabase
     .from('projects_v3')
-    .select('total_price, payment_amount, payment_confirmed_at')
+    .select('total_price, payment_amount, billing_only, discount_amount, payment_confirmed_at')
     .eq('id', orderId)
     .maybeSingle();
   if (!cur) return;
-  const total = Number((cur as any).total_price ?? (cur as any).payment_amount ?? 0);
+  const total = orderStatementCost(cur as any);
   const { data: pays } = await supabase
     .from('order_payments')
     .select('amount')
@@ -154,13 +155,13 @@ export async function resyncStatementAllocationsForTransaction(
   // Load the target invoices (statement scope when known, else the touched orders)
   let query = supabase
     .from('projects_v3')
-    .select('id, code, total_price, payment_amount, total_paid, created_at');
+    .select('id, code, total_price, payment_amount, billing_only, discount_amount, total_paid, created_at');
   query = statementId ? query.eq('statement_id', statementId) : query.in('id', oldOrderIds);
   const { data: fresh } = await query;
 
   const list = (fresh || [])
     .map((o: any) => {
-      const total = Number(o.total_price ?? o.payment_amount ?? 0);
+      const total = orderStatementCost(o);
       const paid = Number(o.total_paid ?? 0);
       return { id: o.id, code: o.code as string, remaining: Math.max(total - paid, 0), created_at: o.created_at as string };
     })

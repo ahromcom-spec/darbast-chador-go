@@ -33,3 +33,19 @@ describe('actual statement receipts and changing costs', () => {
     assert.equal(result.credit, 680_000);
   });
 });
+import { orderStatementCost } from '../src/lib/statementTotals';
+
+describe('order cost read by statements', () => {
+  test('Hosseini order 1000225 priced only in payment_amount counts 16,065,000', () => {
+    assert.equal(orderStatementCost({ total_price: 0, payment_amount: 16_065_000 }), 16_065_000);
+  });
+  test('total_price wins when set (includes renewals)', () => {
+    assert.equal(orderStatementCost({ total_price: 31_500_000, payment_amount: 10_000_000 }), 31_500_000);
+  });
+  test('billing-only shell stays zero', () => {
+    assert.equal(orderStatementCost({ total_price: 0, payment_amount: 5_000_000, billing_only: true }), 0);
+  });
+  test('fully discounted order stays zero', () => {
+    assert.equal(orderStatementCost({ total_price: 0, payment_amount: 5_000_000, discount_amount: 5_000_000 }), 0);
+  });
+});

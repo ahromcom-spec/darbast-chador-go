@@ -29,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCEORole } from '@/hooks/useCEORole';
 import { supabase } from '@/integrations/supabase/client';
+import { orderStatementCost } from '@/lib/statementTotals';
 import { toast } from 'sonner';
 import { format } from 'date-fns-jalali';
 import { faIR } from 'date-fns-jalali/locale';
@@ -237,7 +238,7 @@ export default function CustomerComprehensiveInvoice() {
 
         if (customerOrders.length === 0) return;
 
-        const totalAmount = customerOrders.reduce((sum, o) => sum + (o.total_price ?? o.payment_amount ?? 0), 0);
+        const totalAmount = customerOrders.reduce((sum, o) => sum + orderStatementCost(o as any), 0);
         const totalPaid = customerOrders.reduce((sum, o) => sum + (o.total_paid || 0), 0);
 
         customerDataList.push({
@@ -258,9 +259,9 @@ export default function CustomerComprehensiveInvoice() {
               service_type_name: subcategoryData?.service_type?.name || '-',
               subcategory_name: subcategoryData?.name || '-',
               status: o.status,
-              payment_amount: o.total_price ?? o.payment_amount ?? 0,
+              payment_amount: orderStatementCost(o as any),
               total_paid: o.total_paid || 0,
-              remaining: Math.max(0, (o.total_price ?? o.payment_amount ?? 0) - (o.total_paid || 0)),
+              remaining: Math.max(0, orderStatementCost(o as any) - (o.total_paid || 0)),
               created_at: o.created_at,
               notes: o.notes
             };
