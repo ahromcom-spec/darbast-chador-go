@@ -1,4 +1,5 @@
 # Architecture Decisions
+- Aggregate executive marker waiting categories through `executionMarkerStatuses`; collapsed location groups use all their orders, while expanded markers use only their own orders so mixed statuses remain visible.
 - Resolve statement employer display from each order's invoice override through `statementEmployer`; retain multiple employers explicitly and never change customer ownership or financial allocation for a display override.
 - Prepare new order videos with `prepareOrderVideo` before upload, fingerprinting and metadata creation; serialized FFmpeg workers keep memory bounded and failures never upload unprocessed originals.
 - Use `openPrintWindow` for order and statement printing: run native print in the disposable tab, release the preview dialog on print start, and close/focus back on print completion so app interaction is not stranded.

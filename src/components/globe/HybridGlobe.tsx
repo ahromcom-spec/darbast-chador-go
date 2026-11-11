@@ -18,6 +18,7 @@ import { MapSearchBox } from '@/components/locations/MapSearchBox';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { createNeshanTileLayer, NESHAN_ATTRIBUTION } from '@/lib/neshan';
 import { createOSMBuildingsLayer } from '@/lib/osmBuildings';
+import { executionMarkerStatuses } from '@/lib/executionMarkerStatuses';
 type ProjectHierarchy = ReturnType<typeof useProjectsHierarchy>['projects'][0];
 
 interface HierarchyMedia {
@@ -2037,6 +2038,21 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
         const pendingBadgeHtml = pendingCount > 0 && !activeExecutionOnly
           ? statusChip('rgba(234,179,8,0.97)', `⏳ در انتظار تایید مدیران${pendingCount > 1 ? ` (${pendingCount})` : ''}`)
           : '';
+        // A collapsed marker represents all orders at this location, not only its top project.
+        const representedOrders = count > 1 && !isClusterExpanded
+          ? group.flatMap(p => p.orders || [])
+          : project.orders || [];
+        const waitingCounts = executionMarkerStatuses(representedOrders);
+        const waitingLabels = [
+          { key: 'pending' as const, label: 'در انتظار تایید', tone: 'approval' },
+          { key: 'pending_execution' as const, label: 'در انتظار اجرا', tone: 'execution' },
+          { key: 'awaiting_collection' as const, label: 'در انتظار جمع‌آوری / فک', tone: 'collection' },
+        ];
+        const executionBadgeHtml = activeExecutionOnly
+          ? waitingLabels.filter(item => waitingCounts[item.key] > 0).map(item =>
+              `<div class="execution-marker-status execution-marker-status--${item.tone}">${item.label}</div>`
+            ).join('')
+          : '';
         const archivedBadgeHtml = orderCounts.total === 0
           ? ''
           : pendingBadgeHtml + [
@@ -2063,6 +2079,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
             z-index:10;
           ">
             ${repairBadgeHtml}
+            ${executionBadgeHtml}
             ${archivedBadgeHtml}
             <div style="
               background:${labelGradient};

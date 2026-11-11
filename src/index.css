@@ -176,6 +176,33 @@ body {
 
 /* Persian RTL Design System - Inspired by traditional Persian architecture and modern construction */
 
+.execution-marker-status {
+  padding: 4px 8px;
+  margin-bottom: 3px;
+  border-radius: 6px;
+  font-family: Vazirmatn, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: nowrap;
+  text-align: center;
+  direction: rtl;
+  pointer-events: none;
+  box-shadow: var(--shadow-md);
+}
+.execution-marker-status--approval {
+  background: hsl(var(--gold));
+  color: hsl(var(--foreground));
+}
+.execution-marker-status--execution {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+.execution-marker-status--collection {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
 @layer base {
   :root {
     /* Core colors inspired by Persian architecture */
