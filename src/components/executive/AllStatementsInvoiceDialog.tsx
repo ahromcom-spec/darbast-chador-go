@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Printer, Download, FileStack, ZoomIn, ZoomOut } from 'lucide-react';
+import { Printer, Download, Share2, FileStack, ZoomIn, ZoomOut } from 'lucide-react';
+import { renderStatementPdfBlob, downloadPdfBlob, sharePdfBlob } from '@/lib/statementPdf';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { useToast } from '@/hooks/use-toast';
 import { compactStatementDate, statementPrintLayout } from '@/lib/statementPrintLayout';
@@ -353,48 +354,47 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
     if (!w) toast({ title: 'پنجره چاپ باز نشد', description: 'اجازه باز شدن پنجره چاپ را در مرورگر فعال کنید.', variant: 'destructive' });
   };
 
+  const pdfFileName = `صورتحساب-کل-${props.customerName || 'مشتری'}.pdf`;
+  const pdfTitle = `صورتحساب کل ${props.customerName || ''}`;
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [sharing, setSharing] = useState(false);
+
+  useEffect(() => { setPdfBlob(null); }, [html]);
+
+  const buildPdf = async () => {
+    if (pdfBlob) return pdfBlob;
+    const blob = await renderStatementPdfBlob(styles, html, true);
+    setPdfBlob(blob);
+    return blob;
+  };
+
   const handleDownloadPDF = async () => {
     setBusy(true);
     try {
-      const html2canvas = (await import('html2canvas')).default;
-      const { jsPDF } = await import('jspdf');
-      const container = document.createElement('div');
-      container.innerHTML = `<style>${styles.replace(/<\/?style>/g, '')}</style>${html}`;
-      container.style.position = 'fixed';
-      container.style.left = '-10000px';
-      container.style.top = '0';
-      container.style.width = '210mm';
-      container.style.background = 'white';
-      container.style.direction = 'rtl';
-      document.body.appendChild(container);
-      await new Promise(r => setTimeout(r, 300));
-      const target = container.querySelector('.invoice-container') as HTMLElement;
-      const canvas = await html2canvas(target, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const margin = 6;
-      const availW = pageW - margin * 2;
-      const imgW = availW;
-      const imgH = (canvas.height * imgW) / canvas.width;
-      const pageAvailH = pageH - margin * 2;
-      let remainingH = imgH;
-      let offset = 0;
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-      while (remainingH > 0) {
-        pdf.addImage(dataUrl, 'JPEG', margin, margin - offset, imgW, imgH);
-        remainingH -= pageAvailH;
-        offset += pageAvailH;
-        if (remainingH > 0) pdf.addPage();
-      }
-      pdf.save(`صورتحساب-کل-${props.customerName || 'مشتری'}.pdf`);
-      document.body.removeChild(container);
+      const blob = await buildPdf();
+      downloadPdfBlob(blob, pdfFileName);
       toast({ title: 'موفق', description: 'PDF صورتحساب کل دانلود شد' });
     } catch (e) {
       console.error(e);
       toast({ title: 'خطا', description: 'دریافت PDF با خطا مواجه شد', variant: 'destructive' });
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleShare = async () => {
+    setSharing(true);
+    try {
+      const blob = await buildPdf();
+      const result = await sharePdfBlob(blob, pdfFileName, pdfTitle);
+      if (result === 'shared') toast({ title: 'موفق', description: 'صورتحساب کل به اشتراک گذاشته شد' });
+      else if (result === 'retry') toast({ title: 'فایل آماده شد', description: 'برای ارسال، یک بار دیگر روی «اشتراک‌گذاری» بزنید' });
+      else if (result === 'downloaded') toast({ title: 'دانلود شد', description: 'اشتراک‌گذاری در این مرورگر پشتیبانی نمی‌شود؛ فایل PDF دانلود شد' });
+    } catch (e) {
+      console.error(e);
+      toast({ title: 'خطا', description: 'خطا در اشتراک‌گذاری صورتحساب کل', variant: 'destructive' });
+    } finally {
+      setSharing(false);
     }
   };
 
@@ -431,7 +431,11 @@ export const AllStatementsInvoiceDialog = (props: Props) => {
                   <ZoomIn className="h-4 w-4" />
                 </Button>
               </div>
-              <Button onClick={handleDownloadPDF} variant="outline" size="sm" disabled={busy}>
+              <Button onClick={handleShare} variant="outline" size="sm" disabled={busy || sharing}>
+                <Share2 className="h-4 w-4 ml-1" />
+                {sharing ? 'در حال آماده‌سازی...' : 'اشتراک‌گذاری'}
+              </Button>
+              <Button onClick={handleDownloadPDF} variant="outline" size="sm" disabled={busy || sharing}>
                 <Download className="h-4 w-4 ml-1" />
                 {busy ? 'در حال دانلود...' : 'دانلود PDF'}
               </Button>
