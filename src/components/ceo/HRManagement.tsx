@@ -12,13 +12,16 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { isValidHRPhone, matchesHRSearch, normalizeHRPhone, resolveHRStatus } from '@/lib/hrEmployees';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { 
   Loader2, Plus, Save, Trash2, Users, Info, 
   ChevronDown, ChevronUp, User, Phone, Briefcase,
-  Building, Calendar, Check, Clock, X, Edit, UserCheck
+  Building, Calendar, Check, Clock, X, Edit, UserCheck, Search
 } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 
@@ -197,7 +200,9 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [employees, setEmployees] = useState<HREmployee[]>([]);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<HREmployee | null>(null);
+  const [editPhone, setEditPhone] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // New employee form state
   const [newPhoneNumber, setNewPhoneNumber] = useState('');
@@ -260,7 +265,7 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
   }, [isOpen, showAsCard]);
 
   const isValidPhone = useMemo(() => {
-    return /^09[0-9]{9}$/.test(newPhoneNumber);
+    return isValidHRPhone(newPhoneNumber);
   }, [newPhoneNumber]);
 
   // Lookup user when phone number changes
@@ -381,29 +386,76 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
     }
   };
 
-  const handleUpdateEmployee = async (employee: HREmployee) => {
+  const openEditDialog = (employee: HREmployee) => {
+    setEditing({ ...employee });
+    setEditPhone(employee.phone_number || '');
+  };
+
+  const handleUpdateEmployee = async () => {
+    if (!editing) return;
+    const fullName = editing.full_name.trim();
+    const phone = editPhone ? normalizeHRPhone(editPhone) : '';
+    if (!fullName) {
+      toast.error('لطفاً نام و نام خانوادگی را وارد کنید');
+      return;
+    }
+    if (phone && !isValidHRPhone(phone)) {
+      toast.error('شماره موبایل نامعتبر است');
+      return;
+    }
+
     setSaving(true);
     try {
+      const original = employees.find(e => e.id === editing.id);
+      const phoneChanged = (original?.phone_number || '') !== phone;
+      let userId: string | null = editing.user_id;
+
+      if (phoneChanged) {
+        if (phone) {
+          const { data: dup } = await supabase
+            .from('hr_employees')
+            .select('id, full_name')
+            .eq('phone_number', phone)
+            .neq('id', editing.id)
+            .limit(1);
+          if (dup && dup.length > 0) {
+            toast.error(`این شماره قبلاً برای «${dup[0].full_name}» ثبت شده است`);
+            setSaving(false);
+            return;
+          }
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('user_id')
+            .eq('phone_number', phone)
+            .limit(1);
+          userId = profileData?.[0]?.user_id || null;
+        } else {
+          userId = null;
+        }
+      }
+
       const { error } = await supabase
         .from('hr_employees')
         .update({
-          full_name: employee.full_name,
-          position: employee.position,
-          department: employee.department,
-          hire_date: employee.hire_date,
-          notes: employee.notes,
-          status: employee.status,
+          full_name: fullName,
+          phone_number: phone || null,
+          user_id: userId,
+          position: editing.position,
+          department: editing.department,
+          hire_date: editing.hire_date || null,
+          notes: editing.notes?.trim() || null,
+          status: resolveHRStatus(editing.status, phone || null, userId),
         })
-        .eq('id', employee.id);
+        .eq('id', editing.id);
 
       if (error) throw error;
 
       toast.success('اطلاعات نیرو بروزرسانی شد');
-      setEditingId(null);
+      setEditing(null);
       fetchEmployees();
     } catch (error: any) {
       console.error('Error updating employee:', error);
-      toast.error('خطا در بروزرسانی');
+      toast.error('خطا در بروزرسانی: ' + (error.message || ''));
     } finally {
       setSaving(false);
     }
@@ -428,11 +480,14 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
     }
   };
 
-  const updateEmployeeField = (id: string, field: keyof HREmployee, value: any) => {
-    setEmployees(prev => prev.map(e => 
-      e.id === id ? { ...e, [field]: value } : e
-    ));
+  const updateEditing = (field: keyof HREmployee, value: any) => {
+    setEditing(prev => (prev ? { ...prev, [field]: value } : prev));
   };
+
+  const filteredEmployees = useMemo(
+    () => employees.filter(e => matchesHRSearch(e, searchQuery)),
+    [employees, searchQuery],
+  );
 
   const getStatusBadge = (status: HREmployee['status']) => {
     switch (status) {
@@ -488,7 +543,7 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                 <Input
                   type="tel"
                   value={newPhoneNumber}
-                  onChange={(e) => setNewPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                  onChange={(e) => setNewPhoneNumber(normalizeHRPhone(e.target.value))}
                   placeholder="09100000000"
                   dir="ltr"
                   className={!newPhoneNumber ? '' : isValidPhone ? 'border-green-500' : 'border-destructive'}
@@ -604,11 +659,35 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
       {/* Employees List */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Users className="h-5 w-5 text-primary" />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Users className="h-5 w-5 text-primary" />
+              </div>
+              <CardTitle className="text-lg">
+                لیست نیروهای ثبت‌شده ({searchQuery.trim() ? `${filteredEmployees.length} از ${employees.length}` : employees.length})
+              </CardTitle>
             </div>
-            <CardTitle className="text-lg">لیست نیروهای ثبت‌شده ({employees.length})</CardTitle>
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="جستجو با نام، شماره تماس یا سمت..."
+                className="pr-9 pl-8"
+                aria-label="جستجوی نیروها"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="پاک کردن جستجو"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -635,116 +714,62 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {employees.map((employee) => (
+                  {filteredEmployees.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        نیرویی با این مشخصات پیدا نشد
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {filteredEmployees.map((employee) => (
                     <TableRow key={employee.id}>
                       <TableCell>
-                        {editingId === employee.id ? (
-                          <Input
-                            value={employee.full_name}
-                            onChange={(e) => updateEmployeeField(employee.id, 'full_name', e.target.value)}
-                            className="w-40"
-                          />
-                        ) : (
-                          <span className="font-medium">{employee.full_name}</span>
-                        )}
+                        <span className="font-medium">{employee.full_name}</span>
                       </TableCell>
                       <TableCell>
                         <span dir="ltr" className="text-muted-foreground">
-                          {employee.phone_number}
+                          {employee.phone_number || '-'}
                         </span>
                       </TableCell>
                       <TableCell>
-                        {editingId === employee.id ? (
-                          <MultiSelectDropdown
-                            options={DEFAULT_POSITIONS}
-                            selected={employee.position ? employee.position.split('،') : []}
-                            onChange={(vals) => updateEmployeeField(employee.id, 'position', vals.length > 0 ? vals.join('،') : null)}
-                            placeholder="انتخاب"
-                            className="w-36"
-                            customItems={customPositions}
-                            onCustomItemsChange={handleCustomPositionsChange}
-                            removedDefaults={removedPositions}
-                            onRemovedDefaultsChange={handleRemovedPositionsChange}
-                          />
-                        ) : (
-                          employee.position ? (
-                            <div className="flex flex-wrap gap-1">
-                              {employee.position.split('،').map((p, i) => (
-                                <Badge key={i} variant="secondary" className="text-xs">{p.trim()}</Badge>
-                              ))}
-                            </div>
-                          ) : '-'
-                        )}
+                        {employee.position ? (
+                          <div className="flex flex-wrap gap-1">
+                            {employee.position.split('،').map((p, i) => (
+                              <Badge key={i} variant="secondary" className="text-xs">{p.trim()}</Badge>
+                            ))}
+                          </div>
+                        ) : '-'}
                       </TableCell>
                       <TableCell>
-                        {editingId === employee.id ? (
-                          <MultiSelectDropdown
-                            options={DEFAULT_DEPARTMENTS}
-                            selected={employee.department ? employee.department.split('،') : []}
-                            onChange={(vals) => updateEmployeeField(employee.id, 'department', vals.length > 0 ? vals.join('،') : null)}
-                            placeholder="انتخاب"
-                            className="w-36"
-                            customItems={customDepartments}
-                            onCustomItemsChange={handleCustomDepartmentsChange}
-                            removedDefaults={removedDepartments}
-                            onRemovedDefaultsChange={handleRemovedDepartmentsChange}
-                          />
-                        ) : (
-                          employee.department ? (
-                            <div className="flex flex-wrap gap-1">
-                              {employee.department.split('،').map((d, i) => (
-                                <Badge key={i} variant="outline" className="text-xs">{d.trim()}</Badge>
-                              ))}
-                            </div>
-                          ) : '-'
-                        )}
+                        {employee.department ? (
+                          <div className="flex flex-wrap gap-1">
+                            {employee.department.split('،').map((d, i) => (
+                              <Badge key={i} variant="outline" className="text-xs">{d.trim()}</Badge>
+                            ))}
+                          </div>
+                        ) : '-'}
                       </TableCell>
                       <TableCell>{getStatusBadge(employee.status)}</TableCell>
                       <TableCell>
                         <div className="flex items-center justify-center gap-1">
-                          {editingId === employee.id ? (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleUpdateEmployee(employee)}
-                                disabled={saving}
-                                className="h-8 w-8 p-0 text-green-600"
-                              >
-                                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                  setEditingId(null);
-                                  fetchEmployees();
-                                }}
-                                className="h-8 w-8 p-0 text-muted-foreground"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => setEditingId(employee.id)}
-                                className="h-8 w-8 p-0 text-blue-600"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleDeleteEmployee(employee.id)}
-                                className="h-8 w-8 p-0 text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openEditDialog(employee)}
+                            className="h-8 w-8 p-0 text-blue-600"
+                            aria-label="ویرایش نیرو"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteEmployee(employee.id)}
+                            className="h-8 w-8 p-0 text-destructive"
+                            aria-label="حذف نیرو"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -755,6 +780,134 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!editing} onOpenChange={(open) => { if (!open && !saving) setEditing(null); }}>
+        <DialogContent className="max-w-lg" dir="rtl">
+          <DialogHeader className="text-right sm:text-right pl-8">
+            <DialogTitle>ویرایش نیرو</DialogTitle>
+            <DialogDescription>همه مشخصات نیرو، از جمله شماره تماس، قابل ویرایش است.</DialogDescription>
+          </DialogHeader>
+          {editing && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2 sm:col-span-2">
+                <Label className="flex items-center gap-1">
+                  <User className="h-4 w-4" />
+                  نام و نام خانوادگی <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  value={editing.full_name}
+                  onChange={(e) => updateEditing('full_name', e.target.value)}
+                  placeholder="نام کامل نیرو"
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label className="flex items-center gap-1">
+                  <Phone className="h-4 w-4" />
+                  شماره موبایل
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="tel"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(normalizeHRPhone(e.target.value))}
+                    placeholder="09100000000"
+                    dir="ltr"
+                    className={!editPhone ? '' : isValidHRPhone(editPhone) ? 'border-green-500' : 'border-destructive'}
+                  />
+                  {editPhone && (
+                    <Button type="button" variant="outline" onClick={() => setEditPhone('')} className="shrink-0 gap-1">
+                      <Trash2 className="h-4 w-4" />
+                      حذف شماره
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  با تغییر شماره، نیرو به حساب کاربری همان شماره در اهرم متصل می‌شود.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1">
+                  <Briefcase className="h-4 w-4" />
+                  سمت
+                </Label>
+                <MultiSelectDropdown
+                  options={DEFAULT_POSITIONS}
+                  selected={editing.position ? editing.position.split('،') : []}
+                  onChange={(vals) => updateEditing('position', vals.length > 0 ? vals.join('،') : null)}
+                  placeholder="انتخاب سمت‌ها"
+                  customItems={customPositions}
+                  onCustomItemsChange={handleCustomPositionsChange}
+                  removedDefaults={removedPositions}
+                  onRemovedDefaultsChange={handleRemovedPositionsChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1">
+                  <Building className="h-4 w-4" />
+                  واحد سازمانی
+                </Label>
+                <MultiSelectDropdown
+                  options={DEFAULT_DEPARTMENTS}
+                  selected={editing.department ? editing.department.split('،') : []}
+                  onChange={(vals) => updateEditing('department', vals.length > 0 ? vals.join('،') : null)}
+                  placeholder="انتخاب واحدها"
+                  customItems={customDepartments}
+                  onCustomItemsChange={handleCustomDepartmentsChange}
+                  removedDefaults={removedDepartments}
+                  onRemovedDefaultsChange={handleRemovedDepartmentsChange}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  تاریخ استخدام
+                </Label>
+                <PersianDatePicker
+                  value={editing.hire_date || ''}
+                  onChange={(val) => updateEditing('hire_date', val || null)}
+                  placeholder="انتخاب تاریخ"
+                  timeMode="none"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>وضعیت</Label>
+                <Select
+                  value={editing.status === 'inactive' ? 'inactive' : 'active'}
+                  onValueChange={(v) => updateEditing('status', v === 'inactive' ? 'inactive' : 'active')}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="z-[99999]">
+                    <SelectItem value="active">فعال</SelectItem>
+                    <SelectItem value="inactive">غیرفعال</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>توضیحات</Label>
+                <AutoResizeTextarea
+                  value={editing.notes || ''}
+                  onChange={(e) => updateEditing('notes', e.target.value)}
+                  placeholder="توضیحات اضافی..."
+                  className="min-h-[40px]"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setEditing(null)} disabled={saving}>انصراف</Button>
+            <Button
+              onClick={handleUpdateEmployee}
+              disabled={saving || !editing?.full_name.trim() || (!!editPhone && !isValidHRPhone(editPhone))}
+              className="gap-2"
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              ذخیره تغییرات
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 
