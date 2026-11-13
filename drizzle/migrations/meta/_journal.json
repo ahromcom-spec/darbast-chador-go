@@ -78,6 +78,13 @@
       "when": 1794613514500,
       "tag": "0010_hr_personnel_code",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794613883114,
+      "tag": "0011_tighten_cheques_sms_media_policies",
+      "breakpoints": true
     }
   ]
 }

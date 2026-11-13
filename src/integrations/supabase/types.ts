@@ -6790,6 +6790,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: undefined
       }
+      can_manage_cheques: { Args: { _uid: string }; Returns: boolean }
       can_manage_contractors: { Args: { _actor_id: string }; Returns: boolean }
       can_manage_order_renewals: { Args: { _uid: string }; Returns: boolean }
       can_manage_site_notifications: {

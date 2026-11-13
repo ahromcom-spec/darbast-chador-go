@@ -1,7 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { isAdminImpersonating } from './impersonation';
 import { extractOrderDescription } from './orderDescription';
-import { getNextAllowedSendTimeFresh } from './smsSendWindow';
 
 // شماره مدیرعامل برای ارسال پیامک
 export const CEO_PHONE = '09125511494';
@@ -223,38 +222,7 @@ export const sendOrderSms = async (
   } catch (e) {
     // در صورت خطا در بررسی، ارسال را ادامه می‌دهیم تا از قطع پیامک جلوگیری شود
   }
-  // بازه زمانی مجاز ارسال پیامک: خارج از بازه، پیامک در صف قرار می‌گیرد
-  try {
-    const sendAfter = await getNextAllowedSendTimeFresh();
-    if (sendAfter) {
-      const { data: userRes } = await supabase.auth.getUser();
-      const { error: queueError } = await supabase.from('scheduled_sms').insert({
-        phone: targetPhone,
-        order_code: targetOrderCode,
-        order_id: smsDetails.orderId ?? null,
-        status_key: status,
-        payload: {
-          serviceType: smsDetails.serviceType,
-          address: smsDetails.address,
-          amount: smsDetails.amount,
-          customerName: smsDetails.customerName,
-          description: smsDetails.description,
-          paidAmount: smsDetails.paidAmount,
-          totalPaid: smsDetails.totalPaid,
-          remainingAmount: smsDetails.remainingAmount,
-        },
-        send_after: sendAfter.toISOString(),
-        created_by: userRes?.user?.id ?? null,
-      });
-      if (!queueError) {
-        console.log('[sendOrderSms] Scheduled for later delivery:', sendAfter.toISOString());
-        return { success: true, scheduledFor: sendAfter.toISOString() };
-      }
-      console.warn('[sendOrderSms] Could not schedule SMS, sending immediately:', queueError);
-    }
-  } catch (e) {
-    console.warn('[sendOrderSms] Scheduling check failed, sending immediately:', e);
-  }
+  // بازه زمانی مجاز ارسال پیامک در سرور بررسی می‌شود؛ خارج از بازه، سرور پیامک را در صف قرار می‌دهد
 
   try {
     console.log(`[sendOrderSms] Sending SMS - Phone: ${targetPhone}, Order: ${targetOrderCode}, Status: ${status}, Details:`, smsDetails);
@@ -284,6 +252,9 @@ export const sendOrderSms = async (
     }
 
     console.log('[sendOrderSms] Response:', data);
+    if ((data as any)?.scheduledFor) {
+      return { success: true, scheduledFor: (data as any).scheduledFor as string };
+    }
     return { success: true };
   } catch (err: any) {
     console.error('[sendOrderSms] Exception:', err);
