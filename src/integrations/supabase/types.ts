@@ -1954,6 +1954,7 @@ export type Database = {
           hire_date: string | null
           id: string
           notes: string | null
+          personnel_code: string | null
           phone_number: string | null
           position: string | null
           status: string
@@ -1968,6 +1969,7 @@ export type Database = {
           hire_date?: string | null
           id?: string
           notes?: string | null
+          personnel_code?: string | null
           phone_number?: string | null
           position?: string | null
           status?: string
@@ -1982,6 +1984,7 @@ export type Database = {
           hire_date?: string | null
           id?: string
           notes?: string | null
+          personnel_code?: string | null
           phone_number?: string | null
           position?: string | null
           status?: string
@@ -6971,6 +6974,7 @@ export type Database = {
       generate_service_code: { Args: { _project_id: string }; Returns: string }
       generate_unique_customer_code: { Args: never; Returns: string }
       generate_unique_order_code: { Args: never; Returns: string }
+      generate_unique_personnel_code: { Args: never; Returns: string }
       get_contractor_contact_info: {
         Args: { _contractor_id: string }
         Returns: {

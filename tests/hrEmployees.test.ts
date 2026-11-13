@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { matchesHRSearch, normalizeHRPhone, resolveHRStatus } from '../src/lib/hrEmployees';
+import { hrStaffCode, isPersonnelCode, matchesHRSearch, normalizeHRPhone, resolveHRStatus } from '../src/lib/hrEmployees';
 
 const emp = { full_name: 'علی محمدی', phone_number: '09125511652', position: 'سرپرست،پیمانکار', department: 'فروش' };
 
@@ -31,5 +31,22 @@ describe('HR employee phone and status after edit', () => {
   });
   test('a manually deactivated employee stays inactive', () => {
     assert.equal(resolveHRStatus('inactive', '09123456789', 'u1'), 'inactive');
+  });
+});
+
+describe('HR personnel code', () => {
+  test('staff without a phone use their 8-digit personnel code in reports', () => {
+    assert.equal(hrStaffCode({ id: 'abc123456', phone_number: null, personnel_code: '37631919' }), '37631919');
+  });
+  test('staff with a phone and no personnel code use the phone', () => {
+    assert.equal(hrStaffCode({ id: 'x', phone_number: '09125511652', personnel_code: null }), '09125511652');
+  });
+  test('a personnel code is exactly 8 digits', () => {
+    assert.equal(isPersonnelCode('37631919'), true);
+    assert.equal(isPersonnelCode('3763191'), false);
+    assert.equal(isPersonnelCode('HR-d36ed0'), false);
+  });
+  test('staff can be found by personnel code', () => {
+    assert.equal(matchesHRSearch({ full_name: 'متین قاسمی', phone_number: null, personnel_code: '97527557', position: null, department: null }, '۹۷۵۲'), true);
   });
 });

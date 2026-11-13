@@ -392,7 +392,10 @@ const extractStaffCode = (value: unknown): string => {
   // Try 11-digit phone number first (e.g., 09388231167)
   const phoneMatch = value.match(/09\d{9}/);
   if (phoneMatch) return phoneMatch[0];
-  // Try UUID-like pattern (for HR employees without phone)
+  // 8-digit personnel code (HR employees without phone)
+  const personnelMatch = value.match(/^([1-9][0-9]{7})(?![0-9])/);
+  if (personnelMatch) return personnelMatch[1];
+  // Try UUID-like pattern (legacy HR employees without phone)
   const uuidMatch = value.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
   if (uuidMatch) return uuidMatch[1];
   // Fallback to 4-digit code

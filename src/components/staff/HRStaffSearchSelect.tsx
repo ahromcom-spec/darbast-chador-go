@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { hrStaffCode, matchesHRSearch } from '@/lib/hrEmployees';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface HREmployee {
   id: string;
   phone_number: string;
+  personnel_code?: string | null;
   full_name: string;
   position: string | null;
   department: string | null;
@@ -46,7 +48,7 @@ const loadEmployeesCached = async (): Promise<EmployeeCacheData> => {
   employeePromise = (async () => {
     const { data, error } = await supabase
       .from('hr_employees')
-      .select('id, phone_number, full_name, position, department, status')
+      .select('id, phone_number, personnel_code, full_name, position, department, status')
       .order('full_name', { ascending: true });
 
     if (error) throw error;
@@ -98,25 +100,18 @@ export function HRStaffSearchSelect({
     };
   }, [open, filterActive]);
 
-  const selectedEmployee = employees.find((e) => (e.phone_number || e.id) === value);
+  const isSelected = (e: HREmployee) => !!value && (hrStaffCode(e) === value || e.phone_number === value || e.id === value);
+  const selectedEmployee = employees.find(isSelected);
 
   const filteredEmployees = useMemo(() => {
     if (!search.trim()) return employees;
 
-    const searchLower = search.toLowerCase().trim();
-    return employees.filter((emp) => {
-      const phone = (emp.phone_number || '').toLowerCase();
-      const name = emp.full_name.toLowerCase();
-      const position = (emp.position || '').toLowerCase();
-      const department = (emp.department || '').toLowerCase();
-
-      return phone.includes(searchLower) || name.includes(searchLower) || position.includes(searchLower) || department.includes(searchLower);
-    });
+    return employees.filter((emp) => matchesHRSearch(emp, search));
   }, [search, employees]);
 
   const handleSelect = (employee: HREmployee) => {
-    // Use phone_number as identifier; fall back to employee id if no phone
-    const identifier = employee.phone_number || employee.id;
+    // Personnel code for staff without phone, otherwise phone number
+    const identifier = hrStaffCode(employee);
     onValueChange(identifier, employee.full_name);
     setOpen(false);
     setSearch('');
@@ -137,7 +132,7 @@ export function HRStaffSearchSelect({
           className="w-full justify-between bg-white/50 hover:bg-white/70 text-right"
         >
           <span className="truncate flex-1 text-right">
-            {selectedEmployee ? `${selectedEmployee.full_name}${selectedEmployee.phone_number ? ` - ${selectedEmployee.phone_number}` : ''}` : value ? value : placeholder}
+            {selectedEmployee ? `${selectedEmployee.full_name} - ${hrStaffCode(selectedEmployee)}` : value ? value : placeholder}
           </span>
           {selectedEmployee || value ? (
             <X className="h-4 w-4 shrink-0 opacity-50 hover:opacity-100" onClick={handleClear} />
@@ -160,7 +155,7 @@ export function HRStaffSearchSelect({
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="جستجو با نام یا شماره موبایل..."
+              placeholder="جستجو با نام، شماره موبایل یا کد پرسنلی..."
               className="pr-10 text-sm"
               autoFocus
             />
@@ -184,7 +179,7 @@ export function HRStaffSearchSelect({
                   type="button"
                   onClick={() => handleSelect(employee)}
                   className={`w-full text-right px-3 py-2 rounded-md text-sm hover:bg-accent transition-colors cursor-pointer ${
-                    value === (employee.phone_number || employee.id) ? 'bg-amber-100 dark:bg-amber-900/30' : ''
+                    isSelected(employee) ? 'bg-amber-100 dark:bg-amber-900/30' : ''
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -205,7 +200,7 @@ export function HRStaffSearchSelect({
                       )}
                     </div>
                     <span className="text-xs text-muted-foreground font-mono" dir="ltr">
-                      {employee.phone_number}
+                      {employee.phone_number || (employee.personnel_code ? `کد ${employee.personnel_code}` : '')}
                     </span>
                   </div>
                 </button>

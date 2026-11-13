@@ -106,7 +106,10 @@ const extractStaffCode = (value: unknown): string => {
   // Match phone numbers like 09xxxxxxxxx
   const phoneMatch = value.match(/09\d{9}/);
   if (phoneMatch) return phoneMatch[0];
-  // Match HR-XXXXXX short codes for staff without phone numbers
+  // Match 8-digit personnel codes for staff without phone numbers
+  const personnelMatch = value.match(/(?<![0-9])[1-9][0-9]{7}(?![0-9])/);
+  if (personnelMatch) return personnelMatch[0];
+  // Match legacy HR-XXXXXX short codes
   const hrCodeMatch = value.match(/HR-[0-9a-f]{6}/i);
   if (hrCodeMatch) return hrCodeMatch[0];
   // Match MANUAL-xxx codes for manually entered staff names

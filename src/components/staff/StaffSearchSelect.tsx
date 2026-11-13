@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
+import { hrStaffCode } from '@/lib/hrEmployees';
 import { createPortal } from 'react-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getCurrentZoom } from '@/lib/zoom';
@@ -76,7 +77,7 @@ const loadStaffDirectoryCached = async () => {
     // 1) HR employees (best source for user_id)
     const { data: hrData, error: hrError } = await supabase
       .from('hr_employees')
-      .select('id, phone_number, full_name, position, department, user_id')
+      .select('id, phone_number, personnel_code, full_name, position, department, user_id')
       .order('full_name', { ascending: true });
 
     if (hrError) throw hrError;
@@ -93,8 +94,8 @@ const loadStaffDirectoryCached = async () => {
       .map((h: any) => {
         const phone = String(h.phone_number || '').trim();
         const name = String(h.full_name || '').trim();
-        // For employees without a phone number, use a short code derived from their DB id
-        const code = phone || (h.id ? `HR-${String(h.id).slice(-6)}` : '');
+        // Personnel code (staff without phone) → phone → legacy id-derived code
+        const code = hrStaffCode(h);
         const fullCode = `${h.position || ''} - ${h.department || ''}`
           .trim()
           .replace(/^-\s*|\s*-$/g, '');

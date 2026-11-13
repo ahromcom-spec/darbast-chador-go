@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { hrStaffCode } from '@/lib/hrEmployees';
 import { Order, OrderReportRow, StaffReportRow, ROW_COLORS } from '@/hooks/useDailyReport';
 
 interface StaffDirectoryItem {
@@ -90,13 +91,13 @@ export function ReportBotDialog({ orders, dateLabel, onApply, disabled, moduleKe
     (async () => {
       try {
         const [{ data: hr }, { data: salary }] = await Promise.all([
-          supabase.from('hr_employees').select('id, phone_number, full_name, user_id'),
+          supabase.from('hr_employees').select('id, phone_number, personnel_code, full_name, user_id'),
           supabase.from('staff_salary_settings').select('staff_code, staff_name'),
         ]);
 
         const items: StaffDirectoryItem[] = [];
         (hr || []).forEach((h: any) => {
-          const code = String(h.phone_number || '').trim() || (h.id ? `HR-${String(h.id).slice(-6)}` : '');
+          const code = hrStaffCode(h);
           const name = String(h.full_name || '').trim();
           if (code && name) items.push({ code, name, user_id: h.user_id ? String(h.user_id) : null });
         });

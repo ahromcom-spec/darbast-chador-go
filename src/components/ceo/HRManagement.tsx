@@ -28,6 +28,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 interface HREmployee {
   id: string;
   phone_number: string;
+  personnel_code: string | null;
   full_name: string;
   user_id: string | null;
   position: string | null;
@@ -351,7 +352,7 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
         profileUserId = profileData?.user_id || null;
       }
 
-      const { error } = await supabase
+      const { data: inserted, error } = await supabase
         .from('hr_employees')
         .insert({
           phone_number: newPhoneNumber || null,
@@ -363,11 +364,17 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
           created_by: user.id,
           user_id: profileUserId,
           status: (profileUserId || !newPhoneNumber) ? 'active' : 'pending_registration',
-        });
+        })
+        .select('personnel_code')
+        .single();
 
       if (error) throw error;
 
-      toast.success('نیروی جدید با موفقیت ثبت شد');
+      if (inserted?.personnel_code) {
+        toast.success(`نیروی جدید ثبت شد — کد پرسنلی: ${inserted.personnel_code}`, { duration: 8000 });
+      } else {
+        toast.success('نیروی جدید با موفقیت ثبت شد');
+      }
 
       // Reset form
       setNewPhoneNumber('');
@@ -512,7 +519,7 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
         <Info className="h-4 w-4" />
         <AlertTitle>راهنما</AlertTitle>
         <AlertDescription className="text-sm mt-2 space-y-1">
-          <p>• وارد کردن <strong>شماره موبایل</strong> اختیاری است</p>
+          <p>• وارد کردن <strong>شماره موبایل</strong> اختیاری است؛ اگر شماره وارد نشود، یک <strong>کد پرسنلی ۸ رقمی یکتا</strong> خودکار به نیرو داده می‌شود</p>
           <p>• اگر نیرو هنوز در اهرم ثبت‌نام نکرده، وضعیت "در انتظار ثبت‌نام" خواهد بود</p>
           <p>• پس از ثبت‌نام، وضعیت خودکار به "فعال" تغییر می‌کند</p>
           <p>• نیروهای ثبت‌شده در تنظیمات حقوق گزارش روزانه قابل انتخاب هستند</p>
@@ -554,6 +561,9 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                   </div>
                 )}
               </div>
+              {!newPhoneNumber && (
+                <p className="text-xs text-muted-foreground">بدون شماره، کد پرسنلی ۸ رقمی خودکار صادر می‌شود.</p>
+              )}
               {foundUser && (
                 <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-900/20 rounded-md p-2">
                   <UserCheck className="h-4 w-4" />
@@ -706,7 +716,7 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead className="text-right">نام</TableHead>
-                    <TableHead className="text-right">شماره موبایل</TableHead>
+                    <TableHead className="text-right">شماره موبایل / کد پرسنلی</TableHead>
                     <TableHead className="text-right">سمت</TableHead>
                     <TableHead className="text-right">واحد</TableHead>
                     <TableHead className="text-right">وضعیت</TableHead>
@@ -727,9 +737,14 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                         <span className="font-medium">{employee.full_name}</span>
                       </TableCell>
                       <TableCell>
-                        <span dir="ltr" className="text-muted-foreground">
-                          {employee.phone_number || '-'}
-                        </span>
+                        {employee.phone_number ? (
+                          <span dir="ltr" className="text-muted-foreground">{employee.phone_number}</span>
+                        ) : employee.personnel_code ? (
+                          <Badge variant="outline" className="font-mono text-xs gap-1" title="کد پرسنلی">
+                            <span className="text-muted-foreground">کد پرسنلی</span>
+                            <span dir="ltr">{employee.personnel_code}</span>
+                          </Badge>
+                        ) : '-'}
                       </TableCell>
                       <TableCell>
                         {employee.position ? (
@@ -823,7 +838,13 @@ export function HRManagement({ showAsCard = true }: HRManagementProps) {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   با تغییر شماره، نیرو به حساب کاربری همان شماره در اهرم متصل می‌شود.
+                  {!editing.personnel_code && ' بدون شماره، کد پرسنلی ۸ رقمی خودکار صادر می‌شود.'}
                 </p>
+                {editing.personnel_code && (
+                  <p className="text-sm">
+                    کد پرسنلی: <span dir="ltr" className="font-mono font-semibold">{editing.personnel_code}</span>
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label className="flex items-center gap-1">

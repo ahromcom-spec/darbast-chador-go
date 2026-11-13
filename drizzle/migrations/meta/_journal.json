@@ -71,6 +71,13 @@
       "when": 1794078470466,
       "tag": "0009_restore_order_totals_from_payment_amount",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794613514500,
+      "tag": "0010_hr_personnel_code",
+      "breakpoints": true
     }
   ]
 }

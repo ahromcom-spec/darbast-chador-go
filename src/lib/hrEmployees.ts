@@ -5,6 +5,7 @@ export type HREmployeeStatus = 'active' | 'pending_registration' | 'inactive';
 export interface HRSearchable {
   full_name: string;
   phone_number: string | null;
+  personnel_code?: string | null;
   position: string | null;
   department: string | null;
 }
@@ -40,9 +41,10 @@ export function matchesHRSearch(employee: HRSearchable, query: string): boolean 
   if (qDigits && qDigits.length === q.replace(/\s/g, '').length) {
     const phone = (employee.phone_number || '').replace(/\D/g, '');
     if (phone.includes(qDigits)) return true;
+    if ((employee.personnel_code || '').includes(qDigits)) return true;
   }
   const haystack = normalize(
-    [employee.full_name, employee.phone_number, employee.position, employee.department]
+    [employee.full_name, employee.phone_number, employee.personnel_code, employee.position, employee.department]
       .filter(Boolean)
       .join(' '),
   );
@@ -62,4 +64,22 @@ export function resolveHRStatus(
   if (chosen === 'inactive') return 'inactive';
   if (!phone || linkedUserId) return 'active';
   return 'pending_registration';
+}
+
+/** 8-digit numeric personnel code issued by the database to staff registered without a phone. */
+export function isPersonnelCode(value: string): boolean {
+  return /^[1-9][0-9]{7}$/.test(value);
+}
+
+/**
+ * Identifier used for a staff member in daily reports and salary settings.
+ * A personnel code, once issued, stays the identifier so past report rows keep matching;
+ * otherwise the phone number; legacy rows fall back to the old id-derived code.
+ */
+export function hrStaffCode(employee: { id?: string | null; phone_number?: string | null; personnel_code?: string | null }): string {
+  const code = String(employee.personnel_code || '').trim();
+  if (code) return code;
+  const phone = String(employee.phone_number || '').trim();
+  if (phone) return phone;
+  return employee.id ? `HR-${String(employee.id).slice(-6)}` : '';
 }
