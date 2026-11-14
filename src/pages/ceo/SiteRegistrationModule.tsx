@@ -7,7 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { UserPlus, Loader2, CheckCircle, Phone, User, AlertCircle, UserCheck, FileText } from 'lucide-react';
+import { UserPlus, Loader2, CheckCircle, Phone, User, AlertCircle, UserCheck, FileText, Contact } from 'lucide-react';
+import { isContactPickerSupported, pickPhoneContact } from '@/lib/contactPicker';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -158,6 +159,32 @@ export default function SiteRegistrationModule() {
     }
   }, [debouncedPhone, checkExistingUser]);
 
+  const [pickingContact, setPickingContact] = useState(false);
+
+  const handlePickContact = async () => {
+    if (!isContactPickerSupported()) {
+      toast.error('انتخاب از مخاطبین فقط در مرورگر کروم گوشی‌های اندروید پشتیبانی می‌شود. در آیفون و رایانه لطفاً نام و شماره را دستی وارد کنید.');
+      return;
+    }
+    setPickingContact(true);
+    try {
+      const picked = await pickPhoneContact();
+      if (!picked) return;
+      if (picked.name) setFullName(picked.name);
+      if (picked.phone) setPhoneNumber(picked.phone);
+      if (!picked.phone) toast.warning('این مخاطب شماره موبایل ندارد');
+      else if (!/^09[0-9]{9}$/.test(picked.phone)) toast.warning('شماره این مخاطب موبایل ایران نیست؛ لطفاً بررسی کنید');
+      else toast.success('مشخصات مخاطب قرار گرفت');
+    } catch (error: any) {
+      if (error?.name !== 'AbortError') {
+        console.error('Contact picker error:', error);
+        toast.error('دسترسی به مخاطبین گوشی ممکن نشد');
+      }
+    } finally {
+      setPickingContact(false);
+    }
+  };
+
   const handleRegister = async () => {
     const normalizedPhone = normalizePhone(phoneNumber);
     
@@ -247,6 +274,18 @@ export default function SiteRegistrationModule() {
             )}
 
             <div className="space-y-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handlePickContact}
+                disabled={pickingContact}
+                className="w-full gap-2 border-dashed border-primary/50 text-primary"
+                aria-label="افزودن کاربر از مخاطبین گوشی"
+              >
+                {pickingContact ? <Loader2 className="h-4 w-4 animate-spin" /> : <Contact className="h-4 w-4" />}
+                افزودن از مخاطبین گوشی
+              </Button>
+
               <div className="space-y-2">
                 <Label htmlFor="fullName" className="flex items-center gap-2">
                   <User className="h-4 w-4" />
