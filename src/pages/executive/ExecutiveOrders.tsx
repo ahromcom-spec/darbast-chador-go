@@ -43,6 +43,7 @@ import { AddOrderFromExistingDialog } from '@/components/orders/AddOrderFromExis
 import { PlusCircle } from 'lucide-react';
 import { Layers } from 'lucide-react';
 import { isScaffoldingNoMaterials } from '@/lib/scaffoldingSubtype';
+import { rentalStartFromExecution } from '@/lib/executionRentalStart';
 
 // مراحل اجرایی سفارش - key برای UI، statusMapping برای status در دیتابیس، executionStageMapping برای execution_stage
 // IMPORTANT: pending_execution باید به status = 'pending_execution' در دیتابیس مپ شود
@@ -861,11 +862,22 @@ export default function ExecutiveOrders() {
         updateData.execution_end_date = executionDateIso;
       }
 
+      // تاریخ اجرای وارد‌شده در کادر «اجرا شد» همان تاریخ شروع کرایه داربست است
+      const stageOrder = orders.find(o => o.id === orderId);
+      const rentalStartIso = rentalStartFromExecution(
+        newStage,
+        executionDateIso,
+        !!stageOrder && isScaffoldingNoMaterials(stageOrder as any),
+      );
+      if (rentalStartIso) {
+        updateData.rental_start_date = rentalStartIso;
+      }
+
       const { data: updatedRows, error } = await supabase
         .from('projects_v3')
         .update(updateData)
         .eq('id', orderId)
-        .select('id,status,execution_stage,execution_stage_updated_at,approved_by,execution_start_date,execution_end_date,customer_completion_date,executive_completion_date');
+        .select('id,status,execution_stage,execution_stage_updated_at,approved_by,execution_start_date,execution_end_date,rental_start_date,customer_completion_date,executive_completion_date');
 
       if (error) {
         console.error('RLS/DB error updating stage:', error);
@@ -2771,7 +2783,7 @@ export default function ExecutiveOrders() {
                 <p className="text-xs text-muted-foreground">
                   {isNoMaterials
                     ? 'تاریخ و ساعت انجام نصب یا فک داربست فلزی را انتخاب کنید. این تاریخ در فاکتور و مراحل سفارش نمایش داده می‌شود.'
-                    : 'تاریخ و ساعت اجرای سفارش را انتخاب کنید. این تاریخ در پیامک اطلاع‌رسانی به مشتری ارسال می‌شود و بدون انتخاب آن تأیید مرحله ممکن نیست.'}
+                    : 'تاریخ و ساعت اجرای سفارش را انتخاب کنید. همین تاریخ به‌عنوان تاریخ شروع کرایه داربست ثبت و در پیامک برای مشتری ارسال می‌شود؛ بدون انتخاب آن تأیید مرحله ممکن نیست.'}
                 </p>
               </div>
             );
