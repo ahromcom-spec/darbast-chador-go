@@ -141,14 +141,70 @@ const MAX_AUTO_RETRIES = 5;
 // بازه رندوم تلاش مجدد: از ۵ تا ۱۲۰ ثانیه (برای جلوگیری از تجمع ارسال‌ها)
 const randomRetryDelayMs = () => (5 + Math.floor(Math.random() * 116)) * 1000;
 
-const handler = async (req: Request): Promise<Response> => {
+const jsonResponse = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...corsHeaders } });
+
+/**
+ * پیش‌نمایش پیامک‌های در صف: همان متنی که هنگام ارسال ساخته می‌شود را بدون ارسال، ثبت گزارش یا تأخیر برمی‌گرداند.
+ * دسترسی به ردیف‌ها با سطح دسترسی خود کاربر (RLS صف) سنجیده می‌شود.
+ */
+const handlePreview = async (req: Request, ids: unknown): Promise<Response> => {
+  const list = Array.isArray(ids)
+    ? ids.filter((v): v is string => typeof v === "string" && isSmsLogId(v)).slice(0, 100)
+    : [];
+  const authHeader = req.headers.get("Authorization") || "";
+  if (!authHeader.startsWith("Bearer ")) return jsonResponse({ error: "unauthorized" }, 401);
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const userClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } });
+  const { data: userData, error: userError } = await userClient.auth.getUser();
+  if (userError || !userData?.user) return jsonResponse({ error: "unauthorized" }, 401);
+  if (list.length === 0) return jsonResponse({ previews: {} });
+
+  const { data: rows, error } = await userClient
+    .from("scheduled_sms")
+    .select("id, phone, order_code, order_id, status_key, payload")
+    .in("id", list);
+  if (error) return jsonResponse({ error: error.message }, 400);
+
+  const previews: Record<string, { message?: string; note?: string }> = {};
+  for (const row of rows ?? []) {
+    try {
+      const body = {
+        ...((row.payload ?? {}) as Record<string, unknown>),
+        phone: row.phone,
+        orderCode: row.order_code,
+        orderId: row.order_id ?? undefined,
+        status: row.status_key,
+        bypassWindow: true,
+      };
+      const res = await handler(
+        new Request(req.url, { method: "POST", body: JSON.stringify(body) }),
+        { preview: true },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (typeof data?.previewMessage === "string") previews[row.id] = { message: data.previewMessage };
+      else previews[row.id] = { note: data?.message || data?.error || "متن پیامک ساخته نشد" };
+    } catch (e) {
+      previews[row.id] = { note: e instanceof Error ? e.message : String(e) };
+    }
+  }
+  return jsonResponse({ previews });
+};
+
+const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+  const isPreview = opts.preview === true;
 
   try {
-    const { phone, orderCode, orderId, status, serviceType, address, dateTime, amount, customerName, description, resendMessage, bypassWindow, retryCount, paidAmount, totalPaid, remainingAmount, logId, scheduledId }: SmsRequest = await req.json();
+    const reqBody = await req.json();
+    if (!isPreview && reqBody && Array.isArray(reqBody.previewScheduledIds)) {
+      return await handlePreview(req, reqBody.previewScheduledIds);
+    }
+    const { phone, orderCode, orderId, status, serviceType, address, dateTime, amount, customerName, description, resendMessage, bypassWindow, retryCount, paidAmount, totalPaid, remainingAmount, logId, scheduledId }: SmsRequest = reqBody;
     const isResend = typeof resendMessage === "string" && resendMessage.trim().length > 0;
     const attemptNo = Number(retryCount ?? 0);
 
@@ -335,7 +391,7 @@ const handler = async (req: Request): Promise<Response> => {
         dbTpl = tplRow;
         if (tplRow.enabled === false) {
           console.log(`[send-order-sms] Template ${status} disabled by admin, skipping SMS`);
-          await supabase.from("sms_logs").insert({
+          if (!isPreview) await supabase.from("sms_logs").insert({
             template_key: status, scope: tplRow.scope, recipient: normalizedPhone,
             message: "", status: "skipped", provider_response: "disabled by admin",
             order_code: orderCode, order_id: orderId ?? null,
@@ -364,11 +420,11 @@ const handler = async (req: Request): Promise<Response> => {
     // Conditional amount gating
     try {
       const cond = (dbTpl?.conditions ?? {}) as Record<string, any>;
-      const skipFor = (reason: string) => supabase.from("sms_logs").insert({
+      const skipFor = async (reason: string) => { if (isPreview) return; await supabase.from("sms_logs").insert({
         template_key: status, scope: dbTpl?.scope, recipient: normalizedPhone,
         message: "", status: "skipped", provider_response: reason,
         order_code: orderCode, order_id: orderId ?? null,
-      });
+      }); };
       if (typeof cond.minAmount === "number" && (amount ?? 0) < cond.minAmount) {
         await skipFor(`below minAmount ${cond.minAmount}`);
         return new Response(JSON.stringify({ success: true, message: "شرط حداقل مبلغ برقرار نیست" }),
@@ -533,6 +589,8 @@ const handler = async (req: Request): Promise<Response> => {
     if (!message.includes("ahrom.ir")) {
       message = `${message}\nahrom.ir`;
     }
+
+    if (isPreview) return jsonResponse({ previewMessage: message });
 
     // === تأخیر زمانی ===
     const delayMinutes = Number(dbTpl?.delay_minutes ?? 0);
@@ -827,4 +885,4 @@ const handler = async (req: Request): Promise<Response> => {
   }
 };
 
-serve(handler);
+serve((req) => handler(req));

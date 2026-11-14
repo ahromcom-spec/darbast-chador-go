@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -133,6 +133,9 @@ export default function SmsManagementModule() {
   const [logSearch, setLogSearch] = useState("");
   const [queueSearch, setQueueSearch] = useState("");
   const [customVars, setCustomVars] = useState<SmsCustomVariableRow[]>([]);
+  const [queuePreviews, setQueuePreviews] = useState<Record<string, { message?: string; note?: string }>>({});
+  const [queuePreviewLoading, setQueuePreviewLoading] = useState(false);
+  const requestedPreviewIds = useRef<Set<string>>(new Set());
 
   const loadCustomVars = async () => {
     const { data, error } = await supabase.from("sms_custom_variables").select("*").order("created_at");
@@ -256,7 +259,9 @@ export default function SmsManagementModule() {
       .eq("state", "pending")
       .order("send_after", { ascending: true })
       .limit(100);
-    if (!error) setQueue((data || []) as unknown as ScheduledSms[]);
+    const rows = (data || []) as unknown as ScheduledSms[];
+    if (!error) setQueue(rows);
+    return error ? [] : rows;
   };
 
   useEffect(() => { load(); }, []);
@@ -269,8 +274,32 @@ export default function SmsManagementModule() {
 
   const getQueueMessage = (row: ScheduledSms): string => {
     const p = row.payload || {};
-    return p.message || p.text || p.body || p.resendMessage || "";
+    return queuePreviews[row.id]?.message || p.message || p.text || p.body || p.resendMessage || "";
   };
+
+  // متن نهایی پیامک‌های در صف (همان متنی که هنگام ارسال ساخته می‌شود) از سرور گرفته می‌شود
+  const loadQueuePreviews = async (rows: ScheduledSms[], force = false) => {
+    const ids = rows
+      .map((r) => r.id)
+      .filter((id) => force || !requestedPreviewIds.current.has(id));
+    if (ids.length === 0) return;
+    ids.forEach((id) => requestedPreviewIds.current.add(id));
+    setQueuePreviewLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-order-sms", {
+        body: { previewScheduledIds: ids },
+      });
+      if (error) throw error;
+      const previews = ((data as any)?.previews || {}) as Record<string, { message?: string; note?: string }>;
+      setQueuePreviews((prev) => ({ ...prev, ...previews }));
+    } catch {
+      ids.forEach((id) => requestedPreviewIds.current.delete(id));
+    } finally {
+      setQueuePreviewLoading(false);
+    }
+  };
+
+  useEffect(() => { loadQueuePreviews(queue); }, [queue]);
 
 
   const merged = (item: SmsTemplate): SmsTemplate => ({ ...item, ...(drafts[item.id] || {}) });
@@ -381,7 +410,7 @@ export default function SmsManagementModule() {
     const lower = q.toLowerCase();
     return queue.filter((r) => {
       const p = r.payload || {};
-      const payloadText = [p.message, p.text, p.body, p.customerName, p.address, p.description].filter(Boolean).join(" ");
+      const payloadText = [queuePreviews[r.id]?.message, p.message, p.text, p.body, p.customerName, p.address, p.description].filter(Boolean).join(" ");
       return [
         r.phone,
         r.order_code,
@@ -390,7 +419,7 @@ export default function SmsManagementModule() {
         r.last_error,
       ].filter(Boolean).some((v) => String(v).toLowerCase().includes(lower));
     });
-  }, [queue, queueSearch]);
+  }, [queue, queueSearch, queuePreviews]);
 
   const renderItem = (item: SmsTemplate) => {
     const m = merged(item);
@@ -658,7 +687,12 @@ export default function SmsManagementModule() {
             <Card>
               <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
                 <CardTitle className="text-base">پیامک‌های در انتظار ارسال</CardTitle>
-                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={refreshQueue}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={async () => { const rows = await refreshQueue(); loadQueuePreviews(rows, true); }}
+                >
                   <RefreshCw className="h-3.5 w-3.5 ml-1" /> بارگذاری مجدد
                 </Button>
               </CardHeader>
@@ -684,15 +718,18 @@ export default function SmsManagementModule() {
                 </div>
                 <p className="text-xs text-muted-foreground mb-3">
                   پیامک‌های ناموفق به‌صورت خودکار با یک زمان تصادفی بین ۵ تا ۱۲۰ ثانیه دوباره ارسال می‌شوند (حداکثر ۵ تلاش).
-                  در صورت انصراف می‌توانید ارسال را لغو کنید.
+                  در صورت انصراف می‌توانید ارسال را لغو کنید. متن نمایش داده‌شده همان متنی است که با اطلاعات فعلی سفارش ارسال خواهد شد.
+                  {queuePreviewLoading && <Loader2 className="inline h-3 w-3 animate-spin mr-1" />}
                 </p>
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>زمان ارسال</TableHead>
                       <TableHead>گیرنده</TableHead>
+                      <TableHead>کارفرما</TableHead>
                       <TableHead>کلید</TableHead>
                       <TableHead>کد سفارش</TableHead>
+                      <TableHead>وضعیت</TableHead>
                       <TableHead className="min-w-[260px]">متن پیامک</TableHead>
                       <TableHead>تلاش</TableHead>
                       <TableHead>آخرین خطا</TableHead>
@@ -701,7 +738,7 @@ export default function SmsManagementModule() {
                   </TableHeader>
                   <TableBody>
                     {filteredQueue.length === 0 && (
-                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                      <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                         {queueSearch.trim() ? "موردی با این جستجو یافت نشد." : "پیامکی در انتظار ارسال نیست."}
                       </TableCell></TableRow>
                     )}
@@ -711,10 +748,20 @@ export default function SmsManagementModule() {
                           {new Date(row.send_after).toLocaleString("fa-IR")}
                         </TableCell>
                         <TableCell className="font-mono text-xs">{row.phone}</TableCell>
+                        <TableCell className="text-xs max-w-[140px] truncate" title={row.payload?.address || ""}>
+                          {row.payload?.customerName || "—"}
+                        </TableCell>
                         <TableCell><Badge variant="outline" className="font-mono text-[10px]">{row.status_key}</Badge></TableCell>
                         <TableCell className="font-mono text-xs">{row.order_code || "—"}</TableCell>
-                        <TableCell className="text-xs whitespace-pre-wrap max-w-[320px]" title={getQueueMessage(row)}>
-                          {getQueueMessage(row) || <span className="text-muted-foreground">—</span>}
+                        <TableCell>
+                          <Badge variant="secondary" className="whitespace-nowrap">در انتظار ارسال</Badge>
+                        </TableCell>
+                        <TableCell className="text-xs whitespace-pre-wrap max-w-[320px]">
+                          {getQueueMessage(row) || (
+                            <span className="text-muted-foreground">
+                              {queuePreviews[row.id]?.note || (queuePreviewLoading ? "در حال آماده‌سازی متن..." : "—")}
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="text-xs">
                           {Number(row.payload?.retryCount ?? 0) > 0
