@@ -1059,7 +1059,7 @@ export default function OrderDetail() {
   }
 
   const basePriceForPayment = isSeparatedOrder ? 0 : order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || parsedNotes?.manager_set_price || 0;
-  const grandTotalForPayment = order.total_price ?? (basePriceForPayment + approvedRepairCost + approvedRenewalCost);
+  const grandTotalForPayment = Number(order.total_price) > 0 ? Number(order.total_price) : (basePriceForPayment + approvedRepairCost + approvedRenewalCost);
   const rawPaidForPayment = totalPaid || order.total_paid || 0;
   const paidAmountForPayment = Math.min(Math.max(0, rawPaidForPayment), Math.max(0, grandTotalForPayment));
   const remainingAmountForPayment = Math.max(0, Math.max(0, grandTotalForPayment) - paidAmountForPayment);
@@ -2026,7 +2026,7 @@ export default function OrderDetail() {
                 {/* بلوک ۳: قیمت و جدول زمان‌بندی */}
                 {canViewFinancials && ((parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price) || order.payment_amount || approvedRepairCost > 0 || approvedRenewalCost > 0 || (isExpertPricingRequest && customerHasConfirmedPrice)) && (() => {
                   const basePrice = isSeparatedOrder ? 0 : order.payment_amount || parsedNotes?.estimated_price || parsedNotes?.estimatedPrice || parsedNotes?.total_price || parsedNotes?.manager_set_price || 0;
-                  const grandTotal = order.total_price ?? (basePrice + approvedRepairCost + approvedRenewalCost);
+                  const grandTotal = Number(order.total_price) > 0 ? Number(order.total_price) : (basePrice + approvedRepairCost + approvedRenewalCost);
                   const rawPaidAmount = totalPaid || order.total_paid || 0;
                   const paidAmount = Math.min(Math.max(0, rawPaidAmount), Math.max(0, grandTotal));
                   const remainingAmount = Math.max(0, Math.max(0, grandTotal) - paidAmount);

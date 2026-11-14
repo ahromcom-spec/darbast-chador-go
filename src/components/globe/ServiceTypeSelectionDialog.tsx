@@ -108,7 +108,10 @@ export function ServiceTypeSelectionDialog({
     const legacyRoute = serviceType?.code === '10'
       ? SUBCATEGORY_FORM_ROUTES[leaf.code || '']
       : undefined;
-    const formRoute = leaf.form_path || legacyRoute || '/service/form';
+    // خدمتی که در مدیریت خدمات پویا خاموش شده، قابل سفارش نیست
+    const formRoute = (leaf as { is_service_active?: boolean }).is_service_active === false
+      ? '/form-not-available'
+      : leaf.form_path || legacyRoute || '/service/form';
     onOpenChange(false);
     navigate(formRoute, {
       state: {

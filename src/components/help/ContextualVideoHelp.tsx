@@ -28,9 +28,13 @@ export const VideoBody = memo(({ video }: { video: HelpVideo }) => {
 
   useEffect(() => {
     let cancelled = false;
-    resolveHelpVideoUrl({ storage_path: storagePath, video_url: videoUrl } as HelpVideo).then((resolved) => {
-      if (!cancelled) setUrl(resolved);
-    });
+    resolveHelpVideoUrl({ storage_path: storagePath, video_url: videoUrl } as HelpVideo)
+      .then((resolved) => {
+        if (!cancelled) setUrl(resolved || videoUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setUrl(videoUrl);
+      });
     return () => {
       cancelled = true;
     };

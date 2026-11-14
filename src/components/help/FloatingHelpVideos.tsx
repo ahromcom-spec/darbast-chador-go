@@ -21,6 +21,15 @@ import { useGeneralManagerRole } from '@/hooks/useGeneralManagerRole';
 
 const clamp = (n: number) => Math.min(97, Math.max(0.5, n));
 
+/**
+ * مبنای مختصات: درصدی از اندازه پنجره (همان مبنای پیش‌نمایش انتخاب محل در مدیریت)،
+ * اندازه‌گیری‌شده از بالای خود صفحه؛ پس آیکون همان‌جا که مدیر گذاشته دیده می‌شود و با اسکرول حرکت می‌کند.
+ */
+const viewportBasis = () => ({
+  w: Math.max(1, document.documentElement.clientWidth || window.innerWidth),
+  h: Math.max(1, window.innerHeight),
+});
+
 /** محل ذخیره‌شده هر کاربر روی همان دستگاه (بدون دسترسی مدیریتی) */
 const localPosKey = (id: string, isMobile: boolean) =>
   `help-video-pos-${isMobile ? 'mobile' : 'desktop'}-${id}`;
@@ -103,15 +112,14 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
     []
   );
 
-  /** اندازه کل صفحه (نه فقط پنجره) تا کادر به خودِ صفحه بچسبد و با اسکرول حرکت کند */
+  /** اندازه پنجره به‌عنوان مبنای درصدها؛ کادر به خودِ صفحه می‌چسبد و با اسکرول حرکت می‌کند */
   const [docSize, setDocSize] = useState({ w: 1, h: 1 });
   useEffect(() => {
     // هنگام پخش فیلم اندازه‌گیری متوقف می‌شود تا صفحه دوباره‌سازی نشود و پخش مکث نکند
     if (open) return;
     const measure = () =>
       setDocSize((prev) => {
-        const w = Math.max(document.documentElement.scrollWidth, window.innerWidth);
-        const h = Math.max(document.documentElement.scrollHeight, window.innerHeight);
+        const { w, h } = viewportBasis();
         return prev.w === w && prev.h === h ? prev : { w, h };
       });
     measure();
@@ -124,11 +132,13 @@ const HelpBubble = ({ video, canManage }: BubbleProps) => {
   }, [open]);
 
   const applyPointer = useCallback((clientX: number, clientY: number) => {
-    const w = Math.max(document.documentElement.scrollWidth, window.innerWidth);
-    const h = Math.max(document.documentElement.scrollHeight, window.innerHeight);
+    const { w, h } = viewportBasis();
+    // حداکثر y تا انتهای خود صفحه (بر حسب درصدی از ارتفاع پنجره)
+    const docH = Math.max(document.documentElement.scrollHeight, h);
+    const maxY = Math.max(97, (docH / h) * 100 - 3);
     setPos({
       x: clamp(((clientX + window.scrollX) / w) * 100),
-      y: clamp(((clientY + window.scrollY) / h) * 100),
+      y: Math.min(maxY, Math.max(0.5, ((clientY + window.scrollY) / h) * 100)),
     });
   }, []);
 

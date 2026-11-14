@@ -64,8 +64,9 @@ export const resolveHelpVideoUrl = async (video: HelpVideo): Promise<string> => 
     .from(HELP_BUCKET)
     .createSignedUrl(video.storage_path, 60 * 60 * 6)
     .then(({ data, error }) => {
-      if (error) throw error;
-      const url = data?.signedUrl || video.video_url;
+      // اگر لینک امن ساخته نشد، به آدرس عادی فیلم برمی‌گردیم و چیزی کش نمی‌شود
+      if (error || !data?.signedUrl) return video.video_url;
+      const url = data.signedUrl;
       if (url) {
         resolvedUrlCache.set(cacheKey, {
           url,
@@ -75,6 +76,7 @@ export const resolveHelpVideoUrl = async (video: HelpVideo): Promise<string> => 
       }
       return url;
     })
+    .catch(() => video.video_url)
     .finally(() => pendingUrlRequests.delete(cacheKey));
 
   pendingUrlRequests.set(cacheKey, request);

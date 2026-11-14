@@ -365,6 +365,8 @@ serve(async (req: Request): Promise<Response> => {
       (m) => !results.some((r) => r.ok && r.url === m.url),
     );
 
+    // فیلم‌هایی که برای کاهش حجم در صف قرار گرفتند و بعداً خودکار ارسال می‌شوند
+    let mediaQueued = 0;
     if (safirKey && safirBotId && safirPhone) {
       for (const item of botMediaFailed) {
         const kind = isVideoUrl(item) ? "video" : "photo";
@@ -376,6 +378,7 @@ serve(async (req: Request): Promise<Response> => {
           if (alt) up = await safirUpload(alt);
           if (!up.fileId) {
             await queueCompression(item.url, up.size);
+            mediaQueued++;
             const r = {
               ok: false,
               raw: `حجم فیلم زیاد است؛ کاهش خودکار کیفیت و کوتاه‌کردن انتهای فیلم در صف قرار گرفت (${up.raw})`,
@@ -422,6 +425,7 @@ serve(async (req: Request): Promise<Response> => {
         chatId,
         mediaSent: mediaResults.filter((r) => r.ok).length,
         mediaFailed: mediaResults.filter((r) => !r.ok).length,
+        mediaQueued,
       }),
       {
         status: success ? 200 : 502,

@@ -14,16 +14,39 @@ const toJalali = (d: string | null) => {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  let claimedId: string | null = null;
+  let supabase: ReturnType<typeof createClient> | null = null;
+  // اگر ارسال انجام نشد، علامت «ارسال‌شده» برداشته می‌شود تا فایل گم نشود
+  const releaseClaim = async () => {
+    if (!claimedId || !supabase) return;
+    const id = claimedId;
+    claimedId = null;
+    await supabase.from("project_media").update({ bale_sent_at: null }).eq("id", id);
+  };
   try {
     const { media_id } = await req.json().catch(() => ({}));
     if (typeof media_id !== "string" || !/^[0-9a-f-]{36}$/i.test(media_id)) return json({ error: "invalid media_id" }, 400);
 
     const url = Deno.env.get("SUPABASE_URL")!;
     const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(url, key);
+    supabase = createClient(url, key);
 
     // کمی صبر تا تاریخ و توضیحات فایل هم ثبت شود
     await new Promise((r) => setTimeout(r, 15000));
+
+    // پیش از قفل‌کردن بررسی می‌شود تا فایل به اشتباه «ارسال‌شده» علامت نخورد
+    const { data: settings } = await supabase
+      .from("messenger_settings").select("enabled, send_media").eq("provider", "bale").maybeSingle();
+    if (!settings?.enabled || settings?.send_media === false) return json({ skipped: "disabled" });
+
+    const { data: mediaRow } = await supabase
+      .from("project_media").select("project_id, bale_sent_at").eq("id", media_id).maybeSingle();
+    if (!mediaRow) return json({ skipped: "not found" });
+    if (mediaRow.bale_sent_at) return json({ skipped: "already sent" });
+
+    const { data: order } = await supabase
+      .from("projects_v3").select("code, customer_phone, address, detailed_address").eq("id", mediaRow.project_id).maybeSingle();
+    if (!order?.customer_phone) return json({ skipped: "no phone" });
 
     // قفل: فقط یک بار ارسال
     const { data: claimed } = await supabase
@@ -34,10 +57,7 @@ Deno.serve(async (req) => {
       .select("id, project_id, file_path, file_type, file_size, content_hash, duration_seconds, media_date, description, created_at")
       .maybeSingle();
     if (!claimed) return json({ skipped: "already sent" });
-
-    const { data: settings } = await supabase
-      .from("messenger_settings").select("enabled, send_media").eq("provider", "bale").maybeSingle();
-    if (!settings?.enabled || settings?.send_media === false) return json({ skipped: "disabled" });
+    claimedId = claimed.id;
 
     // فایل تکراری همین سفارش که قبلاً فرستاده شده
     const { data: others } = await supabase
@@ -51,11 +71,7 @@ Deno.serve(async (req) => {
         String(o.media_date) === String(claimed.media_date) &&
         (!claimed.file_size || !o.file_size ||
           Math.abs(o.file_size - claimed.file_size) / Math.max(o.file_size, claimed.file_size) <= 0.03)));
-    if (dup) return json({ skipped: "duplicate" });
-
-    const { data: order } = await supabase
-      .from("projects_v3").select("code, customer_phone, address, detailed_address").eq("id", claimed.project_id).maybeSingle();
-    if (!order?.customer_phone) return json({ skipped: "no phone" });
+    if (dup) { claimedId = null; return json({ skipped: "duplicate" }); }
 
     // آخرین توضیحات ثبت‌شده را دوباره بخوان
     const { data: fresh } = await supabase
@@ -76,19 +92,44 @@ Deno.serve(async (req) => {
     if (description) lines.push(`توضیحات: ${description}`);
     lines.push("ahrom.ir");
 
-    const r = await fetch(`${url}/functions/v1/send-bale-message`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        phone: order.customer_phone,
-        text: lines.join("\n"),
-        media: [{ url: pub.publicUrl, type: isVideo ? "video" : "photo" }],
-        orderCode: order.code,
-        orderId: claimed.project_id,
-      }),
+    const payload = JSON.stringify({
+      phone: order.customer_phone,
+      text: lines.join("\n"),
+      media: [{ url: pub.publicUrl, type: isVideo ? "video" : "photo" }],
+      orderCode: order.code,
+      orderId: claimed.project_id,
     });
-    return json({ sent: r.ok });
+
+    // تا سه بار تلاش؛ فقط وقتی خود فایل تحویل شد «ارسال‌شده» می‌ماند
+    let delivered = false;
+    let lastStatus = 0;
+    for (let attempt = 1; attempt <= 3 && !delivered; attempt++) {
+      try {
+        const r = await fetch(`${url}/functions/v1/send-bale-message`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+          body: payload,
+        });
+        lastStatus = r.status;
+        const body = await r.json().catch(() => ({} as any));
+        // فیلم حجیمی که برای کاهش حجم در صف رفته، بعداً خودکار ارسال می‌شود و تحویل‌شده حساب می‌شود
+        const failed = Number(body?.mediaFailed) || 0;
+        const queued = Number(body?.mediaQueued) || 0;
+        delivered = (r.ok || queued > 0) && failed - queued <= 0;
+      } catch (_) {
+        delivered = false;
+      }
+      if (!delivered && attempt < 3) await new Promise((res) => setTimeout(res, attempt * 5000));
+    }
+
+    if (!delivered) {
+      await releaseClaim();
+      return json({ sent: false, status: lastStatus }, 502);
+    }
+    claimedId = null;
+    return json({ sent: true });
   } catch (e) {
+    await releaseClaim();
     return json({ error: String(e) }, 500);
   }
 });
