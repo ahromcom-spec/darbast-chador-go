@@ -77,9 +77,10 @@ export function isPersonnelCode(value: string): boolean {
  * otherwise the phone number; legacy rows fall back to the old id-derived code.
  */
 export function hrStaffCode(employee: { id?: string | null; phone_number?: string | null; personnel_code?: string | null }): string {
-  const code = String(employee.personnel_code || '').trim();
-  if (code) return code;
+  // شماره موبایل اولویت دارد؛ کد پرسنلی فقط برای نیروهای بدون شماره است
   const phone = String(employee.phone_number || '').trim();
   if (phone) return phone;
+  const code = String(employee.personnel_code || '').trim();
+  if (code) return code;
   return employee.id ? `HR-${String(employee.id).slice(-6)}` : '';
 }

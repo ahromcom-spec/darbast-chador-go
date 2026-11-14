@@ -41,6 +41,9 @@ describe('HR personnel code', () => {
   test('staff with a phone and no personnel code use the phone', () => {
     assert.equal(hrStaffCode({ id: 'x', phone_number: '09125511652', personnel_code: null }), '09125511652');
   });
+  test('staff who later get a phone use the phone instead of their personnel code', () => {
+    assert.equal(hrStaffCode({ id: 'x', phone_number: '09199842554', personnel_code: '97527557' }), '09199842554');
+  });
   test('a personnel code is exactly 8 digits', () => {
     assert.equal(isPersonnelCode('37631919'), true);
     assert.equal(isPersonnelCode('3763191'), false);
