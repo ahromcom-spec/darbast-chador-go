@@ -25,3 +25,5 @@
 - [x] Verify repeated separation, original settled invoice preservation and independent payments.
 - [x] Show order-specific daily activity and report notes below order details for management and customers.
 - [x] Verify historical report visibility and order-scoped access.
+- [x] Add manager-built custom SMS elements (order/payment/renewal/collection dates and amounts) with live preview; deposit date uses the date chosen at payment registration. 7 tests pass; tab, element buttons and preview verified in browser with a sample element.
+- [ ] Verify creating an element and receiving it in a real SMS — the preview account has no manager role, so saving was correctly refused.

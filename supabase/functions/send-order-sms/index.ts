@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { applySmsCustomVariables, usedSmsCustomVariables, type SmsCustomVariable, type SmsOrderSnapshot } from "../_shared/smsCustomVariables.ts";
 import { canReuseSmsLog, isSmsLogId } from "../_shared/smsRetryLog.ts";
 
 const corsHeaders = {
@@ -475,6 +476,34 @@ const handler = async (req: Request): Promise<Response> => {
       .replaceAll("{totalPaid}", fmtMoney(resolvedTotalPaid))
       .replaceAll("{remainingAmount}", fmtMoney(resolvedRemaining))
       .replaceAll("{description}", (description || "").toString().trim() || "ثبت نشده");
+
+    // === المان‌های سفارشی ساخته‌شده توسط مدیریت در ماژول پیامک‌ها ===
+    if (!isResend) {
+      try {
+        const { data: customVars } = await supabase
+          .from("sms_custom_variables")
+          .select("token, source_key, format, fallback, prefix, suffix, enabled");
+        const used = usedSmsCustomVariables(message, (customVars || []) as SmsCustomVariable[]);
+        if (used.length > 0) {
+          const snapshot: SmsOrderSnapshot = { order: null, payments: [], renewals: [], collection: null };
+          if (orderId) {
+            const [{ data: ordFull }, { data: pays }, { data: rens }, { data: colReq }] = await Promise.all([
+              supabase.from("projects_v3").select("created_at, approved_at, execution_start_date, execution_end_date, rental_start_date, rental_end_date, executive_completion_date, customer_completion_date, closed_at, payment_confirmed_at, total_price, total_paid, discount_amount, stage_note").eq("id", orderId).maybeSingle(),
+              supabase.from("order_payments").select("amount, payment_date, created_at, receipt_number").eq("order_id", orderId).order("created_at", { ascending: false }).limit(200),
+              supabase.from("order_renewals").select("renewal_number, new_start_date, new_end_date, renewal_price, status, created_at").or(`order_id.eq.${orderId},billing_order_id.eq.${orderId}`).limit(200),
+              supabase.from("collection_requests").select("requested_date, confirmed_date, completed_at, created_at").eq("order_id", orderId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+            ]);
+            snapshot.order = (ordFull as any) || null;
+            snapshot.payments = (pays || []) as any;
+            snapshot.renewals = (rens || []) as any;
+            snapshot.collection = (colReq as any) || null;
+          }
+          message = applySmsCustomVariables(message, used, snapshot);
+        }
+      } catch (e) {
+        console.warn("[send-order-sms] Could not resolve custom variables:", e);
+      }
+    }
 
     // ارسال مجدد: تاریخ و ساعت داخل متن با تاریخ جدید جایگزین شود
     if (isResend) {

@@ -5946,6 +5946,51 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_custom_variables: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          enabled: boolean
+          fallback: string
+          format: string
+          id: string
+          label: string
+          prefix: string
+          source_key: string
+          suffix: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          fallback?: string
+          format?: string
+          id?: string
+          label: string
+          prefix?: string
+          source_key: string
+          suffix?: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          fallback?: string
+          format?: string
+          id?: string
+          label?: string
+          prefix?: string
+          source_key?: string
+          suffix?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sms_logs: {
         Row: {
           attempts: number

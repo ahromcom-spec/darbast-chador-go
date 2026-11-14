@@ -14,6 +14,8 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { BaleMessengerTab } from "@/components/ceo/BaleMessengerTab";
+import { SmsCustomVariablesTab, SAMPLE_SMS_SNAPSHOT, type SmsCustomVariableRow } from "@/components/ceo/SmsCustomVariablesTab";
+import { applySmsCustomVariables } from "../../../supabase/functions/_shared/smsCustomVariables";
 import {
   Loader2, MessageSquare, Save, RefreshCw, Smartphone, Send, AlertCircle,
   CheckCircle2, XCircle, Lock, RotateCcw, Wallet, Clock, Settings2,
@@ -80,7 +82,7 @@ const PLACEHOLDERS: { token: string; label: string }[] = [
   { token: "{executionDate}", label: "تاریخ اجرای سفارش" },
   { token: "{collectionDate}", label: "تاریخ درخواست جمع‌آوری" },
   { token: "{completionDate}", label: "تاریخ اتمام سفارش" },
-  { token: "{paymentDate}", label: "تاریخ پرداخت" },
+  { token: "{paymentDate}", label: "تاریخ واریز آخرین پرداخت (همان تاریخی که در ثبت پرداخت انتخاب شده)" },
   { token: "{paidAmount}", label: "مبلغ همین پرداخت" },
   { token: "{totalPaid}", label: "مجموع پرداخت‌شده" },
   { token: "{remainingAmount}", label: "مانده سفارش" },
@@ -130,6 +132,13 @@ export default function SmsManagementModule() {
   const [canceling, setCanceling] = useState<string | null>(null);
   const [logSearch, setLogSearch] = useState("");
   const [queueSearch, setQueueSearch] = useState("");
+  const [customVars, setCustomVars] = useState<SmsCustomVariableRow[]>([]);
+
+  const loadCustomVars = async () => {
+    const { data, error } = await supabase.from("sms_custom_variables").select("*").order("created_at");
+    if (!error) setCustomVars((data || []) as SmsCustomVariableRow[]);
+  };
+  useEffect(() => { loadCustomVars(); }, []);
 
   const cancelScheduled = async (row: ScheduledSms) => {
     setCanceling(row.id);
@@ -279,11 +288,20 @@ export default function SmsManagementModule() {
       .replace(/\{amount\}/g, "۲٬۵۰۰٬۰۰۰")
       .replace(/\{orderLink\}/g, "https://ahrom.ir/orders/123")
       .replace(/\{description\}/g, "اجرای داربست نما ۱۲ متر طول × ۶ متر ارتفاع")
-      .replace(/\{paymentLink\}/g, "https://ahrom.ir/user/orders/123?pay=1");
+      .replace(/\{paymentLink\}/g, "https://ahrom.ir/user/orders/123?pay=1")
+      .replace(/\{rentalStartDate\}/g, "1405/07/20")
+      .replace(/\{executionDate\}/g, "1405/07/20")
+      .replace(/\{collectionDate\}/g, "1405/09/20")
+      .replace(/\{completionDate\}/g, "1405/09/22")
+      .replace(/\{paymentDate\}/g, "1405/08/12")
+      .replace(/\{paidAmount\}/g, "۵٬۰۰۰٬۰۰۰ تومان")
+      .replace(/\{totalPaid\}/g, "۱۵٬۰۰۰٬۰۰۰ تومان")
+      .replace(/\{remainingAmount\}/g, "۱۰٬۰۰۰٬۰۰۰ تومان");
+    const bodyWithCustom = applySmsCustomVariables(body, customVars, SAMPLE_SMS_SNAPSHOT);
 
     const footer = (m.footer || BRAND_FOOTER).trim() || BRAND_FOOTER;
     const header = "خدمات ساختمانی و منزل اهرم";
-    const withHeader = body.startsWith(header) ? body : `${header}\n${body}`;
+    const withHeader = bodyWithCustom.startsWith(header) ? bodyWithCustom : `${header}\n${bodyWithCustom}`;
     return withHeader + (m.append_footer ? `\n${footer}` : "") + (!withHeader.includes("ahrom.ir") && !m.append_footer ? `\n${BRAND_FOOTER}` : "");
   };
 
@@ -451,6 +469,16 @@ export default function SmsManagementModule() {
                       {p.token}
                     </Button>
                   ))}
+                  {customVars.filter((v) => v.enabled).map((v) => (
+                    <Button
+                      key={v.id}
+                      type="button" size="sm" variant="secondary" className="h-7 text-xs border border-primary/40"
+                      title={`المان سفارشی: ${v.label}`}
+                      onClick={() => setDraft(item.id, { template: (m.template || "") + " {" + v.token + "}" })}
+                    >
+                      {`{${v.token}}`}
+                    </Button>
+                  ))}
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-2 leading-5 flex items-start gap-1">
                   <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
@@ -612,13 +640,17 @@ export default function SmsManagementModule() {
         </div>
       ) : (
         <Tabs defaultValue="customer" className="w-full">
-          <TabsList>
+          <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="customer">پیامک‌های مشتری ({groups.customer?.length || 0})</TabsTrigger>
             <TabsTrigger value="ceo">پیامک‌های مدیرعامل ({groups.ceo?.length || 0})</TabsTrigger>
             <TabsTrigger value="logs">گزارش ارسال ({logs.length})</TabsTrigger>
             <TabsTrigger value="queue">در انتظار ارسال ({queue.length})</TabsTrigger>
             <TabsTrigger value="bale">پیامرسان بله</TabsTrigger>
+            <TabsTrigger value="custom-vars">المان‌های سفارشی ({customVars.length})</TabsTrigger>
           </TabsList>
+          <TabsContent value="custom-vars" className="mt-4">
+            <SmsCustomVariablesTab variables={customVars} onChanged={loadCustomVars} />
+          </TabsContent>
           <TabsContent value="bale" className="mt-4">
             <BaleMessengerTab />
           </TabsContent>
