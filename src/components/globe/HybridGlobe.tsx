@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useProjectsHierarchy } from '@/hooks/useProjectsHierarchy';
 import { supabase } from '@/integrations/supabase/client';
+import { deleteCustomerLocation, LocationHasActiveOrdersError } from '@/lib/locationDeletion';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { OptimizedImage } from './OptimizedImage';
@@ -658,12 +659,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
 
     try {
       setIsDeleting(true);
-      const { error } = await supabase
-        .from('locations')
-        .update({ is_active: false })
-        .eq('id', locationId);
-      
-      if (error) throw error;
+      await deleteCustomerLocation(locationId);
       
       toast({
         title: 'موفق',
@@ -678,7 +674,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
       console.error('خطا در حذف آدرس:', error);
       toast({
         title: 'خطا',
-        description: 'خطا در حذف آدرس',
+        description: error instanceof LocationHasActiveOrdersError ? error.message : 'خطا در حذف آدرس',
         variant: 'destructive'
       });
     } finally {
@@ -3753,7 +3749,7 @@ export default function HybridGlobe({ onClose, activeExecutionOnly = false, embe
           <DialogHeader>
             <DialogTitle>حذف آدرس</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">آיا از حذف این آدرس اطمینان دارید؟ این عملیات قابل بازگشت نیست.</p>
+          <p className="text-sm text-muted-foreground">آیا از حذف این آدرس اطمینان دارید؟ این عملیات قابل بازگشت نیست و سفارش‌های در انتظار تایید این آدرس هم حذف می‌شوند.</p>
           <div className="flex gap-2 justify-end mt-4">
             <Button variant="outline" onClick={() => setDeleteLocationId(null)} disabled={isDeleting}>
               انصراف

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { deleteCustomerLocation, LocationHasActiveOrdersError } from '@/lib/locationDeletion';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -156,11 +157,14 @@ export const useLocations = () => {
   };
 
   const deleteLocation = async (id: string) => {
-    // حذف نرم: آدرس را غیرفعال می‌کنیم تا از لیست خارج شود و وابستگی‌های پروژه‌ها حفظ شود
-    const { error: softError } = await supabase
-      .from('locations')
-      .update({ is_active: false })
-      .eq('id', id);
+    // حذف نرم همراه سفارش‌های در انتظار تایید تا آدرس دوباره ظاهر نشود
+    let softError: unknown = null;
+    try {
+      await deleteCustomerLocation(id);
+    } catch (e) {
+      if (e instanceof LocationHasActiveOrdersError) throw e;
+      softError = e;
+    }
 
     if (softError) {
       // در صورتی که به هر دلیل آپدیت ناموفق بود، تلاش برای حذف سخت (در صورت نبود وابستگی)

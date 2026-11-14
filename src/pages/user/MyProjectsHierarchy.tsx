@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { calculateTotalFromDimensions } from '@/lib/dimensionCalculations';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { deleteCustomerLocation, LocationHasActiveOrdersError } from '@/lib/locationDeletion';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -474,19 +475,14 @@ export default function MyProjectsHierarchy() {
     
     setIsDeletingLocation(true);
     try {
-      const { error } = await supabase
-        .from('locations')
-        .update({ is_active: false })
-        .eq('id', deleteLocationId);
-
-      if (error) throw error;
+      await deleteCustomerLocation(deleteLocationId);
 
       toast.success("آدرس با موفقیت حذف شد");
       setDeleteLocationId(null);
       await fetchHierarchyData();
     } catch (error: any) {
       console.error('Error deleting location:', error);
-      toast.error("خطا در حذف آدرس");
+      toast.error(error instanceof LocationHasActiveOrdersError ? error.message : "خطا در حذف آدرس");
     } finally {
       setIsDeletingLocation(false);
     }
@@ -1045,7 +1041,7 @@ export default function MyProjectsHierarchy() {
           <AlertDialogHeader>
             <AlertDialogTitle>حذف آدرس</AlertDialogTitle>
             <AlertDialogDescription>
-              آیا مطمئن هستید می‌خواهید این آدرس را حذف کنید؟ این عملیات قابل بازگشت نیست و آدرس از نقشه نیز حذف خواهد شد. توجه: فقط آدرس‌هایی که پروژه‌ای ندارند قابل حذف هستند.
+              آیا مطمئن هستید می‌خواهید این آدرس را حذف کنید؟ این عملیات قابل بازگشت نیست و آدرس از نقشه نیز حذف خواهد شد. سفارش‌های در انتظار تایید این آدرس هم حذف می‌شوند؛ آدرسی که سفارش تاییدشده یا بایگانی‌شده دارد قابل حذف نیست.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
