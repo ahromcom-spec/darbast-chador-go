@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { canReuseSmsLog, isSmsLogId } from "../_shared/smsRetryLog.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -130,6 +131,8 @@ interface SmsRequest {
   totalPaid?: number; // مجموع پرداخت‌شده تا کنون
   remainingAmount?: number; // مانده سفارش
   retryCount?: number; // شمارش تلاش‌های خودکار مجدد در صورت ناموفق بودن
+  logId?: string; // ردیف گزارش همین پیامک؛ تلاش‌های بعدی همان ردیف را به‌روز می‌کنند
+  scheduledId?: string; // ردیف صف همین پیامک؛ تلاش مجدد همان ردیف را دوباره در صف می‌گذارد
 }
 
 // حداکثر تلاش خودکار مجدد در صورت ناموفق بودن ارسال
@@ -144,7 +147,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { phone, orderCode, orderId, status, serviceType, address, dateTime, amount, customerName, description, resendMessage, bypassWindow, retryCount, paidAmount, totalPaid, remainingAmount }: SmsRequest = await req.json();
+    const { phone, orderCode, orderId, status, serviceType, address, dateTime, amount, customerName, description, resendMessage, bypassWindow, retryCount, paidAmount, totalPaid, remainingAmount, logId, scheduledId }: SmsRequest = await req.json();
     const isResend = typeof resendMessage === "string" && resendMessage.trim().length > 0;
     const attemptNo = Number(retryCount ?? 0);
 
@@ -644,18 +647,43 @@ const handler = async (req: Request): Promise<Response> => {
       `[send-order-sms] ParsGreen response (status ${smsResponse.status}): ${responseText.slice(0, 300)}`
     );
 
-    // Audit log
+    // Audit log — هر پیامک فقط یک ردیف دارد؛ تلاش‌های مجدد همان ردیف ناموفق را به‌روز می‌کنند
+    let currentLogId: string | null = null;
     try {
-      await supabase.from("sms_logs").insert({
-        template_key: status,
-        scope: dbTpl?.scope,
-        recipient: normalizedPhone,
+      const logFields = {
         message,
         status: isSuccess ? "sent" : "failed",
         provider_response: responseText.slice(0, 500),
-        order_code: orderCode,
-        order_id: orderId ?? null,
-      });
+        last_attempt_at: new Date().toISOString(),
+      };
+      if (isSmsLogId(logId)) {
+        const { data: existing } = await supabase
+          .from("sms_logs")
+          .select("id, recipient, status, attempts")
+          .eq("id", logId)
+          .maybeSingle();
+        if (canReuseSmsLog(existing as any, normalizedPhone)) {
+          const { data: updated } = await supabase
+            .from("sms_logs")
+            .update({ ...logFields, attempts: Number((existing as any).attempts ?? 1) + 1 })
+            .eq("id", logId)
+            .eq("status", "failed")
+            .select("id")
+            .maybeSingle();
+          if (updated) currentLogId = updated.id;
+        }
+      }
+      if (!currentLogId) {
+        const { data: inserted } = await supabase.from("sms_logs").insert({
+          ...logFields,
+          template_key: status,
+          scope: dbTpl?.scope,
+          recipient: normalizedPhone,
+          order_code: orderCode,
+          order_id: orderId ?? null,
+        }).select("id").maybeSingle();
+        currentLogId = inserted?.id ?? null;
+      }
     } catch (e) {
       console.warn("[send-order-sms] Failed to write sms_logs:", e);
     }
@@ -672,20 +700,21 @@ const handler = async (req: Request): Promise<Response> => {
 
     // === تلاش خودکار مجدد با زمان رندوم (۵ تا ۱۲۰ ثانیه) ===
     let retryAt: string | null = null;
+    let requeued = false;
     if (attemptNo < MAX_AUTO_RETRIES) {
       try {
         const sendAfter = new Date(Date.now() + randomRetryDelayMs()).toISOString();
 
         // اگر برای همین سفارش و همین مرحله تلاش مجددی در صف است، رکورد جدید ساخته نشود
-        const { data: pendingRetry } = await supabase
+        let pendingQuery = supabase
           .from("scheduled_sms")
           .select("id")
           .eq("phone", normalizedPhone)
           .eq("order_code", orderCode)
           .eq("status_key", status)
-          .eq("state", "pending")
-          .limit(1)
-          .maybeSingle();
+          .eq("state", "pending");
+        if (isSmsLogId(scheduledId)) pendingQuery = pendingQuery.neq("id", scheduledId);
+        const { data: pendingRetry } = await pendingQuery.limit(1).maybeSingle();
 
         if (pendingRetry) {
           console.log("[send-order-sms] Retry already queued, skipping duplicate retry");
@@ -695,29 +724,50 @@ const handler = async (req: Request): Promise<Response> => {
           );
         }
 
-        const { error: retryError } = await supabase.from("scheduled_sms").insert({
-          phone: normalizedPhone,
-          order_code: orderCode,
+        const retryPayload = {
+          serviceType,
+          address,
+          amount,
+          customerName,
+          description,
+          // متن نهایی حفظ می‌شود تا پیام مجدد دقیقاً همان پیام باشد
+          resendMessage: message,
+          retryCount: attemptNo + 1,
+          // تلاش بعدی همین ردیف گزارش را به‌روز می‌کند تا پیام تکراری ناموفق ساخته نشود
+          logId: currentLogId ?? undefined,
+        };
+        const retryLastError = `retry ${attemptNo + 1}/${MAX_AUTO_RETRIES}: ${responseText.slice(0, 200)}`;
 
-          order_id: orderId ?? null,
-          status_key: status,
-          payload: {
-            serviceType,
-            address,
-            amount,
-            customerName,
-            description,
-            // متن نهایی حفظ می‌شود تا پیام مجدد دقیقاً همان پیام باشد
-            resendMessage: message,
-            retryCount: attemptNo + 1,
-          },
-          send_after: sendAfter,
-          last_error: `retry ${attemptNo + 1}/${MAX_AUTO_RETRIES}: ${responseText.slice(0, 200)}`,
-        });
+        let retryError: unknown = null;
+        let requeuedSameRow = false;
+        if (isSmsLogId(scheduledId)) {
+          // همان ردیف صف دوباره در انتظار ارسال قرار می‌گیرد
+          const { data: requeuedRow, error } = await supabase
+            .from("scheduled_sms")
+            .update({ state: "pending", payload: retryPayload, send_after: sendAfter, last_error: retryLastError })
+            .eq("id", scheduledId)
+            .select("id")
+            .maybeSingle();
+          retryError = error;
+          requeuedSameRow = !!requeuedRow;
+        }
+        if (!requeuedSameRow && !retryError) {
+          const { error } = await supabase.from("scheduled_sms").insert({
+            phone: normalizedPhone,
+            order_code: orderCode,
+            order_id: orderId ?? null,
+            status_key: status,
+            payload: retryPayload,
+            send_after: sendAfter,
+            last_error: retryLastError,
+          });
+          retryError = error;
+        }
         if (retryError) {
           console.warn("[send-order-sms] Could not queue retry:", retryError);
         } else {
           retryAt = sendAfter;
+          requeued = requeuedSameRow;
           console.log(`[send-order-sms] Retry #${attemptNo + 1} queued for ${sendAfter}`);
         }
       } catch (e) {
@@ -732,6 +782,8 @@ const handler = async (req: Request): Promise<Response> => {
         details: responseText.slice(0, 300),
         retryScheduledFor: retryAt,
         retryCount: retryAt ? attemptNo + 1 : attemptNo,
+        requeued,
+        logId: currentLogId,
       }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );

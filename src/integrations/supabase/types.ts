@@ -5948,8 +5948,10 @@ export type Database = {
       }
       sms_logs: {
         Row: {
+          attempts: number
           created_at: string
           id: string
+          last_attempt_at: string
           message: string
           order_code: string | null
           order_id: string | null
@@ -5960,8 +5962,10 @@ export type Database = {
           template_key: string | null
         }
         Insert: {
+          attempts?: number
           created_at?: string
           id?: string
+          last_attempt_at?: string
           message: string
           order_code?: string | null
           order_id?: string | null
@@ -5972,8 +5976,10 @@ export type Database = {
           template_key?: string | null
         }
         Update: {
+          attempts?: number
           created_at?: string
           id?: string
+          last_attempt_at?: string
           message?: string
           order_code?: string | null
           order_id?: string | null

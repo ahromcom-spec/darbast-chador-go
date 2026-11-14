@@ -45,6 +45,8 @@ interface SmsLog {
   order_code: string | null;
   provider_response: string | null;
   created_at: string;
+  attempts?: number | null;
+  last_attempt_at?: string | null;
   customer_name?: string | null;
   address?: string | null;
   detailed_address?: string | null;
@@ -161,6 +163,8 @@ export default function SmsManagementModule() {
           orderCode: l.order_code || "-",
           status: l.template_key || "resend",
           resendMessage: l.message,
+          // ارسال مجدد پیام ناموفق همان ردیف را به‌روز می‌کند و ردیف تکراری نمی‌سازد
+          ...(l.status === "failed" ? { logId: l.id } : {}),
         },
       });
       if (error) throw error;
@@ -328,6 +332,12 @@ export default function SmsManagementModule() {
     for (const it of items) (g[it.scope] || (g[it.scope] = [])).push(it);
     return g;
   }, [items]);
+
+  // پیام‌های ناموفقی که تلاش مجدد خودکارشان هنوز در صف است
+  const retryingLogIds = useMemo(
+    () => new Set(queue.map((q) => q.payload?.logId).filter((v): v is string => typeof v === "string")),
+    [queue],
+  );
 
   const filteredLogs = useMemo(() => {
     const q = logSearch.trim();
@@ -774,7 +784,17 @@ export default function SmsManagementModule() {
                         <TableCell className="font-mono text-xs">{l.order_code || "—"}</TableCell>
                         <TableCell>
                           {l.status === "sent" && <Badge className="bg-green-600 hover:bg-green-600">ارسال شد</Badge>}
-                          {l.status === "failed" && <Badge variant="destructive">ناموفق</Badge>}
+                          {l.status === "failed" && (
+                            <Badge variant="destructive" className="whitespace-nowrap">
+                              {retryingLogIds.has(l.id) ? "در حال تلاش مجدد" : "ناموفق"}
+                            </Badge>
+                          )}
+                          {Number(l.attempts ?? 1) > 1 && (
+                            <div className="text-[10px] text-muted-foreground mt-1 whitespace-nowrap">
+                              {Number(l.attempts).toLocaleString("fa-IR")} تلاش
+                              {l.last_attempt_at && <> · آخرین {new Date(l.last_attempt_at).toLocaleTimeString("fa-IR", { hour: "2-digit", minute: "2-digit" })}</>}
+                            </div>
+                          )}
                           {l.status === "skipped" && <Badge variant="secondary">رد شد</Badge>}
                         </TableCell>
                         <TableCell className="text-xs whitespace-pre-wrap max-w-[320px]">{l.message}</TableCell>

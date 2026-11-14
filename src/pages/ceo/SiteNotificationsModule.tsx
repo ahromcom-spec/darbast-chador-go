@@ -302,7 +302,16 @@ export default function SiteNotificationsModule() {
 
     const isOk = (s?: string | null) => s === 'sent' || s === 'success';
 
-    const smsRows: NotificationRow[] = logs.map((l: any) => ({
+    // هر پیامک فقط یک ردیف: تلاش‌های مجدد خودکار با ردیف گزارش همان پیام یکی می‌شوند
+    const retryLogIds = new Set<string>(
+      queue
+        .filter((q: any) => q.state === 'pending' || q.state === 'sending')
+        .map((q: any) => q.payload?.logId)
+        .filter((v: unknown): v is string => typeof v === 'string'),
+    );
+    const loggedIds = new Set<string>(logs.map((l: any) => l.id));
+
+    const smsRows: NotificationRow[] = logs.filter((l: any) => !retryLogIds.has(l.id)).map((l: any) => ({
       id: `sms-${l.id}`,
       event_type: isOk(l.status) ? 'sms_sent' : 'sms_failed',
       title: `${isOk(l.status) ? 'پیامک به' : 'پیامک ناموفق به'} ${nameByPhone[l.recipient] || l.recipient}`,
@@ -321,10 +330,12 @@ export default function SiteNotificationsModule() {
 
     const queueRows: NotificationRow[] = queue
       .filter((q: any) => q.state !== 'sent')
+      // تلاش نهایی ناموفق از قبل در ردیف گزارش همان پیام دیده می‌شود
+      .filter((q: any) => !(q.state === 'failed' && loggedIds.has(q.payload?.logId)))
       .map((q: any) => {
         const failed = q.state === 'failed' || q.state === 'error' || q.state === 'canceled';
         const text =
-          (q.payload && (q.payload.message || q.payload.text || q.payload.body)) ||
+          (q.payload && (q.payload.message || q.payload.text || q.payload.body || q.payload.resendMessage)) ||
           `پیامک ${q.status_key || ''}`.trim();
         return {
           id: `smsq-${q.id}`,

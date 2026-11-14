@@ -92,6 +92,13 @@
       "when": 1794615058834,
       "tag": "0012_hr_staff_code_follows_phone",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794618857042,
+      "tag": "0013_merge_sms_retry_logs",
+      "breakpoints": true
     }
   ]
 }

@@ -56,13 +56,21 @@ serve(async (req: Request): Promise<Response> => {
             orderId: row.order_id ?? undefined,
             status: row.status_key,
             bypassWindow: true,
+            // تلاش مجدد همین ردیف صف را دوباره در انتظار می‌گذارد، نه یک ردیف جدید
+            scheduledId: row.id,
           }),
         });
 
         const text = await res.text();
         if (!res.ok) {
           console.error(`[dispatch-scheduled-sms] send failed [${res.status}]: ${text}`);
-          // خود تابع ارسال، تلاش مجدد با زمان رندوم را در صف قرار می‌دهد
+          // خود تابع ارسال، تلاش مجدد را روی همین ردیف صف قرار می‌دهد؛ در این حالت ردیف ناموفق علامت نمی‌خورد
+          let requeued = false;
+          try { requeued = JSON.parse(text)?.requeued === true; } catch { /* non-JSON */ }
+          if (requeued) {
+            results.push({ id: row.id, ok: false, error: `${res.status} (retry queued)` });
+            continue;
+          }
           await supabase
             .from("scheduled_sms")
             .update({
