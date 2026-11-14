@@ -159,6 +159,8 @@ export default function SmsManagementModule() {
   const [variantServices, setVariantServices] = useState<string[]>([]);
   const [creatingVariant, setCreatingVariant] = useState(false);
   const [logService, setLogService] = useState<string>("all");
+  // تب فعال پس از بارگذاری مجدد (مثلاً بعد از ذخیره قاب) حفظ می‌شود
+  const [activeTab, setActiveTab] = useState("customer");
 
   const loadServices = async () => {
     const { data } = await supabase
@@ -1001,7 +1003,7 @@ export default function SmsManagementModule() {
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <Tabs defaultValue="customer" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="customer">پیامک‌های مشتری ({groups.customer?.length || 0})</TabsTrigger>
             <TabsTrigger value="ceo">پیامک‌های مدیرعامل ({groups.ceo?.length || 0})</TabsTrigger>

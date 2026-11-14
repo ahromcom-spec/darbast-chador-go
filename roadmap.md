@@ -30,3 +30,6 @@
 
 - [x] SMS templates per service: general vs service-specific filters, target/exclude services, per-stage service variants, per-service coverage overview, log service filter; sender picks the matching variant. 7 selection tests pass; filters, variant dialog and coverage verified in browser with a temporary variant (removed).
 - [ ] Verify creating/saving a service-specific message and a real SMS using it — preview account has no manager role.
+
+- [x] Custom message frames: managers choose stage (12 stages incl. rejection), services, recipients (customer, collaborators, management roles, custom phones), window/delay/amount conditions. 12 rule tests pass; manager UI create/delete and queued-frame preview verified with a blocked test number; no real SMS sent.
+- [ ] Verify a real frame delivery to a staff phone — avoided sending live SMS.
