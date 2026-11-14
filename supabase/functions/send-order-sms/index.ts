@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { applySmsCustomVariables, usedSmsCustomVariables, type SmsCustomVariable, type SmsOrderSnapshot } from "../_shared/smsCustomVariables.ts";
 import { canReuseSmsLog, isSmsLogId } from "../_shared/smsRetryLog.ts";
+import { selectSmsTemplate } from "../_shared/smsTemplateSelection.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -382,25 +383,42 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
       template = resendMessage!;
     } else {
     try {
-      const { data: tplRow } = await supabase
+      // نوع خدمت (زیرشاخه) سفارش برای انتخاب پیام تخصصی همان خدمت
+      let orderSubcategoryId: string | null = null;
+      try {
+        const q = supabase.from("projects_v3").select("subcategory_id");
+        const { data: svcRow } = orderId
+          ? await q.eq("id", orderId).maybeSingle()
+          : await q.eq("code", orderCode).limit(1).maybeSingle();
+        orderSubcategoryId = (svcRow as any)?.subcategory_id ?? null;
+      } catch (_) { /* نوع خدمت نامشخص ← پیام عمومی */ }
+
+      const { data: stageRows } = await supabase
         .from("sms_templates")
-        .select("template, enabled, delay_minutes, conditions, footer, append_footer, scope")
-        .eq("key", status)
-        .maybeSingle();
+        .select("key, stage_key, template, enabled, delay_minutes, conditions, footer, append_footer, scope, service_subcategory_ids, excluded_subcategory_ids, updated_at")
+        .eq("stage_key", status);
+      const selection = selectSmsTemplate((stageRows || []) as any[], status, orderSubcategoryId);
+      const tplRow: any = selection.kind === "none" ? null : selection.template;
+      const hasStageRows = (stageRows || []).length > 0;
+      if (hasStageRows && (selection.kind === "none" || selection.kind === "disabled" || selection.kind === "excluded")) {
+        const reason = selection.kind === "excluded"
+          ? "service excluded from general message"
+          : selection.kind === "none" ? "no message for this service" : "disabled by admin";
+        console.log(`[send-order-sms] Template ${status} not sent (${reason})`);
+        if (!isPreview) await supabase.from("sms_logs").insert({
+          template_key: status, scope: tplRow?.scope ?? (stageRows as any[])[0]?.scope, recipient: normalizedPhone,
+          message: "", status: "skipped", provider_response: reason,
+          order_code: orderCode, order_id: orderId ?? null,
+        });
+        return new Response(
+          JSON.stringify({ success: true, message: selection.kind === "disabled"
+            ? "ارسال این پیامک توسط مدیریت غیرفعال است"
+            : "برای خدمت این سفارش پیامی در این مرحله تعریف نشده است" }),
+          { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
       if (tplRow) {
         dbTpl = tplRow;
-        if (tplRow.enabled === false) {
-          console.log(`[send-order-sms] Template ${status} disabled by admin, skipping SMS`);
-          if (!isPreview) await supabase.from("sms_logs").insert({
-            template_key: status, scope: tplRow.scope, recipient: normalizedPhone,
-            message: "", status: "skipped", provider_response: "disabled by admin",
-            order_code: orderCode, order_id: orderId ?? null,
-          });
-          return new Response(
-            JSON.stringify({ success: true, message: "ارسال این پیامک توسط مدیریت غیرفعال است" }),
-            { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
-          );
-        }
         if (tplRow.template && tplRow.template.trim().length > 0) {
           template = tplRow.template;
         }

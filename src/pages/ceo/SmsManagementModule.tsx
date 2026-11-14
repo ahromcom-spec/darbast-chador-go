@@ -17,9 +17,15 @@ import { BaleMessengerTab } from "@/components/ceo/BaleMessengerTab";
 import { SmsCustomVariablesTab, SAMPLE_SMS_SNAPSHOT, type SmsCustomVariableRow } from "@/components/ceo/SmsCustomVariablesTab";
 import { applySmsCustomVariables } from "../../../supabase/functions/_shared/smsCustomVariables";
 import {
+  findServiceConflicts, isGeneralTemplate, makeVariantKey, selectSmsTemplate, stageOf, targetsOf,
+} from "../../../supabase/functions/_shared/smsTemplateSelection";
+import { SmsServiceList, SmsServicePicker, serviceLabel, type SmsServiceOption } from "@/components/ceo/SmsServicePicker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
   Loader2, MessageSquare, Save, RefreshCw, Smartphone, Send, AlertCircle,
   CheckCircle2, XCircle, Lock, RotateCcw, Wallet, Clock, Settings2,
-  Search, X,
+  Search, X, Layers, Globe2, Plus, Trash2, Filter, AlertTriangle,
 } from "lucide-react";
 
 interface SmsTemplate {
@@ -36,7 +42,13 @@ interface SmsTemplate {
   footer: string;
   append_footer: boolean;
   updated_at: string;
+  stage_key: string;
+  service_subcategory_ids: string[];
+  excluded_subcategory_ids: string[];
 }
+
+type TplKindFilter = "all" | "general" | "specific";
+type TplStatusFilter = "all" | "enabled" | "disabled";
 
 interface SmsLog {
   id: string;
@@ -52,6 +64,7 @@ interface SmsLog {
   customer_name?: string | null;
   address?: string | null;
   detailed_address?: string | null;
+  subcategory_id?: string | null;
 }
 
 interface ScheduledSms {
@@ -136,6 +149,35 @@ export default function SmsManagementModule() {
   const [queuePreviews, setQueuePreviews] = useState<Record<string, { message?: string; note?: string }>>({});
   const [queuePreviewLoading, setQueuePreviewLoading] = useState(false);
   const requestedPreviewIds = useRef<Set<string>>(new Set());
+  const [services, setServices] = useState<SmsServiceOption[]>([]);
+  const [tplKind, setTplKind] = useState<TplKindFilter>("all");
+  const [tplService, setTplService] = useState<string>("all");
+  const [tplStatus, setTplStatus] = useState<TplStatusFilter>("all");
+  const [tplSearch, setTplSearch] = useState("");
+  const [variantBase, setVariantBase] = useState<SmsTemplate | null>(null);
+  const [variantServices, setVariantServices] = useState<string[]>([]);
+  const [creatingVariant, setCreatingVariant] = useState(false);
+  const [logService, setLogService] = useState<string>("all");
+
+  const loadServices = async () => {
+    const { data } = await supabase
+      .from("subcategories")
+      .select("id, name, is_active, sort_order, service_types_v3:service_type_id(name, sort_order)")
+      .order("sort_order");
+    const rows = ((data || []) as any[]).map((r) => ({
+      id: r.id as string,
+      name: r.name as string,
+      // نوع خدمتِ غیرفعال برای نقش‌های غیر مدیرعامل قابل خواندن نیست
+      typeName: (r.service_types_v3?.name as string) || "خدمات غیرفعال در سایت",
+      active: r.is_active !== false && !!r.service_types_v3,
+      typeSort: Number(r.service_types_v3?.sort_order ?? 999),
+      sort: Number(r.sort_order ?? 999),
+    }));
+    rows.sort((a, b) => a.typeSort - b.typeSort || a.typeName.localeCompare(b.typeName, "fa") || a.sort - b.sort);
+    setServices(rows.map(({ typeSort, sort, ...r }) => r));
+  };
+  useEffect(() => { loadServices(); }, []);
+  const serviceById = useMemo(() => new Map(services.map((s) => [s.id, s])), [services]);
 
   const loadCustomVars = async () => {
     const { data, error } = await supabase.from("sms_custom_variables").select("*").order("created_at");
@@ -209,11 +251,11 @@ export default function SmsManagementModule() {
     if (!logsRes.error) {
       const rawLogs = (logsRes.data || []) as any[];
       const orderCodes = rawLogs.map((l) => l.order_code).filter(Boolean);
-      let projectByCode: Record<string, { customer_name?: string | null; address?: string | null; detailed_address?: string | null }> = {};
+      let projectByCode: Record<string, { customer_name?: string | null; address?: string | null; detailed_address?: string | null; subcategory_id?: string | null }> = {};
       if (orderCodes.length) {
         const { data: projects } = await supabase
           .from("projects_v3")
-          .select("code, customer_name, address, detailed_address")
+          .select("code, customer_name, address, detailed_address, subcategory_id")
           .in("code", orderCodes);
         (projects || []).forEach((p: any) => {
           if (p.code) projectByCode[p.code] = p;
@@ -224,6 +266,7 @@ export default function SmsManagementModule() {
         customer_name: l.order_code ? projectByCode[l.order_code]?.customer_name || null : null,
         address: l.order_code ? projectByCode[l.order_code]?.address || null : null,
         detailed_address: l.order_code ? projectByCode[l.order_code]?.detailed_address || null : null,
+        subcategory_id: l.order_code ? projectByCode[l.order_code]?.subcategory_id || null : null,
       })) as SmsLog[]);
     }
     if (!queueRes.error) setQueue((queueRes.data || []) as unknown as ScheduledSms[]);
@@ -308,9 +351,10 @@ export default function SmsManagementModule() {
 
   const previewText = (item: SmsTemplate) => {
     const m = merged(item);
+    const sampleService = serviceById.get(targetsOf(m)[0] || (tplService !== "all" ? tplService : ""))?.name || "داربست نما";
     const body = (m.template || "")
       .replace(/\{code\}/g, "1000123")
-      .replace(/\{serviceType\}/g, "داربست نما (ثبت شد)")
+      .replace(/\{serviceType\}/g, `${sampleService} (ثبت شد)`)
       .replace(/\{address\}/g, "تهران، خیابان نمونه")
       .replace(/\{customerName\}/g, "علی رضایی")
       .replace(/\{dateTime\}/g, "1404/04/08 ساعت 14:30")
@@ -336,6 +380,10 @@ export default function SmsManagementModule() {
 
   const save = async (item: SmsTemplate) => {
     const m = merged(item);
+    if (!isGeneralTemplate(item) && targetsOf(m).length === 0) {
+      toast.error("برای پیام تخصصی حداقل یک خدمت انتخاب کنید (یا آن را حذف کنید)");
+      return;
+    }
     setSaving(item.id);
     const { data, error } = await supabase.from("sms_templates").update({
       template: m.template,
@@ -346,6 +394,8 @@ export default function SmsManagementModule() {
       conditions: m.conditions || {},
       footer: (m.footer || BRAND_FOOTER).trim() || BRAND_FOOTER,
       append_footer: m.append_footer !== false,
+      service_subcategory_ids: isGeneralTemplate(item) ? [] : targetsOf(m),
+      excluded_subcategory_ids: isGeneralTemplate(item) ? (m.excluded_subcategory_ids || []) : [],
     }).eq("id", item.id).select("id");
     setSaving(null);
     if (error) { toast.error("خطا در ذخیره: " + error.message); return; }
@@ -374,6 +424,69 @@ export default function SmsManagementModule() {
   };
 
 
+  // خدماتی که در هر مرحله قبلاً پیام تخصصی فعال دارند
+  const takenByStage = useMemo(() => {
+    const map = new Map<string, Record<string, string>>();
+    for (const t of items) {
+      if (isGeneralTemplate(t) || !t.enabled) continue;
+      const rec = map.get(stageOf(t)) || {};
+      targetsOf(t).forEach((id) => { rec[id] = `پیام تخصصی «${t.title}» دارد`; });
+      map.set(stageOf(t), rec);
+    }
+    return map;
+  }, [items]);
+
+  const conflicts = useMemo(() => findServiceConflicts(items), [items]);
+
+  const openVariantDialog = (base: SmsTemplate) => {
+    setVariantBase(base);
+    setVariantServices(tplService !== "all" && !takenByStage.get(stageOf(base))?.[tplService] ? [tplService] : []);
+  };
+
+  const createVariant = async () => {
+    if (!variantBase || variantServices.length === 0) return;
+    const base = merged(variantBase);
+    const stage = stageOf(variantBase);
+    const names = variantServices.map((id) => serviceById.get(id)?.name).filter(Boolean);
+    const shortNames = names.length > 2 ? `${names.slice(0, 2).join("، ")} و ${names.length - 2} خدمت دیگر` : names.join("، ");
+    const baseTitle = (variantBase.title || "").split(" — ")[0];
+    setCreatingVariant(true);
+    const { error } = await supabase.from("sms_templates").insert({
+      key: makeVariantKey(stage),
+      stage_key: stage,
+      scope: variantBase.scope,
+      title: `${baseTitle} — ${shortNames}`,
+      description: `نسخه تخصصی «${baseTitle}» برای: ${names.join("، ")}`,
+      template: base.template,
+      default_template: variantBase.default_template || base.template,
+      enabled: true,
+      delay_minutes: Number(base.delay_minutes) || 0,
+      conditions: base.conditions || {},
+      footer: (base.footer || BRAND_FOOTER).trim() || BRAND_FOOTER,
+      append_footer: base.append_footer !== false,
+      service_subcategory_ids: variantServices,
+      excluded_subcategory_ids: [],
+    });
+    setCreatingVariant(false);
+    if (error) { toast.error("ساخت پیام تخصصی ناموفق بود: " + error.message); return; }
+    toast.success("پیام تخصصی ساخته شد — متن آن را ویرایش و ذخیره کنید");
+    setVariantBase(null);
+    setTplKind("all");
+    await load();
+  };
+
+  const deleteVariant = async (item: SmsTemplate) => {
+    if (isGeneralTemplate(item)) return;
+    if (!window.confirm(`پیام تخصصی «${item.title}» حذف شود؟ سفارش‌های این خدمات از این پس پیام عمومی همان مرحله را می‌گیرند.`)) return;
+    setSaving(item.id);
+    const { data, error } = await supabase.from("sms_templates").delete().eq("id", item.id).select("id");
+    setSaving(null);
+    if (error) { toast.error("خطا در حذف: " + error.message); return; }
+    if (!data || data.length === 0) { toast.error("حذف انجام نشد — دسترسی کافی ندارید"); return; }
+    toast.success("پیام تخصصی حذف شد");
+    load();
+  };
+
   const groups: Record<string, SmsTemplate[]> = useMemo(() => {
     const g: Record<string, SmsTemplate[]> = { customer: [], ceo: [] };
     for (const it of items) (g[it.scope] || (g[it.scope] = [])).push(it);
@@ -388,9 +501,10 @@ export default function SmsManagementModule() {
 
   const filteredLogs = useMemo(() => {
     const q = logSearch.trim();
-    if (!q) return logs;
+    const byService = logService === "all" ? logs : logs.filter((l) => l.subcategory_id === logService);
+    if (!q) return byService;
     const lower = q.toLowerCase();
-    return logs.filter((l) => {
+    return byService.filter((l) => {
       const fullAddress = [l.address, l.detailed_address].filter(Boolean).join(" ");
       return [
         l.recipient,
@@ -402,7 +516,7 @@ export default function SmsManagementModule() {
         l.provider_response,
       ].filter(Boolean).some((v) => String(v).toLowerCase().includes(lower));
     });
-  }, [logs, logSearch]);
+  }, [logs, logSearch, logService]);
 
   const filteredQueue = useMemo(() => {
     const q = queueSearch.trim();
@@ -425,6 +539,17 @@ export default function SmsManagementModule() {
     const m = merged(item);
     const dirty = !!drafts[item.id];
     const cond = (m.conditions || {}) as Record<string, any>;
+    const general = isGeneralTemplate(item);
+    const stage = stageOf(item);
+    const stageTaken = takenByStage.get(stage) || {};
+    const specificServicesOfStage = Object.keys(stageTaken);
+    const ownTargets = targetsOf(m);
+    const blockedForThis: Record<string, string> = {};
+    Object.entries(stageTaken).forEach(([id, why]) => { if (!targetsOf(item).includes(id)) blockedForThis[id] = why; });
+    const conflictNames = ownTargets.filter((id) => (conflicts.get(`${stage}|${id}`) || []).length > 1)
+      .map((id) => serviceById.get(id)?.name).filter(Boolean);
+    const overriddenHere = general && tplService !== "all" && !!stageTaken[tplService];
+    const excludedHere = general && tplService !== "all" && (m.excluded_subcategory_ids || []).includes(tplService);
     return (
       <Card key={item.id} className={dirty ? "border-amber-400 shadow-md" : "shadow-sm"}>
         <CardHeader className="pb-3">
@@ -433,7 +558,19 @@ export default function SmsManagementModule() {
               <CardTitle className="text-base flex items-center gap-2 flex-wrap">
                 <MessageSquare className="h-4 w-4 text-primary" />
                 {m.title}
-                <Badge variant="outline" className="text-xs font-mono">{item.key}</Badge>
+                <Badge variant="outline" className="text-xs font-mono">{stage}</Badge>
+                {general ? (
+                  <Badge variant="secondary" className="gap-1 text-[11px]">
+                    <Globe2 className="h-3 w-3" />عمومی · همه خدمات
+                    {(m.excluded_subcategory_ids || []).length > 0 && ` (به‌جز ${(m.excluded_subcategory_ids || []).length.toLocaleString("fa-IR")} خدمت)`}
+                  </Badge>
+                ) : (
+                  <Badge className="gap-1 text-[11px]">
+                    <Layers className="h-3 w-3" />تخصصی · {ownTargets.length.toLocaleString("fa-IR")} خدمت
+                  </Badge>
+                )}
+                {overriddenHere && <Badge variant="outline" className="text-[11px]">برای این خدمت، پیام تخصصی جایگزین است</Badge>}
+                {excludedHere && <Badge variant="destructive" className="text-[11px]">این خدمت استثنا شده است</Badge>}
                 {!m.enabled && <Badge variant="destructive">غیرفعال</Badge>}
                 {m.delay_minutes > 0 && (
                   <Badge variant="secondary" className="gap-1">
@@ -515,6 +652,63 @@ export default function SmsManagementModule() {
                 </p>
               </div>
 
+              <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+                <Label className="text-xs flex items-center gap-1">
+                  <Filter className="h-3.5 w-3.5" />خدماتی که این پیام برای سفارش‌هایشان ارسال می‌شود
+                </Label>
+                {general ? (
+                  <>
+                    <p className="text-[11px] text-muted-foreground leading-5">
+                      این پیام عمومی است و برای سفارش همه خدمات ارسال می‌شود؛ مگر خدماتی که در همین مرحله پیام تخصصی دارند یا در زیر استثنا شده‌اند.
+                    </p>
+                    {specificServicesOfStage.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1 text-[11px]">
+                        <span className="text-muted-foreground">دارای پیام تخصصی:</span>
+                        {specificServicesOfStage.map((id) => (
+                          <Badge key={id} variant="outline" className="font-normal text-[11px]">{serviceLabel(serviceById.get(id))}</Badge>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap items-start gap-2">
+                      <div className="flex-1 min-w-[200px]">
+                        <SmsServicePicker
+                          services={services}
+                          value={m.excluded_subcategory_ids || []}
+                          onChange={(ids) => setDraft(item.id, { excluded_subcategory_ids: ids })}
+                          placeholder="استثنا کردن خدمات (این پیام را نگیرند)"
+                          tone="exclude"
+                        />
+                      </div>
+                      <Button type="button" size="sm" variant="secondary" className="h-8 text-xs" onClick={() => openVariantDialog(item)}>
+                        <Plus className="h-3.5 w-3.5 ml-1" />افزودن پیام تخصصی برای خدمات
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <SmsServicePicker
+                      services={services}
+                      value={ownTargets}
+                      onChange={(ids) => setDraft(item.id, { service_subcategory_ids: ids })}
+                      blocked={blockedForThis}
+                      placeholder="انتخاب خدمات این پیام"
+                    />
+                    {ownTargets.length === 0 && (
+                      <p className="text-[11px] text-destructive">حداقل یک خدمت انتخاب کنید.</p>
+                    )}
+                    <p className="text-[11px] text-muted-foreground leading-5">
+                      سفارش‌های این خدمات در مرحله «{stage}» به‌جای پیام عمومی این متن را دریافت می‌کنند. اگر این پیام غیرفعال شود، پیام عمومی ارسال می‌شود.
+                    </p>
+                  </>
+                )}
+                {conflictNames.length > 0 && (
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400 flex items-start gap-1">
+                    <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                    خدمات «{conflictNames.join("، ")}» در بیش از یک پیام تخصصی این مرحله انتخاب شده‌اند؛ آخرین پیام ویرایش‌شده ارسال می‌شود.
+                  </p>
+                )}
+              </div>
+
               <Accordion type="single" collapsible>
                 <AccordionItem value="adv" className="border rounded-md">
                   <AccordionTrigger className="px-3 py-2 text-sm">
@@ -573,7 +767,12 @@ export default function SmsManagementModule() {
             <span className="text-[11px] text-muted-foreground">
               آخرین ویرایش: {new Date(item.updated_at).toLocaleString("fa-IR")}
             </span>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              {!general && (
+                <Button size="sm" variant="ghost" className="text-destructive" disabled={saving === item.id} onClick={() => deleteVariant(item)}>
+                  <Trash2 className="h-4 w-4 ml-1" />حذف پیام تخصصی
+                </Button>
+              )}
               <Button size="sm" variant="ghost" onClick={() => resetToDefault(item)}>
                 <RotateCcw className="h-4 w-4 ml-1" />بازنشانی به پیش‌فرض
               </Button>
@@ -591,6 +790,127 @@ export default function SmsManagementModule() {
           </div>
         </CardContent>
       </Card>
+    );
+  };
+
+  const stageTitle = (scoped: SmsTemplate[], stage: string) => {
+    const g = scoped.find((t) => stageOf(t) === stage && isGeneralTemplate(t)) || scoped.find((t) => stageOf(t) === stage);
+    return (g?.title || stage).split(" — ")[0];
+  };
+
+  const renderTemplateList = (scope: string) => {
+    const scoped = items.filter((t) => t.scope === scope);
+    const stages = [...new Set(scoped.filter(isGeneralTemplate).map(stageOf)), ...new Set(scoped.map(stageOf))]
+      .filter((v, i, a) => a.indexOf(v) === i);
+    const q = tplSearch.trim();
+    const visible = scoped.filter((t) => {
+      const m = merged(t);
+      const gen = isGeneralTemplate(t);
+      if (tplKind === "general" && !gen) return false;
+      if (tplKind === "specific" && gen) return false;
+      if (tplStatus === "enabled" && !m.enabled) return false;
+      if (tplStatus === "disabled" && m.enabled) return false;
+      if (tplService !== "all") {
+        if (gen && (m.excluded_subcategory_ids || []).includes(tplService) && tplKind !== "general") return false;
+        if (!gen && !targetsOf(t).includes(tplService)) return false;
+      }
+      if (q && ![m.title, m.template, m.description, stageOf(t)].filter(Boolean).some((v) => String(v).includes(q))) return false;
+      return true;
+    });
+    const specificCount = scoped.filter((t) => !isGeneralTemplate(t)).length;
+    const coveredServices = new Set(scoped.filter((t) => !isGeneralTemplate(t) && t.enabled).flatMap(targetsOf));
+    const filtersActive = tplKind !== "all" || tplService !== "all" || tplStatus !== "all" || !!q;
+
+    return (
+      <div className="space-y-3">
+        <Card>
+          <CardContent className="pt-4 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex rounded-md border p-0.5 bg-muted/40">
+                {([
+                  ["all", "همه پیام‌ها", MessageSquare],
+                  ["general", "پیام‌های عمومی سایت", Globe2],
+                  ["specific", "پیام‌های تخصصی خدمات", Layers],
+                ] as const).map(([k, label, Icon]) => (
+                  <Button
+                    key={k} type="button" size="sm" className="h-8 text-xs gap-1"
+                    variant={tplKind === k ? "default" : "ghost"}
+                    onClick={() => setTplKind(k)}
+                  >
+                    <Icon className="h-3.5 w-3.5" />{label}
+                  </Button>
+                ))}
+              </div>
+              <Select value={tplService} onValueChange={setTplService}>
+                <SelectTrigger className="h-9 w-[260px] text-xs"><SelectValue placeholder="نوع خدمت" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">همه خدمات</SelectItem>
+                  {services.map((sv) => (
+                    <SelectItem key={sv.id} value={sv.id} className="text-xs">{serviceLabel(sv)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={tplStatus} onValueChange={(v) => setTplStatus(v as TplStatusFilter)}>
+                <SelectTrigger className="h-9 w-[130px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">همه وضعیت‌ها</SelectItem>
+                  <SelectItem value="enabled">فقط فعال</SelectItem>
+                  <SelectItem value="disabled">فقط غیرفعال</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="relative flex-1 min-w-[180px]">
+                <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input className="h-9 pr-9 text-xs" placeholder="جستجو در عنوان و متن پیام..." value={tplSearch} onChange={(e) => setTplSearch(e.target.value)} />
+              </div>
+              {filtersActive && (
+                <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => { setTplKind("all"); setTplService("all"); setTplStatus("all"); setTplSearch(""); }}>
+                  <X className="h-3.5 w-3.5 ml-1" />حذف فیلترها
+                </Button>
+              )}
+            </div>
+
+            {tplService === "all" ? (
+              <p className="text-[11px] text-muted-foreground">
+                {scoped.filter(isGeneralTemplate).length.toLocaleString("fa-IR")} پیام عمومی ·{" "}
+                {specificCount.toLocaleString("fa-IR")} پیام تخصصی ·{" "}
+                {coveredServices.size.toLocaleString("fa-IR")} خدمت دارای پیام اختصاصی.
+                برای دیدن اینکه مشتریان هر خدمت در هر مرحله کدام پیام را می‌گیرند، یک خدمت را انتخاب کنید.
+              </p>
+            ) : (
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium">
+                  پیام‌هایی که مشتریان «{serviceLabel(serviceById.get(tplService))}» در هر مرحله دریافت می‌کنند:
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {stages.map((st) => {
+                    const r = selectSmsTemplate(scoped.map(merged), st, tplService);
+                    const title = stageTitle(scoped, st);
+                    if (r.kind === "specific") return <Badge key={st} className="text-[11px] font-normal gap-1"><Layers className="h-3 w-3" />{title}: تخصصی</Badge>;
+                    if (r.kind === "general") return <Badge key={st} variant="secondary" className="text-[11px] font-normal gap-1"><Globe2 className="h-3 w-3" />{title}: عمومی</Badge>;
+                    return <Badge key={st} variant="destructive" className="text-[11px] font-normal">{title}: ارسال نمی‌شود</Badge>;
+                  })}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {stages.map((st) => {
+          const list = visible.filter((t) => stageOf(t) === st)
+            .sort((a, b) => Number(!isGeneralTemplate(a)) - Number(!isGeneralTemplate(b)));
+          if (list.length === 0) return null;
+          return (
+            <div key={st} className="space-y-3">
+              {list.map(renderItem)}
+            </div>
+          );
+        })}
+        {visible.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            {filtersActive ? "پیامی با این فیلترها یافت نشد." : "قالبی یافت نشد."}
+          </p>
+        )}
+      </div>
     );
   };
 
@@ -793,17 +1113,11 @@ export default function SmsManagementModule() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="customer" className="space-y-3 mt-4">
-            {(groups.customer || []).map(renderItem)}
-            {(!groups.customer || groups.customer.length === 0) && (
-              <p className="text-sm text-muted-foreground text-center py-8">قالبی یافت نشد.</p>
-            )}
+          <TabsContent value="customer" className="mt-4">
+            {renderTemplateList("customer")}
           </TabsContent>
-          <TabsContent value="ceo" className="space-y-3 mt-4">
-            {(groups.ceo || []).map(renderItem)}
-            {(!groups.ceo || groups.ceo.length === 0) && (
-              <p className="text-sm text-muted-foreground text-center py-8">قالبی یافت نشد.</p>
-            )}
+          <TabsContent value="ceo" className="mt-4">
+            {renderTemplateList("ceo")}
           </TabsContent>
           <TabsContent value="logs" className="mt-4">
             <Card>
@@ -829,6 +1143,18 @@ export default function SmsManagementModule() {
                       <X className="h-4 w-4" />
                     </Button>
                   )}
+                </div>
+                <div className="mb-3 flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <Select value={logService} onValueChange={setLogService}>
+                    <SelectTrigger className="h-8 w-[280px] text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">پیامک‌های همه خدمات</SelectItem>
+                      {services.map((sv) => (
+                        <SelectItem key={sv.id} value={sv.id} className="text-xs">{serviceLabel(sv)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <Table>
                   <TableHeader>
@@ -903,6 +1229,32 @@ export default function SmsManagementModule() {
           </TabsContent>
         </Tabs>
       )}
+
+      <Dialog open={!!variantBase} onOpenChange={(o) => { if (!o) setVariantBase(null); }}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>پیام تخصصی برای «{variantBase ? stageTitle(items, stageOf(variantBase)) : ""}»</DialogTitle>
+            <DialogDescription>
+              خدماتی را انتخاب کنید که مشتریانشان در این مرحله متن جداگانه بگیرند. متن فعلی کپی می‌شود تا آن را برای این خدمات ویرایش کنید.
+            </DialogDescription>
+          </DialogHeader>
+          {variantBase && (
+            <SmsServiceList
+              services={services}
+              value={variantServices}
+              onChange={setVariantServices}
+              blocked={takenByStage.get(stageOf(variantBase)) || {}}
+            />
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setVariantBase(null)}>انصراف</Button>
+            <Button disabled={variantServices.length === 0 || creatingVariant} onClick={createVariant}>
+              {creatingVariant ? <Loader2 className="h-4 w-4 animate-spin ml-1" /> : <Plus className="h-4 w-4 ml-1" />}
+              ساخت پیام تخصصی ({variantServices.length.toLocaleString("fa-IR")} خدمت)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

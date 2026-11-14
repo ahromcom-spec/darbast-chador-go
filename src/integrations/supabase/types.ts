@@ -6072,10 +6072,13 @@ export type Database = {
           delay_minutes: number
           description: string | null
           enabled: boolean
+          excluded_subcategory_ids: string[]
           footer: string
           id: string
           key: string
           scope: string
+          service_subcategory_ids: string[]
+          stage_key: string
           template: string
           title: string
           updated_at: string
@@ -6089,10 +6092,13 @@ export type Database = {
           delay_minutes?: number
           description?: string | null
           enabled?: boolean
+          excluded_subcategory_ids?: string[]
           footer?: string
           id?: string
           key: string
           scope?: string
+          service_subcategory_ids?: string[]
+          stage_key: string
           template: string
           title: string
           updated_at?: string
@@ -6106,10 +6112,13 @@ export type Database = {
           delay_minutes?: number
           description?: string | null
           enabled?: boolean
+          excluded_subcategory_ids?: string[]
           footer?: string
           id?: string
           key?: string
           scope?: string
+          service_subcategory_ids?: string[]
+          stage_key?: string
           template?: string
           title?: string
           updated_at?: string
