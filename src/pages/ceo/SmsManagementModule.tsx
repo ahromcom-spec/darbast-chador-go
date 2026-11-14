@@ -19,6 +19,7 @@ import { applySmsCustomVariables } from "../../../supabase/functions/_shared/sms
 import {
   findServiceConflicts, isGeneralTemplate, makeVariantKey, selectSmsTemplate, stageOf, targetsOf,
 } from "../../../supabase/functions/_shared/smsTemplateSelection";
+import { SmsCustomFramesTab, type CustomFrameRow } from "@/components/ceo/SmsCustomFramesTab";
 import { SmsServiceList, SmsServicePicker, serviceLabel, type SmsServiceOption } from "@/components/ceo/SmsServicePicker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -486,6 +487,18 @@ export default function SmsManagementModule() {
     toast.success("پیام تخصصی حذف شد");
     load();
   };
+
+  // عنوان قاب‌های پیام سفارشی برای نمایش در گزارش ارسال و صف
+  const frameTitleByKey = useMemo(
+    () => new Map(items.filter((t) => t.scope === "custom").map((t) => [t.key, t.title])),
+    [items],
+  );
+  const renderFramePreview = (template: string, serviceId?: string) => previewText({
+    id: "__custom_frame__", key: "__custom_frame__", title: "", description: null, scope: "custom",
+    template, default_template: null, enabled: true, delay_minutes: 0, conditions: {},
+    footer: BRAND_FOOTER, append_footer: true, updated_at: "", stage_key: "",
+    service_subcategory_ids: serviceId ? [serviceId] : [], excluded_subcategory_ids: [],
+  });
 
   const groups: Record<string, SmsTemplate[]> = useMemo(() => {
     const g: Record<string, SmsTemplate[]> = { customer: [], ceo: [] };
@@ -992,11 +1005,22 @@ export default function SmsManagementModule() {
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="customer">پیامک‌های مشتری ({groups.customer?.length || 0})</TabsTrigger>
             <TabsTrigger value="ceo">پیامک‌های مدیرعامل ({groups.ceo?.length || 0})</TabsTrigger>
+            <TabsTrigger value="custom-frames">قاب‌های پیام سفارشی ({groups.custom?.length || 0})</TabsTrigger>
             <TabsTrigger value="logs">گزارش ارسال ({logs.length})</TabsTrigger>
             <TabsTrigger value="queue">در انتظار ارسال ({queue.length})</TabsTrigger>
             <TabsTrigger value="bale">پیامرسان بله</TabsTrigger>
             <TabsTrigger value="custom-vars">المان‌های سفارشی ({customVars.length})</TabsTrigger>
           </TabsList>
+          <TabsContent value="custom-frames" className="mt-4">
+            <SmsCustomFramesTab
+              frames={(groups.custom || []) as unknown as CustomFrameRow[]}
+              services={services}
+              placeholders={PLACEHOLDERS}
+              customVars={customVars}
+              renderPreview={renderFramePreview}
+              onChanged={load}
+            />
+          </TabsContent>
           <TabsContent value="custom-vars" className="mt-4">
             <SmsCustomVariablesTab variables={customVars} onChanged={loadCustomVars} />
           </TabsContent>
@@ -1071,7 +1095,12 @@ export default function SmsManagementModule() {
                         <TableCell className="text-xs max-w-[140px] truncate" title={row.payload?.address || ""}>
                           {row.payload?.customerName || "—"}
                         </TableCell>
-                        <TableCell><Badge variant="outline" className="font-mono text-[10px]">{row.status_key}</Badge></TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-mono text-[10px]">{row.status_key}</Badge>
+                          {row.payload?.templateKey && frameTitleByKey.get(row.payload.templateKey) && (
+                            <div className="text-[10px] text-muted-foreground mt-0.5">قاب: {frameTitleByKey.get(row.payload.templateKey)}</div>
+                          )}
+                        </TableCell>
                         <TableCell className="font-mono text-xs">{row.order_code || "—"}</TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="whitespace-nowrap">در انتظار ارسال</Badge>
@@ -1185,7 +1214,11 @@ export default function SmsManagementModule() {
                         <TableCell className="text-xs max-w-[140px] truncate" title={l.address ? `${l.address}${l.detailed_address ? ` - ${l.detailed_address}` : ""}` : ""}>
                           {l.customer_name || "—"}
                         </TableCell>
-                        <TableCell><Badge variant="outline" className="font-mono text-[10px]">{l.template_key}</Badge></TableCell>
+                        <TableCell>
+                          {l.template_key && frameTitleByKey.has(l.template_key)
+                            ? <Badge variant="secondary" className="text-[10px]">قاب: {frameTitleByKey.get(l.template_key)}</Badge>
+                            : <Badge variant="outline" className="font-mono text-[10px]">{l.template_key}</Badge>}
+                        </TableCell>
                         <TableCell className="font-mono text-xs">{l.order_code || "—"}</TableCell>
                         <TableCell>
                           {l.status === "sent" && <Badge className="bg-green-600 hover:bg-green-600">ارسال شد</Badge>}

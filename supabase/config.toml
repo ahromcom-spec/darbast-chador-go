@@ -29,6 +29,8 @@ project_id = "gclbltatkbwbqxqqrcea"
     verify_jwt = true
   [functions.send-order-sms]
     verify_jwt = false
+  [functions.dispatch-order-messages]
+    verify_jwt = false
   [functions.send-otp]
     verify_jwt = false
   [functions.send-push-notification]

@@ -5991,6 +5991,21 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_dispatch_claims: {
+        Row: {
+          claim_key: string
+          claimed_at: string
+        }
+        Insert: {
+          claim_key: string
+          claimed_at?: string
+        }
+        Update: {
+          claim_key?: string
+          claimed_at?: string
+        }
+        Relationships: []
+      }
       sms_logs: {
         Row: {
           attempts: number
@@ -6076,6 +6091,9 @@ export type Database = {
           footer: string
           id: string
           key: string
+          recipient_kinds: string[]
+          recipient_phones: string[]
+          recipient_roles: string[]
           scope: string
           service_subcategory_ids: string[]
           stage_key: string
@@ -6096,6 +6114,9 @@ export type Database = {
           footer?: string
           id?: string
           key: string
+          recipient_kinds?: string[]
+          recipient_phones?: string[]
+          recipient_roles?: string[]
           scope?: string
           service_subcategory_ids?: string[]
           stage_key: string
@@ -6116,6 +6137,9 @@ export type Database = {
           footer?: string
           id?: string
           key?: string
+          recipient_kinds?: string[]
+          recipient_phones?: string[]
+          recipient_roles?: string[]
           scope?: string
           service_subcategory_ids?: string[]
           stage_key?: string
@@ -6904,6 +6928,10 @@ export type Database = {
           allowed_role: Database["public"]["Enums"]["app_role"]
           is_whitelisted: boolean
         }[]
+      }
+      claim_sms_dispatch: {
+        Args: { _key: string; _window_seconds?: number }
+        Returns: boolean
       }
       cleanup_expired_email_codes: { Args: never; Returns: undefined }
       cleanup_expired_otps: { Args: never; Returns: undefined }

@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { applySmsCustomVariables, usedSmsCustomVariables, type SmsCustomVariable, type SmsOrderSnapshot } from "../_shared/smsCustomVariables.ts";
 import { canReuseSmsLog, isSmsLogId } from "../_shared/smsRetryLog.ts";
 import { selectSmsTemplate } from "../_shared/smsTemplateSelection.ts";
+import { CUSTOM_FRAME_SCOPE, isCustomFrameKey } from "../_shared/smsCustomFrames.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -78,6 +79,7 @@ function formatPersianDateTime(): string {
 // برچسب وضعیت سفارش که داخل serviceType جای داده می‌شود (الگوی پیامک توسط پارس‌گرین تایید شده و نباید تغییر کند)
 const STAGE_LABELS: Record<string, string> = {
   submitted: "ثبت شد",
+  rejected: "رد شد",
   approved: "تایید شد",
   in_progress: "در حال اجرا",
   executed: "اجرا شد",
@@ -109,6 +111,7 @@ const SMS_TEMPLATES: Record<string, string> = {
   contractor_pending_request: APPROVED_TEMPLATE,
   collected: APPROVED_TEMPLATE,
   completed: APPROVED_TEMPLATE,
+  rejected: APPROVED_TEMPLATE,
   rental_started: "📋 سفارش جدید: کد {code} - {serviceType} - آدرس: {address} - مشتری: {customerName} - تاریخ شروع کرایه: {rentalStartDate} - تاریخ: {dateTime}",
   // پیامک‌های مخصوص مدیرعامل
   ceo_new_order: APPROVED_TEMPLATE,
@@ -135,6 +138,8 @@ interface SmsRequest {
   retryCount?: number; // شمارش تلاش‌های خودکار مجدد در صورت ناموفق بودن
   logId?: string; // ردیف گزارش همین پیامک؛ تلاش‌های بعدی همان ردیف را به‌روز می‌کنند
   scheduledId?: string; // ردیف صف همین پیامک؛ تلاش مجدد همان ردیف را دوباره در صف می‌گذارد
+  templateKey?: string; // قاب پیام سفارشی (فقط از سمت سرور)
+  audience?: "customer" | "staff"; // گیرنده قاب سفارشی: مشتری یا پرسنل
 }
 
 // حداکثر تلاش خودکار مجدد در صورت ناموفق بودن ارسال
@@ -193,6 +198,23 @@ const handlePreview = async (req: Request, ids: unknown): Promise<Response> => {
   return jsonResponse({ previews });
 };
 
+/** آیا فراخوان یکی از مدیران پیامک (مدیرعامل، مدیر کل، مدیر سیستم) است؟ */
+const callerIsSmsManager = async (req: Request): Promise<boolean> => {
+  try {
+    const authHeader = req.headers.get("Authorization") || "";
+    if (!authHeader.startsWith("Bearer ")) return false;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } } });
+    const { data } = await userClient.auth.getUser();
+    if (!data?.user) return false;
+    const admin = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", data.user.id).in("role", ["ceo", "general_manager", "admin"]);
+    return (roles?.length ?? 0) > 0;
+  } catch {
+    return false;
+  }
+};
+
 const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -206,6 +228,20 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
       return await handlePreview(req, reqBody.previewScheduledIds);
     }
     const { phone, orderCode, orderId, status, serviceType, address, dateTime, amount, customerName, description, resendMessage, bypassWindow, retryCount, paidAmount, totalPaid, remainingAmount, logId, scheduledId }: SmsRequest = reqBody;
+    // قاب پیام سفارشی: فقط از سمت سرور (تابع ارسال قاب‌ها یا صف ارسال) پذیرفته می‌شود
+    const rawTemplateKey = reqBody?.templateKey;
+    if (rawTemplateKey !== undefined && rawTemplateKey !== null && !isCustomFrameKey(rawTemplateKey)) {
+      return jsonResponse({ error: "قاب پیام نامعتبر است" }, 400);
+    }
+    const templateKey: string | undefined = isCustomFrameKey(rawTemplateKey) ? rawTemplateKey : undefined;
+    const serviceKeyEnv = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const callerIsService = (req.headers.get("Authorization") || "") === `Bearer ${serviceKeyEnv}`;
+    if (templateKey && !isPreview && !callerIsService) {
+      return jsonResponse({ error: "unauthorized" }, 401);
+    }
+    const isStaffAudience = !!templateKey && reqBody?.audience === "staff";
+    const logKey = templateKey || status;
+    const logScope = (fallback?: string | null) => (templateKey ? CUSTOM_FRAME_SCOPE : fallback);
     const isResend = typeof resendMessage === "string" && resendMessage.trim().length > 0;
     const attemptNo = Number(retryCount ?? 0);
 
@@ -248,8 +284,10 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
     // پیامک‌های مدیرعامل باید بدون توجه به whitelist ارسال شوند
     const isCeoNotification = status === "ceo_new_order" || status === "ceo_payment";
     const isContractorNotification = status === "contractor_pending_request";
+    // ارسال مجدد پیام پرسنل از گزارش ارسال توسط مدیر نباید به‌خاطر شماره پرسنلی رد شود
+    const resendByManager = isResend && await callerIsSmsManager(req);
 
-    if (!isCeoNotification && !isContractorNotification) {
+    if (!isCeoNotification && !isContractorNotification && !isStaffAudience && !resendByManager) {
       // Check phone_whitelist table
       const { data: whitelistData } = await supabase
         .from("phone_whitelist")
@@ -332,6 +370,7 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
               .eq("order_code", orderCode)
               .eq("status_key", status)
               .in("state", ["pending", "sending"])
+              .filter("payload->>templateKey", templateKey ? "eq" : "is", templateKey ?? null)
               .limit(1)
               .maybeSingle();
 
@@ -348,7 +387,7 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
               order_code: orderCode,
               order_id: orderId ?? null,
               status_key: status,
-              payload: { serviceType, address, amount, customerName, description, resendMessage, paidAmount, totalPaid, remainingAmount },
+              payload: { serviceType, address, amount, customerName, description, resendMessage, paidAmount, totalPaid, remainingAmount, templateKey, audience: templateKey ? reqBody?.audience : undefined },
               send_after: sendAfter,
             });
 
@@ -381,6 +420,37 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
     if (isResend) {
       // ارسال مجدد: همان متن قبلی، فقط تاریخ به تاریخ جدید به‌روزرسانی می‌شود
       template = resendMessage!;
+    } else if (templateKey) {
+      // قاب پیام سفارشی: همان قاب انتخاب‌شده، بدون انتخاب بین پیام‌های عمومی/تخصصی
+      const { data: frame } = await supabase
+        .from("sms_templates")
+        .select("key, stage_key, template, enabled, delay_minutes, conditions, footer, append_footer, scope")
+        .eq("key", templateKey)
+        .eq("scope", CUSTOM_FRAME_SCOPE)
+        .maybeSingle();
+      if (!frame || !frame.enabled || !String(frame.template || "").trim()) {
+        if (!isPreview) await supabase.from("sms_logs").insert({
+          template_key: logKey, scope: CUSTOM_FRAME_SCOPE, recipient: normalizedPhone,
+          message: "", status: "skipped", provider_response: frame ? "custom frame disabled" : "custom frame deleted",
+          order_code: orderCode, order_id: orderId ?? null,
+        });
+        return jsonResponse({ success: true, message: "این قاب پیام غیرفعال یا حذف شده است" });
+      }
+      dbTpl = frame;
+      template = frame.template;
+      try {
+        const cond = (frame.conditions ?? {}) as Record<string, any>;
+        const outOfRange = (typeof cond.minAmount === "number" && (amount ?? 0) < cond.minAmount)
+          || (typeof cond.maxAmount === "number" && (amount ?? 0) > cond.maxAmount);
+        if (outOfRange) {
+          if (!isPreview) await supabase.from("sms_logs").insert({
+            template_key: logKey, scope: CUSTOM_FRAME_SCOPE, recipient: normalizedPhone,
+            message: "", status: "skipped", provider_response: "amount condition not met",
+            order_code: orderCode, order_id: orderId ?? null,
+          });
+          return jsonResponse({ success: true, message: "شرط مبلغ این قاب برقرار نیست" });
+        }
+      } catch (_) { /* ignore */ }
     } else {
     try {
       // نوع خدمت (زیرشاخه) سفارش برای انتخاب پیام تخصصی همان خدمت
@@ -396,7 +466,8 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
       const { data: stageRows } = await supabase
         .from("sms_templates")
         .select("key, stage_key, template, enabled, delay_minutes, conditions, footer, append_footer, scope, service_subcategory_ids, excluded_subcategory_ids, updated_at")
-        .eq("stage_key", status);
+        .eq("stage_key", status)
+        .neq("scope", CUSTOM_FRAME_SCOPE);
       const selection = selectSmsTemplate((stageRows || []) as any[], status, orderSubcategoryId);
       const tplRow: any = selection.kind === "none" ? null : selection.template;
       const hasStageRows = (stageRows || []).length > 0;
@@ -709,8 +780,8 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
       if (recentSent) {
         console.log("[send-order-sms] Duplicate message detected, skipping send");
         await supabase.from("sms_logs").insert({
-          template_key: status,
-          scope: dbTpl?.scope,
+          template_key: logKey,
+          scope: logScope(dbTpl?.scope),
           recipient: normalizedPhone,
           message: "",
           status: "skipped",
@@ -781,8 +852,8 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
       if (!currentLogId) {
         const { data: inserted } = await supabase.from("sms_logs").insert({
           ...logFields,
-          template_key: status,
-          scope: dbTpl?.scope,
+          template_key: logKey,
+          scope: logScope(dbTpl?.scope),
           recipient: normalizedPhone,
           order_code: orderCode,
           order_id: orderId ?? null,
@@ -817,7 +888,8 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
           .eq("phone", normalizedPhone)
           .eq("order_code", orderCode)
           .eq("status_key", status)
-          .eq("state", "pending");
+          .eq("state", "pending")
+          .filter("payload->>templateKey", templateKey ? "eq" : "is", templateKey ?? null);
         if (isSmsLogId(scheduledId)) pendingQuery = pendingQuery.neq("id", scheduledId);
         const { data: pendingRetry } = await pendingQuery.limit(1).maybeSingle();
 
@@ -840,6 +912,8 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
           retryCount: attemptNo + 1,
           // تلاش بعدی همین ردیف گزارش را به‌روز می‌کند تا پیام تکراری ناموفق ساخته نشود
           logId: currentLogId ?? undefined,
+          templateKey,
+          audience: templateKey ? reqBody?.audience : undefined,
         };
         const retryLastError = `retry ${attemptNo + 1}/${MAX_AUTO_RETRIES}: ${responseText.slice(0, 200)}`;
 

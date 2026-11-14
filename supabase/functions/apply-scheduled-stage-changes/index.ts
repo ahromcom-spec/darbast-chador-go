@@ -116,6 +116,16 @@ Deno.serve(async (req) => {
           }
         }
 
+        // قاب‌های پیام سفارشی همین مرحله (مدیریت، همکاران و ...)؛ اگر قرار نیست مشتری مطلع شود، به مشتری نمی‌رود
+        const frameStage = SMS_STATUS[row.target_stage];
+        if (frameStage) {
+          await fetch(`${url}/functions/v1/dispatch-order-messages`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+            body: JSON.stringify({ orderId: order.id, stage: frameStage, skipCustomer: !row.notify_customer }),
+          }).catch((e) => console.error("custom frames failed", e));
+        }
+
         await sb.from("scheduled_stage_changes").update({ state: "done", executed_at: now, last_error: null }).eq("id", row.id);
         results.push({ id: row.id, ok: true });
       } catch (e) {

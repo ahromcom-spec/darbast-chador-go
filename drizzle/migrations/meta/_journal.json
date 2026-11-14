@@ -113,6 +113,13 @@
       "when": 1794696579642,
       "tag": "0015_sms_template_service_targeting",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794697554490,
+      "tag": "0016_sms_custom_frames",
+      "breakpoints": true
     }
   ]
 }

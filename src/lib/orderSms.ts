@@ -50,6 +50,40 @@ const normalizeIranPhone = (input?: string | null) => {
 
 const isValidIranMobile = (phone?: string | null) => /^09\d{9}$/.test(normalizeIranPhone(phone));
 
+/**
+ * قاب‌های پیام سفارشی همین مرحله را (برای مشتری، همکاران، بخش‌های مدیریتی یا شماره‌های دلخواه) راه می‌اندازد.
+ * سرور قاب‌های فعال مرحله و خدمت سفارش را پیدا می‌کند و از ارسال تکراری همان رویداد جلوگیری می‌کند.
+ */
+export const dispatchCustomOrderMessages = (
+  stage: string,
+  ref: { orderId?: string; orderCode?: string },
+  details?: OrderSmsDetails
+): void => {
+  if (isAdminImpersonating()) return;
+  if (!ref.orderId && !ref.orderCode) return;
+  const num = (v?: number) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
+  const str = (v?: string, max = 500) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : undefined);
+  supabase.functions
+    .invoke('dispatch-order-messages', {
+      body: {
+        orderId: ref.orderId,
+        orderCode: ref.orderId ? undefined : ref.orderCode,
+        stage,
+        details: {
+          serviceType: str(details?.serviceType, 200),
+          address: str(details?.address),
+          customerName: str(details?.customerName, 200),
+          description: str(details?.description, 1000),
+          amount: num(details?.amount) !== undefined ? Math.max(0, details!.amount as number) : undefined,
+          paidAmount: num(details?.paidAmount),
+          totalPaid: num(details?.totalPaid),
+          remainingAmount: num(details?.remainingAmount),
+        },
+      },
+    })
+    .catch((e) => console.warn('[dispatchCustomOrderMessages] failed:', e));
+};
+
 const scaffoldingTypeLabels: Record<string, string> = {
   facade: 'داربست نما',
   facade_with_materials: 'داربست نما',
@@ -172,6 +206,9 @@ export const sendOrderSms = async (
     return { success: true };
   }
 
+  // قاب‌های پیام سفارشی همین مرحله، مستقل از اینکه پیام پیش‌فرض مشتری ارسال شود یا نه
+  dispatchCustomOrderMessages(status, { orderId: details?.orderId, orderCode }, details);
+
   let targetPhone = normalizeIranPhone(phone);
   let targetOrderCode = orderCode;
   let smsDetails: OrderSmsDetails = { ...(details || {}) };
@@ -291,6 +328,9 @@ export const sendCeoNotificationSms = async (
     console.log('[sendCeoNotificationSms] Skipped - Admin is impersonating user');
     return { success: true };
   }
+
+  // اگر پیام مشتری برای این رویداد ارسال نشده باشد هم قاب‌های سفارشی راه می‌افتند (سرور تکرار را حذف می‌کند)
+  dispatchCustomOrderMessages(status, { orderId: details?.orderId, orderCode }, details);
 
   try {
     // ارسال پیامک با وضعیت خاص برای مدیرعامل
