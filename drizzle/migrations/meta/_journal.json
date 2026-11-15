@@ -120,6 +120,13 @@
       "when": 1794697554490,
       "tag": "0016_sms_custom_frames",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794703435636,
+      "tag": "0017_sms_order_event_frames",
+      "breakpoints": true
     }
   ]
 }

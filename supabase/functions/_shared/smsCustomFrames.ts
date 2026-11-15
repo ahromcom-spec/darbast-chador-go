@@ -4,39 +4,86 @@
 
 export const CUSTOM_FRAME_SCOPE = "custom";
 
+export type FrameStageGroup = "order" | "renewal" | "repair" | "discount" | "transfer" | "collaboration";
+
+export const FRAME_STAGE_GROUP_LABELS: Record<FrameStageGroup, string> = {
+  order: "مراحل سفارش",
+  renewal: "تمدید",
+  repair: "تعمیرات",
+  discount: "تخفیف",
+  transfer: "انتقال سفارش",
+  collaboration: "همکاران سفارش",
+};
+
 export interface CustomFrameStage {
   key: string;
   label: string;
   hint: string;
+  group: FrameStageGroup;
+  /** برچسب «شخص مرتبط با رویداد» در این مرحله (گیرنده انتقال یا همکار) — فقط مراحلی که چنین شخصی دارند */
+  personLabel?: string;
+  /** برچسب «مشتری سفارش» وقتی در این مرحله معنای خاصی دارد */
+  customerLabel?: string;
 }
 
 /** همه مراحل سفارش که قاب پیام سفارشی می‌تواند به آن‌ها وصل شود (به ترتیب چرخه سفارش). */
 export const CUSTOM_FRAME_STAGES: CustomFrameStage[] = [
-  { key: "submitted", label: "ثبت سفارش", hint: "وقتی سفارش جدید ثبت می‌شود" },
-  { key: "approved", label: "تایید سفارش", hint: "وقتی مدیریت سفارش را تایید می‌کند" },
-  { key: "rejected", label: "رد سفارش", hint: "وقتی سفارش رد می‌شود" },
-  { key: "in_progress", label: "شروع اجرا", hint: "وقتی اجرای سفارش شروع می‌شود" },
-  { key: "executed", label: "اجرا شد", hint: "وقتی مرحله «اجرا شد» ثبت می‌شود" },
-  { key: "rental_started", label: "شروع کرایه", hint: "وقتی تاریخ شروع کرایه ثبت می‌شود" },
-  { key: "awaiting_payment", label: "در انتظار پرداخت", hint: "وقتی سفارش به مرحله پرداخت می‌رود" },
-  { key: "paid", label: "ثبت پرداخت", hint: "هر بار که پرداختی برای سفارش ثبت می‌شود" },
-  { key: "awaiting_collection", label: "درخواست جمع‌آوری", hint: "وقتی درخواست جمع‌آوری ثبت یا تایید می‌شود" },
-  { key: "in_collection", label: "در حال جمع‌آوری", hint: "وقتی جمع‌آوری شروع می‌شود" },
-  { key: "collected", label: "جمع‌آوری شد", hint: "وقتی جمع‌آوری تمام می‌شود" },
-  { key: "completed", label: "اتمام سفارش", hint: "وقتی سفارش بسته می‌شود" },
+  { key: "submitted", label: "ثبت سفارش", hint: "وقتی سفارش جدید ثبت می‌شود", group: "order" },
+  { key: "approved", label: "تایید سفارش", hint: "وقتی مدیریت سفارش را تایید می‌کند", group: "order" },
+  { key: "rejected", label: "رد سفارش", hint: "وقتی سفارش رد می‌شود", group: "order" },
+  { key: "in_progress", label: "شروع اجرا", hint: "وقتی اجرای سفارش شروع می‌شود", group: "order" },
+  { key: "executed", label: "اجرا شد", hint: "وقتی مرحله «اجرا شد» ثبت می‌شود", group: "order" },
+  { key: "rental_started", label: "شروع کرایه", hint: "وقتی تاریخ شروع کرایه ثبت می‌شود", group: "order" },
+  { key: "awaiting_payment", label: "در انتظار پرداخت", hint: "وقتی سفارش به مرحله پرداخت می‌رود", group: "order" },
+  { key: "paid", label: "ثبت پرداخت", hint: "هر بار که پرداختی برای سفارش ثبت می‌شود", group: "order" },
+  { key: "awaiting_collection", label: "درخواست جمع‌آوری", hint: "وقتی درخواست جمع‌آوری ثبت یا تایید می‌شود", group: "order" },
+  { key: "in_collection", label: "در حال جمع‌آوری", hint: "وقتی جمع‌آوری شروع می‌شود", group: "order" },
+  { key: "collected", label: "جمع‌آوری شد", hint: "وقتی جمع‌آوری تمام می‌شود", group: "order" },
+  { key: "completed", label: "اتمام سفارش", hint: "وقتی سفارش بسته می‌شود", group: "order" },
+  // تمدید
+  { key: "renewal_requested", label: "درخواست تمدید", hint: "وقتی درخواست تمدید ماه بعد ثبت می‌شود", group: "renewal" },
+  { key: "renewal_approved", label: "تایید تمدید", hint: "وقتی مدیریت تمدید را تایید می‌کند یا تمدید تاییدشده ثبت می‌شود", group: "renewal" },
+  { key: "renewal_rejected", label: "رد تمدید", hint: "وقتی درخواست تمدید رد می‌شود", group: "renewal" },
+  // تعمیرات
+  { key: "repair_requested", label: "ثبت درخواست تعمیر", hint: "وقتی درخواست تعمیر برای سفارش ثبت می‌شود", group: "repair" },
+  { key: "repair_approved", label: "تایید و قیمت تعمیر", hint: "وقتی مدیریت تعمیر را تایید و هزینه آن را تعیین می‌کند", group: "repair" },
+  { key: "repair_scheduled", label: "در انتظار انجام تعمیر", hint: "وقتی تعمیر در نوبت انجام قرار می‌گیرد", group: "repair" },
+  { key: "repair_completed", label: "تعمیر انجام شد", hint: "وقتی تعمیر انجام و ثبت می‌شود", group: "repair" },
+  { key: "repair_rejected", label: "رد درخواست تعمیر", hint: "وقتی درخواست تعمیر رد می‌شود", group: "repair" },
+  // تخفیف
+  { key: "discount_applied", label: "اعمال تخفیف", hint: "وقتی مدیریت برای سفارش تخفیف ثبت یا مبلغ آن را تغییر می‌دهد", group: "discount" },
+  // انتقال سفارش
+  { key: "transfer_requested", label: "درخواست انتقال سفارش", hint: "وقتی انتقال سفارش تایید شد و منتظر پذیرش گیرنده است", group: "transfer", personLabel: "گیرنده انتقال", customerLabel: "مالک سفارش (انتقال‌دهنده)" },
+  { key: "transfer_completed", label: "انتقال سفارش انجام شد", hint: "وقتی سفارش به کاربر دیگر منتقل شد", group: "transfer", personLabel: "مالک جدید (گیرنده انتقال)", customerLabel: "مالک قبلی سفارش" },
+  { key: "transfer_rejected", label: "رد انتقال سفارش", hint: "وقتی مدیریت یا گیرنده انتقال را رد می‌کند", group: "transfer", personLabel: "گیرنده انتقال", customerLabel: "مالک سفارش (انتقال‌دهنده)" },
+  // همکاران
+  { key: "collaborator_invited", label: "دعوت همکار", hint: "وقتی دعوت همکاری تایید شد و منتظر پذیرش همکار است", group: "collaboration", personLabel: "همکار دعوت‌شده" },
+  { key: "collaborator_added", label: "افزودن همکار", hint: "وقتی همکار به سفارش اضافه شد (پذیرفت یا مدیریت اضافه کرد)", group: "collaboration", personLabel: "همکار اضافه‌شده" },
 ];
 
 export const CUSTOM_FRAME_STAGE_KEYS = CUSTOM_FRAME_STAGES.map((s) => s.key);
 export const customFrameStageLabel = (key: string) =>
   CUSTOM_FRAME_STAGES.find((s) => s.key === key)?.label || key;
+export const customFrameStage = (key?: string | null) => CUSTOM_FRAME_STAGES.find((s) => s.key === key);
+/** آیا در این مرحله «شخص مرتبط با رویداد» (گیرنده انتقال یا همکار) وجود دارد؟ */
+export const stageHasEventPerson = (key?: string | null) => !!customFrameStage(key)?.personLabel;
 
-export type RecipientKind = "customer" | "collaborators" | "roles" | "phones";
+export type RecipientKind = "customer" | "collaborators" | "roles" | "phones" | "event_person";
 
 export const RECIPIENT_KIND_LABELS: Record<RecipientKind, string> = {
   customer: "مشتری سفارش",
   collaborators: "همکاران سفارش",
   roles: "بخش‌های مدیریتی و پرسنل",
   phones: "شماره‌های دلخواه",
+  event_person: "شخص مرتبط با رویداد (گیرنده انتقال / همکار)",
+};
+
+/** برچسب هر گروه گیرنده در یک مرحله مشخص (مثلاً در انتقال، «مشتری» یعنی مالک قبلی) */
+export const recipientKindLabel = (kind: RecipientKind, stage?: string | null) => {
+  const s = customFrameStage(stage);
+  if (kind === "event_person" && s?.personLabel) return s.personLabel;
+  if (kind === "customer" && s?.customerLabel) return s.customerLabel;
+  return RECIPIENT_KIND_LABELS[kind];
 };
 
 /** بخش‌هایی که می‌توان برایشان پیام فرستاد (همه کاربرانی که این نقش را دارند). */
@@ -129,6 +176,8 @@ export function validateCustomFrame(f: CustomFrame & { title?: string | null; te
     errors.push("بخش‌های مدیریتی گیرنده را انتخاب کنید");
   if (kinds.includes("phones") && (f.recipient_phones || []).filter((p) => normalizeIranMobile(p)).length === 0)
     errors.push("حداقل یک شماره موبایل معتبر وارد کنید");
+  if (kinds.includes("event_person") && !stageHasEventPerson(frameStage(f)))
+    errors.push("«شخص مرتبط با رویداد» فقط برای مراحل انتقال سفارش و همکاران قابل انتخاب است");
   return errors;
 }
 
@@ -140,6 +189,10 @@ export interface FrameRecipientContext {
   skipCustomer?: boolean;
   collaboratorPhones?: string[];
   rolePhones?: Record<string, string[]>;
+  /** گیرنده انتقال یا همکار همین رویداد */
+  eventPersonPhone?: string | null;
+  /** شخص مرتبط با رویداد پیامک را در حساب خودش خاموش کرده است */
+  eventPersonSmsDisabled?: boolean;
 }
 
 export interface FrameRecipient {
@@ -163,6 +216,8 @@ export function resolveFrameRecipients(f: CustomFrame, ctx: FrameRecipientContex
   };
   const kinds = frameKinds(f);
   if (kinds.includes("customer") && !ctx.skipCustomer && !ctx.customerSmsDisabled) push(customerPhone, "customer", "customer");
+  if (kinds.includes("event_person") && stageHasEventPerson(frameStage(f)) && !ctx.eventPersonSmsDisabled)
+    push(ctx.eventPersonPhone, "customer", "event_person");
   if (kinds.includes("collaborators")) (ctx.collaboratorPhones || []).forEach((p) => push(p, "customer", "collaborators"));
   if (kinds.includes("roles")) {
     for (const role of f.recipient_roles || []) {
@@ -178,7 +233,8 @@ export function resolveFrameRecipients(f: CustomFrame, ctx: FrameRecipientContex
 export function describeRecipients(f: CustomFrame): string[] {
   const kinds = frameKinds(f);
   const labels: string[] = [];
-  if (kinds.includes("customer")) labels.push(RECIPIENT_KIND_LABELS.customer);
+  if (kinds.includes("customer")) labels.push(recipientKindLabel("customer", frameStage(f)));
+  if (kinds.includes("event_person")) labels.push(recipientKindLabel("event_person", frameStage(f)));
   if (kinds.includes("collaborators")) labels.push(RECIPIENT_KIND_LABELS.collaborators);
   if (kinds.includes("roles")) (f.recipient_roles || []).forEach((r) => RECIPIENT_ROLE_LABELS[r] && labels.push(RECIPIENT_ROLE_LABELS[r]));
   if (kinds.includes("phones")) {

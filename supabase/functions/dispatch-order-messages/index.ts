@@ -7,6 +7,10 @@ import {
   CUSTOM_FRAME_SCOPE, CUSTOM_FRAME_STAGE_KEYS, DISPATCH_DEDUPE_SECONDS, dispatchClaimKey, frameAppliesTo,
   frameKinds, normalizeIranMobile, resolveFrameRecipients, type CustomFrame,
 } from "../_shared/smsCustomFrames.ts";
+import {
+  EVENT_DEDUPE_SECONDS, ORDER_EVENT_TABLES, eventMoney, eventStageFor, isRecentEvent, jalaliDate, renewalMonthLabel,
+  type OrderEventTable,
+} from "../_shared/smsOrderEvents.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,10 +18,19 @@ const corsHeaders = {
 };
 
 const text = (max: number) => z.string().trim().max(max).optional();
+const EventSchema = z.object({
+  table: z.enum(ORDER_EVENT_TABLES as unknown as [OrderEventTable, ...OrderEventTable[]]),
+  id: z.string().uuid(),
+  op: z.enum(["INSERT", "UPDATE"]),
+  oldStatus: z.string().max(40).nullable().optional(),
+  newStatus: z.string().max(40).nullable().optional(),
+});
 const BodySchema = z.object({
   orderId: z.string().uuid().optional(),
   orderCode: z.string().trim().min(1).max(40).optional(),
-  stage: z.enum(CUSTOM_FRAME_STAGE_KEYS as [string, ...string[]]),
+  stage: z.enum(CUSTOM_FRAME_STAGE_KEYS as [string, ...string[]]).optional(),
+  // رویداد گزارش‌شده توسط پایگاه داده (تمدید، تعمیر، تخفیف، انتقال، همکار) — همیشه با داده واقعی سطر سنجیده می‌شود
+  event: EventSchema.optional(),
   skipCustomer: z.boolean().optional(),
   source: z.string().max(20).optional(),
   details: z.object({
@@ -30,7 +43,125 @@ const BodySchema = z.object({
     totalPaid: z.number().finite().optional(),
     remainingAmount: z.number().finite().optional(),
   }).partial().optional(),
-}).refine((b) => !!b.orderId || !!b.orderCode, { message: "orderId or orderCode is required" });
+}).refine((b) => !!b.event || (!!b.stage && (!!b.orderId || !!b.orderCode)), { message: "event, or stage with orderId/orderCode, is required" });
+
+// deno-lint-ignore no-explicit-any
+type Admin = any;
+interface ResolvedEvent {
+  stage: string;
+  orderId: string;
+  eventRef: string;
+  vars: Record<string, string>;
+  personUserId?: string | null;
+  personPhone?: string | null;
+  personName?: string | null;
+  /** در انتقال سفارش، «مشتری» همان مالک انتقال‌دهنده است */
+  customerUserId?: string | null;
+}
+
+const profileOf = async (admin: Admin, userId?: string | null) => {
+  if (!userId) return null;
+  const { data } = await admin.from("profiles").select("full_name, phone_number, sms_notifications_enabled").eq("user_id", userId).maybeSingle();
+  return data as { full_name?: string | null; phone_number?: string | null; sms_notifications_enabled?: boolean | null } | null;
+};
+
+/** رویداد را از روی سطر واقعی پایگاه داده بازسازی می‌کند؛ اگر با وضعیت فعلی نخواند یا قدیمی باشد، null. */
+async function resolveEvent(admin: Admin, ev: z.infer<typeof EventSchema>): Promise<ResolvedEvent | { skip: string }> {
+  const stage = eventStageFor(ev.table, ev.op, ev.oldStatus, ev.newStatus);
+  if (!stage) return { skip: "no frame stage for this change" };
+  const fresh = (...t: Array<string | null | undefined>) => isRecentEvent(t);
+
+  if (ev.table === "projects_v3") {
+    const { data: o } = await admin.from("projects_v3")
+      .select("id, discount_amount, price_before_discount, discount_note, discount_at, total_price, billing_only").eq("id", ev.id).maybeSingle();
+    if (!o || o.billing_only || !(Number(o.discount_amount) > 0)) return { skip: "no discount" };
+    if (!fresh(o.discount_at)) return { skip: "stale event" };
+    const before = Number(o.price_before_discount);
+    const after = Number.isFinite(before) && before > 0 ? before - Number(o.discount_amount) : Number(o.total_price);
+    return {
+      stage, orderId: o.id, eventRef: `projects_v3:${o.id}:${o.discount_at}`,
+      vars: {
+        discountAmount: eventMoney(o.discount_amount),
+        priceBeforeDiscount: Number.isFinite(before) && before > 0 ? eventMoney(before) : eventMoney(Number(o.total_price) + Number(o.discount_amount)),
+        priceAfterDiscount: eventMoney(after),
+        discountNote: String(o.discount_note || "").trim(),
+      },
+    };
+  }
+
+  if (ev.table === "order_renewals") {
+    const { data: r } = await admin.from("order_renewals")
+      .select("id, order_id, billing_order_id, status, renewal_number, new_start_date, new_end_date, renewal_price, rejection_reason, created_at, updated_at")
+      .eq("id", ev.id).maybeSingle();
+    if (!r || (r.status || "") !== (ev.newStatus || "")) return { skip: "event state mismatch" };
+    if (!fresh(r.created_at, r.updated_at)) return { skip: "stale event" };
+    return {
+      stage, orderId: r.billing_order_id || r.order_id, eventRef: `order_renewals:${r.id}`,
+      vars: {
+        renewalMonth: renewalMonthLabel(r.renewal_number),
+        renewalPrice: eventMoney(r.renewal_price),
+        renewalStartDate: jalaliDate(r.new_start_date),
+        renewalEndDate: jalaliDate(r.new_end_date),
+        reason: String(r.rejection_reason || "").trim(),
+      },
+    };
+  }
+
+  if (ev.table === "repair_requests") {
+    const { data: r } = await admin.from("repair_requests")
+      .select("id, order_id, billing_order_id, status, description, estimated_cost, final_cost, request_date, created_at, updated_at")
+      .eq("id", ev.id).maybeSingle();
+    if (!r || (r.status || "") !== (ev.newStatus || "")) return { skip: "event state mismatch" };
+    if (!fresh(r.created_at, r.updated_at)) return { skip: "stale event" };
+    const cost = r.final_cost ?? r.estimated_cost;
+    return {
+      stage, orderId: r.billing_order_id || r.order_id, eventRef: `repair_requests:${r.id}`,
+      vars: {
+        repairCost: Number(cost) > 0 ? eventMoney(cost) : "",
+        repairDescription: String(r.description || "").trim(),
+        repairDate: jalaliDate(r.request_date || r.created_at),
+      },
+    };
+  }
+
+  if (ev.table === "order_transfer_requests") {
+    const { data: t } = await admin.from("order_transfer_requests")
+      .select("id, order_id, from_user_id, to_user_id, to_phone_number, status, manager_rejection_reason, recipient_rejection_reason, created_at, updated_at")
+      .eq("id", ev.id).maybeSingle();
+    if (!t || (t.status || "") !== (ev.newStatus || "")) return { skip: "event state mismatch" };
+    if (!fresh(t.created_at, t.updated_at)) return { skip: "stale event" };
+    const [from, to] = await Promise.all([profileOf(admin, t.from_user_id), profileOf(admin, t.to_user_id)]);
+    const personPhone = normalizeIranMobile(t.to_phone_number) || normalizeIranMobile(to?.phone_number);
+    return {
+      stage, orderId: t.order_id, eventRef: `order_transfer_requests:${t.id}`,
+      personUserId: t.to_user_id, personPhone, personName: to?.full_name, customerUserId: t.from_user_id,
+      vars: {
+        personName: String(to?.full_name || personPhone || "").trim(),
+        personPhone: personPhone || "",
+        ownerName: String(from?.full_name || "").trim(),
+        reason: String(t.manager_rejection_reason || t.recipient_rejection_reason || "").trim(),
+      },
+    };
+  }
+
+  // order_collaborators
+  const { data: c } = await admin.from("order_collaborators")
+    .select("id, order_id, inviter_user_id, invitee_user_id, invitee_phone_number, collaborator_name, status, manager_rejection_reason, invited_at, created_at, updated_at")
+    .eq("id", ev.id).maybeSingle();
+  if (!c || (c.status || "") !== (ev.newStatus || "")) return { skip: "event state mismatch" };
+  if (!fresh(c.created_at, c.updated_at, c.invited_at)) return { skip: "stale event" };
+  const invitee = await profileOf(admin, c.invitee_user_id);
+  const personPhone = normalizeIranMobile(c.invitee_phone_number) || normalizeIranMobile(invitee?.phone_number);
+  return {
+    stage, orderId: c.order_id, eventRef: `order_collaborators:${c.id}`,
+    personUserId: c.invitee_user_id, personPhone, personName: c.collaborator_name || invitee?.full_name,
+    vars: {
+      personName: String(c.collaborator_name || invitee?.full_name || personPhone || "").trim(),
+      personPhone: personPhone || "",
+      reason: String(c.manager_rejection_reason || "").trim(),
+    },
+  };
+}
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -49,7 +180,8 @@ Deno.serve(async (req) => {
 
   const parsed = BodySchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return json({ error: parsed.error.flatten() }, 400);
-  const { orderId, orderCode, stage, skipCustomer, details = {} } = parsed.data;
+  const { orderCode, skipCustomer, details = {}, event } = parsed.data;
+  let { orderId, stage } = parsed.data;
 
   // === تشخیص فراخوان ===
   const authHeader = req.headers.get("Authorization") || "";
@@ -63,6 +195,17 @@ Deno.serve(async (req) => {
     if (data?.user) userClient = c;
   }
 
+  // === رویداد پایگاه داده: مرحله، سفارش و متغیرها فقط از داده واقعی سطر ساخته می‌شوند ===
+  let resolvedEvent: ResolvedEvent | null = null;
+  if (event) {
+    const r = await resolveEvent(admin, event);
+    if ("skip" in r) return json({ success: true, skipped: r.skip, frames: 0, recipients: 0 });
+    resolvedEvent = r;
+    stage = r.stage;
+    orderId = r.orderId;
+  }
+  if (!stage) return json({ error: "stage is required" }, 400);
+
   // === سفارش ===
   const cols = "id, code, status, execution_stage, subcategory_id, customer_id, customer_name, customer_phone, address, detailed_address, total_price, payment_amount, billing_only";
   const base = admin.from("projects_v3").select(cols);
@@ -70,7 +213,7 @@ Deno.serve(async (req) => {
   if (!order) return json({ error: "order not found" }, 404);
   const o = order as Record<string, any>;
 
-  if (!isService) {
+  if (!isService && !resolvedEvent) {
     if (userClient) {
       // فقط کسی که به این سفارش دسترسی دارد می‌تواند رویداد آن را گزارش کند
       const { data: visible } = await userClient.from("projects_v3").select("id").eq("id", o.id).maybeSingle();
@@ -96,7 +239,12 @@ Deno.serve(async (req) => {
   let customerPhone = normalizeIranMobile(o.customer_phone);
   let customerName: string | undefined = o.customer_name || undefined;
   let customerSmsDisabled = false;
-  if (needKinds.has("customer") || !customerName) {
+  if (resolvedEvent?.customerUserId) {
+    // انتقال سفارش: «مشتری» همان مالکی است که سفارش را منتقل می‌کند (حتی اگر سفارش به نام گیرنده شده باشد)
+    const prof = await profileOf(admin, resolvedEvent.customerUserId);
+    const p = normalizeIranMobile(prof?.phone_number);
+    if (p) { customerPhone = p; customerSmsDisabled = prof?.sms_notifications_enabled === false; }
+  } else if (needKinds.has("customer") || !customerName) {
     if (o.customer_id) {
       const { data: cust } = await admin.from("customers").select("user_id").eq("id", o.customer_id).maybeSingle();
       if (cust?.user_id) {
@@ -121,6 +269,18 @@ Deno.serve(async (req) => {
     collaboratorPhones = (collabs || []).map((c: any) => c.invitee_phone_number || phoneByUser.get(c.invitee_user_id)).filter(Boolean);
   }
 
+  // شخص مرتبط با رویداد (گیرنده انتقال یا همکار) فقط با رضایت پیامکی خودش پیام می‌گیرد
+  const eventPersonPhone = resolvedEvent?.personPhone || null;
+  let eventPersonSmsDisabled = false;
+  if (eventPersonPhone && needKinds.has("event_person")) {
+    const prof = await profileOf(admin, resolvedEvent?.personUserId);
+    if (prof?.sms_notifications_enabled === false) eventPersonSmsDisabled = true;
+    else {
+      const { data: byPhone } = await admin.from("profiles").select("sms_notifications_enabled").eq("phone_number", eventPersonPhone).maybeSingle();
+      if (byPhone?.sms_notifications_enabled === false) eventPersonSmsDisabled = true;
+    }
+  }
+
   const rolePhones: Record<string, string[]> = {};
   const roles = [...new Set(frames.filter((f) => frameKinds(f).includes("roles")).flatMap((f) => f.recipient_roles || []))];
   if (roles.length) {
@@ -143,13 +303,35 @@ Deno.serve(async (req) => {
   }
   const amountCandidates = [details.amount, o.total_price, o.payment_amount].map(Number).filter((v) => Number.isFinite(v) && v > 0);
 
+  // نام پروژه برای متغیر {projectName}
+  let eventVars: Record<string, string> | undefined;
+  if (resolvedEvent) {
+    let projectName = "";
+    const { data: full } = await admin.from("projects_v3").select("hierarchy_project_id").eq("id", o.id).maybeSingle();
+    if (full?.hierarchy_project_id) {
+      const { data: hp } = await admin.from("projects_hierarchy").select("title, location_id").eq("id", full.hierarchy_project_id).maybeSingle();
+      projectName = String(hp?.title || "").trim();
+      if (!projectName && hp?.location_id) {
+        const { data: loc } = await admin.from("locations").select("title").eq("id", hp.location_id).maybeSingle();
+        projectName = String(loc?.title || "").trim();
+      }
+    }
+    if (!projectName) projectName = String(o.address || "").trim();
+    eventVars = { projectName, ...(resolvedEvent.vars || {}) };
+    if (!eventVars.ownerName) eventVars.ownerName = String(customerName || "").trim();
+  }
+  const claimRef = resolvedEvent?.eventRef || o.id;
+  const claimWindow = resolvedEvent ? EVENT_DEDUPE_SECONDS : DISPATCH_DEDUPE_SECONDS;
+
   const jobs: Array<Record<string, unknown>> = [];
   for (const f of frames) {
-    const recipients = resolveFrameRecipients(f, { customerPhone, customerSmsDisabled, skipCustomer, collaboratorPhones, rolePhones });
+    const recipients = resolveFrameRecipients(f, {
+      customerPhone, customerSmsDisabled, skipCustomer, collaboratorPhones, rolePhones, eventPersonPhone, eventPersonSmsDisabled,
+    });
     for (const r of recipients) {
       const { data: claimed } = await admin.rpc("claim_sms_dispatch", {
-        _key: dispatchClaimKey(o.id, stage, f.key, r.phone),
-        _window_seconds: DISPATCH_DEDUPE_SECONDS,
+        _key: dispatchClaimKey(claimRef, stage, f.key, r.phone),
+        _window_seconds: claimWindow,
       });
       if (claimed !== true) continue;
       jobs.push({
@@ -168,6 +350,8 @@ Deno.serve(async (req) => {
         totalPaid: details.totalPaid,
         remainingAmount: details.remainingAmount,
         bypassWindow: (f.conditions as any)?.respectWindow === false,
+        eventVars,
+        eventRef: resolvedEvent?.eventRef,
       });
     }
   }
@@ -182,6 +366,6 @@ Deno.serve(async (req) => {
   if (typeof EdgeRuntime !== "undefined" && EdgeRuntime?.waitUntil) EdgeRuntime.waitUntil(sendAll);
   else await sendAll;
 
-  console.log(`[dispatch-order-messages] order ${o.code} stage ${stage}: ${frames.length} frame(s), ${jobs.length} message(s)`);
+  console.log(`[dispatch-order-messages] order ${o.code} stage ${stage}${resolvedEvent ? ` (${resolvedEvent.eventRef})` : ""}: ${frames.length} frame(s), ${jobs.length} message(s)`);
   return json({ success: true, frames: frames.length, recipients: jobs.length });
 });

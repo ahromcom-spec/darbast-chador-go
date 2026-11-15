@@ -8,19 +8,23 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Plus, Pencil, Copy, Trash2, Loader2, Users, User, Building2, Phone, Search, X, Layers, Globe2,
-  Clock, Sparkles, LayoutGrid, AlertTriangle, MessageSquarePlus,
+  Clock, Sparkles, LayoutGrid, AlertTriangle, MessageSquarePlus, UserCheck,
 } from "lucide-react";
 import { SmsServicePicker, serviceLabel, type SmsServiceOption } from "@/components/ceo/SmsServicePicker";
 import {
-  CUSTOM_FRAME_SCOPE, CUSTOM_FRAME_STAGES, RECIPIENT_KIND_LABELS, RECIPIENT_ROLE_LABELS,
-  customFrameStageLabel, describeRecipients, frameKinds, makeCustomFrameKey, parseCustomPhones,
-  validateCustomFrame, type RecipientKind,
+  CUSTOM_FRAME_SCOPE, CUSTOM_FRAME_STAGES, FRAME_STAGE_GROUP_LABELS, RECIPIENT_KIND_LABELS, RECIPIENT_ROLE_LABELS,
+  customFrameStage, customFrameStageLabel, describeRecipients, frameKinds, makeCustomFrameKey, parseCustomPhones,
+  recipientKindLabel, stageHasEventPerson, validateCustomFrame, type FrameStageGroup, type RecipientKind,
 } from "../../../supabase/functions/_shared/smsCustomFrames";
+import { applyEventVariables, eventVariablesFor, sampleEventVars } from "../../../supabase/functions/_shared/smsOrderEvents";
+
+const STAGE_GROUPS = Object.keys(FRAME_STAGE_GROUP_LABELS) as FrameStageGroup[];
+const SAMPLE_EVENT_VARS = sampleEventVars();
 
 export interface CustomFrameRow {
   id: string;
@@ -54,7 +58,7 @@ interface Props {
 
 type Draft = Omit<CustomFrameRow, "id" | "key" | "updated_at" | "scope"> & { id?: string; key?: string; phonesText: string };
 
-const KIND_ICONS: Record<RecipientKind, typeof User> = { customer: User, collaborators: Users, roles: Building2, phones: Phone };
+const KIND_ICONS: Record<RecipientKind, typeof User> = { customer: User, collaborators: Users, roles: Building2, phones: Phone, event_person: UserCheck };
 
 const emptyDraft = (stage = "submitted"): Draft => ({
   title: "",
@@ -105,6 +109,34 @@ const PRESETS: Array<{ label: string; draft: Partial<Draft> }> = [
       title: "جمع‌آوری — همکاران سفارش", stage_key: "awaiting_collection", recipient_kinds: ["collaborators", "customer"],
       conditions: { respectWindow: true },
       template: "سفارش کد {code} - {serviceType} - آدرس: {address} - تاریخ جمع‌آوری: {collectionDate}",
+    },
+  },
+  {
+    label: "تایید تمدید به مشتری",
+    draft: {
+      title: "تایید تمدید — مشتری", stage_key: "renewal_approved", recipient_kinds: ["customer"], conditions: { respectWindow: true },
+      template: "سفارش کد {code} - {serviceType} - تمدید {renewalMonth} از {renewalStartDate} تا {renewalEndDate} - مبلغ تمدید: {renewalPrice} - پرداخت: {paymentLink}",
+    },
+  },
+  {
+    label: "تعمیر انجام شد به مشتری",
+    draft: {
+      title: "تعمیر انجام شد — مشتری", stage_key: "repair_completed", recipient_kinds: ["customer"], conditions: { respectWindow: true },
+      template: "سفارش کد {code} - {serviceType} - آدرس: {address} - شرح تعمیر: {repairDescription} - هزینه تعمیر: {repairCost} - تاریخ: {dateTime}",
+    },
+  },
+  {
+    label: "اعمال تخفیف به مشتری",
+    draft: {
+      title: "اعمال تخفیف — مشتری", stage_key: "discount_applied", recipient_kinds: ["customer"], conditions: { respectWindow: true },
+      template: "سفارش کد {code} - {serviceType} - تخفیف: {discountAmount} - مبلغ پس از تخفیف: {priceAfterDiscount} - تاریخ: {dateTime}",
+    },
+  },
+  {
+    label: "همکار جدید به همکار",
+    draft: {
+      title: "افزودن همکار — همکار", stage_key: "collaborator_added", recipient_kinds: ["event_person"], conditions: { respectWindow: true },
+      template: "سفارش کد {code} - {serviceType} - {personName} عزیز، سفارش پروژه {projectName} از کاربر {ownerName} برای همکاری به شما اضافه شد - {orderLink}",
     },
   },
 ];
@@ -244,7 +276,7 @@ export function SmsCustomFramesTab({ frames, services, placeholders, customVars,
     return names.length > 3 ? `${names.slice(0, 3).join("، ")} و ${(names.length - 3).toLocaleString("fa-IR")} خدمت دیگر` : names.join("، ");
   };
 
-  const editingStage = CUSTOM_FRAME_STAGES.find((s) => s.key === editing?.stage_key);
+  const editingStage = customFrameStage(editing?.stage_key);
 
   return (
     <div className="space-y-4" dir="rtl">
@@ -274,9 +306,13 @@ export function SmsCustomFramesTab({ frames, services, placeholders, customVars,
           </div>
 
           <div>
-            <p className="text-xs font-medium mb-2 flex items-center gap-1"><LayoutGrid className="h-3.5 w-3.5" />پوشش مراحل سفارش</p>
+            <p className="text-xs font-medium mb-2 flex items-center gap-1"><LayoutGrid className="h-3.5 w-3.5" />پوشش مراحل سفارش، تمدید، تعمیرات، تخفیف، انتقال و همکاران</p>
+            <div className="space-y-3">
+            {STAGE_GROUPS.map((g) => (
+            <div key={g}>
+            <p className="text-[11px] text-muted-foreground mb-1">{FRAME_STAGE_GROUP_LABELS[g]}</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-              {CUSTOM_FRAME_STAGES.map((s) => {
+              {CUSTOM_FRAME_STAGES.filter((s) => s.group === g).map((s) => {
                 const list = byStage.get(s.key) || [];
                 const active = list.filter((f) => f.enabled).length;
                 const selected = stageFilter === s.key;
@@ -294,6 +330,9 @@ export function SmsCustomFramesTab({ frames, services, placeholders, customVars,
                 );
               })}
             </div>
+            </div>
+            ))}
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -301,7 +340,12 @@ export function SmsCustomFramesTab({ frames, services, placeholders, customVars,
               <SelectTrigger className="h-9 w-[170px] text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">همه مراحل</SelectItem>
-                {CUSTOM_FRAME_STAGES.map((s) => <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>)}
+                {STAGE_GROUPS.map((g) => (
+                  <SelectGroup key={g}>
+                    <SelectLabel className="text-[11px]">{FRAME_STAGE_GROUP_LABELS[g]}</SelectLabel>
+                    {CUSTOM_FRAME_STAGES.filter((s) => s.group === g).map((s) => <SelectItem key={s.key} value={s.key} className="text-xs">{s.label}</SelectItem>)}
+                  </SelectGroup>
+                ))}
               </SelectContent>
             </Select>
             <Select value={kindFilter} onValueChange={(v) => setKindFilter(v as any)}>
@@ -392,10 +436,19 @@ export function SmsCustomFramesTab({ frames, services, placeholders, customVars,
                 </div>
                 <div>
                   <Label className="text-xs">مرحله سفارش</Label>
-                  <Select value={editing.stage_key} onValueChange={(v) => patch({ stage_key: v })}>
+                  <Select value={editing.stage_key} onValueChange={(v) => patch({
+                    stage_key: v,
+                    // «شخص مرتبط با رویداد» فقط در مراحل انتقال و همکاران معنا دارد
+                    recipient_kinds: stageHasEventPerson(v) ? editing.recipient_kinds : editing.recipient_kinds.filter((k) => k !== "event_person"),
+                  })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {CUSTOM_FRAME_STAGES.map((s) => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
+                    <SelectContent className="max-h-[60vh]">
+                      {STAGE_GROUPS.map((g) => (
+                        <SelectGroup key={g}>
+                          <SelectLabel className="text-[11px]">{FRAME_STAGE_GROUP_LABELS[g]}</SelectLabel>
+                          {CUSTOM_FRAME_STAGES.filter((s) => s.group === g).map((s) => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
+                        </SelectGroup>
+                      ))}
                     </SelectContent>
                   </Select>
                   {editingStage && <p className="text-[11px] text-muted-foreground mt-1">{editingStage.hint}</p>}
@@ -405,19 +458,28 @@ export function SmsCustomFramesTab({ frames, services, placeholders, customVars,
               <div className="rounded-md border p-3 space-y-3">
                 <Label className="text-xs font-semibold">گیرندگان پیام</Label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {(Object.keys(RECIPIENT_KIND_LABELS) as RecipientKind[]).map((k) => {
+                  {(Object.keys(RECIPIENT_KIND_LABELS) as RecipientKind[])
+                    .filter((k) => k !== "event_person" || stageHasEventPerson(editing.stage_key))
+                    .map((k) => {
                     const Icon = KIND_ICONS[k];
                     const on = editing.recipient_kinds.includes(k);
                     return (
                       <label key={k} className={"flex items-center gap-2 rounded-md border p-2 text-sm cursor-pointer " + (on ? "border-primary bg-primary/5" : "")}>
                         <Checkbox checked={on} onCheckedChange={(v) => toggleKind(k, !!v)} />
-                        <Icon className="h-4 w-4 text-muted-foreground" />{RECIPIENT_KIND_LABELS[k]}
+                        <Icon className="h-4 w-4 text-muted-foreground" />{recipientKindLabel(k, editing.stage_key)}
                       </label>
                     );
                   })}
                 </div>
                 {editing.recipient_kinds.includes("customer") && (
                   <p className="text-[11px] text-muted-foreground">مشتریانی که پیامک را در حساب خود خاموش کرده‌اند این پیام را نمی‌گیرند.</p>
+                )}
+                {editing.recipient_kinds.includes("event_person") && (
+                  <p className="text-[11px] text-muted-foreground">
+                    {editingStage?.group === "transfer"
+                      ? "شماره‌ای که سفارش به آن منتقل می‌شود این پیام را می‌گیرد، حتی اگر هنوز در سایت ثبت‌نام نکرده باشد."
+                      : "همان همکاری که به این سفارش اضافه یا دعوت شده این پیام را می‌گیرد."}
+                  </p>
                 )}
                 {editing.recipient_kinds.includes("roles") && (
                   <div className="space-y-1">
@@ -470,6 +532,10 @@ export function SmsCustomFramesTab({ frames, services, placeholders, customVars,
                       <Button key={p.token} type="button" size="sm" variant="outline" className="h-7 text-xs" title={p.label}
                         onClick={() => patch({ template: `${editing.template || ""} ${p.token}` })}>{p.token}</Button>
                     ))}
+                    {eventVariablesFor(editingStage?.group).map((v) => (
+                      <Button key={v.token} type="button" size="sm" variant="secondary" className="h-7 text-xs" title={v.label}
+                        onClick={() => patch({ template: `${editing.template || ""} ${v.token}` })}>{v.token}</Button>
+                    ))}
                     {customVars.filter((v) => v.enabled).map((v) => (
                       <Button key={v.id} type="button" size="sm" variant="secondary" className="h-7 text-xs border border-primary/40" title={`المان سفارشی: ${v.label}`}
                         onClick={() => patch({ template: `${editing.template || ""} {${v.token}}` })}>{`{${v.token}}`}</Button>
@@ -483,7 +549,7 @@ export function SmsCustomFramesTab({ frames, services, placeholders, customVars,
                 <div className="space-y-1">
                   <Label className="text-xs">پیش‌نمایش</Label>
                   <div className="rounded-xl border bg-muted/40 p-3 text-xs leading-6 whitespace-pre-wrap min-h-[160px]">
-                    {renderPreview(editing.template, editing.service_subcategory_ids[0])}
+                    {renderPreview(applyEventVariables(editing.template, SAMPLE_EVENT_VARS), editing.service_subcategory_ids[0])}
                   </div>
                 </div>
               </div>

@@ -4,6 +4,7 @@ import { applySmsCustomVariables, usedSmsCustomVariables, type SmsCustomVariable
 import { canReuseSmsLog, isSmsLogId } from "../_shared/smsRetryLog.ts";
 import { selectSmsTemplate } from "../_shared/smsTemplateSelection.ts";
 import { CUSTOM_FRAME_SCOPE, isCustomFrameKey } from "../_shared/smsCustomFrames.ts";
+import { applyEventVariables, sanitizeEventVars } from "../_shared/smsOrderEvents.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -91,6 +92,20 @@ const STAGE_LABELS: Record<string, string> = {
   completed: "به اتمام رسید",
   rental_started: "شروع کرایه",
   contractor_pending_request: "در انتظار پذیرش شما",
+  renewal_requested: "درخواست تمدید",
+  renewal_approved: "تمدید تایید شد",
+  renewal_rejected: "تمدید رد شد",
+  repair_requested: "درخواست تعمیر",
+  repair_approved: "تعمیر تایید شد",
+  repair_scheduled: "در انتظار تعمیر",
+  repair_completed: "تعمیر انجام شد",
+  repair_rejected: "تعمیر رد شد",
+  discount_applied: "اعمال تخفیف",
+  transfer_requested: "درخواست انتقال",
+  transfer_completed: "انتقال انجام شد",
+  transfer_rejected: "انتقال رد شد",
+  collaborator_invited: "دعوت همکاری",
+  collaborator_added: "افزودن همکار",
 };
 
 // قالب تایید شده توسط پارس‌گرین برای شماره 90000319
@@ -140,6 +155,8 @@ interface SmsRequest {
   scheduledId?: string; // ردیف صف همین پیامک؛ تلاش مجدد همان ردیف را دوباره در صف می‌گذارد
   templateKey?: string; // قاب پیام سفارشی (فقط از سمت سرور)
   audience?: "customer" | "staff"; // گیرنده قاب سفارشی: مشتری یا پرسنل
+  eventVars?: Record<string, string>; // متغیرهای رویداد (تمدید، تعمیر، تخفیف، انتقال، همکار) — فقط از سمت سرور
+  eventRef?: string; // شناسه رویداد برای جلوگیری از تکرار در صف
 }
 
 // حداکثر تلاش خودکار مجدد در صورت ناموفق بودن ارسال
@@ -240,6 +257,10 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
       return jsonResponse({ error: "unauthorized" }, 401);
     }
     const isStaffAudience = !!templateKey && reqBody?.audience === "staff";
+    // متغیرها و شناسه رویداد فقط همراه قاب سفارشی و از سمت سرور پذیرفته می‌شوند
+    const eventVars = templateKey ? sanitizeEventVars(reqBody?.eventVars) : {};
+    const eventRef: string | undefined = templateKey && typeof reqBody?.eventRef === "string" && /^[a-z_0-9]+:[0-9a-f-]{36}(:[^|]{0,40})?$/i.test(reqBody.eventRef)
+      ? reqBody.eventRef : undefined;
     const logKey = templateKey || status;
     const logScope = (fallback?: string | null) => (templateKey ? CUSTOM_FRAME_SCOPE : fallback);
     const isResend = typeof resendMessage === "string" && resendMessage.trim().length > 0;
@@ -371,6 +392,7 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
               .eq("status_key", status)
               .in("state", ["pending", "sending"])
               .filter("payload->>templateKey", templateKey ? "eq" : "is", templateKey ?? null)
+              .filter("payload->>eventRef", eventRef ? "eq" : "is", eventRef ?? null)
               .limit(1)
               .maybeSingle();
 
@@ -387,7 +409,7 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
               order_code: orderCode,
               order_id: orderId ?? null,
               status_key: status,
-              payload: { serviceType, address, amount, customerName, description, resendMessage, paidAmount, totalPaid, remainingAmount, templateKey, audience: templateKey ? reqBody?.audience : undefined },
+              payload: { serviceType, address, amount, customerName, description, resendMessage, paidAmount, totalPaid, remainingAmount, templateKey, audience: templateKey ? reqBody?.audience : undefined, eventVars: templateKey ? eventVars : undefined, eventRef },
               send_after: sendAfter,
             });
 
@@ -621,6 +643,8 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
       .replaceAll("{totalPaid}", fmtMoney(resolvedTotalPaid))
       .replaceAll("{remainingAmount}", fmtMoney(resolvedRemaining))
       .replaceAll("{description}", (description || "").toString().trim() || "ثبت نشده");
+    // متغیرهای رویداد قاب‌های سفارشی (تمدید، تعمیر، تخفیف، انتقال سفارش، همکار)
+    if (!isResend) message = applyEventVariables(message, eventVars);
 
     // === المان‌های سفارشی ساخته‌شده توسط مدیریت در ماژول پیامک‌ها ===
     if (!isResend) {
@@ -889,7 +913,8 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
           .eq("order_code", orderCode)
           .eq("status_key", status)
           .eq("state", "pending")
-          .filter("payload->>templateKey", templateKey ? "eq" : "is", templateKey ?? null);
+          .filter("payload->>templateKey", templateKey ? "eq" : "is", templateKey ?? null)
+          .filter("payload->>eventRef", eventRef ? "eq" : "is", eventRef ?? null);
         if (isSmsLogId(scheduledId)) pendingQuery = pendingQuery.neq("id", scheduledId);
         const { data: pendingRetry } = await pendingQuery.limit(1).maybeSingle();
 
@@ -914,6 +939,7 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
           logId: currentLogId ?? undefined,
           templateKey,
           audience: templateKey ? reqBody?.audience : undefined,
+          eventRef,
         };
         const retryLastError = `retry ${attemptNo + 1}/${MAX_AUTO_RETRIES}: ${responseText.slice(0, 200)}`;
 
