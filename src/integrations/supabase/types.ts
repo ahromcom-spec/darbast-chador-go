@@ -6086,6 +6086,7 @@ export type Database = {
           default_template: string | null
           delay_minutes: number
           description: string | null
+          display_tab: string | null
           enabled: boolean
           excluded_subcategory_ids: string[]
           footer: string
@@ -6109,6 +6110,7 @@ export type Database = {
           default_template?: string | null
           delay_minutes?: number
           description?: string | null
+          display_tab?: string | null
           enabled?: boolean
           excluded_subcategory_ids?: string[]
           footer?: string
@@ -6132,6 +6134,7 @@ export type Database = {
           default_template?: string | null
           delay_minutes?: number
           description?: string | null
+          display_tab?: string | null
           enabled?: boolean
           excluded_subcategory_ids?: string[]
           footer?: string

@@ -19,7 +19,12 @@ import { applySmsCustomVariables } from "../../../supabase/functions/_shared/sms
 import {
   findServiceConflicts, isGeneralTemplate, makeVariantKey, selectSmsTemplate, stageOf, targetsOf,
 } from "../../../supabase/functions/_shared/smsTemplateSelection";
-import { SmsCustomFramesTab, type CustomFrameRow } from "@/components/ceo/SmsCustomFramesTab";
+import { SmsCustomFramesTab, setFrameDisplayTab, type CustomFrameRow } from "@/components/ceo/SmsCustomFramesTab";
+import {
+  CUSTOM_FRAME_STAGES, FRAME_STAGE_GROUP_LABELS, customFrameStage, customFrameStageLabel, describeRecipients,
+} from "../../../supabase/functions/_shared/smsCustomFrames";
+import { applyEventVariables, eventVariablesFor, sampleEventVars } from "../../../supabase/functions/_shared/smsOrderEvents";
+import { FRAME_DISPLAY_TAB_LABELS, resolveFrameTab } from "@/lib/smsFrameTabs";
 import { SmsServiceList, SmsServicePicker, serviceLabel, type SmsServiceOption } from "@/components/ceo/SmsServicePicker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -27,7 +32,10 @@ import {
   Loader2, MessageSquare, Save, RefreshCw, Smartphone, Send, AlertCircle,
   CheckCircle2, XCircle, Lock, RotateCcw, Wallet, Clock, Settings2,
   Search, X, Layers, Globe2, Plus, Trash2, Filter, AlertTriangle,
+  MessageSquarePlus, Users, ArrowLeftRight, Pencil,
 } from "lucide-react";
+
+const SAMPLE_EVENT_VARS = sampleEventVars();
 
 interface SmsTemplate {
   id: string;
@@ -46,9 +54,15 @@ interface SmsTemplate {
   stage_key: string;
   service_subcategory_ids: string[];
   excluded_subcategory_ids: string[];
+  recipient_kinds?: string[] | null;
+  recipient_roles?: string[] | null;
+  recipient_phones?: string[] | null;
+  display_tab?: string | null;
 }
 
-type TplKindFilter = "all" | "general" | "specific";
+type TplKindFilter = "all" | "general" | "specific" | "frames";
+
+const isFrame = (t: SmsTemplate) => t.scope === "custom";
 type TplStatusFilter = "all" | "enabled" | "disabled";
 
 interface SmsLog {
@@ -161,6 +175,9 @@ export default function SmsManagementModule() {
   const [logService, setLogService] = useState<string>("all");
   // تب فعال پس از بارگذاری مجدد (مثلاً بعد از ذخیره قاب) حفظ می‌شود
   const [activeTab, setActiveTab] = useState("customer");
+  // درخواست باز کردن ویرایش کامل قاب (گیرندگان و مرحله) از تب مشتری/مدیریت
+  const [frameEditRequest, setFrameEditRequest] = useState<string | null>(null);
+  const [frameReturnTab, setFrameReturnTab] = useState<string | null>(null);
 
   const loadServices = async () => {
     const { data } = await supabase
@@ -373,7 +390,9 @@ export default function SmsManagementModule() {
       .replace(/\{paidAmount\}/g, "۵٬۰۰۰٬۰۰۰ تومان")
       .replace(/\{totalPaid\}/g, "۱۵٬۰۰۰٬۰۰۰ تومان")
       .replace(/\{remainingAmount\}/g, "۱۰٬۰۰۰٬۰۰۰ تومان");
-    const bodyWithCustom = applySmsCustomVariables(body, customVars, SAMPLE_SMS_SNAPSHOT);
+    const bodyWithCustom = applySmsCustomVariables(
+      isFrame(m) ? applyEventVariables(body, SAMPLE_EVENT_VARS) : body, customVars, SAMPLE_SMS_SNAPSHOT,
+    );
 
     const footer = (m.footer || BRAND_FOOTER).trim() || BRAND_FOOTER;
     const header = "خدمات ساختمانی و منزل اهرم";
@@ -383,6 +402,31 @@ export default function SmsManagementModule() {
 
   const save = async (item: SmsTemplate) => {
     const m = merged(item);
+    if (isFrame(item)) {
+      if (!(m.title || "").trim()) { toast.error("عنوان قاب را وارد کنید"); return; }
+      if (!(m.template || "").trim()) { toast.error("متن پیام خالی است"); return; }
+      const targets = targetsOf(m);
+      setSaving(item.id);
+      const { data, error } = await supabase.from("sms_templates").update({
+        template: m.template,
+        default_template: m.template,
+        description: m.description,
+        title: m.title.trim(),
+        enabled: m.enabled,
+        delay_minutes: Math.min(5, Math.max(0, Number(m.delay_minutes) || 0)),
+        conditions: m.conditions || {},
+        footer: (m.footer || BRAND_FOOTER).trim() || BRAND_FOOTER,
+        append_footer: m.append_footer !== false,
+        service_subcategory_ids: targets,
+        excluded_subcategory_ids: targets.length ? [] : (m.excluded_subcategory_ids || []),
+      }).eq("id", item.id).eq("scope", "custom").select("id");
+      setSaving(null);
+      if (error) { toast.error("خطا در ذخیره: " + error.message); return; }
+      if (!data || data.length === 0) { toast.error("ذخیره انجام نشد — دسترسی مدیریت پیامک برای حساب شما وجود ندارد"); return; }
+      toast.success("قاب پیام ذخیره شد");
+      await load();
+      return;
+    }
     if (!isGeneralTemplate(item) && targetsOf(m).length === 0) {
       toast.error("برای پیام تخصصی حداقل یک خدمت انتخاب کنید (یا آن را حذف کنید)");
       return;
@@ -431,7 +475,7 @@ export default function SmsManagementModule() {
   const takenByStage = useMemo(() => {
     const map = new Map<string, Record<string, string>>();
     for (const t of items) {
-      if (isGeneralTemplate(t) || !t.enabled) continue;
+      if (isFrame(t) || isGeneralTemplate(t) || !t.enabled) continue;
       const rec = map.get(stageOf(t)) || {};
       targetsOf(t).forEach((id) => { rec[id] = `پیام تخصصی «${t.title}» دارد`; });
       map.set(stageOf(t), rec);
@@ -439,7 +483,7 @@ export default function SmsManagementModule() {
     return map;
   }, [items]);
 
-  const conflicts = useMemo(() => findServiceConflicts(items), [items]);
+  const conflicts = useMemo(() => findServiceConflicts(items.filter((t) => !isFrame(t))), [items]);
 
   const openVariantDialog = (base: SmsTemplate) => {
     setVariantBase(base);
@@ -508,6 +552,40 @@ export default function SmsManagementModule() {
     return g;
   }, [items]);
 
+  // قاب‌هایی که به تب مشتری یا مدیریت اهرم برده شده‌اند (همچنان در تب قاب‌ها هم هستند)
+  const framesByTab = useMemo(() => {
+    const g: Record<string, SmsTemplate[]> = { customer: [], ceo: [] };
+    for (const it of items) {
+      if (!isFrame(it)) continue;
+      const tab = resolveFrameTab(it.display_tab, it.recipient_kinds);
+      if (tab) g[tab].push(it);
+    }
+    return g;
+  }, [items]);
+
+  const openFrameFullEditor = (item: SmsTemplate) => {
+    setFrameReturnTab(activeTab);
+    setFrameEditRequest(item.id);
+    setActiveTab("custom-frames");
+  };
+
+  const moveFrame = async (item: SmsTemplate, tab: "customer" | "ceo" | null) => {
+    setSaving(item.id);
+    const ok = await setFrameDisplayTab(item.id, tab);
+    setSaving(null);
+    if (ok) await load();
+  };
+
+  const deleteFrame = async (item: SmsTemplate) => {
+    if (!window.confirm(`قاب پیام «${item.title}» حذف شود؟ از این پس این پیام ارسال نمی‌شود.`)) return;
+    setSaving(item.id);
+    const { data, error } = await supabase.from("sms_templates").delete().eq("id", item.id).eq("scope", "custom").select("id");
+    setSaving(null);
+    if (error || !data?.length) { toast.error("حذف انجام نشد" + (error ? ": " + error.message : " — دسترسی کافی ندارید")); return; }
+    toast.success("قاب پیام حذف شد");
+    await load();
+  };
+
   // پیام‌های ناموفقی که تلاش مجدد خودکارشان هنوز در صف است
   const retryingLogIds = useMemo(
     () => new Set(queue.map((q) => q.payload?.logId).filter((v): v is string => typeof v === "string")),
@@ -551,6 +629,7 @@ export default function SmsManagementModule() {
   }, [queue, queueSearch, queuePreviews]);
 
   const renderItem = (item: SmsTemplate) => {
+    if (isFrame(item)) return renderFrameItem(item);
     const m = merged(item);
     const dirty = !!drafts[item.id];
     const cond = (m.conditions || {}) as Record<string, any>;
@@ -808,6 +887,190 @@ export default function SmsManagementModule() {
     );
   };
 
+  // قاب پیام سفارشی که به تب مشتری/مدیریت برده شده: همان کارت ویرایش پیامک‌های این تب + امکانات قاب
+  const renderFrameItem = (item: SmsTemplate) => {
+    const m = merged(item);
+    const dirty = !!drafts[item.id];
+    const cond = (m.conditions || {}) as Record<string, any>;
+    const stageInfo = customFrameStage(item.stage_key);
+    const targets = targetsOf(m);
+    const recipients = describeRecipients(item as any);
+    const tab = resolveFrameTab(item.display_tab, item.recipient_kinds);
+    const otherTab = tab === "customer" ? "ceo" : "customer";
+    const canOther = resolveFrameTab(otherTab, item.recipient_kinds) === otherTab;
+    const addToken = (token: string) => setDraft(item.id, { template: (m.template || "") + " " + token });
+    return (
+      <Card key={item.id} className={(dirty ? "border-amber-400 shadow-md" : "shadow-sm") + " border-primary/30"}>
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="flex-1 min-w-[240px] space-y-1.5">
+              <CardTitle className="text-base flex items-center gap-2 flex-wrap">
+                <MessageSquarePlus className="h-4 w-4 text-primary" />
+                {m.title}
+                <Badge className="text-[11px] gap-1"><MessageSquarePlus className="h-3 w-3" />قاب پیام سفارشی</Badge>
+                <Badge variant="outline" className="text-xs">{customFrameStageLabel(item.stage_key)}</Badge>
+                {targets.length ? (
+                  <Badge variant="secondary" className="gap-1 text-[11px]"><Layers className="h-3 w-3" />{targets.length.toLocaleString("fa-IR")} خدمت</Badge>
+                ) : (
+                  <Badge variant="secondary" className="gap-1 text-[11px]">
+                    <Globe2 className="h-3 w-3" />همه خدمات
+                    {(m.excluded_subcategory_ids || []).length > 0 && ` (به‌جز ${(m.excluded_subcategory_ids || []).length.toLocaleString("fa-IR")} خدمت)`}
+                  </Badge>
+                )}
+                {!m.enabled && <Badge variant="destructive">غیرفعال</Badge>}
+                {m.delay_minutes > 0 && (
+                  <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />{m.delay_minutes} دقیقه تأخیر</Badge>
+                )}
+                {cond.respectWindow === false && <Badge variant="secondary" className="text-[11px]">ارسال در هر ساعت</Badge>}
+              </CardTitle>
+              <div className="flex flex-wrap items-center gap-1 text-[11px]">
+                <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-muted-foreground">گیرندگان:</span>
+                {recipients.map((l) => <Badge key={l} variant="secondary" className="font-normal text-[11px]">{l}</Badge>)}
+              </div>
+              {m.description && <p className="text-xs text-muted-foreground">{m.description}</p>}
+            </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs">فعال</Label>
+              <Switch checked={!!m.enabled} disabled={saving === item.id} onCheckedChange={(v) => toggleEnabled(item, v)} />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">عنوان</Label>
+                <Input value={m.title} onChange={(e) => setDraft(item.id, { title: e.target.value })} />
+              </div>
+              <div>
+                <Label className="text-xs">توضیحات (فقط برای مدیران)</Label>
+                <Input value={m.description || ""} onChange={(e) => setDraft(item.id, { description: e.target.value })} />
+              </div>
+              <div>
+                <Label className="text-xs flex items-center gap-1">
+                  متن پیامک
+                  <span className="text-[10px] text-muted-foreground">— متغیرها را با کلیک اضافه کنید</span>
+                </Label>
+                <Textarea dir="rtl" rows={4} value={m.template} onChange={(e) => setDraft(item.id, { template: e.target.value })} />
+                <div className="mt-1 flex items-center gap-2 rounded-md border border-dashed border-primary/40 bg-primary/5 px-3 py-2 text-xs">
+                  <Lock className="h-3.5 w-3.5 text-primary" />
+                  <span className="font-medium">پابرگ اجباری برند:</span>
+                  <code className="font-mono text-primary">{BRAND_FOOTER}</code>
+                  <span className="text-muted-foreground">— به‌صورت خودکار در انتهای هر پیامک افزوده می‌شود</span>
+                </div>
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {PLACEHOLDERS.map((p) => (
+                    <Button key={p.token} type="button" size="sm" variant="outline" className="h-7 text-xs" title={p.label} onClick={() => addToken(p.token)}>{p.token}</Button>
+                  ))}
+                  {eventVariablesFor(stageInfo?.group).map((v) => (
+                    <Button key={v.token} type="button" size="sm" variant="secondary" className="h-7 text-xs" title={v.label} onClick={() => addToken(v.token)}>{v.token}</Button>
+                  ))}
+                  {customVars.filter((v) => v.enabled).map((v) => (
+                    <Button key={v.id} type="button" size="sm" variant="secondary" className="h-7 text-xs border border-primary/40" title={`المان سفارشی: ${v.label}`} onClick={() => addToken("{" + v.token + "}")}>{`{${v.token}}`}</Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+                <Label className="text-xs flex items-center gap-1">
+                  <Filter className="h-3.5 w-3.5" />خدماتی که این قاب برای سفارش‌هایشان ارسال می‌شود
+                </Label>
+                <SmsServicePicker
+                  services={services}
+                  value={targets}
+                  onChange={(ids) => setDraft(item.id, { service_subcategory_ids: ids })}
+                  placeholder="همه خدمات (برای محدود کردن، خدمات را انتخاب کنید)"
+                />
+                {targets.length === 0 && (
+                  <SmsServicePicker
+                    services={services}
+                    value={m.excluded_subcategory_ids || []}
+                    onChange={(ids) => setDraft(item.id, { excluded_subcategory_ids: ids })}
+                    placeholder="استثنا کردن خدمات (این قاب را نگیرند)"
+                    tone="exclude"
+                  />
+                )}
+                <p className="text-[11px] text-muted-foreground leading-5">
+                  این قاب علاوه بر پیامک پیش‌فرض مرحله «{customFrameStageLabel(item.stage_key)}» ارسال می‌شود و هر رویداد برای هر گیرنده فقط یک بار پیام می‌فرستد.
+                </p>
+              </div>
+
+              <div className="rounded-md border border-primary/30 bg-primary/5 p-3 space-y-2">
+                <Label className="text-xs flex items-center gap-1"><MessageSquarePlus className="h-3.5 w-3.5" />امکانات قاب</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button type="button" size="sm" variant="secondary" className="h-8 text-xs" onClick={() => openFrameFullEditor(item)}>
+                    <Pencil className="h-3.5 w-3.5 ml-1" />ویرایش گیرندگان و مرحله
+                  </Button>
+                  {canOther && (
+                    <Button type="button" size="sm" variant="outline" className="h-8 text-xs" disabled={saving === item.id} onClick={() => moveFrame(item, otherTab)}>
+                      <ArrowLeftRight className="h-3.5 w-3.5 ml-1" />بردن به تب {FRAME_DISPLAY_TAB_LABELS[otherTab]}
+                    </Button>
+                  )}
+                  <Button type="button" size="sm" variant="ghost" className="h-8 text-xs" disabled={saving === item.id} onClick={() => moveFrame(item, null)}>
+                    <RotateCcw className="h-3.5 w-3.5 ml-1" />برگرداندن به تب قاب‌ها
+                  </Button>
+                </div>
+              </div>
+
+              <Accordion type="single" collapsible>
+                <AccordionItem value="adv" className="border rounded-md">
+                  <AccordionTrigger className="px-3 py-2 text-sm">
+                    <span className="flex items-center gap-2"><Settings2 className="h-4 w-4" />تنظیمات پیشرفته (شرط‌ها، ساعت و تأخیر)</span>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-3 pb-3 space-y-3">
+                    <label className="flex items-center justify-between gap-2 text-xs">
+                      <span>فقط در ساعات مجاز ارسال پیامک بفرست (خارج از آن، در صف می‌ماند)</span>
+                      <Switch checked={cond.respectWindow !== false} onCheckedChange={(v) => setDraft(item.id, { conditions: { ...cond, respectWindow: v } })} />
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <Label className="text-xs">تأخیر ارسال (۰ تا ۵ دقیقه)</Label>
+                        <Input type="number" min={0} max={5} value={m.delay_minutes ?? 0}
+                          onChange={(e) => setDraft(item.id, { delay_minutes: Math.min(5, Math.max(0, Number(e.target.value) || 0)) })} />
+                      </div>
+                      <div>
+                        <Label className="text-xs">حداقل مبلغ سفارش (تومان)</Label>
+                        <Input type="number" min={0} value={cond.minAmount ?? ""}
+                          onChange={(e) => setDraft(item.id, { conditions: { ...cond, minAmount: e.target.value === "" ? undefined : Number(e.target.value) } })} />
+                      </div>
+                      <div>
+                        <Label className="text-xs">حداکثر مبلغ سفارش (تومان)</Label>
+                        <Input type="number" min={0} value={cond.maxAmount ?? ""}
+                          onChange={(e) => setDraft(item.id, { conditions: { ...cond, maxAmount: e.target.value === "" ? undefined : Number(e.target.value) } })} />
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs flex items-center gap-1"><Smartphone className="h-3.5 w-3.5" />پیش‌نمایش روی موبایل</Label>
+              <MobilePreview text={previewText(m)} />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t flex-wrap gap-2">
+            <span className="text-[11px] text-muted-foreground">آخرین ویرایش: {new Date(item.updated_at).toLocaleString("fa-IR")}</span>
+            <div className="flex gap-2 flex-wrap">
+              <Button size="sm" variant="ghost" className="text-destructive" disabled={saving === item.id} onClick={() => deleteFrame(item)}>
+                <Trash2 className="h-4 w-4 ml-1" />حذف قاب
+              </Button>
+              {dirty && (
+                <Button size="sm" variant="ghost" onClick={() => setDrafts((d) => { const c = { ...d }; delete c[item.id]; return c; })}>لغو</Button>
+              )}
+              <Button size="sm" disabled={!dirty || saving === item.id} onClick={() => save(item)}>
+                {saving === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 ml-1" />}
+                ذخیره
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   const stageTitle = (scoped: SmsTemplate[], stage: string) => {
     const g = scoped.find((t) => stageOf(t) === stage && isGeneralTemplate(t)) || scoped.find((t) => stageOf(t) === stage);
     return (g?.title || stage).split(" — ")[0];
@@ -832,6 +1095,34 @@ export default function SmsManagementModule() {
       if (q && ![m.title, m.template, m.description, stageOf(t)].filter(Boolean).some((v) => String(v).includes(q))) return false;
       return true;
     });
+    const tabFrames = framesByTab[scope] || [];
+    const visibleFrames = tabFrames.filter((t) => {
+      const m = merged(t);
+      if (tplKind === "general" || tplKind === "specific") return false;
+      if (tplStatus === "enabled" && !m.enabled) return false;
+      if (tplStatus === "disabled" && m.enabled) return false;
+      if (tplService !== "all") {
+        const targets = targetsOf(m);
+        if (targets.length > 0 && !targets.includes(tplService)) return false;
+        if ((m.excluded_subcategory_ids || []).includes(tplService)) return false;
+      }
+      if (q && ![m.title, m.template, m.description, customFrameStageLabel(t.stage_key), ...describeRecipients(t as any)]
+        .filter(Boolean).some((v) => String(v).includes(q))) return false;
+      return true;
+    });
+    const stageOrder = (k: string) => {
+      const i = CUSTOM_FRAME_STAGES.findIndex((s) => s.key === k);
+      return i < 0 ? 999 : i;
+    };
+    const extraFrameStages = [...new Set(visibleFrames.map((f) => f.stage_key))]
+      .filter((k) => !stages.includes(k))
+      .sort((a, b) => stageOrder(a) - stageOrder(b));
+    const enabledFramesForStage = (st: string) => tabFrames.filter((f) => {
+      if (f.stage_key !== st || !f.enabled) return false;
+      const targets = targetsOf(f);
+      if (targets.length > 0 && !targets.includes(tplService)) return false;
+      return !(f.excluded_subcategory_ids || []).includes(tplService);
+    }).length;
     const specificCount = scoped.filter((t) => !isGeneralTemplate(t)).length;
     const coveredServices = new Set(scoped.filter((t) => !isGeneralTemplate(t) && t.enabled).flatMap(targetsOf));
     const filtersActive = tplKind !== "all" || tplService !== "all" || tplStatus !== "all" || !!q;
@@ -846,6 +1137,7 @@ export default function SmsManagementModule() {
                   ["all", "همه پیام‌ها", MessageSquare],
                   ["general", "پیام‌های عمومی سایت", Globe2],
                   ["specific", "پیام‌های تخصصی خدمات", Layers],
+                  ...(tabFrames.length > 0 ? [["frames", `قاب‌های سفارشی (${tabFrames.length.toLocaleString("fa-IR")})`, MessageSquarePlus] as const] : []),
                 ] as const).map(([k, label, Icon]) => (
                   <Button
                     key={k} type="button" size="sm" className="h-8 text-xs gap-1"
@@ -888,7 +1180,8 @@ export default function SmsManagementModule() {
               <p className="text-[11px] text-muted-foreground">
                 {scoped.filter(isGeneralTemplate).length.toLocaleString("fa-IR")} پیام عمومی ·{" "}
                 {specificCount.toLocaleString("fa-IR")} پیام تخصصی ·{" "}
-                {coveredServices.size.toLocaleString("fa-IR")} خدمت دارای پیام اختصاصی.
+                {coveredServices.size.toLocaleString("fa-IR")} خدمت دارای پیام اختصاصی
+                {tabFrames.length > 0 && ` · ${tabFrames.length.toLocaleString("fa-IR")} قاب پیام سفارشی`}.
                 برای دیدن اینکه مشتریان هر خدمت در هر مرحله کدام پیام را می‌گیرند، یک خدمت را انتخاب کنید.
               </p>
             ) : (
@@ -900,9 +1193,11 @@ export default function SmsManagementModule() {
                   {stages.map((st) => {
                     const r = selectSmsTemplate(scoped.map(merged), st, tplService);
                     const title = stageTitle(scoped, st);
-                    if (r.kind === "specific") return <Badge key={st} className="text-[11px] font-normal gap-1"><Layers className="h-3 w-3" />{title}: تخصصی</Badge>;
-                    if (r.kind === "general") return <Badge key={st} variant="secondary" className="text-[11px] font-normal gap-1"><Globe2 className="h-3 w-3" />{title}: عمومی</Badge>;
-                    return <Badge key={st} variant="destructive" className="text-[11px] font-normal">{title}: ارسال نمی‌شود</Badge>;
+                    const nf = enabledFramesForStage(st);
+                    const extra = nf ? ` + ${nf.toLocaleString("fa-IR")} قاب` : "";
+                    if (r.kind === "specific") return <Badge key={st} className="text-[11px] font-normal gap-1"><Layers className="h-3 w-3" />{title}: تخصصی{extra}</Badge>;
+                    if (r.kind === "general") return <Badge key={st} variant="secondary" className="text-[11px] font-normal gap-1"><Globe2 className="h-3 w-3" />{title}: عمومی{extra}</Badge>;
+                    return <Badge key={st} variant={nf ? "outline" : "destructive"} className="text-[11px] font-normal">{title}: {nf ? `فقط ${nf.toLocaleString("fa-IR")} قاب` : "ارسال نمی‌شود"}</Badge>;
                   })}
                 </div>
               </div>
@@ -911,16 +1206,30 @@ export default function SmsManagementModule() {
         </Card>
 
         {stages.map((st) => {
-          const list = visible.filter((t) => stageOf(t) === st)
+          const list = (tplKind === "frames" ? [] : visible.filter((t) => stageOf(t) === st))
             .sort((a, b) => Number(!isGeneralTemplate(a)) - Number(!isGeneralTemplate(b)));
-          if (list.length === 0) return null;
+          const frameList = visibleFrames.filter((f) => f.stage_key === st);
+          if (list.length === 0 && frameList.length === 0) return null;
           return (
             <div key={st} className="space-y-3">
               {list.map(renderItem)}
+              {frameList.map(renderFrameItem)}
             </div>
           );
         })}
-        {visible.length === 0 && (
+        {extraFrameStages.map((st) => {
+          const info = customFrameStage(st);
+          return (
+            <div key={st} className="space-y-3">
+              <p className="text-xs font-medium text-muted-foreground flex items-center gap-1 pt-2">
+                <MessageSquarePlus className="h-3.5 w-3.5" />
+                {info ? `${FRAME_STAGE_GROUP_LABELS[info.group]} · ${info.label}` : customFrameStageLabel(st)}
+              </p>
+              {visibleFrames.filter((f) => f.stage_key === st).map(renderFrameItem)}
+            </div>
+          );
+        })}
+        {(tplKind === "frames" ? 0 : visible.length) + visibleFrames.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-8">
             {filtersActive ? "پیامی با این فیلترها یافت نشد." : "قالبی یافت نشد."}
           </p>
@@ -938,7 +1247,7 @@ export default function SmsManagementModule() {
             مدیریت پیامک‌ها
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            متن، شرط‌ها و تأخیر ارسال پیامک‌ها به مشتری و مدیرعامل را کنترل کنید. پابرگ <code className="font-mono">ahrom.ir</code> در همه پیامک‌ها اجباری است.
+            متن، شرط‌ها و تأخیر ارسال پیامک‌ها به مشتری و مدیریت اهرم را کنترل کنید. پابرگ <code className="font-mono">ahrom.ir</code> در همه پیامک‌ها اجباری است.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={load} disabled={loading}>
@@ -1005,8 +1314,8 @@ export default function SmsManagementModule() {
       ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="flex-wrap h-auto">
-            <TabsTrigger value="customer">پیامک‌های مشتری ({groups.customer?.length || 0})</TabsTrigger>
-            <TabsTrigger value="ceo">پیامک‌های مدیرعامل ({groups.ceo?.length || 0})</TabsTrigger>
+            <TabsTrigger value="customer">پیامک‌های مشتری ({(groups.customer?.length || 0) + framesByTab.customer.length})</TabsTrigger>
+            <TabsTrigger value="ceo">پیامک‌های مدیریت اهرم ({(groups.ceo?.length || 0) + framesByTab.ceo.length})</TabsTrigger>
             <TabsTrigger value="custom-frames">قاب‌های پیام سفارشی ({groups.custom?.length || 0})</TabsTrigger>
             <TabsTrigger value="logs">گزارش ارسال ({logs.length})</TabsTrigger>
             <TabsTrigger value="queue">در انتظار ارسال ({queue.length})</TabsTrigger>
@@ -1021,6 +1330,12 @@ export default function SmsManagementModule() {
               customVars={customVars}
               renderPreview={renderFramePreview}
               onChanged={load}
+              requestEditId={frameEditRequest}
+              onEditRequestHandled={() => setFrameEditRequest(null)}
+              onRequestedEditorClosed={() => {
+                if (frameReturnTab) setActiveTab(frameReturnTab);
+                setFrameReturnTab(null);
+              }}
             />
           </TabsContent>
           <TabsContent value="custom-vars" className="mt-4">

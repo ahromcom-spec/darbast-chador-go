@@ -127,6 +127,13 @@
       "when": 1794703435636,
       "tag": "0017_sms_order_event_frames",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794704657968,
+      "tag": "0018_sms_frame_display_tab",
+      "breakpoints": true
     }
   ]
 }

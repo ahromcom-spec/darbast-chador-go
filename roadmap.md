@@ -35,3 +35,4 @@
 - [ ] Verify a real frame delivery to a staff phone — avoided sending live SMS.
 - [x] Custom frames for renewals, repairs, discounts, order transfers and collaborators (event person recipient, event variables); 16 ready-made frames added switched off. Rule tests pass; manager UI and server event checks verified with a blocked test number.
 - [ ] Verify a real renewal/repair/transfer/collaborator message on a live order — avoided sending live SMS.
+- [x] Move custom frames into the customer or «پیامک‌های مدیریت اهرم» tab (renamed from مدیرعامل) with the same editing card plus frame extras; 4 rule tests pass; move, full-editor return and move back verified as site manager.

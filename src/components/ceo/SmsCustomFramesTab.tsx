@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { toast } from "sonner";
 import {
   Plus, Pencil, Copy, Trash2, Loader2, Users, User, Building2, Phone, Search, X, Layers, Globe2,
-  Clock, Sparkles, LayoutGrid, AlertTriangle, MessageSquarePlus, UserCheck,
+  Clock, Sparkles, LayoutGrid, AlertTriangle, MessageSquarePlus, UserCheck, ArrowLeftRight,
 } from "lucide-react";
+import { FRAME_DISPLAY_TAB_LABELS, allowedFrameTabs, resolveFrameTab, type FrameDisplayTab } from "@/lib/smsFrameTabs";
 import { SmsServicePicker, serviceLabel, type SmsServiceOption } from "@/components/ceo/SmsServicePicker";
 import {
   CUSTOM_FRAME_SCOPE, CUSTOM_FRAME_STAGES, FRAME_STAGE_GROUP_LABELS, RECIPIENT_KIND_LABELS, RECIPIENT_ROLE_LABELS,
@@ -44,6 +45,7 @@ export interface CustomFrameRow {
   recipient_kinds: string[];
   recipient_roles: string[];
   recipient_phones: string[];
+  display_tab?: string | null;
   updated_at: string;
 }
 
@@ -54,6 +56,23 @@ interface Props {
   customVars: { id: string; token: string; label: string; enabled: boolean }[];
   renderPreview: (template: string, serviceId?: string) => string;
   onChanged: () => void | Promise<void>;
+  /** قابی که از تب مشتری/مدیریت برای ویرایش کامل (گیرندگان و مرحله) درخواست شده */
+  requestEditId?: string | null;
+  onEditRequestHandled?: () => void;
+  /** پس از بستن پنجره‌ای که از تب دیگر باز شده بود (برای بازگشت به همان تب) */
+  onRequestedEditorClosed?: () => void;
+}
+
+/** نمایش قاب در تب پیامک‌های مشتری یا مدیریت اهرم (فقط نمایش؛ ارسال تغییری نمی‌کند). */
+export async function setFrameDisplayTab(id: string, tab: FrameDisplayTab | null): Promise<boolean> {
+  const { data, error } = await supabase.from("sms_templates").update({ display_tab: tab } as any)
+    .eq("id", id).eq("scope", CUSTOM_FRAME_SCOPE).select("id");
+  if (error || !data?.length) {
+    toast.error("جابجایی قاب انجام نشد" + (error ? ": " + error.message : " — دسترسی کافی ندارید"));
+    return false;
+  }
+  toast.success(tab ? `قاب به تب «${FRAME_DISPLAY_TAB_LABELS[tab]}» برده شد` : "قاب فقط در تب قاب‌های پیام سفارشی نمایش داده می‌شود");
+  return true;
 }
 
 type Draft = Omit<CustomFrameRow, "id" | "key" | "updated_at" | "scope"> & { id?: string; key?: string; phonesText: string };
@@ -75,6 +94,7 @@ const emptyDraft = (stage = "submitted"): Draft => ({
   recipient_kinds: [],
   recipient_roles: [],
   recipient_phones: [],
+  display_tab: null,
   phonesText: "",
 });
 
@@ -141,8 +161,12 @@ const PRESETS: Array<{ label: string; draft: Partial<Draft> }> = [
   },
 ];
 
-export function SmsCustomFramesTab({ frames, services, placeholders, customVars, renderPreview, onChanged }: Props) {
+export function SmsCustomFramesTab({
+  frames, services, placeholders, customVars, renderPreview, onChanged,
+  requestEditId, onEditRequestHandled, onRequestedEditorClosed,
+}: Props) {
   const [editing, setEditing] = useState<Draft | null>(null);
+  const [fromRequest, setFromRequest] = useState(false);
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [stageFilter, setStageFilter] = useState("all");
@@ -191,6 +215,26 @@ export function SmsCustomFramesTab({ frames, services, placeholders, customVars,
     });
   };
 
+  useEffect(() => {
+    if (!requestEditId) return;
+    const f = frames.find((x) => x.id === requestEditId);
+    if (f) { openEdit(f); setFromRequest(true); }
+    onEditRequestHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestEditId, frames]);
+
+  const closeEditor = () => {
+    setEditing(null);
+    if (fromRequest) { setFromRequest(false); onRequestedEditorClosed?.(); }
+  };
+
+  const moveFrame = async (f: CustomFrameRow, tab: FrameDisplayTab | null) => {
+    setBusyId(f.id);
+    const ok = await setFrameDisplayTab(f.id, tab);
+    setBusyId(null);
+    if (ok) await onChanged();
+  };
+
   const patch = (p: Partial<Draft>) => setEditing((d) => (d ? { ...d, ...p } : d));
   const toggleKind = (k: RecipientKind, on: boolean) => {
     if (!editing) return;
@@ -235,15 +279,16 @@ export function SmsCustomFramesTab({ frames, services, placeholders, customVars,
       recipient_kinds: kinds,
       recipient_roles: kinds.includes("roles") ? editing.recipient_roles : [],
       recipient_phones: kinds.includes("phones") ? phoneParse.valid : [],
+      display_tab: resolveFrameTab(editing.display_tab, kinds),
     };
     const res = editing.id
-      ? await supabase.from("sms_templates").update(row).eq("id", editing.id).select("id")
-      : await supabase.from("sms_templates").insert({ ...row, key: makeCustomFrameKey() }).select("id");
+      ? await supabase.from("sms_templates").update(row as any).eq("id", editing.id).select("id")
+      : await supabase.from("sms_templates").insert({ ...row, key: makeCustomFrameKey() } as any).select("id");
     setSaving(false);
     if (res.error) { toast.error("ذخیره قاب ناموفق بود: " + res.error.message); return; }
     if (!res.data || res.data.length === 0) { toast.error("ذخیره انجام نشد — دسترسی مدیریت پیامک برای حساب شما وجود ندارد"); return; }
     toast.success(editing.id ? "قاب پیام ذخیره شد" : "قاب پیام ساخته شد");
-    setEditing(null);
+    closeEditor();
     await onChanged();
   };
 
@@ -388,6 +433,9 @@ export function SmsCustomFramesTab({ frames, services, placeholders, customVars,
                   {!f.enabled && <Badge variant="destructive" className="text-[11px]">غیرفعال</Badge>}
                   {f.delay_minutes > 0 && <Badge variant="secondary" className="text-[11px] gap-1"><Clock className="h-3 w-3" />{f.delay_minutes.toLocaleString("fa-IR")} دقیقه تأخیر</Badge>}
                   {(f.conditions as any)?.respectWindow === false && <Badge variant="secondary" className="text-[11px]">ارسال در هر ساعت</Badge>}
+                  {resolveFrameTab(f.display_tab, f.recipient_kinds) && (
+                    <Badge className="text-[11px] gap-1"><ArrowLeftRight className="h-3 w-3" />در تب {FRAME_DISPLAY_TAB_LABELS[resolveFrameTab(f.display_tab, f.recipient_kinds)!]}</Badge>
+                  )}
                 </div>
                 <div className="flex flex-wrap items-center gap-1 text-[11px]">
                   <span className="text-muted-foreground">گیرندگان:</span>
@@ -405,7 +453,24 @@ export function SmsCustomFramesTab({ frames, services, placeholders, customVars,
               </div>
             </div>
             <div className="rounded-md bg-muted/40 p-2 text-xs leading-6 whitespace-pre-wrap">{f.template}</div>
-            <div className="flex flex-wrap justify-end gap-2">
+            <div className="flex flex-wrap justify-end items-center gap-2">
+              {allowedFrameTabs(f.recipient_kinds).length > 0 && (
+                <Select
+                  value={resolveFrameTab(f.display_tab, f.recipient_kinds) || "frames"}
+                  onValueChange={(v) => moveFrame(f, v === "frames" ? null : (v as FrameDisplayTab))}
+                  disabled={busyId === f.id}
+                >
+                  <SelectTrigger className="h-9 w-[230px] text-xs gap-1">
+                    <ArrowLeftRight className="h-3.5 w-3.5 shrink-0" /><SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="frames" className="text-xs">فقط در تب قاب‌ها</SelectItem>
+                    {allowedFrameTabs(f.recipient_kinds).map((t) => (
+                      <SelectItem key={t} value={t} className="text-xs">بردن به تب {FRAME_DISPLAY_TAB_LABELS[t]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <Button size="sm" variant="ghost" className="text-destructive" disabled={busyId === f.id} onClick={() => remove(f)}>
                 <Trash2 className="h-4 w-4 ml-1" />حذف
               </Button>
@@ -421,7 +486,7 @@ export function SmsCustomFramesTab({ frames, services, placeholders, customVars,
         </p>
       )}
 
-      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+      <Dialog open={!!editing} onOpenChange={(o) => !o && closeEditor()}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" dir="rtl">
           <DialogHeader>
             <DialogTitle>{editing?.id ? "ویرایش قاب پیام" : "قاب پیام جدید"}</DialogTitle>
@@ -502,6 +567,27 @@ export function SmsCustomFramesTab({ frames, services, placeholders, customVars,
                     </p>
                   </div>
                 )}
+              </div>
+
+              <div className="rounded-md border p-3 space-y-2">
+                <Label className="text-xs font-semibold flex items-center gap-1"><ArrowLeftRight className="h-3.5 w-3.5" />محل نمایش قاب در مدیریت پیامک‌ها</Label>
+                <div className="flex flex-wrap gap-2">
+                  {([null, "customer", "ceo"] as (FrameDisplayTab | null)[]).map((t) => {
+                    const allowed = t === null || allowedFrameTabs(editing.recipient_kinds).includes(t);
+                    const current = resolveFrameTab(editing.display_tab, editing.recipient_kinds);
+                    return (
+                      <Button key={t || "frames"} type="button" size="sm" className="h-8 text-xs"
+                        variant={current === t ? "default" : "outline"} disabled={!allowed}
+                        onClick={() => patch({ display_tab: t })}>
+                        {t ? `تب ${FRAME_DISPLAY_TAB_LABELS[t]}` : "فقط تب قاب‌ها"}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-5">
+                  قاب‌هایی که برای مشتری، همکاران یا شخص مرتبط هستند به تب پیامک‌های مشتری، و قاب‌هایی که برای بخش‌های مدیریتی یا شماره‌های دلخواه هستند به تب پیامک‌های مدیریت اهرم برده می‌شوند.
+                  قاب در آن تب کنار پیامک‌های همان مرحله و با همان امکانات ویرایش نمایش داده می‌شود؛ گیرندگان و زمان ارسال تغییری نمی‌کنند.
+                </p>
               </div>
 
               <div className="rounded-md border p-3 space-y-2">
@@ -593,7 +679,7 @@ export function SmsCustomFramesTab({ frames, services, placeholders, customVars,
             </div>
           )}
           <DialogFooter className="gap-2">
-            <Button variant="ghost" onClick={() => setEditing(null)}>انصراف</Button>
+            <Button variant="ghost" onClick={closeEditor}>انصراف</Button>
             <Button onClick={save} disabled={saving || errors.length > 0}>
               {saving && <Loader2 className="h-4 w-4 animate-spin ml-1" />}ذخیره قاب
             </Button>
