@@ -33,3 +33,5 @@
 
 - [x] Custom message frames: managers choose stage (12 stages incl. rejection), services, recipients (customer, collaborators, management roles, custom phones), window/delay/amount conditions. 12 rule tests pass; manager UI create/delete and queued-frame preview verified with a blocked test number; no real SMS sent.
 - [ ] Verify a real frame delivery to a staff phone — avoided sending live SMS.
+- [x] Custom frames for renewals, repairs, discounts, order transfers and collaborators (event person recipient, event variables); 16 ready-made frames added switched off. Rule tests pass; manager UI and server event checks verified with a blocked test number.
+- [ ] Verify a real renewal/repair/transfer/collaborator message on a live order — avoided sending live SMS.

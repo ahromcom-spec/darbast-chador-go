@@ -69,7 +69,7 @@ export interface EventVariable {
 
 /** متغیرهای مخصوص رویدادها؛ در هر مرحله فقط متغیرهای گروه همان مرحله پیشنهاد می‌شوند */
 export const EVENT_VARIABLES: EventVariable[] = [
-  { token: "{projectName}", label: "نام پروژه (محل سفارش)", groups: ["renewal", "repair", "discount", "transfer", "collaboration"], sample: "پروژه خیابان نمونه" },
+  { token: "{projectName}", label: "نام پروژه (محل سفارش)", groups: ["renewal", "repair", "discount", "transfer", "collaboration"], sample: "خیابان نمونه" },
   { token: "{renewalMonth}", label: "ماه تمدید (مثلاً ماه دوم)", groups: ["renewal"], sample: "ماه دوم" },
   { token: "{renewalPrice}", label: "مبلغ تمدید", groups: ["renewal"], sample: "۴٬۵۰۰٬۰۰۰ تومان" },
   { token: "{renewalStartDate}", label: "تاریخ شروع تمدید", groups: ["renewal"], sample: "1405/08/20" },
