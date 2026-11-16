@@ -28,6 +28,7 @@ import { CollectionRequestDialog } from './CollectionRequestDialog';
 import { ManagerRenewalDialog } from './ManagerRenewalDialog';
 import { SeparateOrderChargesDialog } from './SeparateOrderChargesDialog';
 import StaticLocationMap from '@/components/locations/StaticLocationMap';
+import { PhoneLink } from '@/components/ui/PhoneLink';
 import { OrderCollaboratorsList } from './OrderCollaboratorsList';
 import { OrderTimeline } from './OrderTimeline';
 import { ManagerOwnershipChain } from './ManagerOwnershipChain';
@@ -1458,7 +1459,7 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
                 dir="ltr"
               />
             ) : (
-              <p className="font-medium" dir="ltr">{order.customer_phone || '-'}</p>
+              <p className="font-medium"><PhoneLink phone={order.customer_phone} /></p>
             )}
           </div>
         </div>

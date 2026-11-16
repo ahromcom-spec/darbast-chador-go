@@ -22,6 +22,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
+import { PhoneLink } from '@/components/ui/PhoneLink';
 
 interface Order {
   id: string;
@@ -239,7 +240,7 @@ export default function FinanceOrders() {
                         {getStatusBadge(order.status)}
                       </div>
                       <CardDescription>
-                        مشتری: {order.customer_name} • {order.customer_phone}
+                        مشتری: {order.customer_name} • <PhoneLink phone={order.customer_phone} />
                       </CardDescription>
                     </div>
                   </div>
@@ -468,7 +469,7 @@ export default function FinanceOrders() {
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">شماره تماس</Label>
-                  <p className="text-sm font-medium" dir="ltr">{selectedOrder.customer_phone}</p>
+                  <p className="text-sm font-medium"><PhoneLink phone={selectedOrder.customer_phone} /></p>
                 </div>
               </div>
 

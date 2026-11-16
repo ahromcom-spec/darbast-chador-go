@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { toastError } from "@/lib/errorHandler";
 import { Loader2, Send, UserPlus, MapPin, User, Phone } from "lucide-react";
+import { PhoneLink } from '@/components/ui/PhoneLink';
 
 interface OrderRow {
   id: string;
@@ -222,7 +223,7 @@ function OrderCard({ o, onDispatch, onCancel }: { o: OrderRow; onDispatch: () =>
 
       <div className="grid gap-1 text-sm">
         {o.customer_name && <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" />{o.customer_name}</div>}
-        {o.customer_phone && <div className="flex items-center gap-2" dir="ltr"><Phone className="h-4 w-4 text-muted-foreground" />{o.customer_phone}</div>}
+        {o.customer_phone && <div className="flex items-center gap-2" dir="ltr"><Phone className="h-4 w-4 text-muted-foreground" /><PhoneLink phone={o.customer_phone} /></div>}
         {(o.address || o.detailed_address) && <div className="flex items-start gap-2"><MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />{[o.address, o.detailed_address].filter(Boolean).join(" - ")}</div>}
       </div>
 

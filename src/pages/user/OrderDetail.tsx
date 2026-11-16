@@ -28,6 +28,7 @@ import CallHistory from "@/components/calls/CallHistory";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
 import { OrderDailyLogs } from "@/components/orders/OrderDailyLogs";
 import { OrderLocationEditor } from "@/components/locations/OrderLocationEditor";
+import { PhoneLink } from "@/components/ui/PhoneLink";
 import {
   ArrowRight,
   MapPin,
@@ -1188,7 +1189,7 @@ export default function OrderDetail() {
                     {(order.customer_phone || parsedNotes?.phoneNumber) && (
                       <div className="p-3 bg-muted/40 rounded-lg" dir="ltr">
                         <span className="text-xs text-muted-foreground block mb-1" dir="rtl">شماره تماس</span>
-                        <span className="font-medium text-sm">{order.customer_phone || parsedNotes?.phoneNumber}</span>
+                        <PhoneLink phone={order.customer_phone || parsedNotes?.phoneNumber} className="font-medium text-sm" />
                       </div>
                     )}
                   </div>

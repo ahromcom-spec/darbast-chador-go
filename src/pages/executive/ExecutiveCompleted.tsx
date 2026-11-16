@@ -19,6 +19,7 @@ import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaff
 import { useOrderArchive } from '@/hooks/useOrderArchive';
 import { OrderArchiveControls, OrderCardArchiveButton } from '@/components/orders/OrderArchiveControls';
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
+import { PhoneLink } from '@/components/ui/PhoneLink';
 
 // Helper function to parse order notes (handles double-stringified JSON)
 const parseOrderNotes = (notes: string | null | undefined): any => {
@@ -256,7 +257,7 @@ export default function ExecutiveCompleted() {
                       </div>
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Phone className="h-4 w-4" />
-                        <span dir="ltr">{order.customer_phone}</span>
+                        <PhoneLink phone={order.customer_phone} />
                       </div>
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <MapPin className="h-4 w-4" />

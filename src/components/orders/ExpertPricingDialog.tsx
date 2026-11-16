@@ -19,6 +19,7 @@ import { Ruler, DollarSign, Save, Calculator, User, Phone, MapPin, Calendar } fr
 import { useToast } from '@/hooks/use-toast';
 import { parseOrderNotes } from './OrderDetailsView';
 import { formatPersianDate } from '@/lib/dateUtils';
+import { PhoneLink } from '@/components/ui/PhoneLink';
 
 interface ExpertPricingDialogProps {
   open: boolean;
@@ -239,7 +240,7 @@ export function ExpertPricingDialog({ open, onOpenChange, order, onSuccess }: Ex
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Phone className="h-4 w-4 text-muted-foreground" />
-                <span dir="ltr">{order.customer_phone}</span>
+                <PhoneLink phone={order.customer_phone} />
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <MapPin className="h-4 w-4 text-muted-foreground" />

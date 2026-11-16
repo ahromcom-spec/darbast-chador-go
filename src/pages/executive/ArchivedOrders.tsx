@@ -13,6 +13,7 @@ import { Archive, Search, RotateCcw, Trash2, MapPin, Phone, User, Calendar, Aler
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useAuth } from '@/contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
+import { PhoneLink } from '@/components/ui/PhoneLink';
 
 interface ArchivedOrder {
   id: string;
@@ -369,7 +370,7 @@ export default function ArchivedOrders() {
                       {order.customer_phone && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Phone className="h-4 w-4" />
-                          <span dir="ltr">{order.customer_phone}</span>
+                          <PhoneLink phone={order.customer_phone} />
                         </div>
                       )}
                       

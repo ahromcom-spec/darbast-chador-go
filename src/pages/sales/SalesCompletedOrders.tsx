@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { PhoneLink } from '@/components/ui/PhoneLink';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -182,7 +183,7 @@ export default function SalesCompletedOrders() {
                   <div className="flex-1">
                     <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
                     <CardDescription className="mt-1">
-                      مشتری: {order.customer_name} • {order.customer_phone}
+                      مشتری: {order.customer_name} • <PhoneLink phone={order.customer_phone} />
                     </CardDescription>
                   </div>
                   <Badge variant="default" className="bg-green-600">در انتظار پرداخت</Badge>

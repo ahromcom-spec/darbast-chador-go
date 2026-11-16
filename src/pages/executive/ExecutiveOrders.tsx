@@ -28,6 +28,7 @@ import { ManagerCustomerCollaborator } from '@/components/orders/ManagerCustomer
 import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
 import { sendPushNotification, sendNotificationRpc } from '@/lib/notifications';
 import { useAuth } from '@/contexts/AuthContext';
+import { PhoneLink } from '@/components/ui/PhoneLink';
 import { syncLocationActiveStatusByOrderId } from '@/hooks/useLocations';
 import { CollectionRequestDialog } from '@/components/orders/CollectionRequestDialog';
 import { MultiPaymentDialog } from '@/components/orders/MultiPaymentDialog';
@@ -1585,7 +1586,7 @@ export default function ExecutiveOrders() {
                       </div>
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Phone className="h-4 w-4" />
-                        <span dir="ltr">{order.customer_phone}</span>
+                        <PhoneLink phone={order.customer_phone} />
                       </div>
                       <div className="flex items-start gap-2 text-muted-foreground">
                         <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
@@ -2592,7 +2593,7 @@ export default function ExecutiveOrders() {
                 <Label className="text-xs text-muted-foreground">شماره تماس مشتری</Label>
                 <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
                   <Phone className="h-4 w-4 text-primary" />
-                  <span dir="ltr" className="font-medium">{selectedOrder.customer_phone}</span>
+                  <PhoneLink phone={selectedOrder.customer_phone} className="font-medium" />
                 </div>
                 <p className="text-xs text-muted-foreground">
                   در صورت نیاز با مشتری تماس بگیرید و تغییرات را هماهنگ کنید

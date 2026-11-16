@@ -15,6 +15,7 @@ import { buildMediaFingerprint, findDuplicateProjectMedia, mediaDedupeKey } from
 import { prepareOrderVideo } from '@/lib/orderVideoProcessor';
 import { ORDER_VIDEO_NOTICE } from '@/lib/orderVideoPolicy';
 import { uploadToStorageWithProgress } from '@/lib/mediaTransfers';
+import { PhoneLink } from '@/components/ui/PhoneLink';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -524,7 +525,7 @@ export const OrderDetailsView = ({ order, showMedia = true, allowMediaEdit = tru
           <Phone className="h-4 w-4 mt-0.5 text-muted-foreground" />
           <div>
             <Label className="text-xs text-muted-foreground">شماره تماس</Label>
-            <p className="font-medium" dir="ltr">{order.customer_phone || '-'}</p>
+            <p className="font-medium"><PhoneLink phone={order.customer_phone} /></p>
           </div>
         </div>
       </div>

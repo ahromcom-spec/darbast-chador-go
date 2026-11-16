@@ -47,6 +47,7 @@ import { toast } from '@/hooks/use-toast';
 import { SITE_NOTIF_SOUND_KEY } from '@/components/notifications/SiteNotificationSound';
 import SiteNotifSoundSettings from '@/components/notifications/SiteNotifSoundSettings';
 import { cn } from '@/lib/utils';
+import { PhoneLink } from '@/components/ui/PhoneLink';
 
 interface NotificationRow {
   id: string;
@@ -946,7 +947,7 @@ export default function SiteNotificationsModule() {
                               {row.customer_name}
                             </span>
                           )}
-                          {row.customer_phone && <span className="font-mono">{row.customer_phone}</span>}
+                          {row.customer_phone && <PhoneLink phone={row.customer_phone} className="font-mono" />}
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
                             {formatPersianDateTime(row.created_at)}

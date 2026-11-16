@@ -22,6 +22,7 @@ import { useOrderArchive } from '@/hooks/useOrderArchive';
 import { OrderArchiveControls, OrderCardArchiveButton } from '@/components/orders/OrderArchiveControls';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
+import { PhoneLink } from '@/components/ui/PhoneLink';
 interface Order {
   id: string;
   code: string;
@@ -398,7 +399,7 @@ export default function ExecutiveInProgress() {
                       </div>
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Phone className="h-4 w-4" />
-                        <span dir="ltr">{order.customer_phone}</span>
+                        <PhoneLink phone={order.customer_phone} />
                       </div>
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <MapPin className="h-4 w-4" />

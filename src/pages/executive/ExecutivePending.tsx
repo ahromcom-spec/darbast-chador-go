@@ -28,6 +28,7 @@ import { useOrderApprovals } from '@/hooks/useOrderApprovals';
 import { Separator } from '@/components/ui/separator';
 import { sendNotificationSchema } from '@/lib/rpcValidation';
 import { sendPushNotification, sendNotificationRpc } from '@/lib/notifications';
+import { PhoneLink } from '@/components/ui/PhoneLink';
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 
 // Helper to parse order notes safely - handles double-stringified JSON
@@ -363,7 +364,7 @@ export default function ExecutivePending() {
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Phone className="h-4 w-4" />
-                  <span dir="ltr">{order.customer_phone}</span>
+                  <PhoneLink phone={order.customer_phone} />
                 </div>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <MapPin className="h-4 w-4" />
@@ -598,7 +599,7 @@ export default function ExecutivePending() {
                     <Label className="text-muted-foreground">شماره تماس</Label>
                     <p className="font-medium mt-1 flex items-center gap-2" dir="ltr">
                       <Phone className="w-4 h-4" />
-                      {selectedOrder.customer_phone}
+                      <PhoneLink phone={selectedOrder.customer_phone} />
                     </p>
                   </div>
                 </div>

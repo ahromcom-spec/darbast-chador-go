@@ -19,6 +19,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { formatPersianDateTime } from "@/lib/dateUtils";
+import { PhoneLink } from '@/components/ui/PhoneLink';
 
 interface CollectionRequest {
   id: string;
@@ -172,7 +173,7 @@ export default function ExecutiveCollectionRequests() {
                       {request.order?.customer_phone && (
                         <div className="flex items-center gap-1">
                           <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span dir="ltr">{request.order.customer_phone}</span>
+                          <PhoneLink phone={request.order.customer_phone} />
                         </div>
                       )}
                     </div>

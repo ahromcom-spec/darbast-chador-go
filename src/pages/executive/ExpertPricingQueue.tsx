@@ -16,6 +16,7 @@ import { ExpertPricingDialog } from '@/components/orders/ExpertPricingDialog';
 import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
 import { formatPersianDate } from '@/lib/dateUtils';
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
+import { PhoneLink } from '@/components/ui/PhoneLink';
 import { parseLocalizedNumber } from '@/lib/numberParsing';
 
 interface Order {
@@ -314,7 +315,7 @@ export default function ExpertPricingQueue() {
                       <div className="flex-1">
                         <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
                         <CardDescription className="mt-1">
-                          {order.customer_name} • {order.customer_phone}
+                          {order.customer_name} • <PhoneLink phone={order.customer_phone} />
                         </CardDescription>
                       </div>
                       <Badge variant={status.variant} className="gap-1">
@@ -427,7 +428,7 @@ export default function ExpertPricingQueue() {
                       <div className="flex-1">
                         <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
                         <CardDescription className="mt-1">
-                          {order.customer_name} • {order.customer_phone}
+                          {order.customer_name} • <PhoneLink phone={order.customer_phone} />
                         </CardDescription>
                       </div>
                       <div className="flex items-center gap-2">

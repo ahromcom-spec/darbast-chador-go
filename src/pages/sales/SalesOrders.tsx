@@ -18,6 +18,7 @@ import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { ManagerOrderTransfer } from '@/components/orders/ManagerOrderTransfer';
 import { ManagerAddStaffCollaborator } from '@/components/orders/ManagerAddStaffCollaborator';
 import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
+import { PhoneLink } from '@/components/ui/PhoneLink';
 
 interface Order {
   id: string;
@@ -487,7 +488,7 @@ export default function SalesOrders() {
                         <>
                           <span>•</span>
                           <Phone className="h-3 w-3" />
-                          {order.customer_phone}
+                          <PhoneLink phone={order.customer_phone} />
                         </>
                       )}
                     </CardDescription>
@@ -557,7 +558,7 @@ export default function SalesOrders() {
               {selectedOrder && getStatusBadge(selectedOrder.status)}
             </DialogTitle>
             <DialogDescription>
-              مشتری: {selectedOrder?.customer_name} • {selectedOrder?.customer_phone}
+              مشتری: {selectedOrder?.customer_name} • <PhoneLink phone={selectedOrder?.customer_phone} />
             </DialogDescription>
           </DialogHeader>
 

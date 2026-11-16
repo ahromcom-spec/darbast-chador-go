@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useToast } from '@/hooks/use-toast';
 import { ContextualVideoHelp } from '@/components/help/ContextualVideoHelp';
+import { PhoneLink } from '@/components/ui/PhoneLink';
 
 export default function ScaffoldingForm() {
   const navigate = useNavigate();
@@ -238,7 +239,7 @@ export default function ScaffoldingForm() {
                       <Alert className="border-primary/30">
                         <AlertDescription>
                           <p className="font-semibold text-sm">شماره تماس:</p>
-                          <p className="text-sm" dir="ltr">{orderData.customer_phone}</p>
+                          <p className="text-sm"><PhoneLink phone={orderData.customer_phone} /></p>
                         </AlertDescription>
                       </Alert>
                     )}

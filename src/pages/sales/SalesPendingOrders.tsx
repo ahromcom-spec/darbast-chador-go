@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { PhoneLink } from '@/components/ui/PhoneLink';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -273,7 +274,7 @@ export default function SalesPendingOrders() {
             <div className="flex-1">
               <CardTitle className="text-lg">سفارش {order.code}</CardTitle>
               <CardDescription className="mt-1">
-                مشتری: {order.customer_name} • {order.customer_phone}
+                مشتری: {order.customer_name} • <PhoneLink phone={order.customer_phone} />
               </CardDescription>
             </div>
             <Badge variant="secondary">در انتظار تایید</Badge>

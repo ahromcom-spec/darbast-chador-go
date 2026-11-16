@@ -8,6 +8,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { CreditCard, Search, CheckCircle, Clock, User, Phone, Calendar, Receipt, Banknote } from 'lucide-react';
 import { format } from 'date-fns-jalali';
 import { faIR } from 'date-fns-jalali/locale';
+import { PhoneLink } from '@/components/ui/PhoneLink';
 
 interface PaymentRecord {
   id: string;
@@ -314,7 +315,7 @@ const PaymentHistory = () => {
                             {payment.customer_phone && (
                               <div className="flex items-center gap-1 text-xs text-muted-foreground" dir="ltr">
                                 <Phone className="h-3 w-3" />
-                                {payment.customer_phone}
+                                <PhoneLink phone={payment.customer_phone} />
                               </div>
                             )}
                           </div>

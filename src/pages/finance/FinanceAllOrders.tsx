@@ -14,6 +14,7 @@ import { StatusBadge } from '@/components/common/StatusBadge';
 import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { MultiPaymentDialog } from '@/components/orders/MultiPaymentDialog';
 import { Badge } from '@/components/ui/badge';
+import { PhoneLink } from '@/components/ui/PhoneLink';
 
 interface Order {
   id: string;
@@ -262,7 +263,7 @@ export default function FinanceAllOrders() {
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <User className="h-4 w-4" />
                         <span>{order.customer_name}</span>
-                        <span dir="ltr">{order.customer_phone}</span>
+                        <PhoneLink phone={order.customer_phone} />
                       </div>
                     </div>
                   </div>

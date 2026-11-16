@@ -11,6 +11,7 @@ import { toastError } from "@/lib/errorHandler";
 import { CheckCircle2, Clock, MapPin, User, Phone, FileText, Loader2, Eye, Ruler, ImageIcon, ExternalLink, Calendar, Banknote, Info, Layers, Wrench, Truck, Home, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import StaticLocationMap from "@/components/locations/StaticLocationMap";
 import { parseOrderNotes } from "@/components/orders/OrderDetailsView";
+import { PhoneLink } from '@/components/ui/PhoneLink';
 
 interface V3Assignment {
   id: string;
@@ -298,7 +299,7 @@ function AssignmentCard({ a, busy, onAccept, onReject, onView }: { a: V3Assignme
             <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /> {p.customer_name}</div>
           )}
           {p?.customer_phone && (
-            <div className="flex items-center gap-2" dir="ltr"><Phone className="h-4 w-4 text-muted-foreground" /> {p.customer_phone}</div>
+            <div className="flex items-center gap-2" dir="ltr"><Phone className="h-4 w-4 text-muted-foreground" /> <PhoneLink phone={p.customer_phone} /></div>
           )}
         </div>
       )}
@@ -553,7 +554,7 @@ function OrderDetailDialog({ assignment, busy, onAccept, onReject, onCancel, onC
                   <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">نام مشتری:</span> <span className="font-medium">{project.customer_name}</span></div>
                 )}
                 {project.customer_phone && (
-                  <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">تلفن:</span> <span dir="ltr" className="font-medium">{project.customer_phone}</span></div>
+                  <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">تلفن:</span> <PhoneLink phone={project.customer_phone} className="font-medium" /></div>
                 )}
                 {project.subcategory?.name && (
                   <div className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground shrink-0" /> <span className="text-muted-foreground">نوع خدمت:</span> <span className="font-medium">{project.subcategory.name}</span></div>

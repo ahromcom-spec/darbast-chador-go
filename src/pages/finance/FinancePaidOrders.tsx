@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { formatPersianDate } from '@/lib/dateUtils';
+import { PhoneLink } from '@/components/ui/PhoneLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { PersianDatePicker } from '@/components/ui/persian-date-picker';
 import { Textarea } from '@/components/ui/textarea';
@@ -231,7 +232,7 @@ export default function FinancePaidOrders() {
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <User className="h-4 w-4" />
                       <span>{order.customer_name}</span>
-                      <span dir="ltr">{order.customer_phone}</span>
+                      <PhoneLink phone={order.customer_phone} />
                     </div>
                   </div>
                 </div>

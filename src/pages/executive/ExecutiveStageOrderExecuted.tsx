@@ -22,6 +22,7 @@ import { RentalStartDatePicker } from '@/components/orders/RentalStartDatePicker
 import { ManagerRenewalDialog } from '@/components/orders/ManagerRenewalDialog';
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
 import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
+import { PhoneLink } from '@/components/ui/PhoneLink';
 interface Order {
   id: string;
   code: string;
@@ -375,7 +376,7 @@ export default function ExecutiveStageOrderExecuted() {
                       </div>
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Phone className="h-4 w-4" />
-                        <span dir="ltr">{order.customer_phone}</span>
+                        <PhoneLink phone={order.customer_phone} />
                       </div>
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <MapPin className="h-4 w-4" />

@@ -34,6 +34,7 @@ import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
 import { sendPushNotification, sendNotificationRpc } from '@/lib/notifications';
 import { CentralizedVideoPlayer } from '@/components/media/CentralizedVideoPlayer';
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
+import { PhoneLink } from '@/components/ui/PhoneLink';
 // Helper to parse order notes safely - handles double-stringified JSON
 const parseOrderNotes = (notes: any): any => {
   if (!notes) return null;
@@ -1392,7 +1393,7 @@ export default function ExecutivePendingOrders() {
                 <Label className="text-xs text-muted-foreground">شماره تماس مشتری</Label>
                 <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
                   <Phone className="h-4 w-4 text-primary" />
-                  <span dir="ltr" className="font-medium">{selectedOrder.customer_phone}</span>
+                  <PhoneLink phone={selectedOrder.customer_phone} className="font-medium" />
                 </div>
                 <p className="text-xs text-muted-foreground">
                   لطفاً با مشتری تماس بگیرید و زمان‌بندی را هماهنگ کنید
