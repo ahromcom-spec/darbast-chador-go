@@ -189,7 +189,7 @@ export function OrderCollaboratorsList({ orderId, showForManagers = false, isOwn
               <div key={collab.id} className="flex items-center justify-between p-2 bg-background rounded-md">
                 <div className="flex items-center gap-2 flex-wrap">
                   <User className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">{collab.collaborator_name || collab.invitee_name || 'کاربر'}</span>
+                  <span className="text-sm font-medium">{collab.invitee_name || collab.collaborator_name || 'کاربر'}{collab.invitee_name && collab.collaborator_name && collab.collaborator_name !== collab.invitee_name ? ` (${collab.collaborator_name})` : ''}</span>
                   <span className="text-xs text-muted-foreground" dir="ltr">({collab.invitee_phone_number})</span>
                   {collab.collaborator_role && (
                     <Badge variant="secondary" className="text-xs">{collab.collaborator_role} سفارش</Badge>

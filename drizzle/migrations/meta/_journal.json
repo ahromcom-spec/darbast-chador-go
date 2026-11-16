@@ -148,6 +148,13 @@
       "when": 1794794165070,
       "tag": "0020_collaborator_sms_switch",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794795546102,
+      "tag": "0021_collaborator_sms_real_name",
+      "breakpoints": true
     }
   ]
 }
