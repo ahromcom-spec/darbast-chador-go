@@ -57,7 +57,8 @@ const isValidIranMobile = (phone?: string | null) => /^09\d{9}$/.test(normalizeI
 export const dispatchCustomOrderMessages = (
   stage: string,
   ref: { orderId?: string; orderCode?: string },
-  details?: OrderSmsDetails
+  details?: OrderSmsDetails,
+  options?: { collaboratorsOnly?: boolean }
 ): void => {
   if (isAdminImpersonating()) return;
   if (!ref.orderId && !ref.orderCode) return;
@@ -69,6 +70,7 @@ export const dispatchCustomOrderMessages = (
         orderId: ref.orderId,
         orderCode: ref.orderId ? undefined : ref.orderCode,
         stage,
+        collaboratorsOnly: options?.collaboratorsOnly === true ? true : undefined,
         details: {
           serviceType: str(details?.serviceType, 200),
           address: str(details?.address),
@@ -83,6 +85,16 @@ export const dispatchCustomOrderMessages = (
     })
     .catch((e) => console.warn('[dispatchCustomOrderMessages] failed:', e));
 };
+
+/**
+ * پیامک مشتری این سفارش خاموش است ولی همکارانی که مدیریت پیامکشان را روشن کرده
+ * همچنان پیام تغییر مرحله را بگیرند (سرور فقط همکاران روشن را انتخاب می‌کند).
+ */
+export const notifyOrderCollaboratorsOnly = (
+  stage: string,
+  ref: { orderId?: string; orderCode?: string },
+  details?: OrderSmsDetails
+): void => dispatchCustomOrderMessages(stage, ref, details, { collaboratorsOnly: true });
 
 const scaffoldingTypeLabels: Record<string, string> = {
   facade: 'داربست نما',

@@ -30,6 +30,8 @@ import { SeparateOrderChargesDialog } from './SeparateOrderChargesDialog';
 import StaticLocationMap from '@/components/locations/StaticLocationMap';
 import { PhoneLink } from '@/components/ui/PhoneLink';
 import { OrderCollaboratorsList } from './OrderCollaboratorsList';
+import { OrderManualMessageBox } from './OrderManualMessageBox';
+import { extractOrderDescription } from '@/lib/orderDescription';
 import { OrderTimeline } from './OrderTimeline';
 import { ManagerOwnershipChain } from './ManagerOwnershipChain';
 import { CustomerOwnershipChain } from './CustomerOwnershipChain';
@@ -2234,6 +2236,15 @@ export const EditableOrderDetails = ({ order, onUpdate, hidePrice = false, hideD
 
       {/* لیست همکاران سفارش - قابل مشاهده برای مدیران */}
       <OrderCollaboratorsList orderId={order.id} showForManagers={true} />
+
+      {/* پیام سفارشی مدیریت با المان‌های سفارش + کلید پیامک همکاران (فقط مدیران سفارش) */}
+      <OrderManualMessageBox
+        orderId={order.id}
+        orderCode={order.code}
+        customerName={order.customer_name}
+        customerPhone={order.customer_phone}
+        description={(() => { try { return extractOrderDescription(order.notes) || undefined; } catch { return undefined; } })()}
+      />
 
       {/* Media Section with separate images/videos and upload/delete for managers */}
       <OrderMediaSection 

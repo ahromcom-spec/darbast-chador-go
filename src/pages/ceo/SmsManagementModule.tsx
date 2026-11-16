@@ -1534,7 +1534,9 @@ export default function SmsManagementModule() {
                         <TableCell>
                           {l.template_key && frameTitleByKey.has(l.template_key)
                             ? <Badge variant="secondary" className="text-[10px]">قاب: {frameTitleByKey.get(l.template_key)}</Badge>
-                            : <Badge variant="outline" className="font-mono text-[10px]">{l.template_key}</Badge>}
+                            : l.template_key === "manual_message"
+                              ? <Badge variant="secondary" className="text-[10px]">پیام دستی سفارش</Badge>
+                              : <Badge variant="outline" className="font-mono text-[10px]">{l.template_key}</Badge>}
                         </TableCell>
                         <TableCell className="font-mono text-xs">{l.order_code || "—"}</TableCell>
                         <TableCell>

@@ -154,7 +154,9 @@ interface SmsRequest {
   logId?: string; // ردیف گزارش همین پیامک؛ تلاش‌های بعدی همان ردیف را به‌روز می‌کنند
   scheduledId?: string; // ردیف صف همین پیامک؛ تلاش مجدد همان ردیف را دوباره در صف می‌گذارد
   templateKey?: string; // قاب پیام سفارشی (فقط از سمت سرور)
-  audience?: "customer" | "staff"; // گیرنده قاب سفارشی: مشتری یا پرسنل
+  audience?: "customer" | "staff" | "collaborator"; // گیرنده قاب سفارشی (مشتری/پرسنل) یا همکار سفارش — فقط از سمت سرور
+  manualTemplate?: string; // پیام دستی مدیریت از کادر سفارش (با المان‌های سفارش) — فقط از سمت سرور
+  previewOnly?: boolean; // فقط ساخت متن بدون ارسال — فقط از سمت سرور
   eventVars?: Record<string, string>; // متغیرهای رویداد (تمدید، تعمیر، تخفیف، انتقال، همکار) — فقط از سمت سرور
   eventRef?: string; // شناسه رویداد برای جلوگیری از تکرار در صف
 }
@@ -237,7 +239,7 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
-  const isPreview = opts.preview === true;
+  let isPreview = opts.preview === true;
 
   try {
     const reqBody = await req.json();
@@ -257,6 +259,15 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
       return jsonResponse({ error: "unauthorized" }, 401);
     }
     const isStaffAudience = !!templateKey && reqBody?.audience === "staff";
+    // نسخه پیام مرحله برای همکارِ سفارش که مدیریت پیامکش را روشن کرده (فقط از سمت سرور)
+    const isCollaboratorAudience = callerIsService && reqBody?.audience === "collaborator";
+    // پیام دستی مدیریت از کادر «ارسال پیام سفارشی» سفارش (فقط از سمت سرور، پس از سنجش دسترسی مدیر)
+    const manualTemplate: string | undefined = callerIsService && !templateKey && typeof reqBody?.manualTemplate === "string" && reqBody.manualTemplate.trim()
+      ? String(reqBody.manualTemplate).trim().slice(0, 1000) : undefined;
+    const isManual = !!manualTemplate;
+    // تلاش مجدد پیام دستی (از صف، با متن نهایی) هم مثل خود پیام دستی از فیلتر شماره پرسنل مستثناست
+    const isManualStatus = callerIsService && status === "manual_message";
+    if (callerIsService && reqBody?.previewOnly === true) isPreview = true;
     // متغیرها و شناسه رویداد فقط همراه قاب سفارشی و از سمت سرور پذیرفته می‌شوند
     const eventVars = templateKey ? sanitizeEventVars(reqBody?.eventVars) : {};
     const eventRef: string | undefined = templateKey && typeof reqBody?.eventRef === "string" && /^[a-z_0-9]+:[0-9a-f-]{36}(:[^|]{0,40})?$/i.test(reqBody.eventRef)
@@ -308,7 +319,7 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
     // ارسال مجدد پیام پرسنل از گزارش ارسال توسط مدیر نباید به‌خاطر شماره پرسنلی رد شود
     const resendByManager = isResend && await callerIsSmsManager(req);
 
-    if (!isCeoNotification && !isContractorNotification && !isStaffAudience && !resendByManager) {
+    if (!isCeoNotification && !isContractorNotification && !isStaffAudience && !isCollaboratorAudience && !isManual && !isManualStatus && !resendByManager) {
       // Check phone_whitelist table
       const { data: whitelistData } = await supabase
         .from("phone_whitelist")
@@ -344,7 +355,7 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
 
     // === بازه زمانی مجاز ارسال پیامک به مشتری (به وقت تهران) ===
     // پیامک مدیرعامل و ارسال‌های زمان‌بندی‌شده از این محدودیت مستثنا هستند
-    if (!isCeoNotification && !bypassWindow) {
+    if (!isCeoNotification && !bypassWindow && !isManual && !isPreview) {
       try {
         const { data: winRow } = await supabase
           .from("sms_send_window")
@@ -409,7 +420,7 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
               order_code: orderCode,
               order_id: orderId ?? null,
               status_key: status,
-              payload: { serviceType, address, amount, customerName, description, resendMessage, paidAmount, totalPaid, remainingAmount, templateKey, audience: templateKey ? reqBody?.audience : undefined, eventVars: templateKey ? eventVars : undefined, eventRef },
+              payload: { serviceType, address, amount, customerName, description, resendMessage, paidAmount, totalPaid, remainingAmount, templateKey, audience: (templateKey || isCollaboratorAudience) ? reqBody?.audience : undefined, eventVars: templateKey ? eventVars : undefined, eventRef },
               send_after: sendAfter,
             });
 
@@ -442,6 +453,9 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
     if (isResend) {
       // ارسال مجدد: همان متن قبلی، فقط تاریخ به تاریخ جدید به‌روزرسانی می‌شود
       template = resendMessage!;
+    } else if (isManual) {
+      // پیام دستی مدیریت: متن نوشته‌شده در کادر سفارش؛ المان‌ها مثل قالب‌ها با داده سفارش پر می‌شوند
+      template = manualTemplate!;
     } else if (templateKey) {
       // قاب پیام سفارشی: همان قاب انتخاب‌شده، بدون انتخاب بین پیام‌های عمومی/تخصصی
       const { data: frame } = await supabase
@@ -938,7 +952,7 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
           // تلاش بعدی همین ردیف گزارش را به‌روز می‌کند تا پیام تکراری ناموفق ساخته نشود
           logId: currentLogId ?? undefined,
           templateKey,
-          audience: templateKey ? reqBody?.audience : undefined,
+          audience: (templateKey || isCollaboratorAudience) ? reqBody?.audience : undefined,
           eventRef,
         };
         const retryLastError = `retry ${attemptNo + 1}/${MAX_AUTO_RETRIES}: ${responseText.slice(0, 200)}`;

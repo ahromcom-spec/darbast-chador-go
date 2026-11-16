@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { SmsSendWindowButton } from '@/components/sms/SmsSendWindowButton';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,7 +25,9 @@ import { EditableOrderDetails } from '@/components/orders/EditableOrderDetails';
 import { parseOrderNotes } from '@/components/orders/OrderDetailsView';
 import { ManagerCustomerOrderTransfer } from '@/components/orders/ManagerCustomerOrderTransfer';
 import { ManagerCustomerCollaborator } from '@/components/orders/ManagerCustomerCollaborator';
-import { buildOrderSmsAddress, sendOrderSms } from '@/lib/orderSms';
+import { buildOrderSmsAddress, notifyOrderCollaboratorsOnly, sendOrderSms } from '@/lib/orderSms';
+import { useOrderCollaboratorsSms } from '@/hooks/useOrderCollaboratorsSms';
+import { OrderCollaboratorSmsChips } from '@/components/orders/OrderCollaboratorSmsChips';
 import { sendPushNotification, sendNotificationRpc } from '@/lib/notifications';
 import { useAuth } from '@/contexts/AuthContext';
 import { PhoneLink } from '@/components/ui/PhoneLink';
@@ -229,6 +231,9 @@ export default function ExecutiveOrders() {
     }
   });
   const isOrderSmsEnabled = (orderId: string) => !smsDisabledOrders.has(orderId);
+  // همکاران پذیرفته‌شده سفارش‌های نمایش‌داده‌شده با کلید پیامک هر همکار (یک درخواست برای همه کارت‌ها)
+  const visibleOrderIds = useMemo(() => filteredOrders.map((o) => o.id), [filteredOrders]);
+  const { byOrder: collaboratorsByOrder } = useOrderCollaboratorsSms(visibleOrderIds);
   const toggleOrderSms = (orderId: string, enabled: boolean) => {
     setSmsDisabledOrders(prev => {
       const next = new Set(prev);
@@ -580,6 +585,8 @@ export default function ExecutiveOrders() {
         }).catch(err => {
           console.error('SMS notification error:', err);
         });
+      } else if (order) {
+        notifyOrderCollaboratorsOnly('in_progress', { orderId: order.id });
       }
 
       toast({
@@ -661,6 +668,8 @@ export default function ExecutiveOrders() {
         }).catch(err => {
           console.error('SMS notification error:', err);
         });
+      } else if (order) {
+        notifyOrderCollaboratorsOnly('executed', { orderId: order.id });
       }
 
       toast({
@@ -980,6 +989,8 @@ export default function ExecutiveOrders() {
                 }).catch(err => {
                   console.error('SMS notification error:', err);
                 });
+              } else if (smsStatus) {
+                notifyOrderCollaboratorsOnly(smsStatus, { orderId });
               }
             } catch (notifError) {
               console.error('Error sending notification:', notifError);
@@ -1039,6 +1050,8 @@ export default function ExecutiveOrders() {
         }).catch(err => {
           console.error('SMS notification error:', err);
         });
+      } else {
+        notifyOrderCollaboratorsOnly('completed', { orderId: selectedOrder.id });
       }
 
       toast({
@@ -1578,6 +1591,8 @@ export default function ExecutiveOrders() {
                       </div>
                       <SmsSendWindowButton />
                     </div>
+
+                    <OrderCollaboratorSmsChips collaborators={collaboratorsByOrder.get(order.id) || []} />
                     
                     <div className="space-y-1 text-sm">
                       <div className="flex items-center gap-2 text-muted-foreground">

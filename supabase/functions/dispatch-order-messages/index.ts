@@ -11,6 +11,9 @@ import {
   EVENT_DEDUPE_SECONDS, ORDER_EVENT_TABLES, eventMoney, eventStageFor, isRecentEvent, jalaliDate, renewalMonthLabel,
   type OrderEventTable,
 } from "../_shared/smsOrderEvents.ts";
+import {
+  COLLABORATOR_COPY_FRAME_KEY, enabledCollaboratorPhones, isCollaboratorCopyStage,
+} from "../_shared/collaboratorSms.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,6 +35,8 @@ const BodySchema = z.object({
   // رویداد گزارش‌شده توسط پایگاه داده (تمدید، تعمیر، تخفیف، انتقال، همکار) — همیشه با داده واقعی سطر سنجیده می‌شود
   event: EventSchema.optional(),
   skipCustomer: z.boolean().optional(),
+  // پیامک مشتری این سفارش خاموش است: فقط همکاران روشن (نسخه مرحله و قاب‌های «همکاران سفارش») پیام بگیرند
+  collaboratorsOnly: z.boolean().optional(),
   source: z.string().max(20).optional(),
   details: z.object({
     serviceType: text(200),
@@ -180,7 +185,9 @@ Deno.serve(async (req) => {
 
   const parsed = BodySchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return json({ error: parsed.error.flatten() }, 400);
-  const { orderCode, skipCustomer, details = {}, event } = parsed.data;
+  const { orderCode, details = {}, event } = parsed.data;
+  const collaboratorsOnly = parsed.data.collaboratorsOnly === true;
+  const skipCustomer = parsed.data.skipCustomer === true || collaboratorsOnly;
   let { orderId, stage } = parsed.data;
 
   // === تشخیص فراخوان ===
@@ -189,10 +196,11 @@ Deno.serve(async (req) => {
   const isService = !!token && token === serviceKey;
   // deno-lint-ignore no-explicit-any
   let userClient: any = null;
+  let callerUserId: string | null = null;
   if (!isService && token && token !== anonKey) {
     const c = createClient(url, anonKey, { global: { headers: { Authorization: authHeader } } });
     const { data } = await c.auth.getUser();
-    if (data?.user) userClient = c;
+    if (data?.user) { userClient = c; callerUserId = data.user.id; }
   }
 
   // === رویداد پایگاه داده: مرحله، سفارش و متغیرها فقط از داده واقعی سطر ساخته می‌شوند ===
@@ -232,7 +240,17 @@ Deno.serve(async (req) => {
     .eq("stage_key", stage)
     .eq("enabled", true);
   const frames = ((frameRows || []) as CustomFrame[]).filter((f) => frameAppliesTo(f, stage, o.subcategory_id));
-  if (frames.length === 0) return json({ success: true, frames: 0, recipients: 0 });
+
+  // نسخه پیام مرحله برای همکاران روشن: فقط تغییر مرحله اصلی سفارش و فقط وقتی سرور یا یکی از مدیران سفارش آن را گزارش کرده
+  let copyAllowed = !resolvedEvent && isCollaboratorCopyStage(stage);
+  if (copyAllowed && !isService) {
+    if (!callerUserId) copyAllowed = false;
+    else {
+      const { data: isManager } = await admin.rpc("is_order_message_manager", { _user_id: callerUserId });
+      copyAllowed = isManager === true;
+    }
+  }
+  if (frames.length === 0 && !copyAllowed) return json({ success: true, frames: 0, recipients: 0 });
 
   // === اطلاعات گیرندگان (فقط آنچه قاب‌ها لازم دارند) ===
   const needKinds = new Set(frames.flatMap(frameKinds));
@@ -260,13 +278,23 @@ Deno.serve(async (req) => {
     }
   }
 
+  // همکاران سفارش فقط وقتی پیام می‌گیرند که مدیریت کلید پیامک همان همکار را روشن کرده باشد
   let collaboratorPhones: string[] = [];
-  if (needKinds.has("collaborators")) {
-    const { data: collabs } = await admin.from("order_collaborators").select("invitee_phone_number, invitee_user_id").eq("order_id", o.id).eq("status", "accepted");
+  if (needKinds.has("collaborators") || copyAllowed) {
+    const { data: collabs } = await admin.from("order_collaborators")
+      .select("invitee_phone_number, invitee_user_id, sms_enabled")
+      .eq("order_id", o.id).eq("status", "accepted").eq("sms_enabled", true);
     const ids = (collabs || []).map((c: any) => c.invitee_user_id).filter(Boolean);
-    const { data: profs } = ids.length ? await admin.from("profiles").select("user_id, phone_number").in("user_id", ids) : { data: [] as any[] };
-    const phoneByUser = new Map((profs || []).map((p: any) => [p.user_id, p.phone_number]));
-    collaboratorPhones = (collabs || []).map((c: any) => c.invitee_phone_number || phoneByUser.get(c.invitee_user_id)).filter(Boolean);
+    const { data: profs } = ids.length ? await admin.from("profiles").select("user_id, phone_number, sms_notifications_enabled").in("user_id", ids) : { data: [] as any[] };
+    const profByUser = new Map((profs || []).map((p: any) => [p.user_id, p]));
+    collaboratorPhones = enabledCollaboratorPhones((collabs || []).map((c: any) => {
+      const prof = profByUser.get(c.invitee_user_id) as any;
+      return {
+        phone: c.invitee_phone_number || prof?.phone_number,
+        sms_enabled: c.sms_enabled,
+        sms_opted_out: prof?.sms_notifications_enabled === false,
+      };
+    }), customerPhone);
   }
 
   // شخص مرتبط با رویداد (گیرنده انتقال یا همکار) فقط با رضایت پیامکی خودش پیام می‌گیرد
@@ -327,7 +355,7 @@ Deno.serve(async (req) => {
   for (const f of frames) {
     const recipients = resolveFrameRecipients(f, {
       customerPhone, customerSmsDisabled, skipCustomer, collaboratorPhones, rolePhones, eventPersonPhone, eventPersonSmsDisabled,
-    });
+    }).filter((r) => !collaboratorsOnly || r.kind === "collaborators");
     for (const r of recipients) {
       const { data: claimed } = await admin.rpc("claim_sms_dispatch", {
         _key: dispatchClaimKey(claimRef, stage, f.key, r.phone),
@@ -356,6 +384,34 @@ Deno.serve(async (req) => {
     }
   }
 
+  // === نسخه پیام مرحله برای همکاران روشن (همان پیامی که مشتری در این مرحله می‌گیرد) ===
+  let collaboratorCopies = 0;
+  if (copyAllowed) {
+    for (const phone of collaboratorPhones) {
+      const { data: claimed } = await admin.rpc("claim_sms_dispatch", {
+        _key: dispatchClaimKey(o.id, stage, COLLABORATOR_COPY_FRAME_KEY, phone),
+        _window_seconds: DISPATCH_DEDUPE_SECONDS,
+      });
+      if (claimed !== true) continue;
+      collaboratorCopies++;
+      jobs.push({
+        phone,
+        orderCode: o.code,
+        orderId: o.id,
+        status: stage,
+        audience: "collaborator",
+        serviceType,
+        address,
+        customerName: details.customerName || customerName,
+        description: details.description,
+        amount: amountCandidates[0],
+        paidAmount: details.paidAmount,
+        totalPaid: details.totalPaid,
+        remainingAmount: details.remainingAmount,
+      });
+    }
+  }
+
   const sendAll = Promise.allSettled(jobs.map((body) =>
     fetch(`${url}/functions/v1/send-order-sms`, {
       method: "POST",
@@ -367,5 +423,5 @@ Deno.serve(async (req) => {
   else await sendAll;
 
   console.log(`[dispatch-order-messages] order ${o.code} stage ${stage}${resolvedEvent ? ` (${resolvedEvent.eventRef})` : ""}: ${frames.length} frame(s), ${jobs.length} message(s)`);
-  return json({ success: true, frames: frames.length, recipients: jobs.length });
+  return json({ success: true, frames: frames.length, recipients: jobs.length, collaboratorCopies });
 });

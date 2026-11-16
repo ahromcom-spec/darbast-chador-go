@@ -2779,6 +2779,7 @@ export type Database = {
           manager_rejection_reason: string | null
           order_id: string
           responded_at: string | null
+          sms_enabled: boolean
           status: string
           updated_at: string
         }
@@ -2798,6 +2799,7 @@ export type Database = {
           manager_rejection_reason?: string | null
           order_id: string
           responded_at?: string | null
+          sms_enabled?: boolean
           status?: string
           updated_at?: string
         }
@@ -2817,6 +2819,7 @@ export type Database = {
           manager_rejection_reason?: string | null
           order_id?: string
           responded_at?: string | null
+          sms_enabled?: boolean
           status?: string
           updated_at?: string
         }
@@ -7227,6 +7230,18 @@ export type Database = {
         }
         Returns: string
       }
+      get_order_collaborators_sms: {
+        Args: { _order_ids: string[] }
+        Returns: {
+          collaborator_role: string
+          id: string
+          name: string
+          order_id: string
+          phone: string
+          sms_enabled: boolean
+          sms_opted_out: boolean
+        }[]
+      }
       get_order_customer_identity: {
         Args: { p_order_id: string }
         Returns: {
@@ -7318,6 +7333,7 @@ export type Database = {
         Args: { _module_key: string; _user_id: string }
         Returns: boolean
       }
+      is_order_message_manager: { Args: { _user_id: string }; Returns: boolean }
       is_payment_reviewer: { Args: { _uid: string }; Returns: boolean }
       is_pending_order_invitee: {
         Args: { _order_id: string; _user_id: string }
@@ -7491,6 +7507,10 @@ export type Database = {
           _user_id: string
         }
         Returns: string
+      }
+      set_order_collaborator_sms: {
+        Args: { _collaborator_id: string; _enabled: boolean }
+        Returns: boolean
       }
       set_order_schedule:
         | {
