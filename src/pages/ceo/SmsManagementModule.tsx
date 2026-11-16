@@ -35,6 +35,9 @@ import {
   MessageSquarePlus, Users, ArrowLeftRight, Pencil,
 } from "lucide-react";
 
+/** تعداد آخرین پیامک‌هایی که در تب «گزارش ارسال» نمایش داده می‌شوند */
+const SMS_LOG_DISPLAY_LIMIT = 1000;
+
 const SAMPLE_EVENT_VARS = sampleEventVars();
 
 interface SmsTemplate {
@@ -256,7 +259,7 @@ export default function SmsManagementModule() {
     setLoading(true);
     const [tplRes, logsRes, statsRes, queueRes] = await Promise.all([
       supabase.from("sms_templates").select("*").order("scope").order("title"),
-      supabase.from("sms_logs").select("*").order("created_at", { ascending: false }).limit(50),
+      supabase.from("sms_logs").select("*").order("created_at", { ascending: false }).limit(SMS_LOG_DISPLAY_LIMIT),
       supabase.from("sms_logs").select("status, created_at").gte(
         "created_at", new Date(new Date().setHours(0, 0, 0, 0)).toISOString()
       ),
@@ -270,13 +273,14 @@ export default function SmsManagementModule() {
     }
     if (!logsRes.error) {
       const rawLogs = (logsRes.data || []) as any[];
-      const orderCodes = rawLogs.map((l) => l.order_code).filter(Boolean);
+      const orderCodes = Array.from(new Set(rawLogs.map((l) => l.order_code).filter(Boolean))) as string[];
       let projectByCode: Record<string, { customer_name?: string | null; address?: string | null; detailed_address?: string | null; subcategory_id?: string | null }> = {};
-      if (orderCodes.length) {
+      // کدهای سفارش در دسته‌های کوچک خوانده می‌شوند تا درخواست برای ۱۰۰۰ پیام بیش از حد طولانی نشود
+      for (let i = 0; i < orderCodes.length; i += 150) {
         const { data: projects } = await supabase
           .from("projects_v3")
           .select("code, customer_name, address, detailed_address, subcategory_id")
-          .in("code", orderCodes);
+          .in("code", orderCodes.slice(i, i + 150));
         (projects || []).forEach((p: any) => {
           if (p.code) projectByCode[p.code] = p;
         });
