@@ -159,9 +159,9 @@ async function resolveEvent(admin: Admin, ev: z.infer<typeof EventSchema>): Prom
   const personPhone = normalizeIranMobile(c.invitee_phone_number) || normalizeIranMobile(invitee?.phone_number);
   return {
     stage, orderId: c.order_id, eventRef: `order_collaborators:${c.id}`,
-    personUserId: c.invitee_user_id, personPhone, personName: c.collaborator_name || invitee?.full_name,
+    personUserId: c.invitee_user_id, personPhone, personName: invitee?.full_name || c.collaborator_name,
     vars: {
-      personName: String(c.collaborator_name || invitee?.full_name || personPhone || "").trim(),
+      personName: String(invitee?.full_name || c.collaborator_name || personPhone || "").trim(),
       personPhone: personPhone || "",
       reason: String(c.manager_rejection_reason || "").trim(),
     },
@@ -247,7 +247,21 @@ Deno.serve(async (req) => {
     if (!callerUserId) copyAllowed = false;
     else {
       const { data: isManager } = await admin.rpc("is_order_message_manager", { _user_id: callerUserId });
-      copyAllowed = isManager === true;
+      if (isManager === true) copyAllowed = true;
+      else {
+        // کاربر دارای دسترسی سفارش (مثلاً مشتری پس از پرداخت آنلاین یا ثبت درخواست جمع‌آوری):
+        // فقط وقتی پذیرفته می‌شود که همان رویداد واقعاً در چند دقیقه اخیر برای این سفارش ثبت شده باشد
+        const since = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+        let verified = false;
+        if (stage === "paid") {
+          const { data: pay } = await admin.from("order_payments").select("id").eq("order_id", o.id).gte("created_at", since).limit(1);
+          verified = (pay || []).length > 0;
+        } else if (stage === "awaiting_collection") {
+          const { data: cr } = await admin.from("collection_requests").select("id").eq("order_id", o.id).gte("created_at", since).limit(1);
+          verified = (cr || []).length > 0;
+        }
+        copyAllowed = verified;
+      }
     }
   }
   if (frames.length === 0 && !copyAllowed) return json({ success: true, frames: 0, recipients: 0 });

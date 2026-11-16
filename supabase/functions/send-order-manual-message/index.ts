@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
       targets.push({
         kind: "collaborator",
         id: (c as any).id,
-        name: String((c as any).collaborator_name || prof?.full_name || "همکار").trim(),
+        name: String(prof?.full_name || (c as any).collaborator_name || "همکار").trim(),
         phone: normalizeIranMobile((c as any).invitee_phone_number || prof?.phone_number),
         optedOut: prof?.sms_notifications_enabled === false,
       });
