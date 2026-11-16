@@ -7116,6 +7116,22 @@ export type Database = {
         Args: { p_module_date: string; p_module_key: string }
         Returns: Json
       }
+      get_my_pending_collaboration_invites: {
+        Args: never
+        Returns: {
+          can_manage_order: boolean
+          can_view_financials: boolean
+          collaborator_name: string
+          collaborator_role: string
+          id: string
+          invited_at: string
+          inviter_name: string
+          inviter_phone: string
+          inviter_user_id: string
+          order_id: string
+          status: string
+        }[]
+      }
       get_my_projects_v3: {
         Args: never
         Returns: {
@@ -7303,6 +7319,10 @@ export type Database = {
         Returns: boolean
       }
       is_payment_reviewer: { Args: { _uid: string }; Returns: boolean }
+      is_pending_order_invitee: {
+        Args: { _order_id: string; _user_id: string }
+        Returns: boolean
+      }
       log_audit:
         | {
             Args: {

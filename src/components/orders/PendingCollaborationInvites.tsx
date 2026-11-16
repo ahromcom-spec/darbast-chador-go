@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Users, Check, X, Package, MapPin, Calendar, Loader2, Phone, Ruler, Banknote, FileText, ChevronDown, ChevronUp, BadgeCheck, Image as ImageIcon } from 'lucide-react';
+import { Users, Check, X, Eye, Package, MapPin, Calendar, Loader2, Phone, Ruler, Banknote, FileText, ChevronDown, ChevronUp, BadgeCheck, Image as ImageIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { OrderMediaPreview } from '@/components/profile/OrderMediaPreview';
+import { acceptCollaborationInvite, fetchMyPendingCollaborationInvites, rejectCollaborationInvite } from '@/lib/collaborationInvites';
 
 interface CollaborationInvite {
   id: string;
@@ -62,56 +63,16 @@ export function PendingCollaborationInvites() {
     if (!user) return;
 
     try {
-      // Get user's phone number
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('phone_number')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      const collaborations = await fetchMyPendingCollaborationInvites();
 
-      if (!profile?.phone_number) {
+      if (collaborations.length === 0) {
         setInvites([]);
-        setLoading(false);
         return;
       }
 
-      // Fetch pending collaboration invites for this user
-      const { data: collaborations, error } = await supabase
-        .from('order_collaborators')
-        .select(`
-          id,
-          order_id,
-          inviter_user_id,
-          status,
-          invited_at,
-          can_view_financials,
-          can_manage_order,
-          collaborator_name,
-          collaborator_role
-        `)
-        .or(`invitee_user_id.eq.${user.id},invitee_phone_number.eq.${profile.phone_number}`)
-        .in('status', ['pending', 'manager_approved', 'pending_registration'])
-        .order('invited_at', { ascending: false });
-
-      if (error) throw error;
-
-      if (!collaborations || collaborations.length === 0) {
-        setInvites([]);
-        setLoading(false);
-        return;
-      }
-
-      // Fetch additional details for each invite
       const enrichedInvites = await Promise.all(
         collaborations.map(async (collab) => {
-          // Get inviter profile
-          const { data: inviterProfile } = await supabase
-            .from('profiles')
-            .select('full_name, phone_number')
-            .eq('user_id', collab.inviter_user_id)
-            .maybeSingle();
-
-          // Get order details with hierarchy info
+          // مدعو پس از تایید مدیریت اجازه مشاهده (فقط خواندنی) سفارش را دارد
           const { data: order } = await supabase
             .from('projects_v3')
             .select(`
@@ -135,27 +96,27 @@ export function PendingCollaborationInvites() {
             .eq('id', collab.order_id)
             .maybeSingle();
 
-          // Parse notes for dimensions
           let parsedNotes: any = null;
           try {
             if (order?.notes) {
-              if (typeof order.notes === 'string') {
-                parsedNotes = JSON.parse(order.notes);
-                if (typeof parsedNotes === 'string') {
-                  parsedNotes = JSON.parse(parsedNotes);
-                }
-              } else {
-                parsedNotes = order.notes;
-              }
+              parsedNotes = typeof order.notes === 'string' ? JSON.parse(order.notes) : order.notes;
+              if (typeof parsedNotes === 'string') parsedNotes = JSON.parse(parsedNotes);
             }
           } catch (e) {
             console.error('Error parsing order notes:', e);
           }
 
           return {
-            ...collab,
-            inviter_name: inviterProfile?.full_name || 'نامشخص',
-            inviter_phone: inviterProfile?.phone_number || '',
+            id: collab.id,
+            order_id: collab.order_id,
+            inviter_user_id: collab.inviter_user_id,
+            status: collab.status,
+            invited_at: collab.invited_at,
+            collaborator_name: collab.collaborator_name,
+            collaborator_role: collab.collaborator_role,
+            can_manage_order: collab.can_manage_order === true,
+            inviter_name: collab.inviter_name || 'نامشخص',
+            inviter_phone: collab.inviter_phone || '',
             order_code: order?.code || '',
             order_address: order?.address || '',
             order_status: order?.status || '',
@@ -168,7 +129,7 @@ export function PendingCollaborationInvites() {
             location_lat: order?.location_lat || null,
             location_lng: order?.location_lng || null,
             order_notes: parsedNotes,
-            can_view_financials: (collab as any).can_view_financials !== false,
+            can_view_financials: collab.can_view_financials !== false,
             payment_amount: order?.payment_amount || null,
             total_price: (order as any)?.total_price || null,
             total_paid: (order as any)?.total_paid || null,
@@ -198,84 +159,15 @@ export function PendingCollaborationInvites() {
 
   const handleAccept = async (invite: CollaborationInvite) => {
     if (!user) return;
-
     setProcessingId(invite.id);
     try {
-      // Step 1: Create a location for the collaborator user
-      let locationId: string | null = null;
-      
-      if (invite.location_lat && invite.location_lng && invite.order_address) {
-        // Create location for collaborator
-        const { data: newLocation, error: locationError } = await supabase
-          .from('locations')
-          .insert({
-            user_id: user.id,
-            address_line: invite.order_address,
-            lat: invite.location_lat,
-            lng: invite.location_lng,
-            province_id: invite.province_id || null,
-            district_id: invite.district_id || null,
-            title: `آدرس مشترک - سفارش #${invite.order_code}`,
-            is_active: true,
-          })
-          .select('id')
-          .single();
-
-        if (locationError) {
-          console.error('Error creating location for collaborator:', locationError);
-        } else {
-          locationId = newLocation?.id;
-        }
-      }
-
-      // Step 2: Create projects_hierarchy for the collaborator if we have location
-      let hierarchyId: string | null = null;
-      
-      if (locationId && invite.service_type_id && invite.subcategory_id) {
-        const { data: newHierarchy, error: hierarchyError } = await supabase
-          .from('projects_hierarchy')
-          .insert({
-            user_id: user.id,
-            location_id: locationId,
-            service_type_id: invite.service_type_id,
-            subcategory_id: invite.subcategory_id,
-            title: `پروژه مشترک - سفارش #${invite.order_code}`,
-            status: 'active',
-          })
-          .select('id')
-          .single();
-
-        if (hierarchyError) {
-          console.error('Error creating hierarchy for collaborator:', hierarchyError);
-        } else {
-          hierarchyId = newHierarchy?.id;
-        }
-      }
-
-      // Step 3: Update collaboration status to accepted
-      const { error } = await supabase
-        .from('order_collaborators')
-        .update({
-          status: 'accepted',
-          invitee_user_id: user.id,
-          responded_at: new Date().toISOString(),
-        })
-        .eq('id', invite.id);
-
-      if (error) throw error;
-
-      // Step 4: Send notification to inviter
-      await supabase.from('notifications').insert({
-        user_id: invite.inviter_user_id,
-        title: 'دعوت همکاری پذیرفته شد',
-        body: `دعوت همکاری شما برای سفارش #${invite.order_code} پذیرفته شد.`,
-        type: 'success',
-        link: `/user/orders/${invite.order_id}`,
+      await acceptCollaborationInvite({
+        inviteId: invite.id,
+        orderId: invite.order_id,
+        inviterUserId: invite.inviter_user_id,
+        userId: user.id,
       });
-
       toast.success('دعوت همکاری با موفقیت پذیرفته شد. سفارش به لیست سفارشات شما اضافه شد.');
-      
-      // Remove from list
       setInvites(prev => prev.filter(i => i.id !== invite.id));
     } catch (error) {
       console.error('Error accepting collaboration:', error);
@@ -287,32 +179,15 @@ export function PendingCollaborationInvites() {
 
   const handleReject = async (invite: CollaborationInvite) => {
     if (!user) return;
-
     setProcessingId(invite.id);
     try {
-      const { error } = await supabase
-        .from('order_collaborators')
-        .update({
-          status: 'rejected',
-          invitee_user_id: user.id,
-          responded_at: new Date().toISOString(),
-        })
-        .eq('id', invite.id);
-
-      if (error) throw error;
-
-      // Send notification to inviter
-      await supabase.from('notifications').insert({
-        user_id: invite.inviter_user_id,
-        title: 'دعوت همکاری رد شد',
-        body: `دعوت همکاری شما برای سفارش #${invite.order_code} رد شد.`,
-        type: 'info',
-        link: `/user/orders/${invite.order_id}`,
-      });
-
+      await rejectCollaborationInvite({
+        inviteId: invite.id,
+        orderId: invite.order_id,
+        inviterUserId: invite.inviter_user_id,
+        userId: user.id,
+      }, invite.order_code);
       toast.success('دعوت همکاری رد شد');
-      
-      // Remove from list
       setInvites(prev => prev.filter(i => i.id !== invite.id));
     } catch (error) {
       console.error('Error rejecting collaboration:', error);
@@ -387,7 +262,7 @@ export function PendingCollaborationInvites() {
                   {/* Order Code */}
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge variant="default" className="text-base px-3 py-1">
-                      سفارش #{invite.order_code}
+                      سفارش #{invite.order_code || '—'}
                     </Badge>
                     {invite.collaborator_role && (
                       <Badge variant="secondary" className="gap-1">
@@ -505,6 +380,15 @@ export function PendingCollaborationInvites() {
                       رد
                     </Button>
                   </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1"
+                    onClick={() => navigate(`/user/orders/${invite.order_id}`)}
+                  >
+                    <Eye className="h-4 w-4" />
+                    مشاهده کامل سفارش
+                  </Button>
                   <Button
                     size="sm"
                     variant="ghost"

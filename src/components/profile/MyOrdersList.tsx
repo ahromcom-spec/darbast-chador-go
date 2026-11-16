@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { EmptyState } from '@/components/common/EmptyState';
 import { OrderMediaPreview } from '@/components/profile/OrderMediaPreview';
+import { fetchMyPendingCollaborationInvites } from '@/lib/collaborationInvites';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { Package, MapPin, Calendar, Eye, Filter, X, Users, Search, XCircle, Wallet, Archive, Activity, CheckCircle2, Images, ChevronDown } from 'lucide-react';
 import {
@@ -36,6 +37,8 @@ interface Order {
   province_name?: string;
   notes?: any;
   isCollaborated?: boolean;
+  pendingInviteId?: string;
+  hideFinancials?: boolean;
   total_price?: number | null;
   total_paid?: number | null;
   payment_amount?: number | null;
@@ -119,13 +122,32 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
   const fetchOrders = async () => {
     try {
       // Fetch all orders (own + collaborated) using security definer function
-      const { data: ordersData, error } = await supabase
+      let { data: ordersData, error } = await supabase
         .rpc('get_my_projects_v3');
 
       if (error) {
         console.error('Error fetching orders via RPC:', error);
         throw error;
       }
+
+      // دعوت‌های همکاری تایید‌شده توسط مدیریت که منتظر پذیرش این کاربر هستند
+      // هم در لیست سفارشات نمایش داده می‌شوند تا با دیدن جزئیات پذیرفته یا رد شوند.
+      let pendingInvites: Awaited<ReturnType<typeof fetchMyPendingCollaborationInvites>> = [];
+      try {
+        pendingInvites = await fetchMyPendingCollaborationInvites();
+      } catch (e) {
+        console.error('Error fetching pending collaboration invites:', e);
+      }
+      const ownIds = new Set((ordersData || []).map((o: any) => o.id));
+      const inviteOrderIds = [...new Set(pendingInvites.map(i => i.order_id))].filter(id => !ownIds.has(id));
+      if (inviteOrderIds.length > 0) {
+        const { data: inviteOrders } = await supabase
+          .from('projects_v3')
+          .select('*')
+          .in('id', inviteOrderIds);
+        ordersData = [...(ordersData || []), ...((inviteOrders || []) as any[])] as any;
+      }
+      const pendingInviteByOrder = new Map(pendingInvites.map(i => [i.order_id, i]));
 
       if (!ordersData || ordersData.length === 0) {
         setOrders([]);
@@ -180,6 +202,8 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
         province_name: provinceMap.get(order.province_id) || '',
         notes: order.notes,
         isCollaborated: collaboratedOrderIds.has(order.id),
+        pendingInviteId: ownIds.has(order.id) ? undefined : pendingInviteByOrder.get(order.id)?.id,
+        hideFinancials: !ownIds.has(order.id) && pendingInviteByOrder.get(order.id)?.can_view_financials === false,
         total_price: order.total_price,
         total_paid: order.total_paid,
         payment_amount: order.payment_amount,
@@ -351,7 +375,7 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
 
   const renderOrderCard = (order: Order, archived: boolean) => {
     const displayStatus = getOrderDisplayStatus(order);
-    const total = Number(order.total_price) || Number(order.payment_amount) || 0;
+    const total = order.hideFinancials ? 0 : (Number(order.total_price) || Number(order.payment_amount) || 0);
     const paid = Number(order.total_paid) || 0;
     const remaining = Math.max(total - paid, 0);
     const fmt = (n: number) => new Intl.NumberFormat('fa-IR').format(Math.round(n));
@@ -378,6 +402,12 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
                 <Badge variant={displayStatus.paymentVariant}>{displayStatus.paymentLabel}</Badge>
                 {order.statement_closed && (
                   <Badge variant="outline" className="text-xs">صورتحساب بسته شده</Badge>
+                )}
+                {order.pendingInviteId && (
+                  <Badge variant="outline" className="gap-1 text-xs border-accent text-accent-foreground bg-accent/40">
+                    <Users className="h-3 w-3" />
+                    دعوت همکاری — در انتظار پذیرش شما
+                  </Badge>
                 )}
                 {order.isCollaborated && (
                   <Badge variant="outline" className="gap-1 text-xs border-primary/50 text-primary">
@@ -446,7 +476,7 @@ export function MyOrdersList({ userId }: MyOrdersListProps) {
             </div>
 
             <div className="flex gap-2 flex-shrink-0">
-              {order.status === 'pending' && (
+              {order.status === 'pending' && !order.pendingInviteId && (
                 <Button
                   variant="destructive"
                   size="sm"

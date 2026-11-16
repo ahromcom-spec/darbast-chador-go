@@ -51,6 +51,7 @@ import {
   Printer,
   ArrowLeftRight,
   Users,
+  Loader2,
   User,
   ChevronDown,
   ClipboardList,
@@ -69,6 +70,7 @@ import { OrderMediaSection } from "@/components/orders/OrderMediaSection";
 import OrderRatingSection from "@/components/orders/OrderRatingSection";
 import { useProjectRatings, RatingCriteria } from "@/hooks/useRatings";
 import { useAuth } from "@/contexts/AuthContext";
+import { acceptCollaborationInvite, fetchMyPendingCollaborationInvites, rejectCollaborationInvite, type PendingCollaborationInvite } from "@/lib/collaborationInvites";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -320,9 +322,29 @@ export default function OrderDetail() {
     return () => { cancelled = true; };
   }, [id, user?.id]);
 
+  // دعوت همکاری تاییدشده توسط مدیریت که منتظر پذیرش کاربر فعلی است:
+  // سفارش فقط خواندنی نمایش داده می‌شود تا کاربر با دیدن جزئیات آن را بپذیرد یا رد کند.
+  const [pendingInvite, setPendingInvite] = useState<PendingCollaborationInvite | null>(null);
+  const [inviteProcessing, setInviteProcessing] = useState<'accept' | 'reject' | null>(null);
+  useEffect(() => {
+    if (!id || !user?.id) {
+      setPendingInvite(null);
+      return;
+    }
+    let cancelled = false;
+    fetchMyPendingCollaborationInvites()
+      .then((rows) => {
+        if (!cancelled) setPendingInvite(rows.find((r) => r.order_id === id) || null);
+      })
+      .catch(() => { if (!cancelled) setPendingInvite(null); });
+    return () => { cancelled = true; };
+  }, [id, user?.id]);
+
   // مالک سفارش همه دسترسی‌ها را دارد؛ همکار طبق اختیارات تعیین‌شده
-  const canViewFinancials = !hideAmounts && (!myCollabPerms || myCollabPerms.can_view_financials);
-  const canManageOrder = !myCollabPerms || myCollabPerms.can_manage_order;
+  const canViewFinancials = !hideAmounts && (pendingInvite
+    ? pendingInvite.can_view_financials !== false
+    : (!myCollabPerms || myCollabPerms.can_view_financials));
+  const canManageOrder = !pendingInvite && (!myCollabPerms || myCollabPerms.can_manage_order);
 
    
   // معیارهای ثابت امتیازدهی - بدون نیاز به کوئری دیتابیس
@@ -670,7 +692,7 @@ export default function OrderDetail() {
   };
 
   // Security: Draft and pending orders are editable until approved by manager
-  const canEdit = order?.status === 'draft' || order?.status === 'pending';
+  const canEdit = !pendingInvite && (order?.status === 'draft' || order?.status === 'pending');
 
   const handleSetCompletionDate = async () => {
     if (!order || !completionDate) {
@@ -1129,6 +1151,84 @@ export default function OrderDetail() {
 
 
         <div className="space-y-6">
+          {pendingInvite && (
+            <Card className="border-primary/40 bg-primary/5">
+              <CardContent className="pt-6 space-y-3">
+                <div className="flex items-start gap-3">
+                  <Users className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 space-y-1">
+                    <p className="font-semibold text-foreground">دعوت همکاری در این سفارش</p>
+                    <p className="text-sm text-muted-foreground">
+                      {pendingInvite.inviter_name || 'صاحب سفارش'}
+                      {pendingInvite.inviter_phone ? ` (${pendingInvite.inviter_phone})` : ''}
+                      {' '}شما را
+                      {pendingInvite.collaborator_role ? ` به‌عنوان ${pendingInvite.collaborator_role}` : ''}
+                      {' '}به همکاری در این سفارش دعوت کرده و مدیریت اهرم آن را تایید کرده است.
+                      جزئیات، عکس‌ها و فیلم‌های سفارش را بررسی کنید؛ پس از پذیرش، سفارش به لیست سفارشات شما اضافه می‌شود.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    className="gap-1"
+                    disabled={!!inviteProcessing}
+                    onClick={async () => {
+                      if (!user || !order) return;
+                      setInviteProcessing('accept');
+                      try {
+                        await acceptCollaborationInvite({
+                          inviteId: pendingInvite.id,
+                          orderId: order.id,
+                          inviterUserId: pendingInvite.inviter_user_id,
+                          userId: user.id,
+                        });
+                        toast({ title: 'دعوت همکاری پذیرفته شد', description: 'سفارش به لیست سفارشات شما اضافه شد.' });
+                        setPendingInvite(null);
+                        fetchOrderDetails();
+                      } catch (e) {
+                        console.error('Error accepting collaboration:', e);
+                        toast({ title: 'خطا', description: 'خطا در پذیرش دعوت همکاری', variant: 'destructive' });
+                      } finally {
+                        setInviteProcessing(null);
+                      }
+                    }}
+                  >
+                    {inviteProcessing === 'accept' ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                    پذیرش همکاری
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1"
+                    disabled={!!inviteProcessing}
+                    onClick={async () => {
+                      if (!user || !order) return;
+                      setInviteProcessing('reject');
+                      try {
+                        await rejectCollaborationInvite({
+                          inviteId: pendingInvite.id,
+                          orderId: order.id,
+                          inviterUserId: pendingInvite.inviter_user_id,
+                          userId: user.id,
+                        }, order.code);
+                        toast({ title: 'دعوت همکاری رد شد' });
+                        navigate('/profile?tab=orders');
+                      } catch (e) {
+                        console.error('Error rejecting collaboration:', e);
+                        toast({ title: 'خطا', description: 'خطا در رد دعوت همکاری', variant: 'destructive' });
+                      } finally {
+                        setInviteProcessing(null);
+                      }
+                    }}
+                  >
+                    <XCircle className="h-4 w-4" />
+                    رد دعوت
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           {isSeparatedOrder && <p className="font-semibold border-b pb-3">سفارش مستقل تمدید و تعمیرات — سفارش مادر {parsedNotes?.billing_source_code || '—'}</p>}
           {/* Order Header */}
           <Card>
@@ -2239,7 +2339,7 @@ export default function OrderDetail() {
                       )}
 
                     {/* دکمه پرداخت - فقط بعد از تایید سفارش توسط مدیریت اهرم و برای درخواست کارشناسی فقط بعد از تایید قیمت توسط مشتری */}
-                    {['approved', 'completed', 'in_progress', 'pending_execution', 'paid', 'active', 'scheduled', 'closed'].includes(order.status) && 
+                    {!pendingInvite && ['approved', 'completed', 'in_progress', 'pending_execution', 'paid', 'active', 'scheduled', 'closed'].includes(order.status) && 
                       grandTotal > 0 &&
                       remainingAmount > 0 &&
                       (!isExpertPricingRequest || customerHasConfirmedPrice) && (
@@ -2548,6 +2648,7 @@ export default function OrderDetail() {
                   );
                 })()}
 
+              {!pendingInvite && (
               <Collapsible open={isRequestsSectionExpanded} onOpenChange={setIsRequestsSectionExpanded}>
                 <Card>
                   <CollapsibleTrigger asChild>
@@ -2763,11 +2864,12 @@ export default function OrderDetail() {
                   </CollapsibleContent>
                 </Card>
               </Collapsible>
+              )}
             </>
           )}
 
           {/* Status Messages */}
-          {order.status === 'pending' && (
+          {order.status === 'pending' && !pendingInvite && (
             <Card className="border-yellow-200 dark:border-yellow-900 bg-yellow-50 dark:bg-yellow-950/20">
               <CardContent className="pt-6">
                 <div className="flex items-start gap-3">
@@ -2937,11 +3039,11 @@ export default function OrderDetail() {
           {/* عکس‌ها و فیلم‌های سفارش — یک کادر، دسته‌بندی‌شده بر اساس تاریخ */}
           <OrderMediaSection
             orderId={order.id}
-            canUpload={true}
-            canDelete={true}
+            canUpload={!pendingInvite}
+            canDelete={!pendingInvite}
             deleteOwnOnly={true}
-            canEditDate={true}
-            showUploader={true}
+            canEditDate={!pendingInvite}
+            showUploader={!pendingInvite}
           />
 
 
@@ -2953,6 +3055,7 @@ export default function OrderDetail() {
             onClose={() => setSelectedImage(null)}
           />
 
+          {!pendingInvite && (<>
           <OwnershipAndCollaboratorsSection
             orderId={order.id}
             currentOwnerId={order.customer_id}
@@ -2970,11 +3073,12 @@ export default function OrderDetail() {
 
           {/* تاریخچه تماس‌ها */}
           <CallHistory orderId={order.id} />
+          </>)}
 
           {/* Action Buttons */}
           <div className="space-y-2 mb-4">
             <div className="flex flex-wrap items-center gap-2">
-              {order.subcategory?.code === 'scaffolding_with_materials_and_transport' && 
+              {!pendingInvite && order.subcategory?.code === 'scaffolding_with_materials_and_transport' && 
                (order.status === 'completed' || order.status === 'paid') && (
                 <Button
                   onClick={handleRenewOrder}
@@ -3033,7 +3137,7 @@ export default function OrderDetail() {
           </div>
 
           {/* بخش امتیازدهی یکپارچه - فقط برای سفارشات تکمیل شده یا بسته شده */}
-          {(order.status === 'completed' || order.status === 'paid' || order.status === 'closed') && (
+          {!pendingInvite && (order.status === 'completed' || order.status === 'paid' || order.status === 'closed') && (
             <OrderRatingSection orderId={order.id} />
           )}
 
