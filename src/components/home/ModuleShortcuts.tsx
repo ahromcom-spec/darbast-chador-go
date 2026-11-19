@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { X, Palette, ExternalLink, Smartphone, Copy } from 'lucide-react';
@@ -9,6 +9,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { ActivityBadge } from '@/components/activity/ActivityBadge';
+import { useModuleActivityCounts } from '@/hooks/useModuleActivity';
+import { resolveActivityKind } from '@/lib/moduleActivity';
 
 const SHORTCUT_COLORS = [
   { name: 'پیش‌فرض', value: null, bg: 'bg-secondary', text: 'text-secondary-foreground', icon: 'text-primary', border: 'border-border' },
@@ -34,6 +37,25 @@ export function ModuleShortcuts() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { shortcuts, isLoading, removeShortcut, updateColor, reorderShortcuts } = useModuleShortcuts();
+  // شمارش رویدادهای مشاهده‌نشده هر ماژول سنجاق‌شده (مثل نشان عددی برنامه‌های اندروید)
+  const activityRefs = useMemo(
+    () => shortcuts.map((s) => ({ moduleKey: s.module_key, href: s.module_href })),
+    [shortcuts],
+  );
+  const activity = useModuleActivityCounts(activityRefs);
+  const totalUnseen = useMemo(
+    () => Object.values(activity).reduce((sum, c) => sum + (c?.total || 0), 0),
+    [activity],
+  );
+  const describeActivity = (moduleKey: string, href: string | null) => {
+    const counts = activity[moduleKey];
+    const kind = resolveActivityKind(href);
+    if (!counts || !kind) return undefined;
+    const parts = kind.tabs
+      .filter((t) => !t.aggregate && (counts.tabs[t.key] || 0) > 0)
+      .map((t) => `${t.label}: ${(counts.tabs[t.key] || 0).toLocaleString('fa-IR')}`);
+    return parts.length ? `رویدادهای مشاهده‌نشده\n${parts.join('\n')}` : undefined;
+  };
   const { canInstall, isIOS, promptInstall } = usePWAInstall();
   const [colorPickerKey, setColorPickerKey] = useState<string | null>(null);
   const [colorPickerPosition, setColorPickerPosition] = useState<{ top: number; left: number; width: number } | null>(null);
@@ -203,15 +225,29 @@ export function ModuleShortcuts() {
   return (
     <div className="w-full max-w-2xl mx-auto px-4">
       <div className="bg-card rounded-2xl p-4 border border-border shadow-md">
-        <h3 className="text-foreground text-sm font-semibold mb-3 text-center">میانبرهای ماژول</h3>
+        <div className="mb-3 flex items-center justify-center gap-2">
+          <h3 className="text-foreground text-sm font-semibold text-center">میانبرهای ماژول</h3>
+          {totalUnseen > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-destructive" />
+              {totalUnseen.toLocaleString('fa-IR')} رویداد جدید
+            </span>
+          )}
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 auto-rows-fr">
           {shortcuts.map((s, index) => {
             const colors = getColorClasses(s.color);
             const Icon = getModuleIconByKey(s.module_key, s.module_name);
             return (
               <div key={s.id} data-shortcut-card className="relative h-full">
+                <ActivityBadge
+                  variant="corner"
+                  count={activity[s.module_key]?.total}
+                  title={describeActivity(s.module_key, s.module_href)}
+                />
                 <button
                   data-shortcut-index={index}
+                  title={describeActivity(s.module_key, s.module_href)}
                   draggable
                   onDragStart={() => handleDragStart(index)}
                   onDragEnter={() => handleDragEnter(index)}

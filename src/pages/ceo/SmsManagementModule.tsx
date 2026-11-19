@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useModuleTabActivity } from '@/hooks/useModuleActivity';
+import { ActivityBadge } from '@/components/activity/ActivityBadge';
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -178,6 +180,8 @@ export default function SmsManagementModule() {
   const [logService, setLogService] = useState<string>("all");
   // تب فعال پس از بارگذاری مجدد (مثلاً بعد از ذخیره قاب) حفظ می‌شود
   const [activeTab, setActiveTab] = useState("customer");
+  // پیام‌های جدید ارسال‌شده و پیام‌های تازه صف که هنوز دیده نشده‌اند
+  const { counts: activity } = useModuleTabActivity({ href: '/sms-management', defaultModuleKey: 'sms_management', activeTab });
   // درخواست باز کردن ویرایش کامل قاب (گیرندگان و مرحله) از تب مشتری/مدیریت
   const [frameEditRequest, setFrameEditRequest] = useState<string | null>(null);
   const [frameReturnTab, setFrameReturnTab] = useState<string | null>(null);
@@ -1321,8 +1325,8 @@ export default function SmsManagementModule() {
             <TabsTrigger value="customer">پیامک‌های مشتری ({(groups.customer?.length || 0) + framesByTab.customer.length})</TabsTrigger>
             <TabsTrigger value="ceo">پیامک‌های مدیریت اهرم ({(groups.ceo?.length || 0) + framesByTab.ceo.length})</TabsTrigger>
             <TabsTrigger value="custom-frames">قاب‌های پیام سفارشی ({groups.custom?.length || 0})</TabsTrigger>
-            <TabsTrigger value="logs">گزارش ارسال ({logs.length})</TabsTrigger>
-            <TabsTrigger value="queue">در انتظار ارسال ({queue.length})</TabsTrigger>
+            <TabsTrigger value="logs">گزارش ارسال ({logs.length})<ActivityBadge count={activity.tabs.logs} /></TabsTrigger>
+            <TabsTrigger value="queue">در انتظار ارسال ({queue.length})<ActivityBadge count={activity.tabs.queue} /></TabsTrigger>
             <TabsTrigger value="bale">پیامرسان بله</TabsTrigger>
             <TabsTrigger value="custom-vars">المان‌های سفارشی ({customVars.length})</TabsTrigger>
           </TabsList>

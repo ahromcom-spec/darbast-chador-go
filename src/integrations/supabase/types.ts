@@ -2432,6 +2432,27 @@ export type Database = {
         }
         Relationships: []
       }
+      module_activity_seen: {
+        Row: {
+          module_key: string
+          seen_at: string
+          tab_key: string
+          user_id: string
+        }
+        Insert: {
+          module_key: string
+          seen_at?: string
+          tab_key: string
+          user_id: string
+        }
+        Update: {
+          module_key?: string
+          seen_at?: string
+          tab_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       module_assignments: {
         Row: {
           assigned_at: string
@@ -7375,6 +7396,10 @@ export type Database = {
       manual_dispatch_v3: {
         Args: { _contractor_ids: string[]; _project_id: string }
         Returns: Json
+      }
+      mark_module_tab_seen: {
+        Args: { p_module_key: string; p_tab_key: string }
+        Returns: string
       }
       move_to_dlq: {
         Args: {

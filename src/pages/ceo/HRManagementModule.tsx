@@ -1,4 +1,6 @@
 import { MainLayout } from '@/components/layouts/MainLayout';
+import { useModuleTabActivity } from '@/hooks/useModuleActivity';
+import { MAIN_TAB } from '@/lib/moduleActivity';
 import { ModuleLayout } from '@/components/layouts/ModuleLayout';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { HRManagement } from '@/components/ceo/HRManagement';
@@ -9,6 +11,7 @@ const DEFAULT_DESCRIPTION = 'ثبت و مدیریت نیروهای شرکت اه
 
 export default function HRManagementModule() {
   usePageTitle('ماژول مدیریت منابع انسانی');
+  useModuleTabActivity({ href: '/hr-management', defaultModuleKey: 'hr_management', activeTab: MAIN_TAB });
 
   return (
     <MainLayout>

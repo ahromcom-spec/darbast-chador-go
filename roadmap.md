@@ -36,3 +36,5 @@
 - [x] Custom frames for renewals, repairs, discounts, order transfers and collaborators (event person recipient, event variables); 16 ready-made frames added switched off. Rule tests pass; manager UI and server event checks verified with a blocked test number.
 - [ ] Verify a real renewal/repair/transfer/collaborator message on a live order — avoided sending live SMS.
 - [x] Move custom frames into the customer or «پیامک‌های مدیریت اهرم» tab (renamed from مدیرعامل) with the same editing card plus frame extras; 4 rule tests pass; move, full-editor return and move back verified as site manager.
+
+- [x] Android-style unseen-event badges on pinned home modules and on each tab inside order management, transfers/collaboration, SMS, notifications, contractors, daily reports, bank cards, registration, users and HR; verified with the site manager account (badges appear, opening a tab clears only that tab).

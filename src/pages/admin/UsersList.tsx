@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react';
+import { useModuleTabActivity } from '@/hooks/useModuleActivity';
+import { MAIN_TAB } from '@/lib/moduleActivity';
 import { SmsSendWindowButton } from '@/components/sms/SmsSendWindowButton';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,6 +27,7 @@ interface OrderAddr {
 
 export default function UsersList() {
   usePageTitle('مدیریت کاربران');
+  useModuleTabActivity({ href: '/admin/users', defaultModuleKey: 'user_impersonation', activeTab: MAIN_TAB });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');

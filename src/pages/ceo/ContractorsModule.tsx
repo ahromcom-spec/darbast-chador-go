@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useModuleTabActivity } from '@/hooks/useModuleActivity';
+import { ActivityBadge } from '@/components/activity/ActivityBadge';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useContractorVerificationRequests } from '@/hooks/useContractorVerificationRequests';
 import { useServiceCategories } from '@/hooks/useServiceCategories';
@@ -85,6 +87,8 @@ const AUTO_ASSIGN_KEY = 'ahrom.contractors.autoAssign';
 
 export default function ContractorsModule() {
   usePageTitle('مدیریت پیمانکاران');
+  const [contractorTab, setContractorTab] = useState('pending');
+  const { counts: activity } = useModuleTabActivity({ href: '/ceo/contractors-management', defaultModuleKey: 'contractors_management', activeTab: contractorTab });
 
   const {
     pendingRequests,
@@ -750,11 +754,11 @@ export default function ContractorsModule() {
         </div>
       </div>
 
-      <Tabs defaultValue="pending" className="space-y-4">
+      <Tabs value={contractorTab} onValueChange={setContractorTab} className="space-y-4">
         <TabsList className="grid grid-cols-6 w-full max-w-4xl">
-          <TabsTrigger value="pending">در انتظار تأیید ({pendingRequests.length + pendingContractorRows.length})</TabsTrigger>
+          <TabsTrigger value="pending">در انتظار تأیید ({pendingRequests.length + pendingContractorRows.length})<ActivityBadge count={activity.tabs.pending} /></TabsTrigger>
           <TabsTrigger value="active">پیمانکاران ({filteredContractors.length})</TabsTrigger>
-          <TabsTrigger value="exits">درخواست خروج ({exitRequests.length + pendingServiceExits.length})</TabsTrigger>
+          <TabsTrigger value="exits">درخواست خروج ({exitRequests.length + pendingServiceExits.length})<ActivityBadge count={activity.tabs.exits} /></TabsTrigger>
           <TabsTrigger value="assignments">ارسال‌ها ({assignments.length})</TabsTrigger>
           <TabsTrigger value="rejected">رد شده ({rejectedRequests.length + rejectedContractorRows.length})</TabsTrigger>
           <TabsTrigger value="history">تاریخچه ({historyLog.length})</TabsTrigger>

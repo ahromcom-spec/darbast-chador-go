@@ -9,7 +9,10 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeftRight, CheckCircle, XCircle, User, Hash, MapPin, Calendar, ArrowRight, Users } from 'lucide-react';
 import { formatPersianDate } from '@/lib/dateUtils';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useModuleTabActivity } from '@/hooks/useModuleActivity';
+import { ActivityBadge } from '@/components/activity/ActivityBadge';
+import { transferTabKey } from '@/lib/moduleActivity';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -88,6 +91,15 @@ export default function OrderTransferManagement() {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const insideExecutive = location.pathname.startsWith('/executive');
+  // رویدادهای مشاهده‌نشده هر تب (انتقال/همکاری × در انتظار/تایید/رد)
+  const { counts: activity } = useModuleTabActivity({
+    href: insideExecutive ? '/executive' : '/order-transfers-module',
+    defaultModuleKey: insideExecutive ? 'scaffold_execution_with_materials' : 'order_transfers_management',
+    activeTab: transferTabKey(requestType, activeTab),
+  });
+  const statusCount = (status: string) => activity.tabs[transferTabKey(requestType, status)] || 0;
 
   useEffect(() => {
     if (requestType === 'transfer') fetchTransferRequests();
@@ -308,6 +320,7 @@ export default function OrderTransferManagement() {
           >
             <ArrowLeftRight className="h-4 w-4" />
             انتقال سفارش
+            <ActivityBadge count={activity.groups.transfer} />
           </Button>
           <Button
             variant={requestType === 'collaborator' ? 'default' : 'outline'}
@@ -316,14 +329,15 @@ export default function OrderTransferManagement() {
           >
             <Users className="h-4 w-4" />
             همکاری در سفارش
+            <ActivityBadge count={activity.groups.collaborator} />
           </Button>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="w-full mb-4">
-            <TabsTrigger value="pending" className="flex-1">در انتظار تایید</TabsTrigger>
-            <TabsTrigger value="approved" className="flex-1">تایید شده</TabsTrigger>
-            <TabsTrigger value="rejected" className="flex-1">رد شده</TabsTrigger>
+            <TabsTrigger value="pending" className="flex-1">در انتظار تایید<ActivityBadge count={statusCount('pending')} /></TabsTrigger>
+            <TabsTrigger value="approved" className="flex-1">تایید شده<ActivityBadge count={statusCount('approved')} /></TabsTrigger>
+            <TabsTrigger value="rejected" className="flex-1">رد شده<ActivityBadge count={statusCount('rejected')} /></TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab}>

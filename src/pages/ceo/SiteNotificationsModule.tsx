@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useModuleTabActivity } from '@/hooks/useModuleActivity';
+import { ActivityBadge } from '@/components/activity/ActivityBadge';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
@@ -246,6 +248,7 @@ export default function SiteNotificationsModule() {
   const [readIds, setReadIds] = useState<Set<string>>(() => loadReadIds());
 
   const [tab, setTab] = useState('active');
+  const { counts: activity } = useModuleTabActivity({ href: '/site-notifications', defaultModuleKey: 'site_notifications', activeTab: tab });
   const [noteOpenId, setNoteOpenId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(
@@ -769,6 +772,7 @@ export default function SiteNotificationsModule() {
                 <span className="rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-bold">
                   {t.count}
                 </span>
+                <ActivityBadge count={activity.tabs[t.key]} />
               </TabsTrigger>
             ))}
           </TabsList>

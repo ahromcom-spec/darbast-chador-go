@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useModuleTabActivity } from '@/hooks/useModuleActivity';
+import { ActivityBadge } from '@/components/activity/ActivityBadge';
 import { ModuleLayout } from '@/components/layouts/ModuleLayout';
 import { BankCardsList } from '@/components/bank-cards/BankCardsList';
 import { BankCardForm } from '@/components/bank-cards/BankCardForm';
@@ -19,6 +21,9 @@ import {
 } from '@/components/ui/dialog';
 
 export default function BankCardsModule() {
+  const [bankTab, setBankTab] = useState('cards');
+  // تراکنش‌های جدیدی که دیگران روی کارت‌ها ثبت کرده‌اند
+  const { counts: activity } = useModuleTabActivity({ href: '/bank-cards', defaultModuleKey: 'bank_cards', activeTab: bankTab });
   const { cards, loading, saving, createCard, updateCard, deleteCard, toggleCardStatus, getCardTransactions, fetchCards } = useBankCards();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<BankCard | null>(null);
@@ -150,11 +155,12 @@ export default function BankCardsModule() {
           </div>
         </div>
 
-        <Tabs defaultValue="cards" className="w-full">
+        <Tabs value={bankTab} onValueChange={setBankTab} className="w-full">
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="cards" className="gap-2">
               <CreditCard className="h-4 w-4" />
               کارت‌ها
+              <ActivityBadge count={activity.tabs.cards} />
             </TabsTrigger>
             <TabsTrigger value="summary" className="gap-2">
               <History className="h-4 w-4" />

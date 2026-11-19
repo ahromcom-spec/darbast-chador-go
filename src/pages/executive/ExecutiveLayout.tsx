@@ -12,6 +12,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useModuleAssignmentInfo } from '@/hooks/useModuleAssignmentInfo';
+import { useModuleTabActivity } from '@/hooks/useModuleActivity';
+import { ActivityBadge } from '@/components/activity/ActivityBadge';
+import { executiveTabFromPath } from '@/lib/moduleActivity';
 
 // نقش‌های مجاز برای دسترسی به پنل مدیریت اجرایی
 const ALLOWED_ROLES = [
@@ -119,6 +122,19 @@ export function ExecutiveLayout() {
   const [searchParams] = useSearchParams();
   const activeModuleKey = searchParams.get('moduleKey') || 'scaffold_execution_with_materials';
   const { moduleName } = useModuleAssignmentInfo(activeModuleKey, 'ماژول مدیریت اجرای داربست', '');
+  // رویدادهای مشاهده‌نشده هر مرحله؛ تب فعلی با باز بودنش «دیده‌شده» ثبت می‌شود.
+  const { counts: activity } = useModuleTabActivity({
+    href: '/executive',
+    defaultModuleKey: 'scaffold_execution_with_materials',
+    activeTab: executiveTabFromPath(location.pathname),
+  });
+  const tabCount = (href: string) => {
+    if (href === '/executive/order-transfers') {
+      return (activity.groups.transfer || 0) + (activity.groups.collaborator || 0);
+    }
+    const key = executiveTabFromPath(href);
+    return key ? activity.tabs[key] || 0 : 0;
+  };
 
   // Redirect to "همه سفارشات" on initial entry so managers land on the orders list directly.
   // They can still navigate back to the dashboard tab manually.
@@ -241,6 +257,7 @@ export function ExecutiveLayout() {
               >
                 <item.icon className="h-4 w-4" />
                 {item.title}
+                <ActivityBadge count={tabCount(item.href)} />
               </NavLink>
             ))}
 
@@ -259,6 +276,7 @@ export function ExecutiveLayout() {
                 >
                   <ListOrdered className="h-4 w-4" />
                   {activeStage ? activeStage.title : 'مراحل سفارشات مشتری'}
+                  <ActivityBadge count={activity.groups.stages} />
                   <ChevronDown className="h-3 w-3 mr-1" />
                 </Button>
               </DropdownMenuTrigger>
@@ -275,7 +293,8 @@ export function ExecutiveLayout() {
                       }
                     >
                       <item.icon className="h-4 w-4" />
-                      {item.title}
+                      <span className="flex-1">{item.title}</span>
+                      <ActivityBadge count={tabCount(item.href)} />
                     </NavLink>
                   </DropdownMenuItem>
                 ))}

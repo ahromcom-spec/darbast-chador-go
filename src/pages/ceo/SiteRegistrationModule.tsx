@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useModuleTabActivity } from '@/hooks/useModuleActivity';
+import { MAIN_TAB } from '@/lib/moduleActivity';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -20,6 +22,8 @@ const DEFAULT_DESCRIPTION = 'ثبت‌نام کاربر جدید بدون نیا
 export default function SiteRegistrationModule() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
+  // باز بودن ماژول یعنی ثبت‌نام‌های جدید دیده شده‌اند
+  useModuleTabActivity({ href: '/site-registration', defaultModuleKey: 'site_registration', activeTab: MAIN_TAB });
 
   const activeModuleKey = useMemo(() => {
     const fromUrl = searchParams.get('moduleKey')?.trim();

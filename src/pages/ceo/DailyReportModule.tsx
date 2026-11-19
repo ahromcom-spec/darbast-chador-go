@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useModuleTabActivity } from '@/hooks/useModuleActivity';
+import { ActivityBadge } from '@/components/activity/ActivityBadge';
 import { calculateTotalFromDimensions } from '@/lib/dimensionCalculations';
 import { findDuplicateProjectMedia } from '@/lib/mediaFingerprint';
 import { prepareOrderVideo } from '@/lib/orderVideoProcessor';
@@ -746,6 +748,8 @@ export default function DailyReportModule() {
   const [activeTab, setActiveTab] = useState<string>(() => {
     return localStorage.getItem('dailyReportActiveTab') || 'new-report';
   });
+  // گزارش‌هایی که دیگران برای همین ماژول ثبت یا ویرایش کرده‌اند و هنوز دیده نشده‌اند
+  const { counts: reportActivity } = useModuleTabActivity({ href: '/daily-report', defaultModuleKey: 'daily_report', activeTab });
 
   // در تب «لوکیشن اجرایی پروژه» راهنمای ویدیویی شناور ماژول پنهان می‌شود تا نقشه تمیز و قابل کنترل باشد
   useEffect(() => {
@@ -5056,6 +5060,7 @@ export default function DailyReportModule() {
               <TabsTrigger value="saved-reports" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
                 <History className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                 <span>گزارشات ذخیره شده</span>
+                <ActivityBadge count={reportActivity.tabs['saved-reports']} />
               </TabsTrigger>
               <TabsTrigger value="archived-reports" className="gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
                 <Archive className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
