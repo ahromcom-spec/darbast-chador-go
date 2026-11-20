@@ -1,6 +1,9 @@
 // المان‌های سفارشی پیامک: مدیر یک نام (مثلاً {تاریخ_واریز}) می‌سازد و آن را به یکی از
 // داده‌های همان سفارش وصل می‌کند؛ هنگام ارسال، مقدار واقعی همان سفارش جایگزین می‌شود.
-// این فایل بدون وابستگی است تا هم سرور ارسال پیامک و هم صفحه مدیریت از آن استفاده کنند.
+// این فایل فقط به فهرست متغیرهای رویداد وابسته است تا هم سرور ارسال پیامک و هم صفحه مدیریت از آن استفاده کنند.
+// همه المان‌های قدیمی سایت ({code}، {serviceType} و ...) هم به شکل «المان پایه» با نام فارسی در همین فهرست هستند
+// تا مدیر بتواند شکل نوشتن، متن جایگزین و حتی منبع آن‌ها را ویرایش کند.
+import { EVENT_VARIABLES } from "./smsOrderEvents.ts";
 
 export type SmsVariableKind = "date" | "amount" | "count" | "text";
 export type SmsVariableFormat = "auto" | "date" | "datetime" | "weekday_date" | "toman" | "number" | "text";
@@ -30,6 +33,10 @@ export interface SmsOrderSnapshot {
   payments: SmsPaymentRow[];
   renewals: SmsRenewalRow[];
   collection: SmsCollectionRow | null;
+  /** اطلاعات پایه همین پیام که سرور ارسال می‌سازد (کد، نوع خدمات با زیرشاخه، آدرس، لینک‌ها و ...) */
+  base?: Record<string, string | number | null | undefined> | null;
+  /** متغیرهای رویداد (تمدید، تعمیر، تخفیف، انتقال، همکار) */
+  event?: Record<string, string> | null;
 }
 
 export interface SmsCustomVariable {
@@ -41,6 +48,9 @@ export interface SmsCustomVariable {
   prefix?: string | null;
   suffix?: string | null;
   enabled?: boolean | null;
+  /** نام قدیمی انگلیسی همین المان (مثلاً code) که در متن‌های قدیمی هنوز ممکن است باشد */
+  legacy_token?: string | null;
+  is_system?: boolean | null;
 }
 
 type SourceValue = string | number | null | undefined;
@@ -51,6 +61,8 @@ interface SourceDef {
   group: string;
   kind: SmsVariableKind;
   hint?: string;
+  /** فقط برای منابع رویداد: گروه مراحلی که این اطلاعات را دارند */
+  eventGroups?: string[];
   resolve: (s: SmsOrderSnapshot) => SourceValue;
 }
 
@@ -77,8 +89,59 @@ const approvedRenewals = (s: SmsOrderSnapshot) =>
     .filter((r) => !r.status || r.status === "approved")
     .sort((a, b) => (num(b.renewal_number) ?? 0) - (num(a.renewal_number) ?? 0) || (time(b.created_at) || 0) - (time(a.created_at) || 0));
 const o = (s: SmsOrderSnapshot, k: string) => s.order?.[k] ?? null;
+const b = (s: SmsOrderSnapshot, k: string): SourceValue => {
+  const v = s.base?.[k];
+  return typeof v === "string" ? (v.trim() || null) : v ?? null;
+};
+
+export const BASE_SOURCE_GROUP = "اطلاعات پایه سفارش";
+export const EVENT_SOURCE_GROUP = "رویدادها (تمدید، تعمیر، تخفیف، انتقال، همکار)";
+export const EVENT_SOURCE_PREFIX = "event_";
+
+const BASE_SOURCES: SourceDef[] = [
+  { key: "base_code", group: BASE_SOURCE_GROUP, kind: "text", label: "کد سفارش", resolve: (s) => b(s, "code") },
+  { key: "base_service_stage", group: BASE_SOURCE_GROUP, kind: "text", label: "نوع خدمات با زیرشاخه و مرحله سفارش",
+    hint: "مثلاً «خدمات داربست فلزی - اجرای داربست به همراه اجناس (تایید شد)»؛ مرحله سفارش داخل پرانتز می‌آید",
+    resolve: (s) => b(s, "serviceStage") },
+  { key: "base_service_full", group: BASE_SOURCE_GROUP, kind: "text", label: "نوع خدمات با زیرشاخه (بدون مرحله)",
+    hint: "مثلاً «خدمات داربست فلزی - اجرای داربست بدون اجناس»", resolve: (s) => b(s, "serviceFull") },
+  { key: "base_service_type", group: BASE_SOURCE_GROUP, kind: "text", label: "فقط نوع خدمات (مثلاً داربست فلزی)",
+    resolve: (s) => b(s, "serviceTypeName") },
+  { key: "base_service_subcategory", group: BASE_SOURCE_GROUP, kind: "text", label: "فقط زیرشاخه خدمات (مثلاً اجرای داربست به همراه اجناس)",
+    resolve: (s) => b(s, "subcategoryName") },
+  { key: "base_service_form", group: BASE_SOURCE_GROUP, kind: "text", label: "نوع خدمت ثبت‌شده در فرم سفارش (مثلاً داربست نما)",
+    resolve: (s) => b(s, "serviceForm") },
+  { key: "base_stage_label", group: BASE_SOURCE_GROUP, kind: "text", label: "مرحله سفارش در همین پیام (مثلاً اجرا شد)",
+    resolve: (s) => b(s, "stageLabel") },
+  { key: "base_customer_name", group: BASE_SOURCE_GROUP, kind: "text", label: "نام مشتری", resolve: (s) => b(s, "customerName") },
+  { key: "base_address", group: BASE_SOURCE_GROUP, kind: "text", label: "آدرس سفارش", resolve: (s) => b(s, "address") },
+  { key: "base_description", group: BASE_SOURCE_GROUP, kind: "text", label: "شرح فعالیت سفارش", resolve: (s) => b(s, "description") },
+  { key: "base_order_link", group: BASE_SOURCE_GROUP, kind: "text", label: "لینک سفارش", resolve: (s) => b(s, "orderLink") },
+  { key: "base_payment_link", group: BASE_SOURCE_GROUP, kind: "text", label: "لینک پرداخت سفارش", resolve: (s) => b(s, "paymentLink") },
+  { key: "base_now", group: BASE_SOURCE_GROUP, kind: "date", label: "تاریخ و ساعت ارسال پیام", resolve: (s) => b(s, "now") },
+  { key: "base_amount", group: BASE_SOURCE_GROUP, kind: "amount", label: "مبلغ همین پیام (مبلغ سفارش یا پرداخت)",
+    resolve: (s) => num(b(s, "amount")) || null },
+  { key: "base_paid_amount", group: BASE_SOURCE_GROUP, kind: "amount", label: "مبلغ همین پرداخت (یا آخرین پرداخت)",
+    resolve: (s) => num(b(s, "paidAmount")) },
+  { key: "base_total_paid", group: BASE_SOURCE_GROUP, kind: "amount", label: "مجموع پرداخت‌شده سفارش", resolve: (s) => num(b(s, "totalPaid")) },
+  { key: "base_remaining", group: BASE_SOURCE_GROUP, kind: "amount", label: "مانده سفارش", resolve: (s) => num(b(s, "remaining")) },
+  { key: "base_payment_date", group: BASE_SOURCE_GROUP, kind: "date", label: "تاریخ واریز آخرین پرداخت (هنگام پرداخت: امروز)",
+    resolve: (s) => b(s, "paymentDate") },
+  { key: "base_collection_date", group: BASE_SOURCE_GROUP, kind: "date", label: "تاریخ جمع‌آوری (تاییدشده، وگرنه درخواستی)",
+    resolve: (s) => b(s, "collectionDate") },
+];
+
+const EVENT_SOURCES: SourceDef[] = EVENT_VARIABLES.map((v) => {
+  const key = v.token.slice(1, -1);
+  return {
+    key: `${EVENT_SOURCE_PREFIX}${key}`, group: EVENT_SOURCE_GROUP, kind: "text" as const, label: v.label,
+    hint: "فقط در قاب‌های پیام همین نوع رویداد مقدار دارد", eventGroups: v.groups,
+    resolve: (s: SmsOrderSnapshot) => (s.event?.[key] || "").trim() || null,
+  };
+});
 
 const SOURCES: SourceDef[] = [
+  ...BASE_SOURCES,
   // پرداخت‌ها
   { key: "payment_latest_deposit_date", group: "پرداخت", kind: "date", label: "تاریخ واریز آخرین پرداخت ثبت‌شده",
     hint: "همان تاریخی که هنگام ثبت پرداخت در کادر «تاریخ واریز» انتخاب می‌کنید، حتی اگر چند روز قبل باشد",
@@ -139,9 +202,10 @@ const SOURCES: SourceDef[] = [
     resolve: (s) => s.collection?.confirmed_date ?? null },
   { key: "collection_completed_at", group: "جمع‌آوری", kind: "date", label: "تاریخ انجام جمع‌آوری",
     resolve: (s) => s.collection?.completed_at ?? null },
+  ...EVENT_SOURCES,
 ];
 
-export const SMS_VARIABLE_SOURCES = SOURCES.map(({ key, label, group, kind, hint }) => ({ key, label, group, kind, hint }));
+export const SMS_VARIABLE_SOURCES = SOURCES.map(({ key, label, group, kind, hint, eventGroups }) => ({ key, label, group, kind, hint, eventGroups }));
 
 export const SMS_FORMATS_BY_KIND: Record<SmsVariableKind, { value: SmsVariableFormat; label: string }[]> = {
   date: [
@@ -157,12 +221,114 @@ export const SMS_FORMATS_BY_KIND: Record<SmsVariableKind, { value: SmsVariableFo
   text: [{ value: "text", label: "متن" }],
 };
 
-// متغیرهای ثابت سیستم؛ المان سفارشی نباید هم‌نام آن‌ها باشد
-export const BUILTIN_SMS_TOKENS = [
-  "code", "serviceType", "address", "customerName", "dateTime", "amount", "orderLink", "description",
-  "paymentLink", "rentalStartDate", "executionDate", "collectionDate", "completionDate", "paymentDate",
-  "paidAmount", "totalPaid", "remainingAmount",
+export interface SystemSmsElement {
+  legacy: string;
+  token: string;
+  label: string;
+  source_key: string;
+  format: SmsVariableFormat;
+  fallback: string;
+}
+
+/**
+ * المان‌های پایه سایت با نام فارسی؛ هر کدام جایگزین یک نام قدیمی انگلیسی است.
+ * در پایگاه داده به‌صورت ردیف‌های قابل ویرایش (is_system) ذخیره شده‌اند و متن‌های قدیمی خودکار به نام جدید ترجمه می‌شوند.
+ */
+export const SYSTEM_SMS_ELEMENTS: SystemSmsElement[] = [
+  { legacy: "code", token: "کد", label: "کد سفارش", source_key: "base_code", format: "text", fallback: "ثبت نشده" },
+  { legacy: "serviceType", token: "نوع_خدمات", label: "نوع خدمات با زیرشاخه (و مرحله سفارش)", source_key: "base_service_stage", format: "text", fallback: "خدمات" },
+  { legacy: "address", token: "آدرس", label: "آدرس سفارش", source_key: "base_address", format: "text", fallback: "ثبت نشده" },
+  { legacy: "customerName", token: "نام_مشتری", label: "نام مشتری", source_key: "base_customer_name", format: "text", fallback: "مشتری" },
+  { legacy: "dateTime", token: "تاریخ_و_ساعت", label: "تاریخ و ساعت ارسال پیام", source_key: "base_now", format: "datetime", fallback: "ثبت نشده" },
+  { legacy: "amount", token: "مبلغ", label: "مبلغ سفارش / پرداخت (فقط عدد)", source_key: "base_amount", format: "number", fallback: "تعیین نشده" },
+  { legacy: "orderLink", token: "لینک_سفارش", label: "لینک سفارش", source_key: "base_order_link", format: "text", fallback: "https://ahrom.ir/my-orders" },
+  { legacy: "description", token: "شرح_فعالیت", label: "شرح فعالیت سفارش", source_key: "base_description", format: "text", fallback: "ثبت نشده" },
+  { legacy: "paymentLink", token: "لینک_پرداخت", label: "لینک پرداخت سفارش", source_key: "base_payment_link", format: "text", fallback: "https://ahrom.ir/user/orders" },
+  { legacy: "rentalStartDate", token: "تاریخ_شروع_کرایه", label: "تاریخ شروع کرایه", source_key: "order_rental_start", format: "date", fallback: "ثبت نشده" },
+  { legacy: "executionDate", token: "تاریخ_اجرا", label: "تاریخ اجرای سفارش", source_key: "order_execution_end", format: "date", fallback: "ثبت نشده" },
+  { legacy: "collectionDate", token: "تاریخ_جمع_آوری", label: "تاریخ جمع‌آوری", source_key: "base_collection_date", format: "date", fallback: "ثبت نشده" },
+  { legacy: "completionDate", token: "تاریخ_اتمام", label: "تاریخ اتمام سفارش", source_key: "order_completed_at", format: "date", fallback: "ثبت نشده" },
+  { legacy: "paymentDate", token: "تاریخ_واریز", label: "تاریخ واریز آخرین پرداخت", source_key: "base_payment_date", format: "date", fallback: "ثبت نشده" },
+  { legacy: "paidAmount", token: "مبلغ_پرداخت", label: "مبلغ همین پرداخت", source_key: "base_paid_amount", format: "toman", fallback: "ثبت نشده" },
+  { legacy: "totalPaid", token: "مجموع_پرداخت_شده", label: "مجموع پرداخت‌شده", source_key: "base_total_paid", format: "toman", fallback: "ثبت نشده" },
+  { legacy: "remainingAmount", token: "مانده_سفارش", label: "مانده سفارش", source_key: "base_remaining", format: "toman", fallback: "ثبت نشده" },
+  // متغیرهای رویداد
+  { legacy: "projectName", token: "نام_پروژه", label: "نام پروژه (محل سفارش)", source_key: "event_projectName", format: "text", fallback: "ثبت نشده" },
+  { legacy: "renewalMonth", token: "ماه_تمدید", label: "ماه تمدید (مثلاً ماه دوم)", source_key: "event_renewalMonth", format: "text", fallback: "ثبت نشده" },
+  { legacy: "renewalPrice", token: "مبلغ_تمدید", label: "مبلغ تمدید", source_key: "event_renewalPrice", format: "text", fallback: "ثبت نشده" },
+  { legacy: "renewalStartDate", token: "تاریخ_شروع_تمدید", label: "تاریخ شروع تمدید", source_key: "event_renewalStartDate", format: "text", fallback: "ثبت نشده" },
+  { legacy: "renewalEndDate", token: "تاریخ_پایان_تمدید", label: "تاریخ پایان تمدید", source_key: "event_renewalEndDate", format: "text", fallback: "ثبت نشده" },
+  { legacy: "repairCost", token: "هزینه_تعمیر", label: "هزینه تعمیر", source_key: "event_repairCost", format: "text", fallback: "ثبت نشده" },
+  { legacy: "repairDescription", token: "شرح_تعمیر", label: "شرح تعمیر", source_key: "event_repairDescription", format: "text", fallback: "ثبت نشده" },
+  { legacy: "repairDate", token: "تاریخ_درخواست_تعمیر", label: "تاریخ درخواست تعمیر", source_key: "event_repairDate", format: "text", fallback: "ثبت نشده" },
+  { legacy: "discountAmount", token: "مبلغ_تخفیف", label: "مبلغ تخفیف", source_key: "event_discountAmount", format: "text", fallback: "ثبت نشده" },
+  { legacy: "priceBeforeDiscount", token: "مبلغ_قبل_از_تخفیف", label: "مبلغ قبل از تخفیف", source_key: "event_priceBeforeDiscount", format: "text", fallback: "ثبت نشده" },
+  { legacy: "priceAfterDiscount", token: "مبلغ_پس_از_تخفیف", label: "مبلغ پس از تخفیف", source_key: "event_priceAfterDiscount", format: "text", fallback: "ثبت نشده" },
+  { legacy: "discountNote", token: "توضیح_تخفیف", label: "توضیح تخفیف", source_key: "event_discountNote", format: "text", fallback: "ثبت نشده" },
+  { legacy: "personName", token: "نام_شخص", label: "نام گیرنده انتقال / همکار", source_key: "event_personName", format: "text", fallback: "ثبت نشده" },
+  { legacy: "personPhone", token: "شماره_شخص", label: "شماره گیرنده انتقال / همکار", source_key: "event_personPhone", format: "text", fallback: "ثبت نشده" },
+  { legacy: "ownerName", token: "نام_مالک_سفارش", label: "نام کاربری مالک سفارش (انتقال‌دهنده / دعوت‌کننده)", source_key: "event_ownerName", format: "text", fallback: "ثبت نشده" },
+  { legacy: "reason", token: "دلیل_رد", label: "دلیل رد", source_key: "event_reason", format: "text", fallback: "ثبت نشده" },
 ];
+
+// نام‌های قدیمی انگلیسی؛ المان جدید نباید هم‌نام آن‌ها باشد تا با متن‌های قدیمی قاطی نشود
+export const BUILTIN_SMS_TOKENS = SYSTEM_SMS_ELEMENTS.map((e) => e.legacy);
+
+const escapeRe = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** نام‌های قدیمی انگلیسی ({code} و ...) را با نام فارسی فعلی همان المان جایگزین می‌کند */
+export function translateLegacySmsTokens(message: string, variables: SmsCustomVariable[]): string {
+  let out = message || "";
+  if (!out.includes("{")) return out;
+  for (const v of variables) {
+    const legacy = (v.legacy_token || "").trim();
+    if (!legacy || !v.token) continue;
+    out = out.replace(new RegExp(`\\{${escapeRe(legacy)}\\}`, "g"), `{${v.token}}`);
+  }
+  return out;
+}
+
+/** متن را با نام‌های فارسی پیش‌فرض المان‌های پایه می‌نویسد (برای متن‌های آماده داخل برنامه) */
+export const persianizeSmsTokens = (message: string) =>
+  translateLegacySmsTokens(message, SYSTEM_SMS_ELEMENTS.map((e) => ({ token: e.token, source_key: e.source_key, legacy_token: e.legacy })));
+
+/** نام المان را در متن قالب عوض می‌کند (وقتی مدیر نام یک المان را ویرایش می‌کند) */
+export const renameSmsTokenInText = (message: string, from: string, to: string) =>
+  !from || from === to ? message : (message || "").split(`{${from}}`).join(`{${to}}`);
+
+export const isEventSource = (key?: string | null) => !!key && key.startsWith(EVENT_SOURCE_PREFIX);
+
+/**
+ * المان‌هایی که زیر متن هر پیام برای افزودن نشان داده می‌شوند: المان‌های فعال (پایه و ساخته‌شده)،
+ * و المان‌های رویداد فقط در قاب‌های همان نوع رویداد.
+ */
+export function smsElementsFor<T extends { source_key: string; enabled?: boolean | null }>(
+  variables: T[], eventGroup?: string | null,
+): T[] {
+  return variables.filter((v) => {
+    if (v.enabled === false) return false;
+    if (!isEventSource(v.source_key)) return true;
+    if (!eventGroup) return false;
+    const src = SOURCES.find((s) => s.key === v.source_key);
+    return !!src?.eventGroups?.includes(eventGroup);
+  });
+}
+
+/** ترتیب نمایش: المان‌های پایه به ترتیب سایت، سپس المان‌های ساخته‌شده مدیر */
+export const sortSmsElements = <T extends { token: string; is_system?: boolean | null; sort_order?: number | null }>(list: T[]) =>
+  [...list].sort((a, b) =>
+    (a.is_system ? 0 : 1) - (b.is_system ? 0 : 1) || (a.sort_order ?? 1000) - (b.sort_order ?? 1000));
+
+/** نوع خدمات و زیرشاخه را خوانا می‌نویسد: «خدمات داربست فلزی - اجرای داربست به همراه اجناس» */
+export function formatServiceWithSubcategory(typeName?: string | null, subName?: string | null): string {
+  const strip = (v?: string | null) => String(v || "").trim().replace(/^خدمات\s+/, "").trim();
+  const t = strip(typeName);
+  let sub = strip(subName);
+  if (sub === "عمومی") sub = "";
+  if (t && sub) return `خدمات ${t} - ${sub}`;
+  if (t) return `خدمات ${t}`;
+  return sub ? `خدمات ${sub}` : "";
+}
 
 export const getSmsVariableSource = (key: string) => SMS_VARIABLE_SOURCES.find((s) => s.key === key) || null;
 
@@ -178,7 +344,7 @@ export const validateSmsToken = (raw: string): string | null => {
   const t = normalizeSmsToken(raw);
   if (t.length < 2 || t.length > 40) return "نام المان باید بین ۲ تا ۴۰ حرف باشد";
   if (/[{}\s]/.test(t)) return "نام المان نباید آکولاد یا فاصله داشته باشد";
-  if (!/^[\p{L}][\p{L}\p{N}_]*$/u.test(t)) return "نام المان فقط می‌تواند حروف، عدد و _ داشته باشد و با حرف شروع شود";
+  if (!/^[\p{L}][\p{L}\p{N}_\u200c]*$/u.test(t)) return "نام المان فقط می‌تواند حروف، عدد و _ داشته باشد و با حرف شروع شود";
   if (BUILTIN_SMS_TOKENS.some((b) => b.toLowerCase() === t.toLowerCase())) return "این نام برای متغیرهای ثابت سایت رزرو شده است";
   return null;
 };

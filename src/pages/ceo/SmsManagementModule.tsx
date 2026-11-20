@@ -16,8 +16,8 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { BaleMessengerTab } from "@/components/ceo/BaleMessengerTab";
-import { SmsCustomVariablesTab, SAMPLE_SMS_SNAPSHOT, type SmsCustomVariableRow } from "@/components/ceo/SmsCustomVariablesTab";
-import { applySmsCustomVariables } from "../../../supabase/functions/_shared/smsCustomVariables";
+import { SmsCustomVariablesTab, sampleSnapshotForService, type SmsCustomVariableRow } from "@/components/ceo/SmsCustomVariablesTab";
+import { applySmsCustomVariables, smsElementsFor, sortSmsElements, translateLegacySmsTokens } from "../../../supabase/functions/_shared/smsCustomVariables";
 import {
   findServiceConflicts, isGeneralTemplate, makeVariantKey, selectSmsTemplate, stageOf, targetsOf,
 } from "../../../supabase/functions/_shared/smsTemplateSelection";
@@ -25,7 +25,7 @@ import { SmsCustomFramesTab, setFrameDisplayTab, type CustomFrameRow } from "@/c
 import {
   CUSTOM_FRAME_STAGES, FRAME_STAGE_GROUP_LABELS, customFrameStage, customFrameStageLabel, describeRecipients,
 } from "../../../supabase/functions/_shared/smsCustomFrames";
-import { applyEventVariables, eventVariablesFor, sampleEventVars } from "../../../supabase/functions/_shared/smsOrderEvents";
+import { applyEventVariables, sampleEventVars } from "../../../supabase/functions/_shared/smsOrderEvents";
 import { FRAME_DISPLAY_TAB_LABELS, resolveFrameTab } from "@/lib/smsFrameTabs";
 import { SmsServiceList, SmsServicePicker, serviceLabel, type SmsServiceOption } from "@/components/ceo/SmsServicePicker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -101,26 +101,7 @@ interface ScheduledSms {
 }
 
 
-const PLACEHOLDERS: { token: string; label: string }[] = [
-  { token: "{code}", label: "کد سفارش" },
-  { token: "{serviceType}", label: "نوع خدمت" },
-  { token: "{address}", label: "آدرس" },
-  { token: "{customerName}", label: "نام مشتری" },
-  { token: "{dateTime}", label: "تاریخ/ساعت" },
-  { token: "{amount}", label: "مبلغ" },
-  { token: "{orderLink}", label: "لینک سفارش" },
-  { token: "{description}", label: "شرح فعالیت سفارش" },
-  { token: "{paymentLink}", label: "لینک پرداخت سفارش" },
-  { token: "{rentalStartDate}", label: "تاریخ شروع کرایه" },
-  { token: "{executionDate}", label: "تاریخ اجرای سفارش" },
-  { token: "{collectionDate}", label: "تاریخ درخواست جمع‌آوری" },
-  { token: "{completionDate}", label: "تاریخ اتمام سفارش" },
-  { token: "{paymentDate}", label: "تاریخ واریز آخرین پرداخت (همان تاریخی که در ثبت پرداخت انتخاب شده)" },
-  { token: "{paidAmount}", label: "مبلغ همین پرداخت" },
-  { token: "{totalPaid}", label: "مجموع پرداخت‌شده" },
-  { token: "{remainingAmount}", label: "مانده سفارش" },
 
-];
 
 const BRAND_FOOTER = "ahrom.ir";
 
@@ -208,8 +189,10 @@ export default function SmsManagementModule() {
 
   const loadCustomVars = async () => {
     const { data, error } = await supabase.from("sms_custom_variables").select("*").order("created_at");
-    if (!error) setCustomVars((data || []) as SmsCustomVariableRow[]);
+    if (!error) setCustomVars(sortSmsElements((data || []) as SmsCustomVariableRow[]));
   };
+  // المان‌های زیر متن هر پیام: پایه و ساخته‌شده؛ المان‌های رویداد فقط در قاب‌های همان رویداد
+  const elementsForStage = (group?: string | null) => smsElementsFor(customVars, group);
   useEffect(() => { loadCustomVars(); }, []);
 
   const cancelScheduled = async (row: ScheduledSms) => {
@@ -379,28 +362,13 @@ export default function SmsManagementModule() {
 
   const previewText = (item: SmsTemplate) => {
     const m = merged(item);
-    const sampleService = serviceById.get(targetsOf(m)[0] || (tplService !== "all" ? tplService : ""))?.name || "داربست نما";
-    const body = (m.template || "")
-      .replace(/\{code\}/g, "1000123")
-      .replace(/\{serviceType\}/g, `${sampleService} (ثبت شد)`)
-      .replace(/\{address\}/g, "تهران، خیابان نمونه")
-      .replace(/\{customerName\}/g, "علی رضایی")
-      .replace(/\{dateTime\}/g, "1404/04/08 ساعت 14:30")
-      .replace(/\{amount\}/g, "۲٬۵۰۰٬۰۰۰")
-      .replace(/\{orderLink\}/g, "https://ahrom.ir/orders/123")
-      .replace(/\{description\}/g, "اجرای داربست نما ۱۲ متر طول × ۶ متر ارتفاع")
-      .replace(/\{paymentLink\}/g, "https://ahrom.ir/user/orders/123?pay=1")
-      .replace(/\{rentalStartDate\}/g, "1405/07/20")
-      .replace(/\{executionDate\}/g, "1405/07/20")
-      .replace(/\{collectionDate\}/g, "1405/09/20")
-      .replace(/\{completionDate\}/g, "1405/09/22")
-      .replace(/\{paymentDate\}/g, "1405/08/12")
-      .replace(/\{paidAmount\}/g, "۵٬۰۰۰٬۰۰۰ تومان")
-      .replace(/\{totalPaid\}/g, "۱۵٬۰۰۰٬۰۰۰ تومان")
-      .replace(/\{remainingAmount\}/g, "۱۰٬۰۰۰٬۰۰۰ تومان");
-    const bodyWithCustom = applySmsCustomVariables(
-      isFrame(m) ? applyEventVariables(body, SAMPLE_EVENT_VARS) : body, customVars, SAMPLE_SMS_SNAPSHOT,
-    );
+    const sample = serviceById.get(targetsOf(m)[0] || (tplService !== "all" ? tplService : ""))
+      || services.find((x) => x.typeName.includes("داربست") && x.name.includes("به همراه اجناس")) || null;
+    const snapshot = sampleSnapshotForService(sample, "ثبت شد");
+    // متن‌های قدیمی با نام انگلیسی هم با نام فارسی همان المان پیش‌نمایش داده می‌شوند
+    const translated = translateLegacySmsTokens(m.template || "", customVars);
+    const withVars = applySmsCustomVariables(translated, customVars, snapshot);
+    const bodyWithCustom = isFrame(m) ? applyEventVariables(withVars, SAMPLE_EVENT_VARS) : withVars;
 
     const footer = (m.footer || BRAND_FOOTER).trim() || BRAND_FOOTER;
     const header = "خدمات ساختمانی و منزل اهرم";
@@ -727,21 +695,11 @@ export default function SmsManagementModule() {
                   <span className="text-muted-foreground">— به‌صورت خودکار در انتهای هر پیامک افزوده می‌شود</span>
                 </div>
                 <div className="flex flex-wrap gap-1 mt-2">
-                  {PLACEHOLDERS.map((p) => (
-                    <Button
-                      key={p.token}
-                      type="button" size="sm" variant="outline" className="h-7 text-xs"
-                      title={p.label}
-                      onClick={() => setDraft(item.id, { template: (m.template || "") + " " + p.token })}
-                    >
-                      {p.token}
-                    </Button>
-                  ))}
-                  {customVars.filter((v) => v.enabled).map((v) => (
+                  {elementsForStage(null).map((v) => (
                     <Button
                       key={v.id}
-                      type="button" size="sm" variant="secondary" className="h-7 text-xs border border-primary/40"
-                      title={`المان سفارشی: ${v.label}`}
+                      type="button" size="sm" variant="outline" className={"h-7 text-xs" + (v.is_system ? "" : " border-primary/40")}
+                      title={v.label}
                       onClick={() => setDraft(item.id, { template: (m.template || "") + " {" + v.token + "}" })}
                     >
                       {`{${v.token}}`}
@@ -968,14 +926,8 @@ export default function SmsManagementModule() {
                   <span className="text-muted-foreground">— به‌صورت خودکار در انتهای هر پیامک افزوده می‌شود</span>
                 </div>
                 <div className="flex flex-wrap gap-1 mt-2">
-                  {PLACEHOLDERS.map((p) => (
-                    <Button key={p.token} type="button" size="sm" variant="outline" className="h-7 text-xs" title={p.label} onClick={() => addToken(p.token)}>{p.token}</Button>
-                  ))}
-                  {eventVariablesFor(stageInfo?.group).map((v) => (
-                    <Button key={v.token} type="button" size="sm" variant="secondary" className="h-7 text-xs" title={v.label} onClick={() => addToken(v.token)}>{v.token}</Button>
-                  ))}
-                  {customVars.filter((v) => v.enabled).map((v) => (
-                    <Button key={v.id} type="button" size="sm" variant="secondary" className="h-7 text-xs border border-primary/40" title={`المان سفارشی: ${v.label}`} onClick={() => addToken("{" + v.token + "}")}>{`{${v.token}}`}</Button>
+                  {elementsForStage(stageInfo?.group).map((v) => (
+                    <Button key={v.id} type="button" size="sm" variant="outline" className={"h-7 text-xs" + (v.is_system ? "" : " border-primary/40")} title={v.label} onClick={() => addToken("{" + v.token + "}")}>{`{${v.token}}`}</Button>
                   ))}
                 </div>
               </div>
@@ -1334,7 +1286,6 @@ export default function SmsManagementModule() {
             <SmsCustomFramesTab
               frames={(groups.custom || []) as unknown as CustomFrameRow[]}
               services={services}
-              placeholders={PLACEHOLDERS}
               customVars={customVars}
               renderPreview={renderFramePreview}
               onChanged={load}

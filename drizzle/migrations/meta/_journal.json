@@ -162,6 +162,13 @@
       "when": 1795072034609,
       "tag": "0022_module_activity_seen",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1795154833313,
+      "tag": "0023_sms_system_elements",
+      "breakpoints": true
     }
   ]
 }

@@ -38,3 +38,4 @@
 - [x] Move custom frames into the customer or «پیامک‌های مدیریت اهرم» tab (renamed from مدیرعامل) with the same editing card plus frame extras; 4 rule tests pass; move, full-editor return and move back verified as site manager.
 
 - [x] Android-style unseen-event badges on pinned home modules and on each tab inside order management, transfers/collaboration, SMS, notifications, contractors, daily reports, bank cards, registration, users and HR; verified with the site manager account (badges appear, opening a tab clears only that tab).
+- [x] SMS elements in Persian (e.g. {کد}, {نوع_خدمات}) moved into «المان‌های سفارشی» as editable base elements; {نوع_خدمات} shows service type with subcategory; all saved texts converted. Tests pass; server preview verified for with/without-materials orders; no SMS sent.

@@ -2,6 +2,11 @@ import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   applySmsCustomVariables,
+  formatServiceWithSubcategory,
+  renameSmsTokenInText,
+  smsElementsFor,
+  SYSTEM_SMS_ELEMENTS,
+  translateLegacySmsTokens,
   validateSmsToken,
   type SmsOrderSnapshot,
 } from '../supabase/functions/_shared/smsCustomVariables';
@@ -63,5 +68,56 @@ describe('custom SMS elements', () => {
   test('names of built-in variables cannot be reused', () => {
     assert.notEqual(validateSmsToken('paymentDate'), null);
     assert.equal(validateSmsToken('{تاریخ واریز}'), null);
+  });
+});
+
+describe('Persian base SMS elements', () => {
+  const rows = SYSTEM_SMS_ELEMENTS.map((e) => ({
+    token: e.token, source_key: e.source_key, format: e.format, fallback: e.fallback, legacy_token: e.legacy, is_system: true,
+  }));
+  const base: SmsOrderSnapshot = {
+    ...snapshot,
+    base: {
+      code: '1000539',
+      serviceStage: 'خدمات داربست فلزی - اجرای داربست به همراه اجناس (تایید شد)',
+      customerName: 'رضا محمدی',
+      amount: 2_500_000,
+    },
+  };
+
+  test('old English names in saved messages become the Persian element and are filled', () => {
+    const translated = translateLegacySmsTokens('کد {code} - {serviceType} - مشتری: {customerName}', rows);
+    assert.equal(translated, 'کد {کد} - {نوع_خدمات} - مشتری: {نام_مشتری}');
+    assert.equal(
+      applySmsCustomVariables(translated, rows, base),
+      'کد 1000539 - خدمات داربست فلزی - اجرای داربست به همراه اجناس (تایید شد) - مشتری: رضا محمدی',
+    );
+  });
+
+  test('code is written as «کد» and serviceType as «نوع_خدمات»', () => {
+    assert.equal(SYSTEM_SMS_ELEMENTS.find((e) => e.legacy === 'code')?.token, 'کد');
+    assert.equal(SYSTEM_SMS_ELEMENTS.find((e) => e.legacy === 'serviceType')?.token, 'نوع_خدمات');
+  });
+
+  test('service type is written with its subcategory', () => {
+    assert.equal(formatServiceWithSubcategory('داربست فلزی', 'خدمات اجرای داربست بدون اجناس'), 'خدمات داربست فلزی - اجرای داربست بدون اجناس');
+    assert.equal(formatServiceWithSubcategory('قالی شویی', 'خدمات عمومی'), 'خدمات قالی شویی');
+  });
+
+  test('amount element keeps the old number-only form and missing amount says «تعیین نشده»', () => {
+    assert.equal(applySmsCustomVariables('{مبلغ} تومان', rows, base), '۲٬۵۰۰٬۰۰۰ تومان');
+    assert.equal(applySmsCustomVariables('{مبلغ}', rows, { ...base, base: { amount: 0 } }), 'تعیین نشده');
+  });
+
+  test('renaming an element updates the message text', () => {
+    assert.equal(renameSmsTokenInText('کد {کد} - {کد}', 'کد', 'کد_سفارش'), 'کد {کد_سفارش} - {کد_سفارش}');
+  });
+
+  test('event elements are offered only in frames of the same event', () => {
+    const list = smsElementsFor(rows, 'renewal').map((r) => r.token);
+    assert.ok(list.includes('ماه_تمدید'));
+    assert.ok(!list.includes('هزینه_تعمیر'));
+    assert.ok(!smsElementsFor(rows, null).some((r) => r.token === 'ماه_تمدید'));
+    assert.ok(smsElementsFor(rows, null).some((r) => r.token === 'کد'));
   });
 });

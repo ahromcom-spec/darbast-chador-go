@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { applySmsCustomVariables, usedSmsCustomVariables, type SmsCustomVariable, type SmsOrderSnapshot } from "../_shared/smsCustomVariables.ts";
+import { applySmsCustomVariables, formatServiceWithSubcategory, translateLegacySmsTokens, usedSmsCustomVariables, type SmsCustomVariable, type SmsOrderSnapshot } from "../_shared/smsCustomVariables.ts";
 import { canReuseSmsLog, isSmsLogId } from "../_shared/smsRetryLog.ts";
 import { selectSmsTemplate } from "../_shared/smsTemplateSelection.ts";
 import { CUSTOM_FRAME_SCOPE, isCustomFrameKey } from "../_shared/smsCustomFrames.ts";
@@ -588,6 +588,7 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
       typeof n === "number" && Number.isFinite(n) ? `${Math.max(0, n).toLocaleString("fa-IR")} تومان` : "ثبت نشده";
     let rentalStartDate = "ثبت نشده", collectionDate = "ثبت نشده", completionDate = "ثبت نشده", paymentDate = "ثبت نشده", executionDate = "ثبت نشده";
     let resolvedTotalPaid = totalPaid, resolvedRemaining = remainingAmount, resolvedPaidAmount = paidAmount;
+    let rawPaymentDate: string | null = null, rawCollectionDate: string | null = null;
     if (orderId) {
       try {
         const [{ data: ord }, { data: col }, { data: pay }] = await Promise.all([
@@ -597,9 +598,11 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
         ]);
         rentalStartDate = fmtDate((ord as any)?.rental_start_date);
         executionDate = fmtDate((ord as any)?.execution_end_date);
-        collectionDate = fmtDate((col as any)?.confirmed_date || (col as any)?.requested_date);
+        rawCollectionDate = (col as any)?.confirmed_date || (col as any)?.requested_date || null;
+        collectionDate = fmtDate(rawCollectionDate);
         completionDate = fmtDate((ord as any)?.executive_completion_date || (ord as any)?.customer_completion_date || (ord as any)?.closed_at);
-        paymentDate = fmtDate((pay as any)?.payment_date || (pay as any)?.created_at);
+        rawPaymentDate = (pay as any)?.payment_date || (pay as any)?.created_at || null;
+        paymentDate = fmtDate(rawPaymentDate);
         if (resolvedPaidAmount === undefined && (pay as any)?.amount != null) resolvedPaidAmount = Number((pay as any).amount);
         if (resolvedTotalPaid === undefined && (ord as any)?.total_paid != null) resolvedTotalPaid = Number((ord as any).total_paid);
         if (resolvedRemaining === undefined && (ord as any)?.total_price != null && resolvedTotalPaid !== undefined) {
@@ -609,14 +612,32 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
         console.warn("[send-order-sms] Could not resolve date/payment variables:", e);
       }
     }
-    if (status === "paid" && paymentDate === "ثبت نشده") paymentDate = toJalali(new Date());
+    if (status === "paid" && paymentDate === "ثبت نشده") { paymentDate = toJalali(new Date()); rawPaymentDate = new Date().toISOString(); }
 
     // برچسب مرحله سفارش را داخل نام خدمت می‌گنجانیم تا قالب تایید شده پارس‌گرین حفظ شود
     let stageLabel = STAGE_LABELS[status];
     if ((status === "paid" || status === "ceo_payment") && typeof resolvedRemaining === "number" && resolvedRemaining > 0) {
       stageLabel = "پرداخت بخشی از مبلغ";
     }
-    const baseService = serviceType || "خدمات";
+    // نوع خدمات همراه زیرشاخه سفارش (مثلاً «خدمات داربست فلزی - اجرای داربست به همراه اجناس»)
+    let serviceTypeName = "", subcategoryName = "";
+    if (orderId || orderCode) {
+      try {
+        const q = supabase.from("projects_v3").select("subcategory_id");
+        const { data: svc } = orderId ? await q.eq("id", orderId).maybeSingle() : await q.eq("code", orderCode).limit(1).maybeSingle();
+        const subId = (svc as any)?.subcategory_id;
+        if (subId) {
+          const { data: sub } = await supabase.from("subcategories").select("name, service_type_id").eq("id", subId).maybeSingle();
+          subcategoryName = String((sub as any)?.name || "").trim();
+          if ((sub as any)?.service_type_id) {
+            const { data: st } = await supabase.from("service_types_v3").select("name").eq("id", (sub as any).service_type_id).maybeSingle();
+            serviceTypeName = String((st as any)?.name || "").trim();
+          }
+        }
+      } catch (_) { /* نوع خدمت نامشخص ← همان نام ارسال‌شده */ }
+    }
+    const serviceFull = formatServiceWithSubcategory(serviceTypeName, subcategoryName);
+    const baseService = serviceFull || serviceType || "خدمات";
     const decoratedService = stageLabel ? `${baseService} (${stageLabel})` : baseService;
 
     // حذف بخش‌های تکراری آدرس (مثلاً وقتی آدرس و آدرس دقیق یکی هستند)
@@ -638,8 +659,69 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
       return kept.join(" - ") || raw;
     };
 
-    // Replace placeholders in template
-    let message = template
+    // === همه المان‌های پیامک (پایه با نام فارسی، رویدادها و ساخته‌شده مدیر) از جدول المان‌ها ===
+    let allVars: SmsCustomVariable[] = [];
+    if (!isResend) {
+      try {
+        const { data: varRows } = await supabase
+          .from("sms_custom_variables")
+          .select("token, source_key, format, fallback, prefix, suffix, enabled, legacy_token, is_system");
+        allVars = (varRows || []) as SmsCustomVariable[];
+      } catch (e) {
+        console.warn("[send-order-sms] Could not load SMS elements:", e);
+      }
+    }
+    // متن‌های قدیمی با نام انگلیسی ({code}) به نام فارسی همان المان ({کد}) ترجمه می‌شوند
+    let message = isResend ? template : translateLegacySmsTokens(template, allVars);
+
+    if (!isResend) {
+      try {
+        const used = usedSmsCustomVariables(message, allVars);
+        if (used.length > 0) {
+          const snapshot: SmsOrderSnapshot = { order: null, payments: [], renewals: [], collection: null };
+          if (orderId) {
+            const [{ data: ordFull }, { data: pays }, { data: rens }, { data: colReq }] = await Promise.all([
+              supabase.from("projects_v3").select("created_at, approved_at, execution_start_date, execution_end_date, rental_start_date, rental_end_date, executive_completion_date, customer_completion_date, closed_at, payment_confirmed_at, total_price, total_paid, discount_amount, stage_note").eq("id", orderId).maybeSingle(),
+              supabase.from("order_payments").select("amount, payment_date, created_at, receipt_number").eq("order_id", orderId).order("created_at", { ascending: false }).limit(200),
+              supabase.from("order_renewals").select("renewal_number, new_start_date, new_end_date, renewal_price, status, created_at").or(`order_id.eq.${orderId},billing_order_id.eq.${orderId}`).limit(200),
+              supabase.from("collection_requests").select("requested_date, confirmed_date, completed_at, created_at").eq("order_id", orderId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+            ]);
+            snapshot.order = (ordFull as any) || null;
+            snapshot.payments = (pays || []) as any;
+            snapshot.renewals = (rens || []) as any;
+            snapshot.collection = (colReq as any) || null;
+          }
+          snapshot.base = {
+            code: orderCode,
+            serviceStage: decoratedService,
+            serviceFull: baseService,
+            serviceTypeName: serviceTypeName || null,
+            subcategoryName: subcategoryName ? subcategoryName.replace(/^خدمات\s+/, "") : null,
+            serviceForm: serviceType || null,
+            stageLabel: stageLabel || null,
+            customerName: customerName || null,
+            address: dedupeAddress(address) === "ثبت نشده" ? null : dedupeAddress(address),
+            description: (description || "").toString().trim() || null,
+            orderLink,
+            paymentLink,
+            now: new Date().toISOString(),
+            amount: amount ?? null,
+            paidAmount: resolvedPaidAmount ?? null,
+            totalPaid: resolvedTotalPaid ?? null,
+            remaining: resolvedRemaining ?? null,
+            paymentDate: rawPaymentDate,
+            collectionDate: rawCollectionDate,
+          };
+          snapshot.event = eventVars;
+          message = applySmsCustomVariables(message, used, snapshot);
+        }
+      } catch (e) {
+        console.warn("[send-order-sms] Could not resolve SMS elements:", e);
+      }
+    }
+
+    // پشتیبان: اگر ردیف المان پایه‌ای در جدول نباشد، نام قدیمی همچنان با مقدار درست پر می‌شود
+    message = message
       .replaceAll("{code}", orderCode)
       .replaceAll("{serviceType}", decoratedService)
       .replaceAll("{address}", dedupeAddress(address))
@@ -659,34 +741,6 @@ const handler = async (req: Request, opts: { preview?: boolean } = {}): Promise<
       .replaceAll("{description}", (description || "").toString().trim() || "ثبت نشده");
     // متغیرهای رویداد قاب‌های سفارشی (تمدید، تعمیر، تخفیف، انتقال سفارش، همکار)
     if (!isResend) message = applyEventVariables(message, eventVars);
-
-    // === المان‌های سفارشی ساخته‌شده توسط مدیریت در ماژول پیامک‌ها ===
-    if (!isResend) {
-      try {
-        const { data: customVars } = await supabase
-          .from("sms_custom_variables")
-          .select("token, source_key, format, fallback, prefix, suffix, enabled");
-        const used = usedSmsCustomVariables(message, (customVars || []) as SmsCustomVariable[]);
-        if (used.length > 0) {
-          const snapshot: SmsOrderSnapshot = { order: null, payments: [], renewals: [], collection: null };
-          if (orderId) {
-            const [{ data: ordFull }, { data: pays }, { data: rens }, { data: colReq }] = await Promise.all([
-              supabase.from("projects_v3").select("created_at, approved_at, execution_start_date, execution_end_date, rental_start_date, rental_end_date, executive_completion_date, customer_completion_date, closed_at, payment_confirmed_at, total_price, total_paid, discount_amount, stage_note").eq("id", orderId).maybeSingle(),
-              supabase.from("order_payments").select("amount, payment_date, created_at, receipt_number").eq("order_id", orderId).order("created_at", { ascending: false }).limit(200),
-              supabase.from("order_renewals").select("renewal_number, new_start_date, new_end_date, renewal_price, status, created_at").or(`order_id.eq.${orderId},billing_order_id.eq.${orderId}`).limit(200),
-              supabase.from("collection_requests").select("requested_date, confirmed_date, completed_at, created_at").eq("order_id", orderId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-            ]);
-            snapshot.order = (ordFull as any) || null;
-            snapshot.payments = (pays || []) as any;
-            snapshot.renewals = (rens || []) as any;
-            snapshot.collection = (colReq as any) || null;
-          }
-          message = applySmsCustomVariables(message, used, snapshot);
-        }
-      } catch (e) {
-        console.warn("[send-order-sms] Could not resolve custom variables:", e);
-      }
-    }
 
     // ارسال مجدد: تاریخ و ساعت داخل متن با تاریخ جدید جایگزین شود
     if (isResend) {

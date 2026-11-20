@@ -22,7 +22,8 @@ import {
   customFrameStage, customFrameStageLabel, describeRecipients, frameKinds, makeCustomFrameKey, parseCustomPhones,
   recipientKindLabel, stageHasEventPerson, validateCustomFrame, type FrameStageGroup, type RecipientKind,
 } from "../../../supabase/functions/_shared/smsCustomFrames";
-import { applyEventVariables, eventVariablesFor, sampleEventVars } from "../../../supabase/functions/_shared/smsOrderEvents";
+import { applyEventVariables, sampleEventVars } from "../../../supabase/functions/_shared/smsOrderEvents";
+import { smsElementsFor } from "../../../supabase/functions/_shared/smsCustomVariables";
 
 const STAGE_GROUPS = Object.keys(FRAME_STAGE_GROUP_LABELS) as FrameStageGroup[];
 const SAMPLE_EVENT_VARS = sampleEventVars();
@@ -52,8 +53,8 @@ export interface CustomFrameRow {
 interface Props {
   frames: CustomFrameRow[];
   services: SmsServiceOption[];
-  placeholders: { token: string; label: string }[];
-  customVars: { id: string; token: string; label: string; enabled: boolean }[];
+  /** همه المان‌های پیامک (پایه، رویداد و ساخته‌شده) به ترتیب نمایش */
+  customVars: { id: string; token: string; label: string; enabled: boolean; source_key: string; is_system?: boolean | null }[];
   renderPreview: (template: string, serviceId?: string) => string;
   onChanged: () => void | Promise<void>;
   /** قابی که از تب مشتری/مدیریت برای ویرایش کامل (گیرندگان و مرحله) درخواست شده */
@@ -83,7 +84,7 @@ const emptyDraft = (stage = "submitted"): Draft => ({
   title: "",
   description: "",
   stage_key: stage,
-  template: "سفارش کد {code} - {serviceType} - مشتری: {customerName} - آدرس: {address} - تاریخ: {dateTime}",
+  template: "سفارش کد {کد} - {نوع_خدمات} - مشتری: {نام_مشتری} - آدرس: {آدرس} - تاریخ: {تاریخ_و_ساعت}",
   enabled: true,
   delay_minutes: 0,
   conditions: { respectWindow: true },
@@ -105,7 +106,7 @@ const PRESETS: Array<{ label: string; draft: Partial<Draft> }> = [
     draft: {
       title: "سفارش جدید — مدیر اجرایی", stage_key: "submitted", recipient_kinds: ["roles"],
       recipient_roles: ["scaffold_executive_manager"], conditions: { respectWindow: false },
-      template: "سفارش جدید ثبت شد: کد {code} - {serviceType} - مشتری: {customerName} - آدرس: {address} - مبلغ: {amount} تومان - تاریخ: {dateTime}",
+      template: "سفارش جدید ثبت شد: کد {کد} - {نوع_خدمات} - مشتری: {نام_مشتری} - آدرس: {آدرس} - مبلغ: {مبلغ} تومان - تاریخ: {تاریخ_و_ساعت}",
     },
   },
   {
@@ -113,14 +114,14 @@ const PRESETS: Array<{ label: string; draft: Partial<Draft> }> = [
     draft: {
       title: "ثبت پرداخت — مدیر مالی", stage_key: "paid", recipient_kinds: ["roles"],
       recipient_roles: ["finance_manager", "ceo"], conditions: { respectWindow: false },
-      template: "پرداخت سفارش کد {code} - {customerName}: مبلغ {paidAmount} - مجموع پرداخت: {totalPaid} - مانده: {remainingAmount} - تاریخ واریز: {paymentDate}",
+      template: "پرداخت سفارش کد {کد} - {نام_مشتری}: مبلغ {مبلغ_پرداخت} - مجموع پرداخت: {مجموع_پرداخت_شده} - مانده: {مانده_سفارش} - تاریخ واریز: {تاریخ_واریز}",
     },
   },
   {
     label: "اطلاع رد سفارش به مشتری",
     draft: {
       title: "رد سفارش — مشتری", stage_key: "rejected", recipient_kinds: ["customer"], conditions: { respectWindow: true },
-      template: "سفارش کد {code} - {serviceType} - آدرس: {address} - تاریخ: {dateTime} - برای پیگیری: {orderLink}",
+      template: "سفارش کد {کد} - {نوع_خدمات} - آدرس: {آدرس} - تاریخ: {تاریخ_و_ساعت} - برای پیگیری: {لینک_سفارش}",
     },
   },
   {
@@ -128,41 +129,41 @@ const PRESETS: Array<{ label: string; draft: Partial<Draft> }> = [
     draft: {
       title: "جمع‌آوری — همکاران سفارش", stage_key: "awaiting_collection", recipient_kinds: ["collaborators", "customer"],
       conditions: { respectWindow: true },
-      template: "سفارش کد {code} - {serviceType} - آدرس: {address} - تاریخ جمع‌آوری: {collectionDate}",
+      template: "سفارش کد {کد} - {نوع_خدمات} - آدرس: {آدرس} - تاریخ جمع‌آوری: {تاریخ_جمع_آوری}",
     },
   },
   {
     label: "تایید تمدید به مشتری",
     draft: {
       title: "تایید تمدید — مشتری", stage_key: "renewal_approved", recipient_kinds: ["customer"], conditions: { respectWindow: true },
-      template: "سفارش کد {code} - {serviceType} - تمدید {renewalMonth} از {renewalStartDate} تا {renewalEndDate} - مبلغ تمدید: {renewalPrice} - پرداخت: {paymentLink}",
+      template: "سفارش کد {کد} - {نوع_خدمات} - تمدید {ماه_تمدید} از {تاریخ_شروع_تمدید} تا {تاریخ_پایان_تمدید} - مبلغ تمدید: {مبلغ_تمدید} - پرداخت: {لینک_پرداخت}",
     },
   },
   {
     label: "تعمیر انجام شد به مشتری",
     draft: {
       title: "تعمیر انجام شد — مشتری", stage_key: "repair_completed", recipient_kinds: ["customer"], conditions: { respectWindow: true },
-      template: "سفارش کد {code} - {serviceType} - آدرس: {address} - شرح تعمیر: {repairDescription} - هزینه تعمیر: {repairCost} - تاریخ: {dateTime}",
+      template: "سفارش کد {کد} - {نوع_خدمات} - آدرس: {آدرس} - شرح تعمیر: {شرح_تعمیر} - هزینه تعمیر: {هزینه_تعمیر} - تاریخ: {تاریخ_و_ساعت}",
     },
   },
   {
     label: "اعمال تخفیف به مشتری",
     draft: {
       title: "اعمال تخفیف — مشتری", stage_key: "discount_applied", recipient_kinds: ["customer"], conditions: { respectWindow: true },
-      template: "سفارش کد {code} - {serviceType} - تخفیف: {discountAmount} - مبلغ پس از تخفیف: {priceAfterDiscount} - تاریخ: {dateTime}",
+      template: "سفارش کد {کد} - {نوع_خدمات} - تخفیف: {مبلغ_تخفیف} - مبلغ پس از تخفیف: {مبلغ_پس_از_تخفیف} - تاریخ: {تاریخ_و_ساعت}",
     },
   },
   {
     label: "همکار جدید به همکار",
     draft: {
       title: "افزودن همکار — همکار", stage_key: "collaborator_added", recipient_kinds: ["event_person"], conditions: { respectWindow: true },
-      template: "سفارش کد {code} - {serviceType} - {personName} عزیز، سفارش پروژه {projectName} از کاربر {ownerName} برای همکاری به شما اضافه شد - {orderLink}",
+      template: "سفارش کد {کد} - {نوع_خدمات} - {نام_شخص} عزیز، سفارش پروژه {نام_پروژه} از کاربر {نام_مالک_سفارش} برای همکاری به شما اضافه شد - {لینک_سفارش}",
     },
   },
 ];
 
 export function SmsCustomFramesTab({
-  frames, services, placeholders, customVars, renderPreview, onChanged,
+  frames, services, customVars, renderPreview, onChanged,
   requestEditId, onEditRequestHandled, onRequestedEditorClosed,
 }: Props) {
   const [editing, setEditing] = useState<Draft | null>(null);
@@ -614,16 +615,8 @@ export function SmsCustomFramesTab({
                   <Label className="text-xs">متن پیام — متغیرها را با کلیک اضافه کنید</Label>
                   <Textarea dir="rtl" rows={5} value={editing.template} onChange={(e) => patch({ template: e.target.value })} />
                   <div className="flex flex-wrap gap-1">
-                    {placeholders.map((p) => (
-                      <Button key={p.token} type="button" size="sm" variant="outline" className="h-7 text-xs" title={p.label}
-                        onClick={() => patch({ template: `${editing.template || ""} ${p.token}` })}>{p.token}</Button>
-                    ))}
-                    {eventVariablesFor(editingStage?.group).map((v) => (
-                      <Button key={v.token} type="button" size="sm" variant="secondary" className="h-7 text-xs" title={v.label}
-                        onClick={() => patch({ template: `${editing.template || ""} ${v.token}` })}>{v.token}</Button>
-                    ))}
-                    {customVars.filter((v) => v.enabled).map((v) => (
-                      <Button key={v.id} type="button" size="sm" variant="secondary" className="h-7 text-xs border border-primary/40" title={`المان سفارشی: ${v.label}`}
+                    {smsElementsFor(customVars, editingStage?.group).map((v) => (
+                      <Button key={v.id} type="button" size="sm" variant="outline" className={"h-7 text-xs" + (v.is_system ? "" : " border-primary/40")} title={v.label}
                         onClick={() => patch({ template: `${editing.template || ""} {${v.token}}` })}>{`{${v.token}}`}</Button>
                     ))}
                   </div>

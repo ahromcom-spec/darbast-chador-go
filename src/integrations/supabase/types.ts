@@ -5978,8 +5978,11 @@ export type Database = {
           fallback: string
           format: string
           id: string
+          is_system: boolean
           label: string
+          legacy_token: string | null
           prefix: string
+          sort_order: number
           source_key: string
           suffix: string
           token: string
@@ -5992,8 +5995,11 @@ export type Database = {
           fallback?: string
           format?: string
           id?: string
+          is_system?: boolean
           label: string
+          legacy_token?: string | null
           prefix?: string
+          sort_order?: number
           source_key: string
           suffix?: string
           token: string
@@ -6006,8 +6012,11 @@ export type Database = {
           fallback?: string
           format?: string
           id?: string
+          is_system?: boolean
           label?: string
+          legacy_token?: string | null
           prefix?: string
+          sort_order?: number
           source_key?: string
           suffix?: string
           token?: string

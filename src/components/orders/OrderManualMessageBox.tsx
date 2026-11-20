@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, Eye, Loader2, MessageSquareText, Send, XCircle, MinusCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { smsElementsFor, sortSmsElements } from '../../../supabase/functions/_shared/smsCustomVariables';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -50,9 +51,10 @@ export function OrderManualMessageBox({ orderId, orderCode, customerName, custom
   // المان‌های سفارشی ساخته‌شده در مدیریت پیامک (اگر دسترسی باشد)
   useEffect(() => {
     let alive = true;
-    supabase.from('sms_custom_variables').select('token, label, enabled').eq('enabled', true).then(({ data }) => {
+    supabase.from('sms_custom_variables').select('token, label, enabled, source_key, is_system, sort_order').eq('enabled', true).then(({ data }) => {
       if (!alive || !data) return;
-      setCustomElements((data as any[]).map((v) => ({ token: `{${String(v.token).replace(/[{}]/g, '')}}`, label: String(v.label || v.token) })));
+      // همه المان‌های پیامک (پایه با نام فارسی و ساخته‌شده)؛ المان‌های رویداد اینجا مقدار ندارند
+      setCustomElements(sortSmsElements(smsElementsFor(data as any[], null)).map((v: any) => ({ token: `{${String(v.token).replace(/[{}]/g, '')}}`, label: String(v.label || v.token) })));
     });
     return () => { alive = false; };
   }, []);
@@ -149,7 +151,7 @@ export function OrderManualMessageBox({ orderId, orderCode, customerName, custom
           <span className="font-mono">{text.length}/{MAX_LEN}</span>
         </div>
         <div className="flex flex-wrap gap-1">
-          {[...ORDER_MESSAGE_ELEMENTS, ...customElements].map((el) => (
+          {(customElements.length ? customElements : ORDER_MESSAGE_ELEMENTS).map((el) => (
             <button
               key={el.token}
               type="button"

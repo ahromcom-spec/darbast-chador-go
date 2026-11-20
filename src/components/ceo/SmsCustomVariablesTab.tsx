@@ -17,11 +17,12 @@ import {
   Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Loader2, Lock, Pencil, Plus, Search, Sparkles, Trash2 } from "lucide-react";
 import {
-  SMS_FORMATS_BY_KIND, SMS_VARIABLE_SOURCES, getSmsVariableSource, normalizeSmsToken,
-  resolveSmsCustomVariable, validateSmsToken, type SmsOrderSnapshot,
+  BASE_SOURCE_GROUP, SMS_FORMATS_BY_KIND, SMS_VARIABLE_SOURCES, getSmsVariableSource, isEventSource, normalizeSmsToken,
+  renameSmsTokenInText, resolveSmsCustomVariable, sortSmsElements, validateSmsToken, type SmsOrderSnapshot,
 } from "../../../supabase/functions/_shared/smsCustomVariables";
+import { sampleEventVars } from "../../../supabase/functions/_shared/smsOrderEvents";
 
 export interface SmsCustomVariableRow {
   id: string;
@@ -34,6 +35,11 @@ export interface SmsCustomVariableRow {
   suffix: string;
   enabled: boolean;
   updated_at?: string;
+  /** نام قدیمی انگلیسی المان پایه (مثلاً code) */
+  legacy_token?: string | null;
+  /** المان پایه سایت: قابل ویرایش و غیرفعال‌کردن ولی غیرقابل حذف */
+  is_system?: boolean | null;
+  sort_order?: number | null;
 }
 
 // داده نمونه فقط برای پیش‌نمایش؛ هنگام ارسال واقعی، اطلاعات همان سفارش جایگزین می‌شود
@@ -60,9 +66,48 @@ export const SAMPLE_SMS_SNAPSHOT: SmsOrderSnapshot = {
     { renewal_number: 1, new_start_date: new Date(now - 3 * day).toISOString(), new_end_date: new Date(now + 27 * day).toISOString(), renewal_price: 4_000_000, status: "approved" },
   ],
   collection: { requested_date: new Date(now + 28 * day).toISOString(), confirmed_date: null, completed_at: null },
+  base: {
+    code: "1000123",
+    serviceStage: "خدمات داربست فلزی - اجرای داربست به همراه اجناس (تایید شد)",
+    serviceFull: "خدمات داربست فلزی - اجرای داربست به همراه اجناس",
+    serviceTypeName: "داربست فلزی",
+    subcategoryName: "اجرای داربست به همراه اجناس",
+    serviceForm: "داربست نما",
+    stageLabel: "تایید شد",
+    customerName: "علی رضایی",
+    address: "تهران، خیابان نمونه",
+    description: "اجرای داربست نما ۱۲ متر طول × ۶ متر ارتفاع",
+    orderLink: "https://ahrom.ir/orders/123",
+    paymentLink: "https://ahrom.ir/user/orders/123?pay=1",
+    now: new Date(now).toISOString(),
+    amount: 2_500_000,
+    paidAmount: 5_000_000,
+    totalPaid: 15_000_000,
+    remaining: 10_000_000,
+    paymentDate: new Date(now - 10 * day).toISOString(),
+    collectionDate: new Date(now + 28 * day).toISOString(),
+  },
+  event: sampleEventVars(),
 };
 
-const GROUPS = Array.from(new Set(SMS_VARIABLE_SOURCES.map((s) => s.group)));
+/** پیش‌نمایش با خدمت انتخاب‌شده (نوع خدمات و زیرشاخه) */
+export const sampleSnapshotForService = (service?: { typeName: string; name: string } | null, stageLabel = "تایید شد"): SmsOrderSnapshot => {
+  if (!service) return SAMPLE_SMS_SNAPSHOT;
+  const strip = (v: string) => v.trim().replace(/^خدمات\s+/, "");
+  const sub = strip(service.name);
+  const full = `خدمات ${strip(service.typeName)}${sub && sub !== "عمومی" ? ` - ${sub}` : ""}`;
+  return {
+    ...SAMPLE_SMS_SNAPSHOT,
+    base: {
+      ...SAMPLE_SMS_SNAPSHOT.base,
+      serviceStage: `${full} (${stageLabel})`, serviceFull: full,
+      serviceTypeName: strip(service.typeName), subcategoryName: sub,
+    },
+  };
+};
+
+const GROUPS = Array.from(new Set(SMS_VARIABLE_SOURCES.map((s) => s.group)))
+  .sort((a, b) => (a === BASE_SOURCE_GROUP ? -1 : 0) - (b === BASE_SOURCE_GROUP ? -1 : 0));
 
 type Draft = Omit<SmsCustomVariableRow, "id"> & { id?: string };
 const emptyDraft = (): Draft => ({
@@ -76,6 +121,20 @@ export function SmsCustomVariablesTab({
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<SmsCustomVariableRow | null>(null);
+  const [q, setQ] = useState("");
+  const filtered = useMemo(() => {
+    const t = q.trim();
+    const list = sortSmsElements(variables);
+    return t ? list.filter((v) => `${v.token} ${v.label}`.includes(t)) : list;
+  }, [variables, q]);
+  const sections = [
+    { key: "base", title: "المان‌های پایه سفارش", hint: "المان‌های همیشگی سایت با نام فارسی؛ می‌توانید عنوان، نام، شکل نوشتن، متن جایگزین و حتی اطلاعاتی که برمی‌دارند را ویرایش کنید.",
+      items: filtered.filter((v) => v.is_system && !isEventSource(v.source_key)) },
+    { key: "event", title: "المان‌های رویداد (تمدید، تعمیر، تخفیف، انتقال، همکار)", hint: "فقط در قاب‌های پیام همان نوع رویداد زیر متن پیام نشان داده می‌شوند.",
+      items: filtered.filter((v) => v.is_system && isEventSource(v.source_key)) },
+    { key: "custom", title: "المان‌های ساخته‌شده شما", hint: "المان‌هایی که خودتان ساخته‌اید.",
+      items: filtered.filter((v) => !v.is_system) },
+  ];
 
   const source = draft ? getSmsVariableSource(draft.source_key) : null;
   const formats = source ? SMS_FORMATS_BY_KIND[source.kind] : [];
@@ -107,10 +166,25 @@ export function SmsCustomVariablesTab({
     const res = draft.id
       ? await supabase.from("sms_custom_variables").update(payload).eq("id", draft.id).select("id")
       : await supabase.from("sms_custom_variables").insert({ ...payload, created_by: auth.user?.id ?? null }).select("id");
+    if (res.error) { setSaving(false); toast.error("خطا در ذخیره المان: " + res.error.message); return; }
+    if (!res.data || res.data.length === 0) { setSaving(false); toast.error("ذخیره انجام نشد — دسترسی کافی ندارید"); return; }
+    // تغییر نام المان: همه متن‌های پیامک که از نام قبلی استفاده کرده‌اند خودکار به نام جدید تغییر می‌کنند
+    const before = draft.id ? variables.find((v) => v.id === draft.id) : null;
+    let renamed = 0;
+    if (before && before.token !== token) {
+      const { data: tpls } = await supabase.from("sms_templates").select("id, template, default_template");
+      for (const t of (tpls || []) as { id: string; template: string | null; default_template: string | null }[]) {
+        const nextTpl = renameSmsTokenInText(t.template || "", before.token, token);
+        const nextDef = t.default_template == null ? null : renameSmsTokenInText(t.default_template, before.token, token);
+        if (nextTpl === (t.template || "") && nextDef === t.default_template) continue;
+        const { error: upErr } = await supabase.from("sms_templates").update({ template: nextTpl, default_template: nextDef }).eq("id", t.id);
+        if (!upErr) renamed++;
+      }
+    }
     setSaving(false);
-    if (res.error) { toast.error("خطا در ذخیره المان: " + res.error.message); return; }
-    if (!res.data || res.data.length === 0) { toast.error("ذخیره انجام نشد — دسترسی کافی ندارید"); return; }
-    toast.success(draft.id ? "المان به‌روز شد" : "المان ساخته شد — حالا می‌توانید آن را در متن پیامک‌ها قرار دهید");
+    toast.success(draft.id
+      ? (renamed ? `المان به‌روز شد و نام آن در ${renamed.toLocaleString("fa-IR")} پیام هم عوض شد` : "المان به‌روز شد")
+      : "المان ساخته شد — حالا می‌توانید آن را در متن پیامک‌ها قرار دهید");
     setDraft(null);
     onChanged();
   };
@@ -138,7 +212,7 @@ export function SmsCustomVariablesTab({
             <Sparkles className="h-4 w-4 text-primary" />المان‌های سفارشی پیامک
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-1 leading-5">
-            المان بسازید تا تاریخ یا مبلغ دلخواه از همان سفارش مشتری خودکار داخل پیامک قرار بگیرد. بعد از ساخت، المان در زیر متن همه پیامک‌ها قابل افزودن است.
+            همه المان‌های پیامک اینجا هستند: المان‌های پایه سایت (مثل {"{کد}"} و {"{نوع_خدمات}"}) و المان‌هایی که خودتان می‌سازید. هر المان در زیر متن همه پیامک‌ها قابل افزودن است.
           </p>
         </div>
         <Button size="sm" onClick={() => setDraft(emptyDraft())}>
@@ -146,37 +220,56 @@ export function SmsCustomVariablesTab({
         </Button>
       </CardHeader>
       <CardContent className="space-y-2">
-        {variables.length === 0 && (
+        <div className="relative">
+          <Search className="absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input className="h-8 pr-7 text-xs" placeholder="جستجوی المان (نام یا عنوان)..." value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        {sections.map((sec) => sec.items.length > 0 && (
+          <div key={sec.key} className="space-y-2">
+            <div className="pt-2">
+              <h3 className="text-sm font-semibold">{sec.title} <span className="text-xs font-normal text-muted-foreground">({sec.items.length.toLocaleString("fa-IR")})</span></h3>
+              <p className="text-[11px] text-muted-foreground leading-5">{sec.hint}</p>
+            </div>
+            {sec.items.map((v) => {
+              const src = getSmsVariableSource(v.source_key);
+              return (
+                <div key={v.id} className="flex items-center gap-3 border rounded-lg p-3 flex-wrap">
+                  <div className="flex-1 min-w-[220px] space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm">{v.label}</span>
+                      <Badge variant="outline" className="text-xs">{`{${v.token}}`}</Badge>
+                      {v.is_system && (
+                        <Badge variant="secondary" className="text-[10px] gap-1"><Lock className="h-3 w-3" />المان پایه سایت</Badge>
+                      )}
+                      {!v.enabled && <Badge variant="destructive">غیرفعال</Badge>}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {src ? `${src.group} › ${src.label}` : "داده نامعتبر"} — نمونه: {resolveSmsCustomVariable(v, SAMPLE_SMS_SNAPSHOT)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Switch checked={v.enabled} onCheckedChange={(c) => toggle(v, c)} aria-label="فعال" />
+                    <Button size="icon" variant="ghost" aria-label="ویرایش" onClick={() => setDraft({ ...v })}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    {!v.is_system && (
+                      <Button size="icon" variant="ghost" aria-label="حذف" onClick={() => setDeleting(v)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+        {filtered.length === 0 && (
           <div className="text-center text-sm text-muted-foreground py-10 border border-dashed rounded-lg">
-            هنوز المانی ساخته نشده است. مثلاً یک المان «تاریخ واریز» بسازید تا تاریخی که هنگام ثبت پرداخت انتخاب کرده‌اید در پیامک بیاید.
+            {variables.length === 0
+              ? "هنوز المانی ساخته نشده است. مثلاً یک المان «تاریخ واریز» بسازید تا تاریخی که هنگام ثبت پرداخت انتخاب کرده‌اید در پیامک بیاید."
+              : "المانی با این جستجو پیدا نشد."}
           </div>
         )}
-        {variables.map((v) => {
-          const src = getSmsVariableSource(v.source_key);
-          return (
-            <div key={v.id} className="flex items-center gap-3 border rounded-lg p-3 flex-wrap">
-              <div className="flex-1 min-w-[220px] space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium text-sm">{v.label}</span>
-                  <Badge variant="outline" className="font-mono text-xs" dir="ltr">{`{${v.token}}`}</Badge>
-                  {!v.enabled && <Badge variant="destructive">غیرفعال</Badge>}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {src ? `${src.group} › ${src.label}` : "داده نامعتبر"} — نمونه: {resolveSmsCustomVariable(v, SAMPLE_SMS_SNAPSHOT)}
-                </p>
-              </div>
-              <div className="flex items-center gap-1">
-                <Switch checked={v.enabled} onCheckedChange={(c) => toggle(v, c)} aria-label="فعال" />
-                <Button size="icon" variant="ghost" aria-label="ویرایش" onClick={() => setDraft({ ...v })}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button size="icon" variant="ghost" aria-label="حذف" onClick={() => setDeleting(v)}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-            </div>
-          );
-        })}
       </CardContent>
 
       <Dialog open={!!draft} onOpenChange={(o) => { if (!o) setDraft(null); }}>
@@ -202,6 +295,11 @@ export function SmsCustomVariablesTab({
                   {tokenError || (duplicate ? "المانی با همین نام وجود دارد" :
                     `در متن پیامک به این شکل نوشته می‌شود: {${normalizeSmsToken(draft.token) || "نام"}}`)}
                 </p>
+                {draft.is_system && (
+                  <p className="text-[11px] mt-1 text-muted-foreground">
+                    این المان پایه سایت است. اگر نامش را عوض کنید، متن همه پیام‌هایی که از آن استفاده کرده‌اند خودکار با نام جدید به‌روز می‌شود.
+                  </p>
+                )}
               </div>
               <div>
                 <Label className="text-xs">این المان چه چیزی را از سفارش بردارد؟</Label>
