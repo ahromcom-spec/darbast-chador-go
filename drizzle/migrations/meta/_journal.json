@@ -169,6 +169,13 @@
       "when": 1795154833313,
       "tag": "0023_sms_system_elements",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1795235967985,
+      "tag": "0024_bulk_transfer_orders_to_customer",
+      "breakpoints": true
     }
   ]
 }
