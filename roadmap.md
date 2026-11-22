@@ -39,3 +39,6 @@
 
 - [x] Android-style unseen-event badges on pinned home modules and on each tab inside order management, transfers/collaboration, SMS, notifications, contractors, daily reports, bank cards, registration, users and HR; verified with the site manager account (badges appear, opening a tab clears only that tab).
 - [x] SMS elements in Persian (e.g. {کد}, {نوع_خدمات}) moved into «المان‌های سفارشی» as editable base elements; {نوع_خدمات} shows service type with subcategory; all saved texts converted. Tests pass; server preview verified for with/without-materials orders; no SMS sent.
+
+- [x] «پروژه‌های مشتریان» tab in the orders module: search, customer → address → project hierarchy, transfer or add collaborator for a whole address, a single project or selected projects. 5 rule tests pass; tab, selection and both dialogs verified as site manager; bulk transfer verified on real orders inside a rolled-back test (3 orders → 1 address, 2 projects) and refused for non-managers.
+- [ ] Verify a real collaborator invite from the new tab — avoided sending a live invite/SMS.

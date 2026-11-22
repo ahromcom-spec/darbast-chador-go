@@ -321,9 +321,9 @@ export function CustomerProjectsTab() {
                             </div>
                           </div>
 
-                          {chosen.length > 0 && !allChosen && (
+                          {chosen.length > 0 && (
                             <div className="mx-3 mb-2 flex items-center justify-between gap-2 flex-wrap rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
-                              <span>{fa(chosen.length)} پروژه از این آدرس انتخاب شده</span>
+                              <span>{allChosen ? `همه ${fa(chosen.length)} پروژه این آدرس انتخاب شده` : `${fa(chosen.length)} از ${fa(a.projects.length)} پروژه این آدرس انتخاب شده`}</span>
                               <div className="flex gap-2">
                                 <Button size="sm" className="h-8 gap-1" onClick={() => openAction('transfer', c, chosen, `${fa(chosen.length)} پروژه انتخاب‌شده`)}>
                                   <ArrowLeftRight className="h-3.5 w-3.5" /> انتقال
