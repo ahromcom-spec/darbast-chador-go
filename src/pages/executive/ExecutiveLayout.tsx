@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useLocation, Navigate, useSearchParams, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ShoppingCart, Users, ClipboardCheck, Play, Loader, CheckCircle, Banknote, PackageOpen, ArrowLeftRight, ChevronDown, ListOrdered, Archive, PackageCheck, Package, ArrowRight, Receipt, Lock, FileText, Files } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Users, ClipboardCheck, Play, Loader, CheckCircle, Banknote, PackageOpen, ArrowLeftRight, ChevronDown, ListOrdered, Archive, PackageCheck, Package, ArrowRight, Receipt, Lock, FileText, Files, FolderTree } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -100,6 +100,11 @@ const mainNavItems = [
     title: 'مشتریان',
     href: '/executive/customers',
     icon: Users
+  },
+  {
+    title: 'پروژه‌های مشتریان',
+    href: '/executive/customer-projects',
+    icon: FolderTree
   },
   {
     title: 'انتقال و همکاری سفارش',
