@@ -4,7 +4,7 @@
 
 export const CUSTOM_FRAME_SCOPE = "custom";
 
-export type FrameStageGroup = "order" | "renewal" | "repair" | "discount" | "transfer" | "collaboration";
+export type FrameStageGroup = "order" | "renewal" | "repair" | "discount" | "transfer" | "collaboration" | "statement";
 
 export const FRAME_STAGE_GROUP_LABELS: Record<FrameStageGroup, string> = {
   order: "مراحل سفارش",
@@ -13,6 +13,7 @@ export const FRAME_STAGE_GROUP_LABELS: Record<FrameStageGroup, string> = {
   discount: "تخفیف",
   transfer: "انتقال سفارش",
   collaboration: "همکاران سفارش",
+  statement: "صورتحساب",
 };
 
 export interface CustomFrameStage {
@@ -59,7 +60,13 @@ export const CUSTOM_FRAME_STAGES: CustomFrameStage[] = [
   // همکاران
   { key: "collaborator_invited", label: "دعوت همکار", hint: "وقتی دعوت همکاری تایید شد و منتظر پذیرش همکار است", group: "collaboration", personLabel: "همکار دعوت‌شده" },
   { key: "collaborator_added", label: "افزودن همکار", hint: "وقتی همکار به سفارش اضافه شد (پذیرفت یا مدیریت اضافه کرد)", group: "collaboration", personLabel: "همکار اضافه‌شده" },
+  // صورتحساب
+  { key: "statement_payment", label: "ثبت پرداخت صورتحساب", hint: "وقتی مدیریت پرداختی را برای یک صورتحساب یا همه صورتحساب‌های مشتری ثبت می‌کند (با سهم هر سفارش)", group: "statement", customerLabel: "مشتری صاحب صورتحساب" },
+  { key: "statement_discount", label: "تخفیف صورتحساب", hint: "وقتی مدیریت تخفیف یک صورتحساب یا تخفیف کلی مشتری را ثبت یا تغییر می‌دهد", group: "statement", customerLabel: "مشتری صاحب صورتحساب" },
+  { key: "statement_closed", label: "بستن صورتحساب", hint: "وقتی مدیریت صورتحساب را می‌بندد", group: "statement", customerLabel: "مشتری صاحب صورتحساب" },
 ];
+/** مراحل صورتحساب به خدمت خاصی وابسته نیستند (یک پرداخت ممکن است چند سفارش با خدمات مختلف را بپوشاند) */
+export const isStatementStage = (key?: string | null) => customFrameStage(key)?.group === "statement";
 
 export const CUSTOM_FRAME_STAGE_KEYS = CUSTOM_FRAME_STAGES.map((s) => s.key);
 export const customFrameStageLabel = (key: string) =>

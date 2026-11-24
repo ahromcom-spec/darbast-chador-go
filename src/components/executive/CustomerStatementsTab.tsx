@@ -23,6 +23,7 @@ import { TransferOrderStatementDialog } from '@/components/executive/TransferOrd
 import { SeparateOrderChargesDialog } from '@/components/orders/SeparateOrderChargesDialog';
 import { extractOrderDescription } from '@/lib/orderDescription';
 import { canDeleteStatement } from '@/lib/statementDeletion';
+import { notifyStatementEvent } from '@/lib/statementSms';
 import { calculateStatementTotals, orderStatementCost } from '@/lib/statementTotals';
 
 interface OrderRow {
@@ -502,6 +503,7 @@ export function CustomerStatementsTab({ filter = 'all' }: CustomerStatementsTabP
     try {
       const { error } = await supabase.rpc('close_customer_statement' as any, { _statement_id: closing.id });
       if (error) throw error;
+      if (closing.status !== 'closed') void notifyStatementEvent({ kind: 'closed', statementId: closing.id });
       toast({ title: 'انجام شد', description: `صورتحساب شماره ${closing.statement_number} بسته شد` });
       setClosing(null);
       await load();

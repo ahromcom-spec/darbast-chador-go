@@ -95,7 +95,7 @@ const b = (s: SmsOrderSnapshot, k: string): SourceValue => {
 };
 
 export const BASE_SOURCE_GROUP = "اطلاعات پایه سفارش";
-export const EVENT_SOURCE_GROUP = "رویدادها (تمدید، تعمیر، تخفیف، انتقال، همکار)";
+export const EVENT_SOURCE_GROUP = "رویدادها (تمدید، تعمیر، تخفیف، انتقال، همکار، صورتحساب)";
 export const EVENT_SOURCE_PREFIX = "event_";
 
 const BASE_SOURCES: SourceDef[] = [
@@ -268,6 +268,19 @@ export const SYSTEM_SMS_ELEMENTS: SystemSmsElement[] = [
   { legacy: "personName", token: "نام_شخص", label: "نام گیرنده انتقال / همکار", source_key: "event_personName", format: "text", fallback: "ثبت نشده" },
   { legacy: "personPhone", token: "شماره_شخص", label: "شماره گیرنده انتقال / همکار", source_key: "event_personPhone", format: "text", fallback: "ثبت نشده" },
   { legacy: "ownerName", token: "نام_مالک_سفارش", label: "نام کاربری مالک سفارش (انتقال‌دهنده / دعوت‌کننده)", source_key: "event_ownerName", format: "text", fallback: "ثبت نشده" },
+  // صورتحساب (فقط در قاب‌های پیام صورتحساب)
+  { legacy: "statementNumber", token: "شماره_صورتحساب", label: "شماره صورتحساب", source_key: "event_statementNumber", format: "text", fallback: "ثبت نشده" },
+  { legacy: "statementTotal", token: "مبلغ_کل_صورتحساب", label: "مبلغ کل صورتحساب", source_key: "event_statementTotal", format: "text", fallback: "ثبت نشده" },
+  { legacy: "statementPaid", token: "پرداخت_شده_صورتحساب", label: "مجموع پرداخت‌شده صورتحساب", source_key: "event_statementPaid", format: "text", fallback: "ثبت نشده" },
+  { legacy: "statementRemaining", token: "مانده_صورتحساب", label: "مانده صورتحساب (پس از تخفیف)", source_key: "event_statementRemaining", format: "text", fallback: "ثبت نشده" },
+  { legacy: "statementDiscount", token: "تخفیف_صورتحساب", label: "مبلغ تخفیف صورتحساب", source_key: "event_statementDiscount", format: "text", fallback: "ثبت نشده" },
+  { legacy: "statementDiscountNote", token: "توضیح_تخفیف_صورتحساب", label: "توضیح تخفیف صورتحساب", source_key: "event_statementDiscountNote", format: "text", fallback: "ثبت نشده" },
+  { legacy: "statementPaymentAmount", token: "مبلغ_پرداخت_صورتحساب", label: "مبلغ همین پرداخت صورتحساب", source_key: "event_statementPaymentAmount", format: "text", fallback: "ثبت نشده" },
+  { legacy: "statementPaymentMethod", token: "روش_پرداخت", label: "روش پرداخت", source_key: "event_statementPaymentMethod", format: "text", fallback: "ثبت نشده" },
+  { legacy: "statementDepositDate", token: "تاریخ_واریز_صورتحساب", label: "تاریخ واریز / سررسید چک", source_key: "event_statementDepositDate", format: "text", fallback: "ثبت نشده" },
+  { legacy: "statementAllocation", token: "سهم_سفارش_ها", label: "سهم پرداخت از هر سفارش و صورتحساب", source_key: "event_statementAllocation", format: "text", fallback: "ثبت نشده" },
+  { legacy: "statementOrderCodes", token: "کد_سفارش_های_صورتحساب", label: "کد سفارش‌های صورتحساب / پرداخت", source_key: "event_statementOrderCodes", format: "text", fallback: "ثبت نشده" },
+  { legacy: "statementClosedDate", token: "تاریخ_بستن_صورتحساب", label: "تاریخ بستن صورتحساب", source_key: "event_statementClosedDate", format: "text", fallback: "ثبت نشده" },
   { legacy: "reason", token: "دلیل_رد", label: "دلیل رد", source_key: "event_reason", format: "text", fallback: "ثبت نشده" },
 ];
 

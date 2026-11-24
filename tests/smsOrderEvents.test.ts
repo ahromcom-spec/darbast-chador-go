@@ -103,3 +103,38 @@ describe('event variables', () => {
     assert.equal(eventVariablesFor('order').length, 0);
   });
 });
+
+import { formatAllocation, statementSummary, paymentMethodLabel, STATEMENT_EVENT_STAGE } from '../supabase/functions/_shared/smsStatementEvents';
+import { frameAppliesTo, isStatementStage } from '../supabase/functions/_shared/smsCustomFrames';
+
+describe('statement payment, discount and closing messages', () => {
+  test('statement stages are selectable frame stages', () => {
+    for (const s of Object.values(STATEMENT_EVENT_STAGE)) {
+      assert.ok(CUSTOM_FRAME_STAGE_KEYS.includes(s), s);
+      assert.ok(isStatementStage(s));
+    }
+  });
+  test('a 12 million payment over two orders lists the share of each order and statement', () => {
+    const text = formatAllocation([
+      { orderCode: '1000539', statementNumber: 3, amount: 8_000_000 },
+      { orderCode: '1000540', statementNumber: 4, amount: 4_000_000 },
+    ]);
+    assert.equal(text, 'سفارش 1000539 (صورتحساب ۳): ۸٬۰۰۰٬۰۰۰ تومان، سفارش 1000540 (صورتحساب ۴): ۴٬۰۰۰٬۰۰۰ تومان');
+  });
+  test('remaining subtracts payments and discount, never below zero', () => {
+    const orders = [{ total_price: 10_000_000 }, { total_price: 0, payment_amount: 5_000_000 }, { total_price: 9_000_000, status: 'rejected' }];
+    assert.deepEqual(statementSummary(orders, 12_000_000, 500_000), { total: 15_000_000, paid: 12_000_000, discount: 500_000, remaining: 2_500_000 });
+    assert.equal(statementSummary(orders, 20_000_000, 0).remaining, 0);
+  });
+  test('payment methods are written in Persian', () => {
+    assert.equal(paymentMethodLabel('card_transfer'), 'کارت به کارت');
+    assert.equal(paymentMethodLabel('cheque'), 'چک');
+  });
+  test('statement frames ignore service filters only when untargeted', () => {
+    const f = { key: 'custom_abc123', scope: 'custom', stage_key: 'statement_payment', enabled: true };
+    assert.equal(frameAppliesTo(f, 'statement_payment', null), true);
+  });
+  test('statement variables are filled', () => {
+    assert.equal(applyEventVariables('صورتحساب {statementNumber}', { statementNumber: '۳' }), 'صورتحساب ۳');
+  });
+});

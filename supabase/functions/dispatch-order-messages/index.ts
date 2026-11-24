@@ -12,6 +12,9 @@ import {
   type OrderEventTable,
 } from "../_shared/smsOrderEvents.ts";
 import {
+  STATEMENT_EVENT_STAGE, formatAllocation, paymentMethodLabel, statementSummary, type StatementEventKind,
+} from "../_shared/smsStatementEvents.ts";
+import {
   COLLABORATOR_COPY_FRAME_KEY, enabledCollaboratorPhones, isCollaboratorCopyStage,
 } from "../_shared/collaboratorSms.ts";
 
@@ -28,12 +31,21 @@ const EventSchema = z.object({
   oldStatus: z.string().max(40).nullable().optional(),
   newStatus: z.string().max(40).nullable().optional(),
 });
+const StatementEventSchema = z.object({
+  kind: z.enum(["payment", "discount", "closed"]),
+  // پرداخت: شناسه گروه پرداخت (STMT-GRP)؛ تخفیف/بستن: شناسه صورتحساب؛ تخفیف کلی: شناسه مشتری
+  groupId: z.string().uuid().optional(),
+  statementId: z.string().uuid().optional(),
+  customerId: z.string().uuid().optional(),
+});
 const BodySchema = z.object({
   orderId: z.string().uuid().optional(),
   orderCode: z.string().trim().min(1).max(40).optional(),
   stage: z.enum(CUSTOM_FRAME_STAGE_KEYS as [string, ...string[]]).optional(),
   // رویداد گزارش‌شده توسط پایگاه داده (تمدید، تعمیر، تخفیف، انتقال، همکار) — همیشه با داده واقعی سطر سنجیده می‌شود
   event: EventSchema.optional(),
+  // رویداد صورتحساب گزارش‌شده توسط مدیر — همیشه با داده واقعی پایگاه داده سنجیده می‌شود
+  statementEvent: StatementEventSchema.optional(),
   skipCustomer: z.boolean().optional(),
   // پیامک مشتری این سفارش خاموش است: فقط همکاران روشن (نسخه مرحله و قاب‌های «همکاران سفارش») پیام بگیرند
   collaboratorsOnly: z.boolean().optional(),
@@ -48,7 +60,7 @@ const BodySchema = z.object({
     totalPaid: z.number().finite().optional(),
     remainingAmount: z.number().finite().optional(),
   }).partial().optional(),
-}).refine((b) => !!b.event || (!!b.stage && (!!b.orderId || !!b.orderCode)), { message: "event, or stage with orderId/orderCode, is required" });
+}).refine((b) => !!b.event || !!b.statementEvent || (!!b.stage && (!!b.orderId || !!b.orderCode)), { message: "event, or stage with orderId/orderCode, is required" });
 
 // deno-lint-ignore no-explicit-any
 type Admin = any;
@@ -168,6 +180,129 @@ async function resolveEvent(admin: Admin, ev: z.infer<typeof EventSchema>): Prom
   };
 }
 
+const sumAmounts = (rows: Array<{ amount?: unknown }>) => rows.reduce((a, r) => a + (Number(r.amount) || 0), 0);
+
+/** مبلغ کل، پرداخت و مانده چند صورتحساب (با تخفیف‌های خودشان) */
+async function statementsFinance(admin: Admin, statementIds: string[], extraDiscount = 0) {
+  if (statementIds.length === 0) return null;
+  const [{ data: sts }, { data: orders }] = await Promise.all([
+    admin.from("customer_statements").select("id, statement_number, discount_amount, discount_note, customer_id").in("id", statementIds),
+    admin.from("projects_v3").select("id, code, status, total_price, payment_amount, billing_only, discount_amount, statement_id, created_at")
+      .in("statement_id", statementIds),
+  ]);
+  const ords = (orders || []).filter((o: any) => o.status !== "rejected");
+  const ids = ords.map((o: any) => o.id);
+  const { data: pays } = ids.length ? await admin.from("order_payments").select("amount").in("order_id", ids) : { data: [] };
+  const discount = (sts || []).reduce((a: number, x: any) => a + (Number(x.discount_amount) || 0), 0) + extraDiscount;
+  return { statements: sts || [], orders: ords, summary: statementSummary(ords, sumAmounts(pays || []), discount) };
+}
+
+/** رویداد صورتحساب را از داده واقعی بازسازی می‌کند؛ اگر تازه نباشد یا داده نخواند، skip. */
+async function resolveStatementEvent(admin: Admin, ev: z.infer<typeof StatementEventSchema>): Promise<ResolvedEvent | { skip: string }> {
+  const stage = STATEMENT_EVENT_STAGE[ev.kind as StatementEventKind];
+  const customerUserOf = async (customerId?: string | null) => {
+    if (!customerId) return null;
+    const { data } = await admin.from("customers").select("user_id").eq("id", customerId).maybeSingle();
+    return data?.user_id || null;
+  };
+  const money = (n: number) => eventMoney(n);
+  const num = (n: unknown) => Number(n || 0).toLocaleString("fa-IR");
+
+  if (ev.kind === "payment") {
+    if (!ev.groupId) return { skip: "missing payment group" };
+    const { data: pays } = await admin.from("order_payments")
+      .select("id, order_id, amount, payment_method, payment_date, created_at")
+      .ilike("notes", `%STMT-GRP:${ev.groupId}%`);
+    if (!pays?.length) return { skip: "payment not found" };
+    if (!isRecentEvent(pays.map((p: any) => p.created_at))) return { skip: "stale event" };
+    const { data: ords } = await admin.from("projects_v3").select("id, code, statement_id, created_at").in("id", [...new Set(pays.map((p: any) => p.order_id))]);
+    const orderById = new Map((ords || []).map((o: any) => [o.id, o]));
+    const stIds = [...new Set((ords || []).map((o: any) => o.statement_id).filter(Boolean))] as string[];
+    const fin = await statementsFinance(admin, stIds);
+    const stNum = new Map((fin?.statements || []).map((x: any) => [x.id, x.statement_number]));
+    const allocation = formatAllocation(pays.map((p: any) => {
+      const o = orderById.get(p.order_id) as any;
+      return { orderCode: String(o?.code || ""), statementNumber: stNum.get(o?.statement_id) ?? null, amount: Number(p.amount) || 0 };
+    }));
+    const customerId = (fin?.statements?.[0] as any)?.customer_id || null;
+    const anchor = (ords || []).sort((a: any, b: any) => String(b.created_at).localeCompare(String(a.created_at)))[0] as any;
+    const numbers = (fin?.statements || []).map((x: any) => num(x.statement_number));
+    const first = pays[0] as any;
+    return {
+      stage, orderId: anchor.id, eventRef: `statement_payment:${ev.groupId}`,
+      customerUserId: await customerUserOf(customerId),
+      vars: {
+        statementNumber: numbers.length > 1 ? `${numbers.join("، ")}` : (numbers[0] || ""),
+        statementTotal: fin ? money(fin.summary.total) : "",
+        statementPaid: fin ? money(fin.summary.paid) : "",
+        statementRemaining: fin ? money(fin.summary.remaining) : "",
+        statementDiscount: fin && fin.summary.discount > 0 ? money(fin.summary.discount) : "",
+        statementPaymentAmount: money(sumAmounts(pays)),
+        statementPaymentMethod: paymentMethodLabel(first.payment_method),
+        statementDepositDate: jalaliDate(first.payment_date || first.created_at),
+        statementAllocation: allocation,
+        statementOrderCodes: [...new Set((ords || []).map((o: any) => o.code))].join("، "),
+      },
+    };
+  }
+
+  if (ev.kind === "discount" && !ev.statementId) {
+    // تخفیف کلی مشتری
+    if (!ev.customerId) return { skip: "missing customer" };
+    const { data: g } = await admin.from("customer_global_discounts").select("id, discount_amount, discount_note, updated_at, created_at")
+      .eq("customer_id", ev.customerId).maybeSingle();
+    if (!g || !(Number(g.discount_amount) > 0)) return { skip: "no discount" };
+    if (!isRecentEvent([g.updated_at, g.created_at])) return { skip: "stale event" };
+    const { data: sts } = await admin.from("customer_statements").select("id").eq("customer_id", ev.customerId);
+    const stIds = (sts || []).map((x: any) => x.id);
+    const fin = await statementsFinance(admin, stIds, Number(g.discount_amount) || 0);
+    const anchor = (fin?.orders || []).sort((a: any, b: any) => String(b.created_at).localeCompare(String(a.created_at)))[0] as any;
+    if (!anchor) return { skip: "customer has no orders" };
+    return {
+      stage, orderId: anchor.id, eventRef: `customer_global_discounts:${g.id}:${Math.round(Number(g.discount_amount))}`,
+      customerUserId: await customerUserOf(ev.customerId),
+      vars: {
+        statementNumber: "همه صورتحساب‌ها",
+        statementTotal: money(fin!.summary.total),
+        statementPaid: money(fin!.summary.paid),
+        statementRemaining: money(fin!.summary.remaining),
+        statementDiscount: money(Number(g.discount_amount)),
+        statementDiscountNote: String(g.discount_note || "").trim(),
+        statementOrderCodes: fin!.orders.map((o: any) => o.code).join("، "),
+      },
+    };
+  }
+
+  if (!ev.statementId) return { skip: "missing statement" };
+  const { data: st } = await admin.from("customer_statements")
+    .select("id, customer_id, statement_number, status, closed_at, discount_amount, discount_note, updated_at").eq("id", ev.statementId).maybeSingle();
+  if (!st) return { skip: "statement not found" };
+  if (ev.kind === "closed") {
+    if (st.status !== "closed" || !isRecentEvent([st.closed_at])) return { skip: "stale event" };
+  } else {
+    if (!(Number(st.discount_amount) > 0)) return { skip: "no discount" };
+    if (!isRecentEvent([st.updated_at])) return { skip: "stale event" };
+  }
+  const fin = await statementsFinance(admin, [st.id]);
+  const anchor = (fin?.orders || []).sort((a: any, b: any) => String(b.created_at).localeCompare(String(a.created_at)))[0] as any;
+  if (!anchor) return { skip: "statement has no orders" };
+  return {
+    stage, orderId: anchor.id,
+    eventRef: ev.kind === "closed" ? `customer_statements:${st.id}:closed` : `customer_statements:${st.id}:disc-${Math.round(Number(st.discount_amount))}`,
+    customerUserId: await customerUserOf(st.customer_id),
+    vars: {
+      statementNumber: num(st.statement_number),
+      statementTotal: money(fin!.summary.total),
+      statementPaid: money(fin!.summary.paid),
+      statementRemaining: money(fin!.summary.remaining),
+      statementDiscount: Number(st.discount_amount) > 0 ? money(Number(st.discount_amount)) : "",
+      statementDiscountNote: String(st.discount_note || "").trim(),
+      statementOrderCodes: fin!.orders.map((o: any) => o.code).join("، "),
+      statementClosedDate: st.closed_at ? jalaliDate(st.closed_at) : "",
+    },
+  };
+}
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
@@ -185,7 +320,7 @@ Deno.serve(async (req) => {
 
   const parsed = BodySchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return json({ error: parsed.error.flatten() }, 400);
-  const { orderCode, details = {}, event } = parsed.data;
+  const { orderCode, details = {}, event, statementEvent } = parsed.data;
   const collaboratorsOnly = parsed.data.collaboratorsOnly === true;
   const skipCustomer = parsed.data.skipCustomer === true || collaboratorsOnly;
   let { orderId, stage } = parsed.data;
@@ -212,7 +347,26 @@ Deno.serve(async (req) => {
     stage = r.stage;
     orderId = r.orderId;
   }
+  if (statementEvent && !event) {
+    // فقط مدیران سفارش/مالی می‌توانند رویداد صورتحساب را گزارش کنند
+    if (!isService) {
+      if (!callerUserId) return json({ error: "unauthorized" }, 401);
+      const { data: isManager } = await admin.rpc("is_order_message_manager", { _user_id: callerUserId });
+      let allowed = isManager === true;
+      if (!allowed) {
+        const { data: fin } = await admin.from("user_roles").select("role").eq("user_id", callerUserId).eq("role", "finance_manager").limit(1);
+        allowed = (fin || []).length > 0;
+      }
+      if (!allowed) return json({ error: "forbidden" }, 403);
+    }
+    const r = await resolveStatementEvent(admin, statementEvent);
+    if ("skip" in r) return json({ success: true, skipped: r.skip, frames: 0, recipients: 0 });
+    resolvedEvent = r;
+    stage = r.stage;
+    orderId = r.orderId;
+  }
   if (!stage) return json({ error: "stage is required" }, 400);
+  const statementStage = !!statementEvent && !event;
 
   // === سفارش ===
   const cols = "id, code, status, execution_stage, subcategory_id, customer_id, customer_name, customer_phone, address, detailed_address, total_price, payment_amount, billing_only";
@@ -239,7 +393,7 @@ Deno.serve(async (req) => {
     .eq("scope", CUSTOM_FRAME_SCOPE)
     .eq("stage_key", stage)
     .eq("enabled", true);
-  const frames = ((frameRows || []) as CustomFrame[]).filter((f) => frameAppliesTo(f, stage, o.subcategory_id));
+  const frames = ((frameRows || []) as CustomFrame[]).filter((f) => frameAppliesTo(f, stage!, statementStage ? null : o.subcategory_id));
 
   // نسخه پیام مرحله برای همکاران روشن: فقط تغییر مرحله اصلی سفارش و فقط وقتی سرور یا یکی از مدیران سفارش آن را گزارش کرده
   let copyAllowed = !resolvedEvent && isCollaboratorCopyStage(stage);

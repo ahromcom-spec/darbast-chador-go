@@ -84,6 +84,18 @@ export const EVENT_VARIABLES: EventVariable[] = [
   { token: "{personName}", label: "نام گیرنده انتقال / همکار", groups: ["transfer", "collaboration"], sample: "محمد احمدی" },
   { token: "{personPhone}", label: "شماره گیرنده انتقال / همکار", groups: ["transfer", "collaboration"], sample: "09121234567" },
   { token: "{ownerName}", label: "نام کاربری مالک سفارش (انتقال‌دهنده / دعوت‌کننده)", groups: ["transfer", "collaboration"], sample: "علی رضایی" },
+  { token: "{statementNumber}", label: "شماره صورتحساب (یا «همه صورتحساب‌ها»)", groups: ["statement"], sample: "۳" },
+  { token: "{statementTotal}", label: "مبلغ کل صورتحساب", groups: ["statement"], sample: "۲۰٬۰۰۰٬۰۰۰ تومان" },
+  { token: "{statementPaid}", label: "مجموع پرداخت‌شده صورتحساب", groups: ["statement"], sample: "۱۲٬۰۰۰٬۰۰۰ تومان" },
+  { token: "{statementRemaining}", label: "مانده صورتحساب (پس از تخفیف)", groups: ["statement"], sample: "۷٬۵۰۰٬۰۰۰ تومان" },
+  { token: "{statementDiscount}", label: "مبلغ تخفیف صورتحساب", groups: ["statement"], sample: "۵۰۰٬۰۰۰ تومان" },
+  { token: "{statementDiscountNote}", label: "توضیح تخفیف صورتحساب", groups: ["statement"], sample: "تخفیف خورده حساب" },
+  { token: "{statementPaymentAmount}", label: "مبلغ همین پرداخت صورتحساب", groups: ["statement"], sample: "۱۲٬۰۰۰٬۰۰۰ تومان" },
+  { token: "{statementPaymentMethod}", label: "روش پرداخت (نقدی، کارت به کارت، چک)", groups: ["statement"], sample: "کارت به کارت" },
+  { token: "{statementDepositDate}", label: "تاریخ واریز / سررسید چک", groups: ["statement"], sample: "1405/08/20" },
+  { token: "{statementAllocation}", label: "سهم پرداخت از هر سفارش و صورتحساب", groups: ["statement"], sample: "سفارش 1000539 (صورتحساب ۳): ۸٬۰۰۰٬۰۰۰ تومان، سفارش 1000540 (صورتحساب ۴): ۴٬۰۰۰٬۰۰۰ تومان" },
+  { token: "{statementOrderCodes}", label: "کد سفارش‌های صورتحساب / پرداخت", groups: ["statement"], sample: "1000539، 1000540" },
+  { token: "{statementClosedDate}", label: "تاریخ بستن صورتحساب", groups: ["statement"], sample: "1405/08/25" },
   { token: "{reason}", label: "دلیل رد", groups: ["renewal", "repair", "transfer", "collaboration"], sample: "تاریخ درخواستی در دسترس نیست" },
 ];
 export const EVENT_VARIABLE_TOKENS = EVENT_VARIABLES.map((v) => v.token);
@@ -99,7 +111,7 @@ export function sanitizeEventVars(input: unknown): Record<string, string> {
   for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
     if (!EVENT_KEYS.has(k)) continue;
     if (typeof v !== "string" && typeof v !== "number") continue;
-    const text = String(v).replace(/[\r\n]+/g, " ").trim().slice(0, 300);
+    const text = String(v).replace(/[\r\n]+/g, " ").trim().slice(0, 600);
     if (text) out[k] = text;
   }
   return out;

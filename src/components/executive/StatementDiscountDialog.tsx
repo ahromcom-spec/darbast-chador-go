@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { BadgePercent, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { parseLocalizedNumber } from '@/lib/numberParsing';
+import { notifyStatementEvent } from '@/lib/statementSms';
 
 interface Props {
   open: boolean;
@@ -67,6 +68,9 @@ export function StatementDiscountDialog({
             created_by: user?.id || null,
           } as any, { onConflict: 'customer_id' });
         if (error) throw error;
+      }
+      if (parsed > 0 && parsed !== Math.round(currentAmount || 0)) {
+        void notifyStatementEvent(scope === 'statement' ? { kind: 'discount', statementId: statementId! } : { kind: 'discount', customerId });
       }
       toast({ title: '✓ تخفیف ذخیره شد', description: `${fmt(parsed)} تومان` });
       onOpenChange(false);

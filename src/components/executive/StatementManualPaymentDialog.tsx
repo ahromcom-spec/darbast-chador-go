@@ -17,6 +17,7 @@ import { formatPersianDate } from '@/lib/dateUtils';
 import { buildGroupPaymentSummary } from '@/lib/paymentNoteFormat';
 import { recalculateBankCardBalance } from '@/hooks/useBankCardRealtimeSync';
 import { ImageZoomModal } from '@/components/common/ImageZoomModal';
+import { notifyStatementEvent } from '@/lib/statementSms';
 
 interface OrderLite {
   id: string;
@@ -347,6 +348,9 @@ export function StatementManualPaymentDialog({
       if (affectedCards.size > 0) {
         window.dispatchEvent(new CustomEvent('bank-card-balance-updated'));
       }
+
+      // پیام قاب‌های «ثبت پرداخت صورتحساب» با سهم هر سفارش (در پس‌زمینه)
+      if (groupId && insertedPaymentIds.length > 0) void notifyStatementEvent({ kind: 'payment', groupId });
 
       toast({
         title: isCheque ? '✓ چک ثبت شد' : '✓ پرداخت ثبت شد',
