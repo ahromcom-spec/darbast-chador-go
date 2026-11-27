@@ -55,6 +55,7 @@ import { StaffAuditTab } from '@/components/ceo/StaffAuditTab';
 import { StaffSalarySettingsTab } from '@/components/ceo/StaffSalarySettingsTab';
 import { ExcelImportDialog } from '@/components/ceo/ExcelImportDialog';
 import { ReportBotDialog } from '@/components/daily-report/ReportBotDialog';
+import { ExpandableText } from '@/components/common/ExpandableText';
 
 import { ModuleLayout } from '@/components/layouts/ModuleLayout';
 import { OrderTimeline } from '@/components/orders/OrderTimeline';
@@ -5355,16 +5356,18 @@ export default function DailyReportModule() {
                                           </div>
                                         )}
                                         {selectedOrder.address && (
-                                          <div className="flex items-start gap-1">
-                                            <span className="font-medium text-blue-700">آدرس:</span>
-                                            <span className="line-clamp-2">{selectedOrder.address}</span>
-                                          </div>
+                                          <ExpandableText
+                                            label="آدرس:"
+                                            text={selectedOrder.address}
+                                            title="آدرس کامل محل"
+                                          />
                                         )}
                                         {selectedOrder.activity_description && (
-                                          <div className="flex items-start gap-1">
-                                            <span className="font-medium text-blue-700">شرح محل:</span>
-                                            <span className="line-clamp-2">{selectedOrder.activity_description}</span>
-                                          </div>
+                                          <ExpandableText
+                                            label="شرح محل:"
+                                            text={selectedOrder.activity_description}
+                                            title="شرح کامل محل و نوع فعالیت"
+                                          />
                                         )}
                                       </div>
                                     );
