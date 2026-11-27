@@ -1,4 +1,5 @@
 # Roadmap
+- [x] Fix only the four selected security findings: trigger setup denied to clients, profile-photo reads owner/manager scoped, messenger-settings and template reads manager scoped. Signed-in ordinary-account regression passes; service execution retained; all four absent from rescan and marked fixed. Other findings and stored data unchanged.
 - [x] Prevent daily-report media from being displayed or synchronized to another row/order; four tests pass for new rows, saved rows, legacy media and aggregation, including empty row IDs that previously synchronized the entire report.
 - [ ] Verify a live daily-report video upload across multiple rows — requesting account sees a read-only empty report and cannot read the report owner's existing media; no live data changed.
 - [x] Align single and combined statement employer display with order invoice settings; preserve ownership and financial accounting. Nine tests pass; dialog rendering verified with order 1000502 recorded employer data.

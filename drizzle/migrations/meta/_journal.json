@@ -183,6 +183,13 @@
       "when": 1795702283199,
       "tag": "0025_add_statement_sms_elements_and_frames",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1795783823043,
+      "tag": "0026_restrict_selected_security_access",
+      "breakpoints": true
     }
   ]
 }
