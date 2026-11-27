@@ -9,6 +9,7 @@ import { buildMediaFingerprint, findDuplicateProjectMedia } from '@/lib/mediaFin
 import { uploadToStorageWithProgress } from '@/lib/mediaTransfers';
 import { prepareOrderVideo } from '@/lib/orderVideoProcessor';
 import { ORDER_VIDEO_NOTICE } from '@/lib/orderVideoPolicy';
+import { dailyReportMediaScope } from '@/lib/dailyReportMediaScope';
 
 const MEDIA_BUCKET = 'project-media';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -31,6 +32,7 @@ interface OrderRowMediaUploadProps {
   showAllUsers?: boolean; // In aggregated/overview mode, show media from all users
   moduleKey?: string; // Used to auto-create report if dailyReportId is null (mobile recovery)
   onReportCreated?: (reportId: string) => void; // Callback when a report is auto-created
+  sourceRow?: boolean;
 }
 
 export function OrderRowMediaUpload({
@@ -43,6 +45,7 @@ export function OrderRowMediaUpload({
   showAllUsers = false,
   moduleKey,
   onReportCreated,
+  sourceRow = false,
 }: OrderRowMediaUploadProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -55,10 +58,16 @@ export function OrderRowMediaUpload({
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const mediaScope = dailyReportMediaScope(rowIndex, dailyReportOrderId, sourceRow);
+  const scopeKey = `${dailyReportId}:${reportDate}:${moduleKey}:${mediaScope}:${orderId}`;
+  const currentScopeRef = useRef(scopeKey);
+  currentScopeRef.current = scopeKey;
+  const fetchSequenceRef = useRef(0);
 
 
   // Fetch existing media for this row - SCOPED to the specific module
   const fetchMedia = useCallback(async () => {
+    const sequence = ++fetchSequenceRef.current;
     if (!user) return;
     if (!dailyReportId && !showAllUsers) return;
 
@@ -66,39 +75,15 @@ export function OrderRowMediaUpload({
       let allMedia: any[] = [];
 
       if (dailyReportId) {
-        // PRIMARY: Fetch by dailyReportId + row_index (module-scoped)
+        // One row-scoped query; order_id must never pull another row's media.
         const { data } = await supabase
           .from('daily_report_order_media')
           .select('id, file_path, file_type')
           .eq('daily_report_id', dailyReportId)
-          .eq('row_index', rowIndex)
+          .or(mediaScope)
           .order('created_at', { ascending: true });
         if (data) allMedia.push(...data);
 
-        // SECONDARY: Also fetch by order identifiers for completeness
-        const hasValidOrderRowId = dailyReportOrderId && isValidUuid(dailyReportOrderId);
-        const hasValidOrderId = orderId && isValidUuid(orderId);
-
-        if (hasValidOrderRowId) {
-          const { data } = await supabase
-            .from('daily_report_order_media')
-            .select('id, file_path, file_type')
-            .eq('daily_report_id', dailyReportId)
-            .eq('daily_report_order_id', dailyReportOrderId!)
-            .order('created_at', { ascending: true });
-          if (data) allMedia.push(...data);
-        }
-
-        if (!hasValidOrderRowId && hasValidOrderId) {
-          const { data } = await supabase
-            .from('daily_report_order_media')
-            .select('id, file_path, file_type')
-            .eq('daily_report_id', dailyReportId)
-            .eq('report_date', reportDate)
-            .eq('order_id', orderId!)
-            .order('created_at', { ascending: true });
-          if (data) allMedia.push(...data);
-        }
       } else if (showAllUsers && moduleKey) {
         // For showAllUsers mode: get all report IDs for this module+date, then fetch media
         const { data: moduleReports } = await supabase
@@ -113,7 +98,7 @@ export function OrderRowMediaUpload({
             .from('daily_report_order_media')
             .select('id, file_path, file_type')
             .in('daily_report_id', reportIds)
-            .eq('row_index', rowIndex)
+            .or(mediaScope)
             .order('created_at', { ascending: true });
           if (data) allMedia.push(...data);
         }
@@ -127,6 +112,7 @@ export function OrderRowMediaUpload({
         return true;
       });
 
+      if (currentScopeRef.current !== scopeKey || sequence !== fetchSequenceRef.current) return;
       if (dedupedData.length > 0) {
         const items: MediaItem[] = dedupedData.map((m: any) => {
           const { data: urlData } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(m.file_path);
@@ -144,10 +130,13 @@ export function OrderRowMediaUpload({
     } catch (err) {
       console.error('Error fetching row media:', err);
     }
-  }, [dailyReportId, dailyReportOrderId, orderId, reportDate, user, showAllUsers, rowIndex, moduleKey]);
+  }, [dailyReportId, reportDate, user, showAllUsers, moduleKey, mediaScope, scopeKey]);
 
   useEffect(() => {
+    setMedia([]);
+    setPreviewIndex(null);
     fetchMedia();
+    return () => { fetchSequenceRef.current++; };
   }, [fetchMedia]);
 
   // آخرین فیلم ثبت‌شده برای این سفارش (فقط نمایش، بدون ثبت مجدد)
@@ -161,7 +150,7 @@ export function OrderRowMediaUpload({
       const { data } = await supabase
         .from('project_media')
         .select('id, file_path, file_type, created_at')
-        .eq('project_id', orderId!)
+        .eq('project_id', orderId)
         .eq('file_type', 'video')
         .order('created_at', { ascending: false })
         .limit(1)
@@ -372,7 +361,7 @@ export function OrderRowMediaUpload({
         }
 
         // Add to local state immediately so it shows up even for unsaved rows
-        if (insertedMedia) {
+        if (insertedMedia && currentScopeRef.current === scopeKey) {
           const { data: urlData } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(storagePath);
           setMedia(prev => [...prev, {
             id: insertedMedia.id,

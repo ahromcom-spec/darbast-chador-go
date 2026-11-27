@@ -1,4 +1,6 @@
 # Roadmap
+- [x] Prevent daily-report media from being displayed or synchronized to another row/order; four tests pass for new rows, saved rows, legacy media and aggregation, including empty row IDs that previously synchronized the entire report.
+- [ ] Verify a live daily-report video upload across multiple rows — requesting account sees a read-only empty report and cannot read the report owner's existing media; no live data changed.
 - [x] Align single and combined statement employer display with order invoice settings; preserve ownership and financial accounting. Nine tests pass; dialog rendering verified with order 1000502 recorded employer data.
 - [ ] Verify employer update end-to-end from management order details to statements — current requesting account redirects away from management; direct dialog rendering verified instead.
 - [x] Convert new order videos to SD 480p and first 60 seconds before saving; show notice across order/report upload controls. Two policy tests pass; authenticated MediaUploader selection, processing, upload and download verified with a 65-second file producing 852×480, 60-second MP4. Existing order linkage not exercised; bundled headless Chromium lacks H264 playback support.

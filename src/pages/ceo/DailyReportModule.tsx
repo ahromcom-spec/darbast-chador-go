@@ -3,6 +3,7 @@ import { useModuleTabActivity } from '@/hooks/useModuleActivity';
 import { ActivityBadge } from '@/components/activity/ActivityBadge';
 import { calculateTotalFromDimensions } from '@/lib/dimensionCalculations';
 import { findDuplicateProjectMedia } from '@/lib/mediaFingerprint';
+import { dailyReportMediaScope } from '@/lib/dailyReportMediaScope';
 import { prepareOrderVideo } from '@/lib/orderVideoProcessor';
 import { ORDER_VIDEO_NOTICE } from '@/lib/orderVideoPolicy';
 import { uploadToStorageWithProgress } from '@/lib/mediaTransfers';
@@ -83,7 +84,7 @@ async function deleteAndReinsertOrderRows(
     notes?: string;
     row_color?: string;
   }>,
-  sourceRows?: Array<{ order_id?: string; activity_description?: string; service_details?: string; team_name?: string; notes?: string }> // original rows before filtering, for position mapping
+  sourceRows?: Array<{ id?: string; order_id?: string; activity_description?: string; service_details?: string; team_name?: string; notes?: string }> // original rows before filtering, for position mapping
 ): Promise<{ insertedOrders: Array<{ id: string; order_id: string | null }> | null }> {
   // 1. Get ALL media for this report (linked and orphaned) with row_index
   const { data: allMediaRecords } = await supabase
@@ -105,7 +106,7 @@ async function deleteAndReinsertOrderRows(
         mediaByRowIndex[m.row_index].push(m.id);
         rowIndicesWithMedia.add(m.row_index);
       }
-      if (m.daily_report_order_id) {
+      if (m.row_index == null && m.daily_report_order_id) {
         if (!oldRowMediaMap[m.daily_report_order_id]) oldRowMediaMap[m.daily_report_order_id] = [];
         oldRowMediaMap[m.daily_report_order_id].push(m.id);
       }
@@ -134,7 +135,7 @@ async function deleteAndReinsertOrderRows(
       // Check if this row position has media by row_index
       const hasMediaByIndex = rowIndicesWithMedia.has(origIdx);
       // Check if old row at this position had media
-      const oldRowId = oldRowIdsByIndex[origIdx];
+      const oldRowId = origRow.id || oldRowIdsByIndex[origIdx];
       const hadOldMedia = oldRowId && oldRowMediaMap[oldRowId] && oldRowMediaMap[oldRowId].length > 0;
 
       if (hasMediaByIndex || hadOldMedia) {
@@ -196,7 +197,7 @@ async function deleteAndReinsertOrderRows(
       const origRow = referenceRows[origIdx];
       const hasContent = rowHasContent(origRow);
       const hasMediaByIndex = rowIndicesWithMedia.has(origIdx);
-      const oldRowId = oldRowIdsByIndex[origIdx];
+      const oldRowId = sourceRows?.[origIdx]?.id || oldRowIdsByIndex[origIdx];
       const hadOldMedia = oldRowId && oldRowMediaMap[oldRowId] && oldRowMediaMap[oldRowId].length > 0;
 
       if (!hasContent && !hasMediaByIndex && !hadOldMedia && sourceRows) continue;
@@ -219,16 +220,6 @@ async function deleteAndReinsertOrderRows(
           .update({ daily_report_order_id: newRow.id, row_index: newRowIdx })
           .eq('daily_report_id', reportId)
           .in('id', oldRowMediaMap[oldRowId]);
-      }
-
-      // Re-link by order_id (for media that has order_id but lost row link)
-      if (newRow.order_id) {
-        await supabase
-          .from('daily_report_order_media')
-          .update({ daily_report_order_id: newRow.id })
-          .eq('daily_report_id', reportId)
-          .eq('order_id', newRow.order_id)
-          .is('daily_report_order_id', null);
       }
 
       newRowIdx++;
@@ -3192,14 +3183,15 @@ export default function DailyReportModule() {
 
 
   // Sync row media to project_media when order is selected
-  const syncRowMediaToProject = async (orderId: string, reportId: string, rowId?: string) => {
+  const syncRowMediaToProject = async (orderId: string, reportId: string, rowIndex: number, rowId?: string) => {
+    if (!user) return;
     try {
-      let query = supabase
+      const query = supabase
         .from('daily_report_order_media')
         .select('id, file_path, file_type, file_size, mime_type, content_hash, duration_seconds')
         .eq('daily_report_id', reportId)
-        .eq('synced_to_project_media', false);
-      if (rowId) query = query.eq('daily_report_order_id', rowId);
+        .eq('synced_to_project_media', false)
+        .or(dailyReportMediaScope(rowIndex, rowId));
 
       const { data: unsynced } = await query;
       if (!unsynced || unsynced.length === 0) return;
@@ -3224,7 +3216,7 @@ export default function DailyReportModule() {
 
         const { error: insertErr } = await supabase.from('project_media').insert({
           project_id: orderId,
-          user_id: user!.id,
+          user_id: user.id,
           file_path: m.file_path,
           file_type: m.file_type,
           file_size: m.file_size,
@@ -3273,7 +3265,7 @@ export default function DailyReportModule() {
 
     // When order_id is set, sync any existing row media to project_media
     if (field === 'order_id' && value && existingReportId && user) {
-      syncRowMediaToProject(value, existingReportId, updated[index].id);
+      syncRowMediaToProject(value, existingReportId, index, updated[index].id);
     }
 
     // بررسی آیا یک ردیف خالی در انتها وجود دارد
@@ -5427,6 +5419,7 @@ export default function DailyReportModule() {
                                   <OrderRowMediaUpload
                                     dailyReportId={isAggregated && row.source_daily_report_id ? row.source_daily_report_id : existingReportId}
                                     dailyReportOrderId={row.id}
+                                    sourceRow={isAggregated && !!row.source_daily_report_id}
                                     orderId={row.order_id || undefined}
                                     reportDate={toLocalDateString(reportDate)}
                                     readOnly={effectiveReadOnly}

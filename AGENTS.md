@@ -1,4 +1,5 @@
 # Architecture Decisions
+- Scope daily-report media reads and order synchronization through `dailyReportMediaScope`: report + row index, legacy row-ID fallback only without an index, source row IDs in aggregation; never sync a whole report when an unsaved row has no ID.
 - Aggregate executive marker waiting categories through `executionMarkerStatuses`; collapsed location groups use all their orders, while expanded markers use only their own orders so mixed statuses remain visible.
 - Resolve statement employer display from each order's invoice override through `statementEmployer`; retain multiple employers explicitly and never change customer ownership or financial allocation for a display override.
 - Prepare new order videos with `prepareOrderVideo` before upload, fingerprinting and metadata creation; serialized FFmpeg workers keep memory bounded and failures never upload unprocessed originals.
